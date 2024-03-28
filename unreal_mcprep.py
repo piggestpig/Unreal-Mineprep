@@ -8,8 +8,8 @@ edit = menus.find_menu(unreal.Name("LevelEditor.MainMenu"))
 
 # 创建菜单栏按钮
 tree_menu = edit.add_sub_menu(owner=unreal.Name(edit.get_name()),
-                              section_name=unreal.Name('ceshi_tree'),
-                              name=unreal.Name('ceshi_tree'),
+                              section_name=unreal.Name('mcprep_test'),
+                              name=unreal.Name('mcprep_test'),
                               label=unreal.Text('MC'))
 
 # 子目录创建
@@ -140,81 +140,3 @@ print("hello")
 sub_menu.add_menu_entry(section_name=unreal.Name(''), args=menu_entry)
 sub_menu.add_menu_entry(section_name=unreal.Name(''), args=menu_entry2)
 sub_menu.add_menu_entry(section_name=unreal.Name(''), args=menu_entry3)
-
-'''
-# 获取所有材质
-materials = unreal.EditorAssetLibrary.list_assets('/Game/')
-# 遍历所有材质
-for material_path in materials:
-    try:
-        # 加载材质
-        material = unreal.load_asset(material_path)
-        # 创建1-x节点
-        node_one_minus = unreal.MaterialEditingLibrary.create_material_expression(material, unreal.MaterialExpressionOneMinus, node_pos_x=-50, node_pos_y=-100)
-        node_tex = unreal.MaterialEditingLibrary.get_material_property_input_node(material, unreal.MaterialProperty.MP_ROUGHNESS)
-        if node_tex != None:
-            unreal.MaterialEditingLibrary.connect_material_expressions(from_expression=node_tex, from_output_name="", to_expression=node_one_minus, to_input_name="")
-            unreal.MaterialEditingLibrary.connect_material_property(from_expression=node_one_minus
-                                                                , from_output_name=""
-                                                                , property_=unreal.MaterialProperty.MP_ROUGHNESS)
-    except:
-        pass'''
-
-
-   
-'''asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-my_mat = asset_tools.create_asset("M_CreatedByPython", "/Game/CreatedByPython", unreal.Material, unreal.MaterialFactoryNew())
-unreal.EditorAssetLibrary.save_asset(my_mat.get_path_name())
-
-node_add = unreal.MaterialEditingLibrary.create_material_expression(my_mat, unreal.MaterialExpressionAdd, node_pos_x=-200, node_pos_y=0)
-
-node_tex = unreal.MaterialEditingLibrary.create_material_expression(my_mat, unreal.MaterialExpressionTextureSampleParameter2D
-            , node_pos_x=-600, node_pos_y=0)
-
-texture_asset = unreal.load_asset("/Game/StarterContent/Textures/T_Brick_Clay_Beveled_D")
-node_tex.set_editor_property("texture", texture_asset)
-# use MaterialEditingLibrary
-unreal.MaterialEditingLibrary.connect_material_property(from_expression=node_tex
-                                                    , from_output_name=""
-                                                    , property_=unreal.MaterialProperty.MP_BASE_COLOR)
-
-unreal.MaterialEditingLibrary.connect_material_expressions(from_expression=node_tex, from_output_name="", to_expression=node_add, to_input_name="A")
-'''
-
-
-
-
-
-
-
-
-'''material = unreal.load_asset("/Game/CreatedByPython/M_CreatedByPython")
-node_tex = unreal.MaterialEditingLibrary.get_material_property_input_node(material, unreal.MaterialProperty.MP_BASE_COLOR)
-print(node_tex)
-print("aaaaaaaaaa")
-#unreal.EditorAssetLibrary.save_loaded_asset(material)
-unreal.MaterialEditingLibrary.connect_material_property(from_expression=node_tex
-                                                    , from_output_name="A"
-                                                    , property_=unreal.MaterialProperty.MP_OPACITY_MASK)
-'''
-
-
-
-'''# 获取纹理贴图路径列表
-texture_paths = unreal.EditorAssetLibrary.list_assets('/Game/StarterContent/Textures/')
-# 遍历纹理贴图路径列表
-for path in texture_paths:
-    # 加载纹理贴图
-    asset = unreal.load_asset(path)
-    # 将TextureFilter设置为nearest
-    asset.set_editor_property('Filter', unreal.TextureFilter.TF_DEFAULT)
-    # 保存纹理贴图
-    unreal.EditorAssetLibrary.save_loaded_asset(asset)'''
-
-
-'''
-    except Exception as e:
-        # 捕获异常并输出错误信息
-        print("An error occurred:", e)
-'''
-
