@@ -4,7 +4,7 @@
 
 ✨这是一个正在开发中的UE5插件，继承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的实用功能，并加入一些新的资产，为制作MC动画带来便利
 
-> 目前还没写使用教程 •ࡇ• —— 在v1.0正式发布前，插件主要供内部使用，不考虑兼容性和潜在的 ~~bug~~ 特性。需要安装[TApython](https://github.com/cgerchenhp/UE_TAPython_Plugin_Release) 和 [Easy File Dialog](https://www.unrealengine.com/marketplace/en-US/product/easy-file-dialog) 作为前置插件。
+> 目前还没写使用教程 •ࡇ• —— 在v1.0正式发布前，插件主要供内部使用，不考虑兼容性和潜在的 ~~bug~~ 特性。
 
 ## 版本更新
 
