@@ -28,3 +28,11 @@
 26,质量,Quality
 27,是HDR视频,HDR video
 28,更新渲染配置,Update Config
+29,附魔,Enchant
+30,祛魔,Disenchant
+31,自定义附魔,Custom enchant
+32,由于动态材质实例的特性，自定义效果只有在游戏运行/渲染时才能看到,"Due to the characteristic of dynamic material instances, custom effects can only be seen during gameplay/rendering."
+33,颜色,Color
+34,速度,Speed
+35,缩放,Scale
+36,透明度,Opacity
