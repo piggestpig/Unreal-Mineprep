@@ -4,6 +4,9 @@
 
 ✨这是一个正在开发中的UE5插件，继承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的实用功能，并加入一些新的资产，为制作MC动画带来便利
 
+
+<img src="/Readme素材/插件展示.png" alt="示例图片" width="520" height="505">
+
 > 目前还没写使用教程 •ࡇ• —— 在v1.0正式发布前，插件主要供内部使用，不考虑兼容性和潜在的 ~~bug~~ 特性。需要安装[TApython](https://github.com/cgerchenhp/UE_TAPython_Plugin_Release) 和 [Easy File Dialog](https://www.unrealengine.com/marketplace/en-US/product/easy-file-dialog) 作为前置插件。
 
 ## 版本更新
@@ -46,6 +49,7 @@
 - `Intel_2K_mp4`使用2560x1440分辨率，输出jpg序列帧，通过ffmpeg编码为10bit H265的mp4视频。默认编码器是intel的hevc_qsv  
   注：把8bit素材编码为10bit视频，实测下来真的能减少色彩断层！
 - `Intel_HDR_2K_mp4`使用 *HDR_2K_exr* 的预设，通过ffmpeg编码为10bit H265的mp4视频，带Rec2100 PQ静态元数据。默认编码器是intel的hevc_qsv
+- *小故事：我测试插件时使用最高质量视频编码，导出后仍然有色彩断层，这是怎么回事呢...？哦原来我在用笔记本远程连接台式机，网络传输压画质了hhh*
 
 #### 24w13b
 - 制作了4个渲染预设和1个OCIO色彩管理文件。（如果电脑能流畅运行，我会优先选择录屏，其次才是渲染。毕竟UE5比起blender最大的优势就是速度快嘛。以下渲染配置都是1个采样，不使用路径追踪，有N卡的用户强烈推荐安装DLSS！）  
