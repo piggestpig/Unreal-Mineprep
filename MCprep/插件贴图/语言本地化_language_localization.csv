@@ -36,3 +36,13 @@
 34,速度,Speed
 35,缩放,Scale
 36,透明度,Opacity
+37,自定义帧率,Custom FPS
+38,视频名称,Video Name
+39,启用碰撞,Enable Collision
+40,自发光,Glow
+41,照明强度,illuminance
+42,自身亮度,self-brightness
+43,灯光排除,Light Linking
+44,灯光组,Light group
+45,2x增强网格体距离场,2x distance field
+46,启用Nanite,Enable Nanite
