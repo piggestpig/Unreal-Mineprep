@@ -4,12 +4,42 @@
 
 ✨这是一个正在开发中的UE5插件，继承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的实用功能，并加入一些新的资产，为制作MC动画带来便利
 
-
 <img src="/Readme素材/插件展示.jpg" alt="示例图片" width="520" height="720">
 
-> 目前还没写使用教程 •ࡇ• —— 在v1.0正式发布前，插件主要供内部使用，不考虑兼容性和潜在的 ~~bug~~ 特性。需要安装[TApython](https://github.com/cgerchenhp/UE_TAPython_Plugin_Release) 和 [Easy File Dialog](https://www.unrealengine.com/marketplace/en-US/product/easy-file-dialog) 作为前置插件。
+> 目前还没写使用教程 •ࡇ• —— 在v1.0正式发布前，插件主要供内部使用，不考虑兼容性和潜在的 ~~bug~~ 特性。如果你没有虚幻引擎，可以去Release里下载打包好的内容示例，体验一下插件功能
+
+## 安装方法（适用于0.3版本）
+1、下载MCprep文件夹，放至虚幻引擎工程文件的content目录下。  
+
+2、开启以下虚幻引擎插件：
+- Python Editor Script Plugin
+- Movie Render Queue
+- Movie Render Queue Additional Render Passes
+- OpenColorlO (OCIO)
+- NiagaraFluids
+- Motion Trajectory
+- Motion Design（当前版本非必须，推荐开启）
+
+重启虚幻引擎，右键MCprep蓝图，点击“运行编辑器控件”，此时插件的大部分功能已经可以使用了！
+
+3、下载并安装 [TApython](https://github.com/cgerchenhp/UE_TAPython_Plugin_Release) 和 [DLSS](https://developer.nvidia.com/rtx/dlss/get-started) 以使用全部功能。这俩需要手动安装，对新手来说会比较麻烦（回忆一下你第一次给MC装模组的情景，装Forge、Fabric等前置插件还是有点困难的。~~哦你说你玩的是基岩版那没事了~~）以后会简化安装流程！
+
+4、如果要渲染视频，记得点击插件面板的“初始化视频渲染”然后重启。注意，我们用到了 [ffmpeg](https://ffmpeg.org/download.html) 进行视频编码，它的存放路径也就是你的工程文件路径不能有中文。
+
 
 ## 版本更新
+
+### 0.3 : 多彩世界
+![image](Readme素材/0.3封面图.jpg)
+
+- 0.3正式版现已发布！本次更新的主题为“多彩世界”，和0.2版本相比，加入了大量新功能与资源素材，我们用其制作了动画短片《史蒂夫之梦》。来看一看最后更新的内容吧：
+- **优化安装流程，减少对其他插件的依赖**。之前的版本必须借助TApython才能运行，否则整个蓝图都会报错。现在只有“植物摇摆”功能依赖TApython，而且它不影响其他功能。具体来说，我们用python自带的filedialog替代了“更换材质”的选择文件夹弹窗，用UE自带的“显示消息对话”节点替代了右下角提示弹窗。
+- **修复大量bug，提高稳定性**。 “准备场景”在搜索材质中的纹理贴图时，会判断对象是否为空来避免闪退，最多向前查找三层。“更换材质”会先删除原来的材质节点（删的更干净了），再连接新材质。动画纹理能对粗糙度和法线贴图进行处理了。
+- “准备场景”新增`渐变动画纹理`选项，可以使动画材质平滑过渡。
+- “LOD & Nanite”新增`投射阴影`选项，可以批量关闭选中项的阴影。在导入超过1000万面的特大场景后，阴影渲染会使帧数明显下降。不妨在编辑场景时关闭一部分模型的阴影，渲染前再打开。
+- 新增`滚动方块`，把它拖放到场景中，设置方向、重力、速度，可以在运行时滚起来
+- 整理了插件结构，现在有一个“材质”文件夹。更新了Github页面对插件的介绍。
+- 我们计划跳过0.3 Demo内容示例，等下次0.4-pre1一起发布。下个版本的主题暂定为“足迹与故事”，将会制作生物、动画这方面的内容。
 
 #### 24w22a
 - 本周没有更新，因为我们正在全力制作新的动画视频《史蒂夫之梦》！过几天就能发布啦，祝MC15周年生日快乐（托更了好久hh）
