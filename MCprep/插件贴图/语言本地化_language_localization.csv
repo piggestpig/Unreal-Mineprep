@@ -4,7 +4,7 @@
 2,批量处理对象 :,Target :
 3,视口选中项,Viewport selected
 4,资产文件夹,Asset folder
-5,Blender路径,Blender Path
+5,Blender路径,Blender path
 6,重载材质属性,Overwrite Material Input
 7,金属度,Metallic
 8,高光度,Specular
@@ -40,11 +40,28 @@
 38,视频名称,Video Name
 39,启用碰撞,Enable Collision
 40,自发光,Glow
-41,照明强度,illuminance
-42,自身亮度,self-brightness
+41,照明强度,Illuminance
+42,自身亮度,Self-brightness
 43,灯光排除,Light Linking
 44,灯光组,Light group
 45,2x增强网格体距离场,2x distance field
 46,启用Nanite,Enable Nanite
 47,渐变动画纹理,Gradient Animated Texture
-48,投射阴影,Cast Shadow
+48,投射阴影,Cast shadow
+49,材质包路径,Texture pack path
+50,放置方块,Block
+51,放置物品,Item
+52,过滤名称,Filter
+53,辉光,Bloom
+54,强度,Intensity
+55,阈值,Threshold
+56,动态模糊,Motion blur
+57,最大值,Max blur
+58,光程,Light paths
+59,反射次数,Reflection
+60,折射次数,Refraction
+61,色彩管理,Color management
+62,自动曝光,Auto exposure
+63,曝光补偿,Exposure
+64,阴影对比度,Shadow
+65,高光对比度,Highlight
