@@ -1,18 +1,18 @@
 ﻿ ,中文,English,,,,,中文,English,,,,,,中文,English,,,,,中文,English
-0,准备场景,Prep Scene,,,,,,,,,,,,VFX下界传送门,VFX Nether Portal,,,,,3D摄像机组,3D camera rig
-1,更换材质,Swap Texture,,,,,,,,,,,,可交互2D水面,Interactive 2D Water,,,,,末影粒子,Ender Particles
-2,批量处理对象 :,Target :,,,,,,,,,,,,可交互3D水池,Interactive 3D Water Pool,,,,,,
-3,视口选中项,Viewport selected,,,,,,,,,,,,摇臂摄像机,Crane Camera,,,,,,
-4,资产文件夹,Asset folder,,,,,,,,,,,,曲线引导粒子,Curve Guide Particles,,,,,,
-5,Blender路径,Blender path,,,,,,,,,,,,滚动方块,Rolling Block,,,,,,
-6,重载材质属性,Overwrite Material Input,,,,,,,,,,,,粒子自碰撞,Self-collision Particles,,,,,,
-7,金属度,Metallic,,,,,,,,,,,,落叶粒子,Falling Leaves,,,,,,
-8,高光度,Specular,,,,,,,,,,,,飞行摄像机,FPV Flying Camera,,,,,,
-9,粗糙度,Roughness,,,,,,,,,,,,,,,,,,,
-10,植物摇摆,Auto Sway,,,,,,,,,,,,,,,,,,,
-11,摇摆幅度,Sway strength,,,,,,,,,,,,,,,,,,,
-12,摇摆速度,Sway speed,,,,,,,,,,,,,,,,,,,
-13,预设 :,Preset :,,,,,,,,,,,,,,,,,,,
+0,准备场景,Prep Scene,,,,,Steve 普通人模,Steve,,,,,,VFX下界传送门,VFX Nether Portal,,,,,3D摄像机组,3D camera rig
+1,更换材质,Swap Texture,,,,,Alex 细手臂人模,Alex (slim),,,,,,可交互2D水面,Interactive 2D Water,,,,,末影粒子,Ender Particles
+2,批量处理对象 :,Target :,,,,,Steve+表情,Steve_face,,,,,,可交互3D水池,Interactive 3D Water Pool,,,,,爆炸粒子,Explosion Particles
+3,视口选中项,Viewport selected,,,,,Alex(细手臂)+表情,Alex (slim)_face,,,,,,摇臂摄像机,Crane Camera,,,,,“通用跟踪目标” tag,“Followed Target”  tag
+4,资产文件夹,Asset folder,,,,,Steve 模块化绑定,Steve_modular rig,,,,,,曲线引导粒子,Curve Guide Particles,,,,,“碰撞” tag,“collider”  tag
+5,Blender路径,Blender path,,,,,Steve 直角弯折,Steve_angular bent,,,,,,滚动方块,Rolling Block,,,,,,
+6,重载材质属性,Overwrite Material Input,,,,,Steve [NPC],Steve [NPC],,,,,,粒子自碰撞,Self-collision Particles,,,,,,
+7,金属度,Metallic,,,,,第三人称运动匹配角色,Motion matching player,,,,,,落叶粒子,Falling Leaves,,,,,,
+8,高光度,Specular,,,,,僵尸,Zombie,,,,,,飞行摄像机,FPV Flying Camera,,,,,,
+9,粗糙度,Roughness,,,,,僵尸 [NPC],Zombie [NPC],,,,,,下雨粒子,Rain Particles,,,,,,
+10,植物摇摆,Auto Sway,,,,,尸壳,Husk,,,,,,,,,,,,,
+11,摇摆幅度,Sway strength,,,,,尸壳 [NPC],Husk [NPC],,,,,,,,,,,,,
+12,摇摆速度,Sway speed,,,,,溺尸,Drowned,,,,,,,,,,,,,
+13,预设 :,Preset :,,,,,溺尸 [NPC],Drowned [NPC],,,,,,,,,,,,,
 14,初始化视频渲染,Init Video Render,,,,,,,,,,,,,,,,,,,
 15,打开输出文件夹,Open Output Folder,,,,,,,,,,,,,,,,,,,
 16,输出图片序列帧格式,Image sequence :,,,,,,,,,,,,,,,,,,,
