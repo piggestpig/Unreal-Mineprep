@@ -12,7 +12,7 @@
 10,植物摇摆,Auto Sway,,,,,尸壳,Husk,,,,,,下雪粒子,Snow Particles,,,,,,
 11,摇摆幅度,Sway strength,,,,,尸壳 [NPC],Husk [NPC],,,,,,爆炸粒子,Explosion Particles,,,,,,
 12,摇摆速度,Sway speed,,,,,溺尸,Drowned,,,,,,软体史蒂夫,Soft Body Steve,,,,,,
-13,预设 :,Preset :,,,,,溺尸 [NPC],Drowned [NPC],,,,,,,,,,,,,
+13,预设 :,Preset :,,,,,溺尸 [NPC],Drowned [NPC],,,,,,MC像素文字(3D),MC Pixel Text (3D),,,,,,
 14,初始化视频渲染,Init Video Render,,,,,,,,,,,,,,,,,,,
 15,打开输出文件夹,Open Output Folder,,,,,,,,,,,,,,,,,,,
 16,输出图片序列帧格式,Image sequence :,,,,,,,,,,,,,,,,,,,
