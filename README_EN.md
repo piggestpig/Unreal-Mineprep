@@ -33,9 +33,9 @@
 - Deformer Graph
 - Text 3D
 - Metasound
-- Take Recorder (not required in the current version)
-- Chaos Flesh (not required in the current version)
-- Motion Design (not required in the current version)
+- Take Recorder (not necessary in the current version)
+- Chaos Flesh (not necessary in the current version)
+- Motion Design (not necessary in the current version)
 
 Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Editor Utility Widget". Most of the plugin's functions should now be available!
 
@@ -55,7 +55,7 @@ Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Edi
 ![image](Readme素材/0.4封面图.jpg)
 - New milestone (*・ω・)ﾉ We fixed a lot of bugs and added several new features this week. The packaged demo exe containing all the content from 0.3 and 0.4-pre1 will be uploaded later as a formal Release.
 - mcprep_data.json has been updated to version 1.21, synchronized with the newly released MCprep 3.6. The default resource pack has not been updated yet.
-- Added a `Complex` option next to the "Collision" option in the plugin panel, enabled by default. Previous prepared scenes also used complex collision; if you want to perform physical simulations, please disable this option and then use the prepared scene on the selected items. Additionally, three new features have been added:
+- Added a `Complex` option next to the "Collision" option in the plugin panel, enabled by default. Previous prepared scenes also used complex collision; if you want to perform physical simulations, please disable this option and then use the prepared scene on the selected items. Additionally, three new functions have been added:
 - **Replace Material**  
   `Modifies`: Viewport Selected   
   `Effect`: Searches for a single static mesh or a blueprint containing skeletal mesh components and replaces all materials with the specified material. If no material is specified, no replacement will occur.  
@@ -64,7 +64,7 @@ Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Edi
   `Modifies`: Opened sequencer  
   `Effect`: Searches for "Motion Matching Player" on the timeline, finds recorded animations, and attempts to fix rotation issues. (I finally found this bug. Since the MC rigs are redirected to the official motion matching character at runtime, it records keyframe animations twice. Resetting the MC rigs' rotation to zero can partially solve the issue of idle camera rotation).
 > The following is the first experimental feature and the first one to include C++ code.  
-> We discovered the hidden VR+3D rendering feature last week and couldn't wait to bring it out this week -- please use experimental features with caution. A detailed introduction and warning will pop up before running, requiring confirmation to proceed.
+> We discovered the hidden VR+3D rendering function last week and couldn't wait to bring it out this week -- please use experimental features with caution. A detailed introduction and warning will pop up before running, requiring confirmation to proceed.
 - **Experimental Feature**  
   `Requires`: UE version 5.4 + Windows system (Otherwise, it will try to recompile the plugin from source code when opening the project file, and it's currently unclear if Visual Studio is needed)  
   `Modifies`: Movie Render Queue Additional Render Passes plugin  
@@ -79,10 +79,10 @@ Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Edi
 - The shortcut key for inverting the mouse Y-axis in "FPV Flight Mode" has been changed to Tab
 - Added an option for automatic wall climbing (i.e., two-block high) to the "Motion Matching Player", enabled by default; can be disabled at runtime by pressing Tab
 - Both "Motion Matching Player" and "Simple NPC" now have item slots and can enable physical simulation through the num pad.  
-  "0" - Paralysis  "." - Toggle gravity  "2" - Drop item  
-  "4" - Break left arm  "1" - Break left leg  
-  "6" - Break right arm  "3" - Break right leg  
-  "8" - Break head  "5" - Break Full body   
+  "0" - Paralysis   "." - Toggle gravity   "2" - Drop item  
+  "4" - Break left arm   "1" - Break left leg  
+  "6" - Break right arm   "3" - Break right leg  
+  "8" - Break head   "5" - Break Full body   
   - When recording animations using the camera recorder, if you want to throw the held item, add "Nearby Spawned Actors", and then manually specify the model of the thrown item on the timeline. This is currently the best method, as directly dropping the original item causes jitter, while spawning a new item is more stable.
 > The above shortcuts may require enabling Num Lock on the num pad
 - Added "NPC跑步跟随目标" (Run to Follow Target) option and several original running animations to the creature detail panel.
@@ -91,7 +91,7 @@ Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Edi
 - Added `Smooth Physical Material`, `Elastic Physical Material`, and the previously existing "High Friction Physical Material" to affect objects with enabled physical simulation.
 - Removed the material interface of "Interactive 2D Water Surface" because water materials require a dedicated module to render waves, and randomly changing one doesn't work. Also, changed its collision target from Actor to component, fixing the collision failure bug.
 - Fixed the bug where "Light Linking" was ineffective for internal components
-- The "2x Distance Field" and "Enable Nanite" options in the "LOD&Nanite" feature are disabled by default, as they run very slowly. The first button to disable shadows seems more practical.
+- The "2x Distance Field" and "Enable Nanite" options in the "LOD&Nanite" function are disabled by default, as they run very slowly. The first button to disable shadows seems more practical.
 - The plugin panel pop-up now supports English, and part of the GitHub Readme has also been translated into English -- Yes, clicking the English button at the top won't lead to a 404 page anymore. The oldest bug has finally been fixed!
 
 > [!NOTE]
