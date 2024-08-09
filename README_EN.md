@@ -60,12 +60,12 @@ Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Edi
   `Modifies`: Viewport Selected   
   `Effect`: Searches for a single static mesh or a blueprint containing skeletal mesh components and replaces all materials with the specified material. If no material is specified, no replacement will occur.  
   `Options`: Material, Overlay, Physics
-- **Process Recorded Animation**  
+- **Process Recording**  
   `Modifies`: Opened sequencer  
   `Effect`: Searches for "Motion Matching Player" on the timeline, finds recorded animations, and attempts to fix rotation issues. (I finally found this bug. Since the MC rigs are redirected to the official motion matching character at runtime, it records keyframe animations twice. Resetting the MC rigs' rotation to zero can partially solve the issue of idle camera rotation).
 > The following is the first experimental feature and the first one to include C++ code.  
 > We discovered the hidden VR+3D rendering function last week and couldn't wait to bring it out this week -- please use experimental features with caution. A detailed introduction and warning will pop up before running, requiring confirmation to proceed.
-- **Experimental Feature**  
+- **Experimental**  
   `Requires`: UE version 5.4 + Windows system (Otherwise, it will try to recompile the plugin from source code when opening the project file, and it's currently unclear if Visual Studio is needed)  
   `Modifies`: Movie Render Queue Additional Render Passes plugin  
   `Effect`: Extracts the modified new plugin and moves it to the Plugins folder in the root directory of the project file. It will prioritize loading the plugin from here upon restart. The Stereo, Eye Separation, and Eye Convergence Distance options in panoramic rendering have been unlocked, allowing output of stereoscopic panoramic rendering. Other rendering presets are unaffected. It has not yet been added to the custom rendering configuration in the plugin panel.  
@@ -87,7 +87,7 @@ Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Edi
 > The above shortcuts may require enabling Num Lock on the num pad
 - Added "NPC跑步跟随目标" (Run to Follow Target) option and several original running animations to the creature detail panel.
 - "MC Sky" can now set the direction and speed of cloud movement, and the cascade shadow distance of lighting has been increased for smoother transitions
-- "Prepared Scene" now adds sound effect physical materials based on block names. Currently, there are six types: grass, gravel (dirt), sand, snow, stone, and wood. Unmatched ones are considered stone. The "Motion Matching Player" will play corresponding footstep sound effects when walking on them. Note that the entire audio rendering module is still in early development, and currently, you can only hear the sound.
+- "Prep Scene" now adds sound effect physical materials based on block names. Currently, there are six types: grass, gravel (dirt), sand, snow, stone, and wood. Unmatched ones are considered stone. The "Motion Matching Player" will play corresponding footstep sound effects when walking on them. Note that the entire audio rendering module is still in early development, and currently, you can only hear the sound.
 - Added `Smooth Physical Material`, `Elastic Physical Material`, and the previously existing "High Friction Physical Material" to affect objects with enabled physical simulation.
 - Removed the material interface of "Interactive 2D Water Surface" because water materials require a dedicated module to render waves, and randomly changing one doesn't work. Also, changed its collision target from Actor to component, fixing the collision failure bug.
 - Fixed the bug where "Light Linking" was ineffective for internal components
@@ -95,4 +95,4 @@ Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Edi
 - The plugin panel pop-up now supports English, and part of the GitHub Readme has also been translated into English -- Yes, clicking the English button at the top won't lead to a 404 page anymore. The oldest bug has finally been fixed!
 
 > [!NOTE]
-> The remaining translation is WIP
+> The remaining English translation is WIP
