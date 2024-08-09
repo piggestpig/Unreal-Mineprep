@@ -2,21 +2,27 @@
 
 [**中文**](./README.md) | [**English**](./README_EN.md)
 
-✨这是一个正在开发中的UE5插件，继承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的实用功能，并加入一些新的资产，为制作MC动画带来便利
+✨This is a UE5 plugin that inherits the practical features of [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/), and adds some new assets to facilitate the creation of MC animations.
 
-<img src="/Readme素材/插件展示.jpg" alt="示例图片" width="560" height="750">
+![image](Readme素材/0.4封面图.jpg)
 
-*本插件与Minecraft、MCprep官方没有直接联系，在其建议下插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆（0.3及之前的版本已经归档，就不做修改了）。Github主页很好改名，但是动插件文件夹会出一堆bug，有空再试试
-> 目前还没写使用教程 •ࡇ• —— 在v1.0正式发布前，插件主要供内部使用，不考虑兼容性和潜在的 ~~bug~~ 特性。如果你没有虚幻引擎，可以去Release里下载打包好的内容示例，体验一下插件功能
+<img src="/Readme素材/插件展示_EN.jpg" alt="Example Image">
 
-## 安装方法（适用于0.3版本）
-1、下载MCprep文件夹，放至虚幻引擎工程文件的content目录下。  
+*This plugin is not affiliated with Minecraft or MCprep. Upon their suggestion, we changed the name from Unreal MCprep to Unreal Mineprep to avoid confusion (versions 0.3 and earlier have been archived so they remain unchanged). It's easy to rename the GitHub page, but renaming the plugin folder can cause a lot of bugs, so I'll try that later if possible.
 
-2、开启以下虚幻引擎插件：
+*We are planning a overhaul of the plugin, and 0.4-pre2 gonna rename the root directory to Mineprep!
+
+> Currently there is no user tutorial •ࡇ• — Before the official release of v1.0, the plugin is mainly for internal use, and we haven't planned to deal with compatibility and potential ~~bugs~~ features. If you don't have Unreal Engine, you can download the packed demo from the Release section to experience this plugin's demonstration.
+
+## Installation (for version 0.3+)
+1. Download the MCprep folder and place it in the "content" directory of your UE project (do not place it in other paths).
+
+2. Enable the following built-in plugins:
 - Python Editor Script Plugin
 - Movie Render Queue
 - Movie Render Queue Additional Render Passes
 - OpenColorlO (OCIO)
+- Apple Prores Media
 - NiagaraFluids
 - Motion Trajectory
 - Motion Warping
@@ -26,344 +32,67 @@
 - Chooser
 - Deformer Graph
 - Text 3D
-- Chaos Flesh（当前版本非必须）
-- Motion Design（当前版本非必须）
+- Metasound
+- Take Recorder (not required in the current version)
+- Chaos Flesh (not required in the current version)
+- Motion Design (not required in the current version)
 
-重启虚幻引擎，右键Mineprep蓝图，点击“运行编辑器控件”，此时插件的大部分功能已经可以使用了！
+Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Editor Utility Widget". Most of the plugin's functions should now be available!
 
-3、下载并安装 [TApython](https://github.com/cgerchenhp/UE_TAPython_Plugin_Release) 和 [DLSS](https://developer.nvidia.com/rtx/dlss/get-started) 以使用植物摇摆等更多功能。这俩需要手动安装，对新手来说会比较麻烦（回忆一下你第一次给MC装模组的情景，装Forge、Fabric等前置插件还是有点困难的。~~哦你说你玩的是基岩版那没事了~~）以后会简化安装流程！
+3. Download and install [TApython](https://github.com/cgerchenhp/UE_TAPython_Plugin_Release) and [DLSS](https://developer.nvidia.com/rtx/dlss/get-started) to use additional features like auto sway. These need to be installed manually, which can be a bit tricky for beginners (Remember the first time you installed mods for MC? Forge, Fabric, pre-request... It was truly a bit difficult. ~~Oh you say play the Bedrock Edition, never mind then~~). The installation process will be simplified in the future!
 
-4、下载 [Blender](https://www.blender.org/download/) 并安装 [MCprep](https://theduckcow.com/dev/blender/mcprep/) 插件，然后在Mineprep面板配置Blender路径，以使用放置方块和物品的功能。
+4. Download [Blender](https://www.blender.org/download/) and install [MCprep](https://theduckcow.com/dev/blender/mcprep/), then configure the Blender path in the Mineprep panel to use the block and item spawner.
 
-5、如果要渲染视频，记得点击插件面板的“初始化视频渲染”然后重启。注意，我们用到了 [ffmpeg](https://ffmpeg.org/download.html) 进行视频编码，它的存放路径也就是你的工程文件路径不能有中文。
+5. If you want to render videos, remember to click "Init Video Render" in the plugin panel and then restart. Note that we use [ffmpeg](https://ffmpeg.org/download.html) for video encoding, and its storage path, which is your project file path, cannot contain non-ascii characters. (Besides, click "Experimental Features" and restart to unlock VR stereoscopic rendering. If you don't use it, you needn't click it.)
 
+## License
+- This plugin is open-source under the GPL-3.0 license, which is also inherited from MCprep.
+- Thanks to all the software and plugins referenced, including Unreal Engine, Minecraft, Blender, MCprep, FFmpeg, TApython, DLSS, etc. You may also check their requirements — for example, MCprep requires you to own a legitimate copy of Minecraft, and the official assets of Unreal Engine  can only be used within UE.
 
-## 版本更新
+## Version Updates
 
-#### 24w30a
-- Mineprep 0.4-pre1就要发布了，这是最后一次快照更新，加入新功能并修复bug~
-- **强制刷新构造函数**  
-  `对象`：最后一个视口选中项  
-  `效果`：每隔一段时间刷新选中的物体，使其在编辑器中不断更新状态。如果帧数下降，可以勾选“中止”打断程序运行。例如，之前摇臂摄像机的关键帧动画不能触发追踪模块，现在可以使用此功能强制刷新了。  
-  `可选项`：时长(s)，间隔(s)，中止(勾选框)
-- 修改了所有骨骼的碰撞设置，修复穿模和面部扭曲的bug
-- 新增`软体史蒂夫`，使用骨骼模拟物理+Niagara变形制作而成，目前只能在场景中放置一个实例，之后会继续更新。
-> 我们还尝试用Chaos Flesh做软体模拟，但是bug更多了，暂时不会加入插件面板
-- 新增`下雪粒子`
-- 新增`MC文字`，需要开启Text 3D插件，放置到场景中可以修改文本、颜色等属性。
-- 在视频渲染模块中添加了“-tag:v hvc1”。H.265分为hev1和hvc1两种模式，苹果不支持之前默认的hev1，现在指定为hvc1。
-- 全景渲染预设的DLSS Quality已更改为DLAA，能显著提升质量，同时将横向采样数改为4、横向视野设置为120°，渲染前采用10帧显式暖场帧，以节约显存并加快速度。
-> 好消息：官方为全景渲染插件做了3D输出功能；坏消息：不知为何它被隐藏起来了，需要修改插件源码才能启用。目前Mineprep不包含C++模块，我们考虑在0.4pre-1之后加入新功能，也许就能输出VR+3D+HDR的超高规格视频了！
-- “MCprep自定义渲染配置”改名为“Mineprep自定义渲染配置”，同时修改预设分辨率，“VR全景_4K”改为4320x2160（因为4K又叫2160p，通常以短边为基准），“VR全景_8K”改为8640x4320
-- 修复了暖场帧、HDR视频编码等bug
+#### 0.4-pre1
+![image](Readme素材/0.4封面图.jpg)
+- New milestone (*・ω・)ﾉ We fixed a lot of bugs and added several new features this week. The packaged demo exe containing all the content from 0.3 and 0.4-pre1 will be uploaded later as a formal Release.
+- mcprep_data.json has been updated to version 1.21, synchronized with the newly released MCprep 3.6. The default resource pack has not been updated yet.
+- Added a `Complex` option next to the "Collision" option in the plugin panel, enabled by default. Previous prepared scenes also used complex collision; if you want to perform physical simulations, please disable this option and then use the prepared scene on the selected items. Additionally, three new features have been added:
+- **Replace Material**  
+  `Modifies`: Viewport Selected   
+  `Effect`: Searches for a single static mesh or a blueprint containing skeletal mesh components and replaces all materials with the specified material. If no material is specified, no replacement will occur.  
+  `Options`: Material, Overlay, Physics
+- **Process Recorded Animation**  
+  `Modifies`: Opened sequencer  
+  `Effect`: Searches for "Motion Matching Player" on the timeline, finds recorded animations, and attempts to fix rotation issues. (I finally found this bug. Since the MC rigs are redirected to the official motion matching character at runtime, it records keyframe animations twice. Resetting the MC rigs' rotation to zero can partially solve the issue of idle camera rotation).
+> The following is the first experimental feature and the first one to include C++ code.  
+> We discovered the hidden VR+3D rendering feature last week and couldn't wait to bring it out this week -- please use experimental features with caution. A detailed introduction and warning will pop up before running, requiring confirmation to proceed.
+- **Experimental Feature**  
+  `Requires`: UE version 5.4 + Windows system (Otherwise, it will try to recompile the plugin from source code when opening the project file, and it's currently unclear if Visual Studio is needed)  
+  `Modifies`: Movie Render Queue Additional Render Passes plugin  
+  `Effect`: Extracts the modified new plugin and moves it to the Plugins folder in the root directory of the project file. It will prioritize loading the plugin from here upon restart. The Stereo, Eye Separation, and Eye Convergence Distance options in panoramic rendering have been unlocked, allowing output of stereoscopic panoramic rendering. Other rendering presets are unaffected. It has not yet been added to the custom rendering configuration in the plugin panel.  
+  `Options`: Yes/No
+- New rendering preset `【实验性】VR_3D-FTB_8K_HDR_exr`, requires enabling experimental features  
+  - Uses 8640*8640 resolution, outputs a Full-Top-Bottom panoramic sequence, adopts Rec2100 PQ color transformation, and DWAA compressed exr encoding. Since we're doing such high-spec rendering, let's max out all parameters.
+  - Each frame is about 35MB, requiring about 40G of VRAM + shared memory... This is really not something an ordinary computer can handle qwq (exr is already much smaller than png).
+- Continued fixing rendering preset and character collision bugs
+- Added `Diffuse` slider to the "Light Path" panel, which can increase the intensity of indirect lighting
+- Now you can place multiple "Soft Body Steve" in the scene
+- The shortcut key for inverting the mouse Y-axis in "FPV Flight Mode" has been changed to Tab
+- Added an option for automatic wall climbing (i.e., two-block high) to the "Motion Matching Player", enabled by default; can be disabled at runtime by pressing Tab
+- Both "Motion Matching Player" and "Simple NPC" now have item slots and can enable physical simulation through the num pad.  
+  "0" - Paralysis  "." - Toggle gravity  "2" - Drop item  
+  "4" - Break left arm  "1" - Break left leg  
+  "6" - Break right arm  "3" - Break right leg  
+  "8" - Break head  "5" - Break Full body   
+  - When recording animations using the camera recorder, if you want to throw the held item, add "Nearby Spawned Actors", and then manually specify the model of the thrown item on the timeline. This is currently the best method, as directly dropping the original item causes jitter, while spawning a new item is more stable.
+> The above shortcuts may require enabling Num Lock on the num pad
+- Added "NPC跑步跟随目标" (Run to Follow Target) option and several original running animations to the creature detail panel.
+- "MC Sky" can now set the direction and speed of cloud movement, and the cascade shadow distance of lighting has been increased for smoother transitions
+- "Prepared Scene" now adds sound effect physical materials based on block names. Currently, there are six types: grass, gravel (dirt), sand, snow, stone, and wood. Unmatched ones are considered stone. The "Motion Matching Player" will play corresponding footstep sound effects when walking on them. Note that the entire audio rendering module is still in early development, and currently, you can only hear the sound.
+- Added `Smooth Physical Material`, `Elastic Physical Material`, and the previously existing "High Friction Physical Material" to affect objects with enabled physical simulation.
+- Removed the material interface of "Interactive 2D Water Surface" because water materials require a dedicated module to render waves, and randomly changing one doesn't work. Also, changed its collision target from Actor to component, fixing the collision failure bug.
+- Fixed the bug where "Light Linking" was ineffective for internal components
+- The "2x Distance Field" and "Enable Nanite" options in the "LOD&Nanite" feature are disabled by default, as they run very slowly. The first button to disable shadows seems more practical.
+- The plugin panel pop-up now supports English, and part of the GitHub Readme has also been translated into English -- Yes, clicking the English button at the top won't lead to a 404 page anymore. The oldest bug has finally been fixed!
 
-#### 24w29a
-- 本周更新了放置生物功能和NPC运动系统，旧版运动匹配角色也重生啦。在背景中放几个生物，无需编辑动画，它们就能动起来，给场景增添几分生机 ╰ \*°▽°\* ╯
-- “放置生物”现已实装，具体参见24w28a介绍。目前支持的生物包括之前的所有人模 + 僵尸、尸壳、溺尸
-- 修复了“MC_UE模块化绑定”的左臂凸起和腿部旋转问题
-- 新增了AI控制器和相关的黑板、任务模块，可以让NPC生物自行游荡或跟随目标。若在场景中放置了导航网格体，它们会跟着导航走。
-- 旧版运动匹配角色重新启用，更名为`简单运动匹配NPC`。它具有AI控制器，运行游戏或渲染时会自己走动。新增了MC原版玩家和僵尸的动作库
-- 新增`下雨粒子`，运行在GPU上，可以实时生成大范围降雨，模拟MC原版风格的雨滴和水花。
-- “附加组件”新增添加标签功能。`“collider” tag`会对物体及其所有组件添加碰撞标签，可以与水交互。`“通用跟踪目标” tag`会添加标签与AI感知刺激源组件，使该物体成为NPC跟随的目标
-
-#### 24w28a
-- 本周更新了“生成MC天空”，“放置生物”，“预设素材”和多个新功能！可以在生成器面板放置生物（暂未实装）、粒子、摄像机、传送门等各种素材了
-- **生成MC天空**  
-  `对象`：MC天空  
-  `效果`：清除场景中的默认光照和大气，添加“MC天空”蓝图。它具有方块形状的云、太阳和月亮，可以更改时间、角度等设置。之后会继续更新  
-- **放置生物**  
-  `对象`：选定的生物  
-  `效果`：尝试在屏幕中心15m内检测地面，如果检测到了就把生物放到地面上，没有就放在前方的空中。放置的生物是从基本骨骼或蓝图角色衍生而来，更换其皮肤、动画库、AI控制器等属性。对于骨骼网格体，会把缩放设置为0.95并添加“collider” tag；对于NPC生物，会随机设置旋转。  
-  `可选项`：生物名称(支持多语言)，过滤名称  
-- **预设素材**  
-  `对象`：选定的蓝图  
-  `效果`：尝试在屏幕中心15m内检测地面，如果检测到了就把预设素材放到地面上，没有就放在前方的空中。  
-  `可选项`：蓝图名称(支持多语言)，过滤名称  
-- 新增了`末影粒子`，`爆炸粒子`。末影粒子必须要通过“附加组件”绑定到生物或模型上，向外持续散发紫色粒子。爆炸粒子则是在一瞬间产生TNT爆炸效果，可以单独放置或绑定
-- 点击语言选项前面的图标，可以直接打开“语言本地化_language_localization.csv”文件
-- 渲染输出名称前面有了重置按钮。点一下会自动更新为“{时间线名称}\_{分辨率}\_{帧率}\_[是否HDR]\_[是否VR]\_[3D({瞳距}mm,{视场}°,[是否FSBS])]”。若未打开时间线则不会更新
-- 绑定3D摄像机组会自动添加到时间线
-
-#### 24w27a
-- 本周对插件的多个方面进行了更新，包括人物模型、3D渲染、生成器、语言本地化等内容
-- 修复了所有人物模型（除模块化绑定外）左臂弯曲会略微凸起的问题
-- 最近发现Blender的形态键可以导出到虚幻引擎！由此可以制作直角弯曲的四肢以及表情变形动画。除模块化绑定外，所有人模都已经添加了变形目标(即形态键)，稍后会制作动画蓝图。
-- 新人模 `MC_Bent`  
-  - 骨架与MocapCarrier相同，四肢具有形态键，通过动画蓝图的驱动器实时变形，实现直角弯曲。
-  - 小臂和小腿锁定了Y轴和Z轴的旋转，小腿X轴旋转限制在75°以内
-  - *形态键可能导致材质法向出现问题，目前没有完美的修复方法，有时会出现异常的光滑/阴影。更换材质时建议添加微弱的自发光
-- 以上模型的FBX文件已更新到“Blender扩展资源”文件夹中
-- 语言本地化更新：借助python脚本，现在能从csv文件中实时读取文字，不需要导入为表格了
-- 生成器面板新增 `附加组件` 按钮，之后还会制作 `放置生物` 和 `预设素材`。它们的选项框具有多语言支持，放置的东西也会重命名
-- **附加组件**  
-  `对象`：最后一个视口选中项  
-  `效果`：把选定的物品绑定到对象上。可能是直接添加为组件，也可能是在场景中生成新物品，比如最新的“3D摄像机组”  
-  `可选项`：物品名(支持多语言)，过滤名称
-- 修复了渲染输出面板和渲染预设的一些bug。现在渲染前会有30帧暖场帧，中途取消不会跳过视频编码了
-- 新增 `3D（FSBS）自定义渲染配置` ，`3D摄像机组` 蓝图，插件面板的 `红蓝3D叠加输出` 选项
-  - 当你按照普通的流程制作了一个镜头后，可以快速输出3D视频：首先选中当前摄像机，然后在生成器面板使用“附加组件”绑定3D摄像机组，接着在渲染输出面板设置参数，最后使用“3D（FSBS）自定义渲染配置”导出视频，这样就搞定了
-  - 默认输出是左右眼画面并排的Full Side By Side格式，横向分辨率变为2倍，适合后期调色、合成苹果的空间视频。勾选“红蓝3D叠加输出”后，会生成目标分辨率的滤色视频，适合带上3D眼睛观看。
-  - 支持HDR，不支持全景渲染和Alpha通道，采样数恒为1，渲染压力为普通视频的2~3倍。**始终建议在插件面板修改渲染参数，最终画面的色彩可能会有些许不同**
-  - 3D摄像机组可以设置“目标摄像机”，“用tag获取摄像机”，“瞳距（mm）”，“预览时捕获每帧”，“预览分辨率（默认540p）”。放置到场景中后，会展示左右眼分别看到的画面和红蓝3D叠加画面。它会自动绑定到选中的摄像机，修改焦距、后期处理配置等参数。绑定函数首先在场景中搜索具有tag的物品（默认tag为“3D”），把它设置为目标摄像机。如果没有，读取你选定的目标摄像机（值为空则在场景中寻找摄像机）。目标摄像机如果是普通摄像机/电影摄像机/包含摄像机的蓝图，就会与之同步；如果目标摄像机是个模型，就只会绑定旋转和位移。
-> 时间轴摄像机和镜头试拍录制器记录的动画会在关卡开始时刷新，因此只绑定目标摄像机会丢失对象。建议添加tag“3D”，或者使用“附加组件”功能，一键配置目标摄像机和tag
-
-> 3D渲染需要记录左右眼画面，性能消耗大。视图卡顿的话可以关闭“预览时捕获每帧”
-
-#### 24w26a
-- 我们重新设计了插件面板并添加了许多新功能
-  - 插件面板从MCprep改名为Mineprep，包含`高级设置`，`渲染输出`，`生成器`，`其他功能`四个子版块
-  - “高级设置”里会显示`材质包路径`，默认为MC原版材质，已经包含在“插件贴图”文件夹中。当点击“更换材质”功能时，会写入你所选择的材质包文件夹；如果中途取消，会终止程序并回到默认材质。你也可以手动输入材质包路径。
-  - 当你配置了Blender路径并安装MCprep插件后，可以使用“生成器”的`放置方块`、`放置物品`功能，远程调用Blender获取模型然后摆放到场景中。名称从材质包中加载，所以会显示英文名。
-  - “其他功能”包含原来的灯光排除、LOD&Nanite功能；新增了`辉光`、`动态模糊`、`光程`、`色彩管理`选项，能够像Blender一样快速调整画面效果。它会首先在场景中生成一个“Mineprep后期处理体积”（如果已经有了，就读取其中的值），范围是无限，优先级是9（高于普通的后期处理体积），然后设置里面的参数。
-- **放置方块**  
-  `前提`：安装Blender和其中的MCprep插件，配置Blender与材质包路径  
-  `对象`：选定的方块（来自材质包）  
-  `效果`：导入并放置选定的方块。首先会在工程文件根目录创建一个空的cache文件夹，然后在后台启动Blender，发送一串命令，远程调用MCprep生成方块，导出FBX模型到cache文件夹中，最后导入虚幻引擎。若4秒内没有检测到模型，程序会终止。导入后先尝试在屏幕中心15m内检测地面，如果检测到了就把方块放到地面上，没有就放在前方的空中。  
-  `可选项`：方块名，材质包路径，过滤名称  
-
-- **放置物品**  
-  `前提`：安装Blender和其中的MCprep插件，配置Blender与材质包路径  
-  `对象`：选定的物品（来自材质包）  
-  `效果`：导入并放置选定的物品。大致流程同上，在Blender中生成模型时会把厚度设置为0.075然后应用实体化修改器  
-  `可选项`：物品名，材质包路径，过滤名称
-
-- **过滤名称**  
-  `前提`：材质包路径有效  
-  `对象`：生成器的所有选项框  
-  `效果`：根据你输入的名称，筛选出包含这些字符的选项。尽管“放置方块”的单词之间有下划线，过滤名称时请使用空格隔开
-
-- **辉光**  
-  `对象`：Mineprep后期处理体积  
-  `效果`：实时更新辉光强度和阈值。当取消勾选时退回到UE5默认辉光设置，同时也会保留修改后的值  
-  `可选项`：强度、阈值
-
-- **动态模糊**  
-  `对象`：Mineprep后期处理体积  
-  `效果`：实时更新动态模糊强度和最大值。当取消勾选时退回到UE5默认设置，同时也会保留修改后的值  
-  `可选项`：强度、最大值
-> 注意，动态模糊仅在游戏和渲染模式下可见，视图编辑器好像没效果
-
-- **光程**  
-  `前提`：在项目设置里开启lumen硬件光线追踪  
-  `对象`：Mineprep后期处理体积  
-  `效果`：把光线光照模式改为“反射的命中光照”，实时更新反射次数和折射次数。这可以用于镜子的多重反射。当取消勾选时退回到UE5默认设置，同时也会保留修改后的值  
-  `可选项`：反射次数、折射次数
-
-- **色彩管理**  
-  `对象`：Mineprep后期处理体积  
-  `效果`：启用自动曝光时把曝光补偿设置为1，关闭自动曝光时把曝光补偿设置为11；实时更新曝光补偿、阴影对比度、高光对比度。当取消勾选时退回到UE5默认设置，同时也会保留修改后的值  
-  `可选项`：自动曝光（勾选框）、曝光补偿、阴影对比度、高光对比度
-
-#### 24w25a
-- 0.4版本的第一个快照！虚幻引擎官方发布了运动匹配示例场景，我们很快移植到了MC角色上
-- 旧版运动匹配蓝图已弃用，暂时保留在依赖文件夹里。取而代之的是新版`第三人称运动匹配角色`。
-  - 可以像MC一样用WASD移动角色、shift潜行、ctrl加速、空格跳跃等等。
-  - 角色具有运动匹配功能，会自动从动画库中挑选合适的动画播放，通过运行时重定向把动画应用于MC人模。
-  - 默认皮肤是官方宣传片材质的史蒂夫
-  - 新增：正面自动跨上1格高方块，侧面自动跳上1格高方块，自动翻越1格高栅栏，按空格还可攀爬1.5~2.5格高方块
-  - 新增：用键盘“1”，“2”，“3”切换表情，默认播放眨眼动画。这些动画片段可以在类默认值里更改。
-  - 新增：鼠标右键聚焦，中键居中人物。这是官方运动匹配附带的功能，以后可能会更改。
-> 注意，镜头试拍录制器似乎无法单独录制镜头旋转。不建议在人物静止时旋转视角。
-- 根据MCprep官方的建议，插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆。Github主页很好改名，但是动插件文件夹会出一堆bug，之后再试试qwq
-
-
-### 0.3 : 多彩世界
-![image](Readme素材/0.3封面图.jpg)
-
-- 0.3正式版现已发布！本次更新的主题为“多彩世界”，和0.2版本相比，加入了大量新功能与资源素材，我们用其制作了动画短片《史蒂夫之梦》。来看一看最后更新的内容吧：
-- **优化安装流程，减少对其他插件的依赖**。之前的版本必须借助TApython才能运行，否则整个蓝图都会报错。现在只有“植物摇摆”功能依赖TApython，而且它不影响其他功能。具体来说，我们用python自带的filedialog替代了“更换材质”的选择文件夹弹窗，用UE自带的“显示消息对话”节点替代了右下角提示弹窗。
-- **修复大量bug，提高稳定性**。 “准备场景”在搜索材质中的纹理贴图时，会判断对象是否为空来避免闪退，最多向前查找三层。“更换材质”会先删除原来的材质节点（删的更干净了），再连接新材质。动画纹理能对粗糙度和法线贴图进行处理了。
-- “准备场景”新增`渐变动画纹理`选项，可以使动画材质平滑过渡。
-- “LOD & Nanite”新增`投射阴影`选项，可以批量关闭选中项的阴影。在导入超过1000万面的特大场景后，阴影渲染会使帧数明显下降。不妨在编辑场景时关闭一部分模型的阴影，渲染前再打开。
-- 新增`滚动方块`，把它拖放到场景中，设置方向、重力、速度，可以在运行时滚起来
-- 整理了插件结构，现在有一个“材质”文件夹。更新了Github页面对插件的介绍。
-- 我们计划跳过0.3 Demo内容示例，等下次0.4-pre1一起发布。下个版本的主题暂定为“足迹与故事”，将会制作生物、动画这方面的内容。
-
-#### 24w22a
-- 本周没有更新，因为我们正在全力制作新的动画视频《史蒂夫之梦》！过几天就能发布啦，祝MC15周年生日快乐（托更了好久hh）
-
-#### 24w21a
-- 新增`摇臂摄像机`，预先把电影摄像机绑定到摇臂上，拖入场景即可使用。开启“希区柯克变焦”功能后，摄像机将自动追踪摇臂底座，根据摇臂长度缩放焦距。
-> 和单独的摄像机相比，电影摄像机组件缺少追踪模块，因此用蓝图实现了类似功能。遗憾的是和追踪相关的关键帧动画不会在视图中更新，需要进入游戏模式或者渲染才能看到。***0.4版本(24w30a)新增了“强制刷新构造函数”按钮解决此问题！***
-- 优化了传送门材质，可以调整纹理和色相，增加了传送门的整体缩放变量
-
-#### 24w20a
-- 新增`曲线引导粒子`，由样条线和粒子系统组成，粒子会沿着曲线运动。拖放到场景中之后，选中一个控制点并按住Alt移动，即可挤出新的控制点。
-- 修改了所有粒子系统，开放材质或网格体接口，现在可以在细节面板里编辑这些参数了。
-- 新增表情动画蓝图，目前处于测试阶段，附带了两个表情。直接把动画蓝图拖放到场景中，在两个轨道中添加身体和表情的动画，然后右键把表情的插槽名称改为“f”，即可分离控制。
-- Nvidia宣布将在一个月内更新DLSS插件！这意味这我们可以迁移到UE5.4了，Unreal MCprep 0.3正式版即将推出~
-
-#### 24w19a
-- 新增`Demo`分支，存放打包的exe文件，并发布到release里。Git LFS传大文件有好多坑啊啊啊，我最后选择了分卷压缩(doge
-- 优化了飞行模式的手感，现在转向回正后不会漂移，按"\\"可以反转鼠标Y轴
-- 调整了所有游戏模式的摄像机光圈，可以在更大范围内设置景深了
-- 优化了可交互3D水面的渲染，减少颗粒感
-- 修改了MC_FaceX和MC_Slim_FaceX的脸部骨骼，为接下来的高级表情控制功能做准备
-
-#### 0.3-pre1
-- 第一个预览版本，进行了大量优化并修复了不少bug！稍后将上传打包的exe文件，供没有虚幻引擎的用户体验插件。以下是新功能
-- **自发光**  
-  `对象`：视口选中项/资产文件夹  
-  `效果`：使选中的材质发光，可以分别控制照亮场景的强度和自身亮度  
-  `可选项`：照明强度，自身亮度
-- **灯光排除**  
-  `对象`：视口选中项  
-  `效果`：批量分配选中对象的灯光组。只有同一组的灯光才能照亮同一组的物体。默认灯光组是1  
-  `可选项`：灯光组 [1，2，3]
-- **LOD&Nanite**  
-  `对象`：视口选中项/资产文件夹  
-  `效果`：开启对应选项后，可提高网格体距离场分辨率至2倍（有利于GPU碰撞检测），开启Nanite并将回退目标的三角形百分比设置为100%（保持原先碰撞箱）  
-  `可选项`：2x增强网格体距离场，启用Nanite
-> 不清楚这是什么功能？那就最好不要动它哦。MC的Distant Horizon模组特别棒，我也试了试UE5的Nanite优化 —— 虽然帧率显著提升，但方块变成多边形了，一言难尽。2x增强网格体距离场会逐步加重负担，导致帧率下降，建议不要给整个场景使用，应该搭建小的辅助碰撞模型。哦对了，这俩玩意儿加载时间特别长，一不小心还会闪退TAT
-- 改进了自定义附魔的实现方法，现在可以在物体面板看到附魔组件了
-- 大改视频渲染模块：虚幻引擎默认的ffmpeg编码模式是concat，会导致重复帧和卡顿，拖慢编码速度。现在采用默认的input，极大加快N卡处理png序列帧的速度，视频也变流畅了！
-  - 两个mp4渲染配置文件的默认硬件选项从Intel GPU改为Nvidia GPU
-  - 插件面板增加了帧率和视频名称的选项
-  - 新增以下两个渲染预设，需要开启UE自带的*Apple Prores Media* 插件，无需插件的初始化功能。这个格式编解码速度快，但windows自带播放器是不认的，而且体积很大。
-  - `Prores_2K_mov（UE内置插件）`使用2560x1440分辨率，直接输出Prores422LT编码的mov视频，无需渲染结束后的等待。
-  - `Prores4444_2K_透明mov（内置插件）`使用2560x1440分辨率，直接输出Prores4444编码的mov视频，还能包含Alpha通道，生成透明免抠视频。    
-- 更新了飞行模式，手感大大提升。现在按鼠标左/右/中键都可以急刹，并且效果会叠加。按鼠标侧键可以加速俯仰。我们收集了许多内测建议，将陆陆续续改进。
-- 准备场景增加了“启用碰撞”选项
-- 更换材质能自动处理动画贴图了
-- 新增了UE“建筑可视化”示例里的高质量水材质
-- 优化了传送门和落叶粒子。“VFX传送门”可以使用立方体渲染目标的全景贴图，保持高性能的同时带来透视效果，目前还不能传送。
-- 新增`可交互2D水面`，`可交互3D水池`，`粒子自碰撞`，都是使用Niagara GPU的高性能粒子系统。
-- 新增`场景初始化`蓝图，拖放到场景中设置画质和最高帧率
-- 正在制作一个示例文件，展示Unreal MCprep的各种功能，打包后供没有虚幻引擎的用户体验。
-
-#### 24w17b
-- 新增了`第三人称运动匹配模式`
-  - 可以像MC一样用WASD移动角色、shift潜行、ctrl加速、空格跳跃等等。
-  - 角色具有运动匹配功能，会自动从动画库中挑选合适的动画播放
-  - 目前从Mixamo中下载了几个动作，包含前后左右的行走和跑步，仅供测试使用。再过几个月，UE5.4会发布一个官方示例文件，里面包含上百个高质量动画。我们已经做好了准备，到时候可以快速迁移到这个角色上——然后就能实时录制动画了！
-> *此功能需要UE5.4的Motion trajectory插件
-- 新增了从UE5和Mixamo人模到MocapCarrier的重定向器。推荐用这个功能替代自动重定向，因为原来的运动速度不一样，经过调试之后将根骨骼的位移x1.5就好多了。
-> 注意，Mixamo下载的动画不带根骨骼，启用根运动会出错。我通过[Mixamo Converter](https://terribilisstudio.fr/?section=MC)对其进行转换，然后重定向。另外Mixamo Converter只认Mixamo网站的标准模型。
-- 重命名：`MC玩家摄像机 & MC玩家模式`已更名为`MC第一人称摄像机 & MC第一人称模式`，`飞行模式`已更名为`FPV飞行模式`
-- 改进了飞行模式，现在按鼠标左右键可以急刹，上升/下降的速度会随飞行速度而变化。
-
-#### 24w17a
-- 一大批MC人模正在接近 —— 借助动作捕捉和游戏模式，减轻k帧的工作量，加快动画制作流程！先来看看目前做好的通用模型吧
-- 更新了插件结构，*Blender_export.py* 和新的FBX人模放在*Blender扩展资源* 文件夹下。这些FBX模型具有广泛的兼容性，可以导入Blender、UE、Mixamo（在线动作捕捉素材库）、Cascadeur（AI辅助动画软件，可用于视频动捕）等各种软件。MCprep的*生物模型rigs* 文件夹里已经包含了导入UE5.4并经过优化的模型。
-- `MocapCarrier`（简称MC）
-  - 最基础的模型，自带Steve的粗胳膊皮肤。
-  - 下面的高级人模都设置了骨骼兼容，可以直接使用MocapCarrier的动画，无需重定向。如果要用其他动作捕捉软件，推荐用它作为载体，这就是MocapCarrier名字的由来
-- `MC_Slim`  
-  - 骨架与MocapCarrier相同，自带Alex的细胳膊皮肤。
-- `MC_FaceX`  
-  - 在MocapCarrier基础上，添加了脸部骨骼，可单独设置嘴巴、眉毛、左眼、右眼、眼白的材质。
-  - 脸部不打算做动捕或者高级绑定了，稍后会制作动画库，准备一些常用素材；也可以自己k帧。
-- `MC_Slim_FaceX`  
-  - 在MC_Slim基础上，添加了脸部骨骼，可单独设置嘴巴、眉毛、左眼、右眼、眼白的材质。
-- `MC_模块化绑定`  
-  - 在MocapCarrier基础上，调整了腿部骨骼轴向，配置了UE5.4的模块化绑定功能。
-  - 把它拖放到场景中，你会直接进入动画模式，能对各个关节进行k帧，腿部和身体有IK绑定。  
-  > 不过...应该没人会在虚幻引擎中手搓动画吧（づ￣3￣）づ 以上人模主打一个动作捕捉工作流程，要k帧也可以去Blender或者Cascadeur，所以就只给MocapCarrier做了模块化绑定，其他的不搞了，展示一下新功能就行。模块化绑定的IK控制器需要很奇特的骨骼朝向，不然会变成小短腿，这个bug修了好久
-
-#### 24w16a
-- 更新了两个游戏模式，现在可以像玩MC一样用键盘移动/飞行啦。开启UE5自带的 *Take Recorder* 插件后，还能通过 *镜头试拍录制器* 记录运动轨迹，实时运镜。最简单的使用方法是修改 *世界场景设置* 里的 *游戏模式重载* ，不需要拖放蓝图，直接运行游戏就行。
-- `MC第一人称摄像机 & MC第一人称模式`  
-  - WASD移动，shift潜行，ctrl加速，空格跳跃
-  - 包含自动跳跃、潜行防掉、视野缩放等特性
-- `飞行摄像机（Do_a_barrel_roll）& 飞行模式`
-  - MC有一个超棒的鞘翅模组叫Do a barrel roll，可以像FPV无人机一样做空中机动，我参考他的按键设置制作了飞行模式（目前是初稿，以后可能有修改）
-  - WS前进/后退，AD左右偏航，鼠标左右移动横滚，前后移动俯仰
-  - 空格上升，shift下降，ctrl加速前进，z加速后退
-- *小故事：我本来没有做炸机的程序，但是撞上东西后自带奇妙效果，还特别好玩 (ﾉ･ω･)ﾉ 应该是弹簧臂组件的特性*
-
-#### 24w15b
-- 添加了落叶粒子（niagara）和传送门（立方体渲染目标）的基础模板
-- 整理了插件结构，可以拖放到场景中的素材都保存在`MC蓝图资源`文件夹下
-
-#### 24w15a
-- 更新了一键附魔功能
-- **附魔**  
-  `对象`：视口选中项  
-  `效果`：将附魔材质添加到选中物体的覆层材质  
-  `可选项`：祛魔 - 清除覆层材质  
-  - 自定义附魔 [颜色，速度，缩放，透明度] - 添加一个组件，在运行时创建动态材质实例，修改以上参数  
-  > · 由于动态材质实例的特性，只有开始游戏和渲染时才能看到效果  
-  > · 与植物摇摆一起使用会有穿模bug
-  
-
-#### 24w14b
-- 更新了插件面板的UI文本绑定，为后续更新和多语言支持带来便利。现在所有名称记录在`语言本地化_language_localization.csv`文件中，可以很方便地编辑，然后导入虚幻引擎变成表格，在插件运行时加载。
-
-#### 24w14a
-- 重新整理了插件结构，所有虚幻引擎相关内容都在MCprep文件夹里，丢到工程文件的Content目录下就可以使用了
-- 从这个版本起，不需要安装Easy File Dialog作为前置插件了，选择文件夹的功能由TApython提供
-- 制作了2个视频渲染预设和1个自定义配置文件，可以通过插件面板修改。我们终于实现了在虚幻引擎中快速导出视频的方法——甚至还能导出HDR视频！先来看看全新的“自定义渲染配置”功能吧
-- **预设**（选项框）  
-  `对象`：MCprep自定义渲染配置/插件面板细节参数  
-  `效果`：选择一个渲染预设，加载到“MCprep自定义渲染配置”和插件面板细节参数  
-  `可选项`：(Intel)2K.mp4, (Intel)HDR_2K.mp4, 2K.png, ACES_2K.exr, HDR_2K.exr, VR全景_8K.png
-- **初始化视频渲染**  
-  `对象`：DefaultEngine.ini  
-  `效果`：如果要导出视频，需要进行初始化并重启工程文件（一个工程只需一次初始化）。它会解压ffmpeg压缩包，把ffmpeg.exe的路径添加到项目设置中，并修改一些编码参数
-- **打开输出文件夹**  
-  `对象`：/Saved/MovieRenders  
-  `效果`：打开默认输出文件夹。如果路径名称包含中文等特殊字符，会弹出一个警告。此时你可以渲染图片序列帧，但不能用ffmpeg导出视频！建议使用纯英文路径
-- **更新渲染配置**  
-  `对象`：MCprep自定义渲染配置  
-  `效果`：将细节面板的参数载入到“MCprep自定义渲染配置”中，你可以在渲染时调用它。  
-  `可选项`：（可以使用预设或手动修改）
-  - 输出图片序列帧格式 [png, jpg, exr]  
-  - 分辨率 [1080p, 2K, 4K, VR全景_4K, VR全景_8K]
-  - 空间采样数、时间采样数
-  - 色彩管理 [普通(sRGB), HDR(Rec2100 PQ), ACEScg]
-  - 全景渲染（勾选框）
-  - 输出视频（勾选框）
-  - 视频编码 [H.264, H.265]
-  - 硬件加速 [CPU(慢), Nvidia GPU, Intel GPU, AMD GPU]
-  - 色度抽样 [yuv420p, yuv422p, yuv444p, yuv420p10le, yuv422p10le, yuv444p10le]
-  - 质量 [低, 中, 高, 极高]
-  - 是HDR视频（勾选框）
-> 如果不清楚某个选项最好不要动它！错误的搭配会导致视频颜色怪异甚至无法播放，不过windows自带的播放器比较差，yuv444都放不出来(*￣︿￣)。显卡编码比cpu快得多，这两年的intel核显就已经很强了，强烈推荐用显卡。另外把png编码成视频的速度远慢于jpg和exr。
-
-  下面是两个新的视频编码预设
-- `Nvidia_2K_mp4`使用2560x1440分辨率，输出png序列帧，通过ffmpeg编码为10bit H265的mp4视频。默认编码器是Nvidia的hevc_nvenc  
-  注：把8bit素材编码为10bit视频，实测下来真的能减少色彩断层！
-- `Nvidia_HDR_2K_mp4`使用 *HDR_2K_exr* 的预设，通过ffmpeg编码为10bit H265的mp4视频，带Rec2100 PQ静态元数据。默认编码器是Nvidia的hevc_nvenc
-- *小故事：我测试插件时使用最高质量视频编码，导出后仍然有色彩断层，这是怎么回事呢...？哦原来我在用笔记本远程连接台式机，网络传输压画质了hhh*
-
-#### 24w13b
-- 制作了4个渲染预设和1个OCIO色彩管理文件。（没有渲染预设前，我会优先选择录屏，毕竟UE5比起blender最大的优势就是速度快嘛。以下渲染配置都是1个采样，不使用路径追踪，有N卡的用户强烈推荐安装DLSS！）  
-- `2K_png`是之前常用的渲染设置，使用2560x1440分辨率并输出png序列帧。若安装了DLSS插件，还会使用DLAA。  
-- `ACES_2K_exr`使用2560x1440分辨率和ACEScg色彩变换，输出DWAA压缩的exr序列帧。若安装了DLSS插件，还会使用DLAA。这个需要在达芬奇等专业后期软件里剪辑，可以转换成其他色彩空间。  
-- `HDR_2K_exr`使用2560x1440分辨率和Rec2100PQ色彩变换，输出DWAA压缩的exr序列帧。若安装了DLSS插件，还会使用DLAA。这个需要在支持HDR和exr的后期软件里剪辑，比如PR和达芬奇。  
-- `VR全景_8K_png`使用7680x3840分辨率，输出png序列帧。必须开启虚幻引擎自带的Movie Render Queue Additional Render Passes插件并关闭项目设置里的自动曝光。若安装了DLSS插件，还会使用DLSS Quality。注意全景图需要很高的分辨率才会看起来清晰，而且尺寸要是2:1。默认设置使用横8纵3的拼接模式，速度超慢还占显存（目测24G都不够用），我试验后改成横5纵3，配合DLSS 16G勉强够用。如果电脑带不动可以降分辨率，但是4K会比8K糊得多。
-
-#### 24w13a
-- 在弄坏了两次插件后，我准备定期更新github，既能作为备份也能推进开发。不如...就学mojang一周发一个快照吧
-- 添加了Readme简介，记录了0.1 0.2两个分支版本
-- 制作了用于附魔的覆层材质和用于动画序列帧的材质函数
-
-### 0.2
-- 小插件有图形化界面啦~通过右键运行编辑器工具控件即可调出插件面板。下面是已实现的功能和可选参数
-- **准备场景**  
-  `对象`：视口选中项/资产文件夹  
-  `效果`：批量优化材质、贴图和碰撞箱。修改模型碰撞复杂度为“将复杂碰撞用作简单碰撞”；修改材质混合模式为“已遮罩”，启用“双面”，连接Alpha通道，将高光贴图反转后连接到粗糙度；修改纹理贴图的过滤器为“最近”，如果不是法线贴图再把压缩设置改为“用户界面2D（RGBA）”  
-  `可选项`：重载材质属性（金属度，高光度，粗糙度）
-  
-- **更换材质**  
-  `前提`：安装UE5的Easy File Dialog插件。*0.3版本已不再需要前置插件*  
-  `对象`：视口选中项/资产文件夹  
-  `效果`：批量更换贴图（支持PBR材质包，但不支持CTM连接纹理），同时调用“准备场景”中的优化材质功能。运行时会弹出资源管理器，让你选择一个MC材质包解压后的文件夹。  
-  `可选项`：重载材质属性（金属度，高光度，粗糙度） 
-
-- **植物摇摆**  
-  `前提`：安装UE5的TApython插件  
-  `对象`：视口选中项/资产文件夹  
-  `效果`：让选中的对象随风摇摆。在材质中创建simple grass wind节点并连接到全局位置偏移  
-  `可选项`：摇摆幅度，摇摆速度
-
-- **启动Blender**  
-  `效果`：把你的Blender.exe文件路径复制到框中（建议直接复制到插件的默认值），点一下图标即可打开blender。以后还会添加更多功能
-
-- *小故事：~~怎么会有人把自己的插件搞坏了两次啊qwq~~ 我想把插件复制到另一个工程文件里，一不小心按了ctrl+x剪贴，又一不小心按了ctrl+z撤销，然后它 ...原地消失了！  
-  尝试恢复文件无果后，我只好从头再做一遍，不过这次有了更好看的UI界面和更整齐的蓝图节点，为后续更新打下了基础*
-
-
-### 0.1
-- 最早的版本，写了两个python文件，`Blender_export.py`可以在blender中批量处理mcprep优化过的材质，使贴图能够导出到OBJ/FBX中。`unreal_mcprep.py`则是在虚幻引擎里批量优化材质、贴图和碰撞箱。
-- *小故事：当时我随便给文件起了个名字，好像叫test.py，结果一不小心把它覆写掉了，痛失插件qwq。后来我重写了代码，把它传到github上做备份，Unreal MCprep从此诞生了！*
+> [!NOTE]
+> The remaining translation is WIP
