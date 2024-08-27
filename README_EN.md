@@ -46,8 +46,13 @@ Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Edi
 5. If you want to render videos, remember to click "Init Video Render" in the plugin panel and then restart. Note that we use [ffmpeg](https://ffmpeg.org/download.html) for video encoding, and its storage path, which is your project file path, cannot contain non-ascii characters. (Besides, click "Experimental Features" and restart to unlock VR stereoscopic rendering. If you don't use it, you needn't click it.)
 
 ## License
-- This plugin is open-source under the GPL-3.0 license, which is also inherited from MCprep.
-- Thanks to all the software and plugins referenced, including Unreal Engine, Minecraft, Blender, MCprep, FFmpeg, TApython, DLSS, etc. You may also check their requirements — for example, MCprep requires you to own a legitimate copy of Minecraft, and the official assets of Unreal Engine  can only be used within UE.
+- When creating the plugin, I first used the GPL-3.0 license, but recently discovered that UE's source code EULA is incompatible with open-source licenses (*´･д･)? So for now there is no License file here. In short:
+- In most cases, you can use this plugin for free.
+> UE5.4 charges film makers with annual revenue over $1 million per seat. Apparently we won't reach that threshold hhh (UE5.3 and earlier versions even didn't  charge the film industry, but engine content is not backward compatible, so the latest Mineprep can only be used with higher versions).
+- Without an open-source license on GitHub, it is private by default, so you can't modify the plugin and sell it. Given the inclusion of engine source code and official assets, UE5's EULA is incompatible with open-source licenses. You should edit it for personal use only.
+> Interesting fact: open-source ≠ public ≠ free. For example, you can find Unreal Engine source code on GitHub, but it uses Epic Games' own EULA. Open-source is related to the License file.
+- Thanks to all the software and plugins referenced, including Unreal Engine, Minecraft, Blender, MCprep, FFmpeg, TApython, DLSS, etc. When using relevant content, you can also check their requirements — for example, MCprep requires you to own a legitimate copy of Minecraft, and UE's official assets can only be used within Unreal Engine.
+- In the future, we may consider making a Mineprep Lite, which only includes core features like prep scene and swap texture, without official assets and engine source code. This will make installation much simpler and I can put a GPL-3.0 license there.
 
 ## Version Updates
 
@@ -86,6 +91,11 @@ Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Edi
   - When recording animations using the camera recorder, if you want to throw the held item, add "Nearby Spawned Actors", and then manually specify the model of the thrown item on the timeline. This is currently the best method, as directly dropping the original item causes jitter, while spawning a new item is more stable.
 > The above shortcuts may require enabling Num Lock on the num pad
 - Added "NPC跑步跟随目标" (Run to Follow Target) option and several original running animations to the creature detail panel.
+- Added "Idle-Follow AI Controller"
+- Try fixing the bug where the Take Recorder can not record character camera rotation.
+  - The FPV flying camera can always record rotation.
+  - The MC first-person camera can now record rotation except for camera shake.
+  - The motion matching player is more complicated. You need to place a `Sync Player Camera` through the generator, then add it to the recording panel. It will sync and record the player's camera rotation. If the recorded animation has a few stutters, delete those keyframes and smooth the transition. Remember to switch the camera bound to the timeline before render.
 - "MC Sky" can now set the direction and speed of cloud movement, and the cascade shadow distance of lighting has been increased for smoother transitions
 - "Prep Scene" now adds sound effect physical materials based on block names. Currently, there are six types: grass, gravel (dirt), sand, snow, stone, and wood. Unmatched ones are considered stone. The "Motion Matching Player" will play corresponding footstep sound effects when walking on them. Note that the entire audio rendering module is still in early development, and currently, you can only hear the sound.
 - Added `Smooth Physical Material`, `Elastic Physical Material`, and the previously existing "High Friction Physical Material" to affect objects with enabled physical simulation.
