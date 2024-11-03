@@ -16,7 +16,7 @@
 14,初始化视频渲染,Init Video Render,初始化視頻渲染,,,,猪灵,Piglin,豬人/豬布林,,,,,同步玩家摄像机,Sync Player Camera,同步玩家攝像機,,,,,,,,,,,,
 15,打开输出文件夹,Open Output Folder,打開輸出資料夾,,,,猪灵 [NPC],Piglin [NPC],豬人/豬布林 [NPC],,,,,丁达尔体积光,God Rays,丁達爾體積光,,,,,,,,,,,,
 16,输出图片序列帧格式,Image sequence :,輸出圖片序列幀格式,,,,猪灵蛮兵,Piglin Brute,殘暴豬人/豬布林蠻兵,,,,,动态体积雾,Dynamic Volumetric Fog,動態體積霧,,,,,,,,,,,,
-17,分辨率,Resolution,分辨率,,,,猪灵蛮兵 [NPC],Piglin Brute [NPC],殘暴豬人/豬布林蠻兵 [NPC],,,,,缓动导轨摄像机,Smooth Rail Camera,緩動導軌攝像機,,,,,,,,,,,,
+17,分辨率,Resolution,分辨率,,,,猪灵蛮兵 [NPC],Piglin Brute [NPC],殘暴豬人/豬布林蠻兵 [NPC],,,,,导轨摄像机,Rail Camera,導軌攝像機,,,,,,,,,,,,
 18,空间采样数,Spatial samples,空間採樣數,,,,卫道士,Vindicator,衛道士,,,,,流体化自碰撞粒子,Fluid-style Collision Particles,流體化自碰撞粒子,,,,,,,,,,,,
 19,时间采样数,Temporal samples,時間採樣數,,,,卫道士 [NPC],Vindicator [NPC],衛道士 [NPC],,,,,堆放方块,Pile Up Blocks,堆放方塊,,,,,,,,,,,,
 20,色彩管理,Color space,色彩管理,,,,掠夺者,Pillager,掠奪者,,,,,背景生物散布器,Background Animal Scatter,背景生物散佈器,,,,,,,,,,,,
