@@ -1,0 +1,30 @@
+{
+    "Settings": {
+        "ue_language": "zh-Hans",
+        "b_viewport_selected": "true",
+        "b_asset_folder": "false",
+        "asset_folder": "/Game/mc/import",
+        "b_metallic": "false",
+        "b_specular": "false",
+        "b_roughness": "false",
+        "metallic": "0",
+        "specular": "0.25",
+        "roughness": "0.7",
+        "b_collision": "true",
+        "b_gradient_animated_texture": "false",
+        "texture_pack_path": "默认 (mc 1.20)",
+        "lang_index": "1",
+        "blender_path": ""
+    },
+    "key_map": {
+        "W": "W",
+        "A": "A",
+        "S": "S",
+        "D": "D",
+        "LeftShift": "LeftShift",
+        "LeftControl": "LeftControl",
+        "LeftAlt": "LeftAlt",
+        "SpaceBar": "SpaceBar",
+        "NumPadZero": "Comma"
+    }
+}
