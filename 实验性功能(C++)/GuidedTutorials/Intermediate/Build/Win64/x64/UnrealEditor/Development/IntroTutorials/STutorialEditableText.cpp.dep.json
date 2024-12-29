@@ -1,0 +1,33 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "e:\\ue\\mineprep_last_0_4\\plugins\\guidedtutorials\\source\\introtutorials\\private\\stutorialeditabletext.cpp",
+        "ProvidedModule": "",
+        "PCH": "e:\\ue\\mineprep_last_0_4\\intermediate\\build\\win64\\x64\\mineprep_last_0_4editor\\development\\unrealed\\sharedpch.unrealed.project.valapi.cpp20.h.pch",
+        "Includes": [
+            "e:\\ue\\mineprep_last_0_4\\plugins\\guidedtutorials\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\introtutorials\\definitions.introtutorials.h",
+            "e:\\ue\\mineprep_last_0_4\\plugins\\guidedtutorials\\source\\introtutorials\\private\\stutorialeditabletext.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\slatehyperlinkrun.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\ilayoutblock.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\irunrenderer.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\islaterun.h",
+            "e:\\ue\\mineprep_last_0_4\\plugins\\guidedtutorials\\source\\introtutorials\\private\\editortutorialstyle.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\slateimagerun.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\itextdecorator.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\widgets\\input\\smultilineeditabletextbox.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\widgets\\text\\smultilineeditabletext.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\slatetextlayoutfactory.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\slatetextlayout.h",
+            "d:\\ue_5.4\\engine\\source\\editor\\unrealed\\public\\editordirectories.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\richtextlayoutmarshaller.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\basetextlayoutmarshaller.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\itextlayoutmarshaller.h",
+            "e:\\ue\\mineprep_last_0_4\\plugins\\guidedtutorials\\source\\introtutorials\\private\\tutorialtext.h",
+            "e:\\ue\\mineprep_last_0_4\\plugins\\guidedtutorials\\source\\introtutorials\\private\\tutorialimagedecorator.h",
+            "d:\\ue_5.4\\engine\\source\\developer\\desktopplatform\\public\\desktopplatformmodule.h",
+            "d:\\ue_5.4\\engine\\source\\developer\\desktopplatform\\public\\idesktopplatform.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}

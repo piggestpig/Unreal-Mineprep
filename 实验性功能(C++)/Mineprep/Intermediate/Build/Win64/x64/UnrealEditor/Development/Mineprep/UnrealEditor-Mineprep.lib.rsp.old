@@ -1,0 +1,14 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UnrealEditor-Mineprep.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"E:\ue\MCplugin\Intermediate\Build\Win64\x64\MCpluginEditor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.h.obj"
+"E:\ue\MCplugin\Plugins\Mineprep\Intermediate\Build\Win64\x64\UnrealEditor\Development\Mineprep\Module.Mineprep.cpp.obj"
+"E:\ue\MCplugin\Plugins\Mineprep\Intermediate\Build\Win64\x64\UnrealEditor\Development\Mineprep\Mineprep.cpp.obj"
+"E:\ue\MCplugin\Plugins\Mineprep\Intermediate\Build\Win64\x64\UnrealEditor\Development\Mineprep\MineprepBPLibrary.cpp.obj"
+"E:\ue\MCplugin\Plugins\Mineprep\Intermediate\Build\Win64\x64\UnrealEditor\Development\Mineprep\Default.rc2.res"
+/OUT:"E:\ue\MCplugin\Plugins\Mineprep\Intermediate\Build\Win64\x64\UnrealEditor\Development\Mineprep\UnrealEditor-Mineprep.lib"

@@ -1,0 +1,13 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.MoviePipelineMaskRenderPass.cpp.obj": [
+			"MoviePipelineMaskRenderPass.init.gen.cpp.obj",
+			"MoviePipelineMaskRenderPassModule.cpp.obj",
+			"MoviePipelineObjectIdPass.cpp.obj",
+			"MoviePipelinePanoramicBlender.cpp.obj",
+			"MoviePipelinePanoramicPass.cpp.obj",
+			"MovieRenderOverlappedMask.cpp.obj"
+		]
+	}
+}

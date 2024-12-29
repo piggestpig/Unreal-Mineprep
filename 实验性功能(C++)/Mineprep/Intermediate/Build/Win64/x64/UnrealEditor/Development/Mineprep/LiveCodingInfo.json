@@ -1,0 +1,11 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.Mineprep.cpp.obj": [
+			"Mineprep.init.gen.cpp.obj",
+			"MineprepBPLibrary.gen.cpp.obj",
+			"Mineprep.cpp.obj",
+			"MineprepBPLibrary.cpp.obj"
+		]
+	}
+}

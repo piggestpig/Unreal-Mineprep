@@ -1,0 +1,19 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "e:\\ue\\mineprep_last_0_4\\plugins\\guidedtutorials\\source\\introtutorials\\private\\tutorialimagedecorator.cpp",
+        "ProvidedModule": "",
+        "PCH": "e:\\ue\\mineprep_last_0_4\\intermediate\\build\\win64\\x64\\mineprep_last_0_4editor\\development\\unrealed\\sharedpch.unrealed.project.valapi.cpp20.h.pch",
+        "Includes": [
+            "e:\\ue\\mineprep_last_0_4\\plugins\\guidedtutorials\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\introtutorials\\definitions.introtutorials.h",
+            "e:\\ue\\mineprep_last_0_4\\plugins\\guidedtutorials\\source\\introtutorials\\private\\tutorialimagedecorator.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\islaterun.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\ilayoutblock.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\irunrenderer.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\itextdecorator.h",
+            "d:\\ue_5.4\\engine\\source\\runtime\\slate\\public\\framework\\text\\slateimagerun.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}

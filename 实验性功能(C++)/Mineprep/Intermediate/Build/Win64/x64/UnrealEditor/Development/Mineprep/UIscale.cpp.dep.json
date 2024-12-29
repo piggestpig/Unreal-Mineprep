@@ -1,0 +1,15 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "e:\\ue\\mcplugin\\plugins\\mineprep\\source\\mineprep\\private\\uiscale.cpp",
+        "ProvidedModule": "",
+        "PCH": "e:\\ue\\mcplugin\\intermediate\\build\\win64\\x64\\mcplugineditor\\development\\unrealed\\sharedpch.unrealed.project.valapi.cpp20.h.pch",
+        "Includes": [
+            "e:\\ue\\mcplugin\\plugins\\mineprep\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\mineprep\\definitions.mineprep.h",
+            "e:\\ue\\mcplugin\\plugins\\mineprep\\source\\mineprep\\public\\uiscale.h",
+            "e:\\ue\\mcplugin\\plugins\\mineprep\\intermediate\\build\\win64\\unrealeditor\\inc\\mineprep\\uht\\uiscale.generated.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
