@@ -9,6 +9,7 @@
 #include "Editor/EditorEngine.h"
 #include "Settings/LevelEditorViewportSettings.h"
 #include "Framework/Application/IMenu.h"
+#include "Tracks/MovieSceneMaterialTrack.h"
 #include "MineprepBPLibrary.generated.h"
 
 UCLASS()
@@ -30,6 +31,8 @@ class Umineprep : public UBlueprintFunctionLibrary
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Tick Run On Any Thread", Keywords = "Mineprep Tick Thread"), Category = "Mineprep|实验性功能(C++)") 
 	static void SetTickRunOnAnyThread(UObject* Object, bool bRunOnAnyThread);
-};
 
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Material Info", Keywords = "Mineprep Material Info"), Category = "Mineprep|实验性功能(C++)")
+	static FComponentMaterialInfo GetMaterialInfo(UMovieSceneComponentMaterialTrack* Track);
+};
 

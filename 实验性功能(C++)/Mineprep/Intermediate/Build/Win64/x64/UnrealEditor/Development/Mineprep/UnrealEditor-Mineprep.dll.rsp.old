@@ -49,6 +49,7 @@
 "..\Intermediate\Build\Win64\x64\UnrealEditor\Development\AppFramework\UnrealEditor-AppFramework.lib"
 "..\Intermediate\Build\Win64\x64\UnrealEditor\Development\ToolWidgets\UnrealEditor-ToolWidgets.lib"
 "..\Intermediate\Build\Win64\x64\UnrealEditor\Development\LevelEditor\UnrealEditor-LevelEditor.lib"
+"..\Intermediate\Build\Win64\x64\UnrealEditor\Development\PropertyEditor\UnrealEditor-PropertyEditor.lib"
 "..\Intermediate\Build\Win64\x64\UnrealEditor\Development\Core\UnrealEditor-Core.lib"
 "..\Intermediate\Build\Win64\x64\UnrealEditor\Development\InputCore\UnrealEditor-InputCore.lib"
 "delayimp.lib"

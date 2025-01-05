@@ -6,6 +6,14 @@
 #include "Framework/Commands/InputChord.h"
 #include "LevelEditor.h"
 #include "ToolMenus.h"
+#include "PropertyEditorModule.h"
+#include "IDetailTreeNode.h"
+#include "IPropertyRowGenerator.h"
+#include "PropertyHandle.h"
+#include "Framework/MultiBox/MultiBoxBuilder.h"
+#include "Framework/MultiBox/MultiBoxDefs.h"
+#include "Styling/SlateIconFinder.h"
+#include "Tracks/MovieSceneMaterialTrack.h"
 
 // 添加控制台变量
 static float GMineprepTickInterval = 0.5f;
@@ -119,6 +127,178 @@ private:
 
 static TSharedPtr<FMineprepEditorTicker> MineprepEditorTicker;
 
+static FSlateIcon GetKeyframeIcon(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TSharedPtr<IPropertyHandle> PropertyHandle)
+{
+    // 返回关键帧图标
+    return FSlateIcon(FAppStyle::GetAppStyleSetName(), "Sequencer.AddKey.Details");
+}
+
+static void OnAddKeyframeClicked(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TSharedPtr<IPropertyHandle> PropertyHandle)
+{
+    if (PropertyHandle.IsValid())
+    {
+        // 获取参数类型和值
+        FString ParamType;
+        if (FProperty* Property = PropertyHandle->GetProperty())
+        {
+            ParamType = Property->GetCPPType();
+        }
+
+        TSharedPtr<IPropertyHandle> ParentHandle = PropertyHandle->GetParentHandle();
+        if (!ParentHandle.IsValid())
+        {
+            return;
+        }
+
+        // 获取参数信息
+        TSharedPtr<IPropertyHandle> ParameterInfoHandle = ParentHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FScalarParameterValue, ParameterInfo));
+        if (!ParameterInfoHandle.IsValid())
+        {
+            return;
+        }
+
+        FMaterialParameterInfo ParamInfo;
+        void* ValuePtr = nullptr;
+        if (ParameterInfoHandle->GetValueData(ValuePtr) == FPropertyAccess::Success)
+        {
+            ParamInfo = *static_cast<FMaterialParameterInfo*>(ValuePtr);
+        }
+
+        // 获取参数值
+        FString ParamValueStr;
+        PropertyHandle->GetValueAsFormattedString(ParamValueStr);
+
+        // 获取材质实例
+        TArray<UObject*> OuterObjects;
+        PropertyHandle->GetOuterObjects(OuterObjects);
+        UMaterialInstance* MaterialInstance = nullptr;
+        for (UObject* OuterObj : OuterObjects)
+        {
+            MaterialInstance = Cast<UMaterialInstance>(OuterObj);
+            if (MaterialInstance)
+            {
+                break;
+            }
+        }
+
+        if (MaterialInstance)
+        {
+            // 遍历 MeshComponent
+            for (TObjectIterator<UMeshComponent> It; It; ++It)
+            {
+                UMeshComponent* MeshComp = *It;
+                bool bFound = false;
+                for (int32 i = 0; i < MeshComp->GetNumMaterials(); ++i)
+                {
+                    UMaterialInterface* Mat = MeshComp->GetMaterial(i);
+                    if (Mat == MaterialInstance)
+                    {
+                        // 创建MaterialInfo
+                        FComponentMaterialInfo MaterialInfo;
+                        MaterialInfo.MaterialSlotIndex = i;
+                        MaterialInfo.MaterialType = EComponentMaterialType::IndexedMaterial;
+                        MaterialInfo.MaterialSlotName = MeshComp->GetMaterialSlotNames().IsValidIndex(i) ? 
+                            MeshComp->GetMaterialSlotNames()[i] : NAME_None;
+
+                        // 调用事件
+                        FString BlueprintPath = TEXT("/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C");
+                        if (UClass* LoadedClass = LoadClass<UObject>(nullptr, *BlueprintPath))
+                        {
+                            if (UObject* CustomHotkeyWidget = NewObject<UObject>(GetTransientPackage(), LoadedClass))
+                            {
+                                if (UFunction* KeyMatFunc = CustomHotkeyWidget->FindFunction(FName(TEXT("KeyMaterial"))))
+                                {
+                                    struct
+                                    {
+                                        UMeshComponent* Component;
+                                        FComponentMaterialInfo MaterialInfo;
+                                        FMaterialParameterInfo ParamInfo;
+                                        FString ParamType;
+                                        FString ParamValue;
+                                    } Params;
+
+                                    Params.Component = MeshComp;
+                                    Params.MaterialInfo = MaterialInfo;
+                                    Params.ParamInfo = ParamInfo;
+                                    Params.ParamType = ParamType;
+                                    Params.ParamValue = ParamValueStr;
+
+                                    CustomHotkeyWidget->ProcessEvent(KeyMatFunc, &Params);
+                                }
+                            }
+                        }
+                        bFound = true;
+                        break;
+                    }
+                }
+                if (bFound)
+                {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+static bool IsKeyframeButtonEnabled(TWeakPtr<IDetailTreeNode> OwnerTreeNode)
+{
+    // 返回关键帧按钮是否可用
+    return true;
+}
+
+static bool IsKeyframeButtonVisible(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TSharedPtr<IPropertyHandle> PropertyHandle)
+{
+    // 返回关键帧按钮是否可见
+    return true;
+}
+
+static bool IsDynamicParameterProperty(const TSharedPtr<IPropertyHandle>& PropertyHandle)
+{
+    if (!PropertyHandle.IsValid() || PropertyHandle->GetProperty() == nullptr)
+    {
+        return false;
+    }
+
+    static const FName ScalarParamName("ScalarParameterValues");
+    static const FName VectorParamName("VectorParameterValues");
+    static const FName TextureParamName("TextureParameterValues");
+
+    // 只检查直接父级，判断是否属于动态材质参数
+    TSharedPtr<IPropertyHandle> ParentHandle = PropertyHandle->GetParentHandle();
+    if (ParentHandle.IsValid())
+    {
+        if (FProperty* ParentProperty = ParentHandle->GetProperty())
+        {
+            FName PropName = ParentProperty->GetFName();
+            if (PropName == ScalarParamName || PropName == VectorParamName || PropName == TextureParamName)
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtensionArgs& Args, TArray<FPropertyRowExtensionButton>& OutExtensionButtons)
+{
+    TSharedPtr<IPropertyHandle> PropertyHandle = Args.PropertyHandle;
+    if (!PropertyHandle.IsValid() || !IsDynamicParameterProperty(PropertyHandle))
+    {
+        return; 
+    }
+
+    FPropertyRowExtensionButton& CreateKey = OutExtensionButtons.AddDefaulted_GetRef();
+    CreateKey.Icon = TAttribute<FSlateIcon>::Create(TAttribute<FSlateIcon>::FGetter::CreateStatic(&GetKeyframeIcon, Args.OwnerTreeNode, PropertyHandle));
+    CreateKey.Label = NSLOCTEXT("PropertyEditor", "CreateKey", "Create Key");
+    CreateKey.ToolTip = NSLOCTEXT("PropertyEditor", "CreateKeyToolTip", "Add a keyframe for this property.");
+    CreateKey.UIAction = FUIAction(
+        FExecuteAction::CreateStatic(&OnAddKeyframeClicked, Args.OwnerTreeNode, PropertyHandle),
+        FCanExecuteAction::CreateStatic(&IsKeyframeButtonEnabled, Args.OwnerTreeNode),
+        FIsActionButtonVisible::CreateStatic(&IsKeyframeButtonVisible, Args.OwnerTreeNode, PropertyHandle)
+    );
+}
+
 void FMineprepModule::StartupModule()
 {
     // 注册命令
@@ -141,6 +321,10 @@ void FMineprepModule::StartupModule()
 
     // 创建编辑器Ticker
     MineprepEditorTicker = MakeShareable(new FMineprepEditorTicker());
+
+    // 注册全局行扩展处理程序
+    FPropertyEditorModule& PropertyEditorModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+    PropertyEditorModule.GetGlobalRowExtensionDelegate().AddStatic(&RegisterKeyframeExtensionHandler);
 }
 
 void FMineprepModule::ShutdownModule()
@@ -150,6 +334,13 @@ void FMineprepModule::ShutdownModule()
 
     // 重置编辑器Ticker
     MineprepEditorTicker.Reset();
+
+    // 注销全局行扩展处理程序
+    if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
+    {
+        FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+        PropertyEditorModule.GetGlobalRowExtensionDelegate().RemoveAll(this);
+    }
 }
 
 void FMineprepModule::ExecuteKey0Command() {ExecuteBlueprintEvent(TEXT("key0"));}

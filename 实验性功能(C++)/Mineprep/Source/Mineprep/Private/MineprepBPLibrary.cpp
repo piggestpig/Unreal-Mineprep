@@ -205,3 +205,13 @@ FString Umineprep::GetWidgetTextUnderMouse()
     return ResultText;
 }
 
+FComponentMaterialInfo Umineprep::GetMaterialInfo(UMovieSceneComponentMaterialTrack* Track)
+{
+	if (!Track)
+	{
+		FFrame::KismetExecutionMessage(TEXT("Cannot call GetMaterialInfo on a null track"), ELogVerbosity::Error);
+		return FComponentMaterialInfo();
+	}
+
+	return Track->GetMaterialInfo();
+}

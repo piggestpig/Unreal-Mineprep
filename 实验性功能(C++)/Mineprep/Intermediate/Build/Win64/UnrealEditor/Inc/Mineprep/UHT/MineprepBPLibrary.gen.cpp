@@ -6,6 +6,7 @@
 
 #include "UObject/GeneratedCppIncludes.h"
 #include "Mineprep/Public/MineprepBPLibrary.h"
+#include "Runtime/MovieSceneTracks/Public/Tracks/MovieSceneMaterialTrack.h"
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
 void EmptyLinkFunctionForGeneratedCodeMineprepBPLibrary() {}
 
@@ -14,8 +15,62 @@ COREUOBJECT_API UClass* Z_Construct_UClass_UObject_NoRegister();
 ENGINE_API UClass* Z_Construct_UClass_UBlueprintFunctionLibrary();
 MINEPREP_API UClass* Z_Construct_UClass_Umineprep();
 MINEPREP_API UClass* Z_Construct_UClass_Umineprep_NoRegister();
+MOVIESCENETRACKS_API UClass* Z_Construct_UClass_UMovieSceneComponentMaterialTrack_NoRegister();
+MOVIESCENETRACKS_API UScriptStruct* Z_Construct_UScriptStruct_FComponentMaterialInfo();
 UPackage* Z_Construct_UPackage__Script_Mineprep();
 // End Cross Module References
+
+// Begin Class Umineprep Function GetMaterialInfo
+struct Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics
+{
+	struct mineprep_eventGetMaterialInfo_Parms
+	{
+		UMovieSceneComponentMaterialTrack* Track;
+		FComponentMaterialInfo ReturnValue;
+	};
+#if WITH_METADATA
+	static constexpr UECodeGen_Private::FMetaDataPairParam Function_MetaDataParams[] = {
+		{ "Category", "Mineprep|\xe5\xae\x9e\xe9\xaa\x8c\xe6\x80\xa7\xe5\x8a\x9f\xe8\x83\xbd(C++)" },
+		{ "DisplayName", "Get Material Info" },
+		{ "Keywords", "Mineprep Material Info" },
+		{ "ModuleRelativePath", "Public/MineprepBPLibrary.h" },
+	};
+	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_Track_MetaData[] = {
+		{ "EditInline", "true" },
+	};
+#endif // WITH_METADATA
+	static const UECodeGen_Private::FObjectPropertyParams NewProp_Track;
+	static const UECodeGen_Private::FStructPropertyParams NewProp_ReturnValue;
+	static const UECodeGen_Private::FPropertyParamsBase* const PropPointers[];
+	static const UECodeGen_Private::FFunctionParams FuncParams;
+};
+const UECodeGen_Private::FObjectPropertyParams Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::NewProp_Track = { "Track", nullptr, (EPropertyFlags)0x0010000000080080, UECodeGen_Private::EPropertyGenFlags::Object, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(mineprep_eventGetMaterialInfo_Parms, Track), Z_Construct_UClass_UMovieSceneComponentMaterialTrack_NoRegister, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_Track_MetaData), NewProp_Track_MetaData) };
+const UECodeGen_Private::FStructPropertyParams Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::NewProp_ReturnValue = { "ReturnValue", nullptr, (EPropertyFlags)0x0010000000000580, UECodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(mineprep_eventGetMaterialInfo_Parms, ReturnValue), Z_Construct_UScriptStruct_FComponentMaterialInfo, METADATA_PARAMS(0, nullptr) }; // 3517514751
+const UECodeGen_Private::FPropertyParamsBase* const Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::PropPointers[] = {
+	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::NewProp_Track,
+	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::NewProp_ReturnValue,
+};
+static_assert(UE_ARRAY_COUNT(Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::PropPointers) < 2048);
+const UECodeGen_Private::FFunctionParams Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::FuncParams = { (UObject*(*)())Z_Construct_UClass_Umineprep, nullptr, "GetMaterialInfo", nullptr, nullptr, Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::PropPointers, UE_ARRAY_COUNT(Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::PropPointers), sizeof(Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::mineprep_eventGetMaterialInfo_Parms), RF_Public|RF_Transient|RF_MarkAsNative, (EFunctionFlags)0x04022401, 0, 0, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::Function_MetaDataParams), Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::Function_MetaDataParams) };
+static_assert(sizeof(Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::mineprep_eventGetMaterialInfo_Parms) < MAX_uint16);
+UFunction* Z_Construct_UFunction_Umineprep_GetMaterialInfo()
+{
+	static UFunction* ReturnFunction = nullptr;
+	if (!ReturnFunction)
+	{
+		UECodeGen_Private::ConstructUFunction(&ReturnFunction, Z_Construct_UFunction_Umineprep_GetMaterialInfo_Statics::FuncParams);
+	}
+	return ReturnFunction;
+}
+DEFINE_FUNCTION(Umineprep::execGetMaterialInfo)
+{
+	P_GET_OBJECT(UMovieSceneComponentMaterialTrack,Z_Param_Track);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	*(FComponentMaterialInfo*)Z_Param__Result=Umineprep::GetMaterialInfo(Z_Param_Track);
+	P_NATIVE_END;
+}
+// End Class Umineprep Function GetMaterialInfo
 
 // Begin Class Umineprep Function GetWidgetTextUnderMouse
 struct Z_Construct_UFunction_Umineprep_GetWidgetTextUnderMouse_Statics
@@ -265,6 +320,7 @@ void Umineprep::StaticRegisterNativesUmineprep()
 {
 	UClass* Class = Umineprep::StaticClass();
 	static const FNameNativePtrPair Funcs[] = {
+		{ "GetMaterialInfo", &Umineprep::execGetMaterialInfo },
 		{ "GetWidgetTextUnderMouse", &Umineprep::execGetWidgetTextUnderMouse },
 		{ "SetCameraPreviewSize", &Umineprep::execSetCameraPreviewSize },
 		{ "SetEditorUIScale", &Umineprep::execSetEditorUIScale },
@@ -288,6 +344,7 @@ struct Z_Construct_UClass_Umineprep_Statics
 #endif // WITH_METADATA
 	static UObject* (*const DependentSingletons[])();
 	static constexpr FClassFunctionLinkInfo FuncInfo[] = {
+		{ &Z_Construct_UFunction_Umineprep_GetMaterialInfo, "GetMaterialInfo" }, // 179558862
 		{ &Z_Construct_UFunction_Umineprep_GetWidgetTextUnderMouse, "GetWidgetTextUnderMouse" }, // 2417036259
 		{ &Z_Construct_UFunction_Umineprep_SetCameraPreviewSize, "SetCameraPreviewSize" }, // 1733107221
 		{ &Z_Construct_UFunction_Umineprep_SetEditorUIScale, "SetEditorUIScale" }, // 801178846
@@ -337,14 +394,14 @@ Umineprep::~Umineprep() {}
 // End Class Umineprep
 
 // Begin Registration
-struct Z_CompiledInDeferFile_FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_Statics
+struct Z_CompiledInDeferFile_FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_Statics
 {
 	static constexpr FClassRegisterCompiledInInfo ClassInfo[] = {
-		{ Z_Construct_UClass_Umineprep, Umineprep::StaticClass, TEXT("Umineprep"), &Z_Registration_Info_UClass_Umineprep, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(Umineprep), 3786559301U) },
+		{ Z_Construct_UClass_Umineprep, Umineprep::StaticClass, TEXT("Umineprep"), &Z_Registration_Info_UClass_Umineprep, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(Umineprep), 3791972182U) },
 	};
 };
-static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_992708786(TEXT("/Script/Mineprep"),
-	Z_CompiledInDeferFile_FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_Statics::ClassInfo),
+static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_1091920938(TEXT("/Script/Mineprep"),
+	Z_CompiledInDeferFile_FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_Statics::ClassInfo),
 	nullptr, 0,
 	nullptr, 0);
 // End Registration

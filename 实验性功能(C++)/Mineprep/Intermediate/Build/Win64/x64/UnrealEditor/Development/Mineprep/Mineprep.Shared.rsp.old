@@ -286,6 +286,7 @@
 /I "Editor\Blutility\Classes"
 /I "Editor\Blutility\Public"
 /I "Runtime\AppFramework\Public"
+/I "Editor\EditorStyle\Public"
 /I "E:\ue\MCplugin\Plugins\Mineprep\Intermediate\Build\Win64\UnrealEditor\Inc\Mineprep\UHT"
 /I "E:\ue\MCplugin\Plugins\Mineprep\Source"
 /I "E:\ue\MCplugin\Plugins\Mineprep\Source\Mineprep\Public"

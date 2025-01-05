@@ -9,13 +9,16 @@
 #include "UObject/ScriptMacros.h"
 
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
+class UMovieSceneComponentMaterialTrack;
 class UObject;
+struct FComponentMaterialInfo;
 #ifdef MINEPREP_MineprepBPLibrary_generated_h
 #error "MineprepBPLibrary.generated.h already included, missing '#pragma once' in MineprepBPLibrary.h"
 #endif
 #define MINEPREP_MineprepBPLibrary_generated_h
 
-#define FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_17_RPC_WRAPPERS \
+#define FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_18_RPC_WRAPPERS \
+	DECLARE_FUNCTION(execGetMaterialInfo); \
 	DECLARE_FUNCTION(execSetTickRunOnAnyThread); \
 	DECLARE_FUNCTION(execGetWidgetTextUnderMouse); \
 	DECLARE_FUNCTION(execSetCameraPreviewSize); \
@@ -23,7 +26,7 @@ class UObject;
 	DECLARE_FUNCTION(execSetEditorUIScale);
 
 
-#define FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_17_INCLASS \
+#define FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_18_INCLASS \
 private: \
 	static void StaticRegisterNativesUmineprep(); \
 	friend struct Z_Construct_UClass_Umineprep_Statics; \
@@ -32,7 +35,7 @@ public: \
 	DECLARE_SERIALIZER(Umineprep)
 
 
-#define FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_17_STANDARD_CONSTRUCTORS \
+#define FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_18_STANDARD_CONSTRUCTORS \
 	/** Standard constructor, called after all reflected properties have been initialized */ \
 	NO_API Umineprep(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()); \
 	DEFINE_DEFAULT_OBJECT_INITIALIZER_CONSTRUCTOR_CALL(Umineprep) \
@@ -46,13 +49,13 @@ public: \
 	NO_API virtual ~Umineprep();
 
 
-#define FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_14_PROLOG
-#define FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_17_GENERATED_BODY_LEGACY \
+#define FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_15_PROLOG
+#define FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_18_GENERATED_BODY_LEGACY \
 PRAGMA_DISABLE_DEPRECATION_WARNINGS \
 public: \
-	FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_17_RPC_WRAPPERS \
-	FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_17_INCLASS \
-	FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_17_STANDARD_CONSTRUCTORS \
+	FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_18_RPC_WRAPPERS \
+	FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_18_INCLASS \
+	FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h_18_STANDARD_CONSTRUCTORS \
 public: \
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
@@ -60,7 +63,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 template<> MINEPREP_API UClass* StaticClass<class Umineprep>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_Mineprep_last_0_4_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h
+#define CURRENT_FILE_ID FID_MCplugin_Plugins_Mineprep_Source_Mineprep_Public_MineprepBPLibrary_h
 
 
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
