@@ -215,3 +215,79 @@ FComponentMaterialInfo Umineprep::GetMaterialInfo(UMovieSceneComponentMaterialTr
 
 	return Track->GetMaterialInfo();
 }
+
+bool Umineprep::CleanMaterial(UMaterial* Material)
+{
+	if (!Material)
+	{
+		return false;
+	}
+
+	// 确保MaterialGraph被创建
+	if (!Material->MaterialGraph)
+	{
+		Material->MaterialGraph = CastChecked<UMaterialGraph>(FBlueprintEditorUtils::CreateNewGraph(Material, NAME_None, UMaterialGraph::StaticClass(), UMaterialGraphSchema::StaticClass()));
+		Material->MaterialGraph->Material = Material;
+	}
+
+	// 在获取未使用节点前先完全重建图表
+	Material->MaterialGraph->RebuildGraph();
+	
+	// 强制更新材质连接关系
+	Material->MaterialGraph->LinkMaterialExpressionsFromGraph();
+
+	// 获取所有未使用的节点
+	TArray<UEdGraphNode*> UnusedNodes;
+	Material->MaterialGraph->GetUnusedExpressions(UnusedNodes);
+
+	if (UnusedNodes.Num() > 0)
+	{
+		// 创建事务
+		const FScopedTransaction Transaction(NSLOCTEXT("Mineprep", "MineprepCleanMaterial", "Clean Unused Material Expressions"));
+		
+		Material->Modify();
+		Material->MaterialGraph->Modify();
+
+		int32 NodesDeleted = 0;
+		
+		// 删除所有未使用的节点
+		for (int32 Index = 0; Index < UnusedNodes.Num(); ++Index)
+		{
+			if (UMaterialGraphNode* GraphNode = Cast<UMaterialGraphNode>(UnusedNodes[Index]))
+			{
+				UMaterialExpression* MaterialExpression = GraphNode->MaterialExpression;
+				if (!MaterialExpression)
+				{
+					continue;
+				}
+
+				// 删除节点前先断开所有连接
+				GraphNode->BreakAllNodeLinks();
+
+				// 删除节点
+				FBlueprintEditorUtils::RemoveNode(nullptr, GraphNode, true);
+
+				MaterialExpression->Modify();
+				Material->GetExpressionCollection().RemoveExpression(MaterialExpression);
+				Material->RemoveExpressionParameter(MaterialExpression);
+				MaterialExpression->MarkAsGarbage();
+				NodesDeleted++;
+			}
+		}
+
+		// 重新刷新图表确保所有更改都生效
+		Material->MaterialGraph->RebuildGraph();
+		Material->MaterialGraph->LinkMaterialExpressionsFromGraph();
+
+		// 标记材质为脏
+		Material->MarkPackageDirty();
+
+		// 如果需要,还可以强制刷新材质
+		Material->PreEditChange(nullptr);
+		Material->PostEditChange();
+		
+		return NodesDeleted > 0;
+	}
+
+	return false;
+}

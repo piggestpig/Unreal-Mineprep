@@ -10,6 +10,11 @@
 #include "Settings/LevelEditorViewportSettings.h"
 #include "Framework/Application/IMenu.h"
 #include "Tracks/MovieSceneMaterialTrack.h"
+#include "MaterialGraph/MaterialGraph.h"
+#include "MaterialGraph/MaterialGraphNode.h"
+#include "MaterialGraph/MaterialGraphSchema.h"
+#include "ScopedTransaction.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "MineprepBPLibrary.generated.h"
 
 UCLASS()
@@ -34,5 +39,8 @@ class Umineprep : public UBlueprintFunctionLibrary
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Material Info", Keywords = "Mineprep Material Info"), Category = "Mineprep|实验性功能(C++)")
 	static FComponentMaterialInfo GetMaterialInfo(UMovieSceneComponentMaterialTrack* Track);
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Clean Material", Keywords = "Mineprep Material Clean"), Category = "Mineprep|实验性功能(C++)")
+	static bool CleanMaterial(UMaterial* Material);
 };
 

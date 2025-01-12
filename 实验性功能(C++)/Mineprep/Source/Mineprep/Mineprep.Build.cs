@@ -29,7 +29,7 @@ public class Mineprep : ModuleRules
 				// ... add other public dependencies that you statically link with here ...
 				"Slate",
 				"SlateCore",
-				"InputCore" // 添加 InputCore 模块依赖
+				"InputCore", // 添加 InputCore 模块依赖
 			}
 			);
 			
@@ -47,7 +47,7 @@ public class Mineprep : ModuleRules
 				"ToolWidgets",
 				"LevelEditor",
 				"PropertyEditor", // 添加 PropertyEditor 模块依赖
-				"MovieSceneTracks" // 添加 MovieSceneTracks 模块依赖
+				"MovieSceneTracks", // 添加 MovieSceneTracks 模块依赖
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
