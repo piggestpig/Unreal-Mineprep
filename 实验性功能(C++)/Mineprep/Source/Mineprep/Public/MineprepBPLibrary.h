@@ -15,6 +15,12 @@
 #include "MaterialGraph/MaterialGraphSchema.h"
 #include "ScopedTransaction.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "ISettingsModule.h"
+#include "ISettingsSection.h"
+#include "ISettingsContainer.h"
+#include "ISettingsEditorModule.h"
+#include "ISettingsCategory.h"
+#include "Engine/UserDefinedStruct.h"
 #include "MineprepBPLibrary.generated.h"
 
 UCLASS()
@@ -24,12 +30,6 @@ class Umineprep : public UBlueprintFunctionLibrary
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Editor UI Scale", Keywords = "Mineprep UI Scale Editor"), Category = "Mineprep|实验性功能(C++)")
 	static float SetEditorUIScale(float Scale);
-
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Preview Selected Cameras", Keywords = "Mineprep Camera Preview"), Category = "Mineprep|实验性功能(C++)")
-	static void SetPreviewSelectedCameras(bool bPreview);
-
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Camera Preview Size", Keywords = "Mineprep Camera Preview"), Category = "Mineprep|实验性功能(C++)")
-	static void SetCameraPreviewSize(float PreviewSize);
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Widget Text Under Mouse", Keywords = "Mineprep UI Widget Text"), Category = "Mineprep|实验性功能(C++)")
 	static FString GetWidgetTextUnderMouse();
@@ -42,5 +42,14 @@ class Umineprep : public UBlueprintFunctionLibrary
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Clean Material", Keywords = "Mineprep Material Clean"), Category = "Mineprep|实验性功能(C++)")
 	static bool CleanMaterial(UMaterial* Material);
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Project Setting", Keywords = "Mineprep Settings"), Category = "Mineprep|实验性功能(C++)")
+	static bool SetProjectSetting(const FString& SettingName, const FString& Value);
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Project Setting", Keywords = "Mineprep Settings"), Category = "Mineprep|实验性功能(C++)")
+	static FString GetProjectSetting(const FString& SettingName);
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Expose Struct Variables"), Category = "Mineprep|实验性功能(C++)")
+	static bool ExposeStructVariables(UUserDefinedStruct* Structure); 
 };
 

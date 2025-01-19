@@ -14,45 +14,15 @@ float Umineprep::SetEditorUIScale(float Scale)
 {
     if (FSlateApplication::IsInitialized())
     {
+        if (Scale < 0) return FSlateApplication::Get().GetApplicationScale();
         FSlateApplication::Get().SetApplicationScale(Scale);
     }
     return Scale;
 }
 
-void Umineprep::SetPreviewSelectedCameras(bool bPreview)
-{
-    if (GEditor)
-    {
-        ULevelEditorViewportSettings* Settings = GetMutableDefault<ULevelEditorViewportSettings>();
-        if (Settings)
-        {
-            Settings->bPreviewSelectedCameras = bPreview;
-            Settings->SaveConfig();
-            Settings->PostEditChange();
-        }
-    }
-}
-
-void Umineprep::SetCameraPreviewSize(float PreviewSize)
-{
-    if (GEditor)
-    {
-        ULevelEditorViewportSettings* Settings = GetMutableDefault<ULevelEditorViewportSettings>();
-        if (Settings)
-        {
-            Settings->CameraPreviewSize = PreviewSize;
-            Settings->SaveConfig();
-            Settings->PostEditChange();
-        }
-    }
-}
-
 void Umineprep::SetTickRunOnAnyThread(UObject* Object, bool bRunOnAnyThread)
 {
-    if (!Object)
-    {
-        return;
-    }
+    if (!Object) return;
 
     if (AActor* Actor = Cast<AActor>(Object))
     {
@@ -291,3 +261,146 @@ bool Umineprep::CleanMaterial(UMaterial* Material)
 
 	return false;
 }
+
+bool Umineprep::SetProjectSetting(const FString& SettingName, const FString& Value)
+{
+    // 获取Settings模块
+    ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings");
+    if (!SettingsModule)
+    {
+        return false;
+    }
+
+    // 遍历所有容器
+    TArray<FName> ContainerNames;
+    SettingsModule->GetContainerNames(ContainerNames);
+
+    for (const FName& ContainerName : ContainerNames)
+    {
+        TSharedPtr<ISettingsContainer> Container = SettingsModule->GetContainer(ContainerName);
+        if (!Container.IsValid())
+        {
+            continue;
+        }
+
+        // 遍历所有类别
+        TArray<TSharedPtr<ISettingsCategory>> Categories;
+        Container->GetCategories(Categories);
+
+        for (const TSharedPtr<ISettingsCategory>& Category : Categories)
+        {
+            // 遍历所有分段
+            TArray<TSharedPtr<ISettingsSection>> Sections;
+            Category->GetSections(Sections);
+
+            for (const TSharedPtr<ISettingsSection>& Section : Sections)
+            {
+                if (UObject* SectionObj = Section->GetSettingsObject().Get())
+                {
+                    // 遍历设置对象的所有属性
+                    for (TFieldIterator<FProperty> PropIt(SectionObj->GetClass()); PropIt; ++PropIt)
+                    {
+                        FProperty* Property = *PropIt;
+                        if (Property->HasAnyPropertyFlags(CPF_Config) && Property->GetName() == SettingName)
+                        {
+                            // 创建事务
+                            const FScopedTransaction Transaction(NSLOCTEXT("Mineprep", "SetProjectSetting", "Set Project Setting"));
+                            
+                            // 修改对象
+                            SectionObj->Modify();
+                            
+                            // 设置属性值
+                            void* ValuePtr = Property->ContainerPtrToValuePtr<void>(SectionObj);
+                            Property->ImportText(*Value, ValuePtr, 0, SectionObj);
+
+                            // 通知更改
+                            FPropertyChangedEvent ChangeEvent(Property);
+                            SectionObj->PostEditChangeProperty(ChangeEvent);
+                            
+                            // 保存配置到相应的 ini 文件
+                            const FString& ConfigFileName = SectionObj->GetDefaultConfigFilename();
+                            SectionObj->UpdateDefaultConfigFile(ConfigFileName);
+                            
+                            // 调用 SaveConfig() 来确保更改被立即写入
+                            SectionObj->SaveConfig();
+                            
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+FString Umineprep::GetProjectSetting(const FString& SettingName)
+{
+    // 获取Settings模块
+    ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings");
+    if (!SettingsModule)
+    {
+        return FString();
+    }
+
+    // 遍历所有容器
+    TArray<FName> ContainerNames;
+    SettingsModule->GetContainerNames(ContainerNames);
+
+    for (const FName& ContainerName : ContainerNames)
+    {
+        TSharedPtr<ISettingsContainer> Container = SettingsModule->GetContainer(ContainerName);
+        if (!Container.IsValid())
+        {
+            continue;
+        }
+
+        // 遍历所有类别
+        TArray<TSharedPtr<ISettingsCategory>> Categories;
+        Container->GetCategories(Categories);
+
+        for (const TSharedPtr<ISettingsCategory>& Category : Categories)
+        {
+            // 遍历所有分段
+            TArray<TSharedPtr<ISettingsSection>> Sections;
+            Category->GetSections(Sections);
+
+            for (const TSharedPtr<ISettingsSection>& Section : Sections)
+            {
+                if (UObject* SectionObj = Section->GetSettingsObject().Get())
+                {
+                    // 遍历设置对象的所有属性
+                    for (TFieldIterator<FProperty> PropIt(SectionObj->GetClass()); PropIt; ++PropIt)
+                    {
+                        FProperty* Property = *PropIt;
+                        if (Property->HasAnyPropertyFlags(CPF_Config) && Property->GetName() == SettingName)
+                        {
+                            FString OutString;
+                            const void* PropertyValue = Property->ContainerPtrToValuePtr<void>(SectionObj);
+                            
+                            // 将属性值转换为字符串
+                            Property->ExportTextItem(OutString, PropertyValue, PropertyValue, SectionObj, PPF_None);
+                            
+                            return OutString;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return FString();
+}
+
+bool Umineprep::ExposeStructVariables(UUserDefinedStruct* Structure) 
+{
+    if (!Structure) return false;
+    for (TFieldIterator<FProperty> PropIt(Structure); PropIt; ++PropIt)
+    {
+        FProperty* Property = *PropIt;
+        Property->SetPropertyFlags(CPF_Interp);
+        Structure->Modify();
+        UE_LOG(LogTemp, Display, TEXT("Property Name: %s"), *PropIt->GetName());
+    }
+    return true;
+}
+

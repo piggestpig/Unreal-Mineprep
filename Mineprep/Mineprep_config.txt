@@ -16,6 +16,25 @@
         "lang_index": "1",
         "blender_path": "E:\\blender\\blender-4.3.2-windows-x64\\blender.exe"
     },
+    "ProjectSettings": {
+        "bDefaultFeatureAutoExposure": "false",
+        "bEnableRayTracing": "true",
+        "bUseHardwareRayTracingForLumen": "true",
+        "bEnableRayTracingShadows": "true",
+        "bAllowStaticLighting": "false",
+        "CustomDepthStencil": "3",
+        "bEnableAlphaChannelInPostProcessing": "1",
+        "bEnableDLSSInEditorViewports": "true",
+        "bEnableDLSSInPlayInEditorViewports": "true",
+        "bEnableXeSSInEditorViewports": "true",
+        "OutputFileExtension": "mp4",
+        "EncodeSettings_Low": "-preset fast -qp 28 -global_quality 28",
+        "EncodeSettings_Med": "-preset medium -qp 23 -global_quality 23",
+        "EncodeSettings_High": "-preset medium -qp 19 -global_quality 19",
+        "EncodeSettings_Epic": "-preset slow -qp 16 -global_quality 16",
+        "VideoCodec": "libx265",
+        "AudioCodec": "aac"
+    },
     "key_map": {
         "W": "W",
         "A": "A",

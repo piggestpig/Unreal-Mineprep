@@ -46,8 +46,9 @@ public class Mineprep : ModuleRules
 				"AppFramework",
 				"ToolWidgets",
 				"LevelEditor",
-				"PropertyEditor", // 添加 PropertyEditor 模块依赖
-				"MovieSceneTracks", // 添加 MovieSceneTracks 模块依赖
+				"PropertyEditor",
+				"MovieSceneTracks",
+				"SettingsEditor",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
