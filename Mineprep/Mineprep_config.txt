@@ -1,5 +1,6 @@
 {
     "Settings": {
+        "init": "false",
         "ue_language": "zh-Hans",
         "b_viewport_selected": "true",
         "b_asset_folder": "false",
@@ -14,7 +15,11 @@
         "b_gradient_animated_texture": "false",
         "texture_pack_path": "默认 (mc 1.20)",
         "lang_index": "1",
-        "blender_path": "E:\\blender\\blender-4.3.2-windows-x64\\blender.exe"
+        "blender_path": "E:\\blender\\blender-4.3.2-windows-x64\\blender.exe",
+        "GPU": "2",
+        "TTS": "false",
+        "memory_preload": "false",
+        "ffmpeg_path": ""
     },
     "ProjectSettings": {
         "bDefaultFeatureAutoExposure": "false",
@@ -24,6 +29,7 @@
         "bAllowStaticLighting": "false",
         "CustomDepthStencil": "3",
         "bEnableAlphaChannelInPostProcessing": "1",
+        "bEnableUserSettings": "true",
         "bEnableDLSSInEditorViewports": "true",
         "bEnableDLSSInPlayInEditorViewports": "true",
         "bEnableXeSSInEditorViewports": "true",
@@ -42,8 +48,8 @@
         "D": "D",
         "LeftShift": "LeftShift",
         "LeftControl": "LeftControl",
-        "LeftAlt": "LeftAlt",
+        "LeftAlt": "LeftControl",
         "SpaceBar": "SpaceBar",
-        "NumPadZero": "Comma"
+        "NumPadZero": "None"
     }
 }

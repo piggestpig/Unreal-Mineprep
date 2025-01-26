@@ -49,6 +49,9 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Project Setting", Keywords = "Mineprep Settings"), Category = "Mineprep|实验性功能(C++)")
 	static FString GetProjectSetting(const FString& SettingName);
 
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Open Project Setting", Keywords = "Mineprep Settings"), Category = "Mineprep|实验性功能(C++)")
+	static void OpenProjectSetting(const FName& ContainerName, const FName& CategoryName, const FName& SectionName);
+
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Expose Struct Variables"), Category = "Mineprep|实验性功能(C++)")
 	static bool ExposeStructVariables(UUserDefinedStruct* Structure); 
 };

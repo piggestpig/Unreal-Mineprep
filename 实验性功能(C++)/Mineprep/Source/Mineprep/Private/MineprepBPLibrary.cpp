@@ -391,6 +391,12 @@ FString Umineprep::GetProjectSetting(const FString& SettingName)
     return FString();
 }
 
+void Umineprep::OpenProjectSetting(const FName& ContainerName, const FName& CategoryName, const FName& SectionName)
+{
+    FModuleManager::LoadModuleChecked<ISettingsModule>("Settings").ShowViewer(ContainerName, CategoryName, SectionName);
+}
+
+
 bool Umineprep::ExposeStructVariables(UUserDefinedStruct* Structure) 
 {
     if (!Structure) return false;
@@ -403,4 +409,3 @@ bool Umineprep::ExposeStructVariables(UUserDefinedStruct* Structure)
     }
     return true;
 }
-

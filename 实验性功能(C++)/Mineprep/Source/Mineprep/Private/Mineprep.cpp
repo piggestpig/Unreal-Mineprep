@@ -16,12 +16,12 @@
 #include "Tracks/MovieSceneMaterialTrack.h"
 
 // 添加控制台变量
-static float GMineprepTickInterval = 0.5f;
+static float GMineprepTickInterval = 9999999.0f;
 static FAutoConsoleVariableRef CVarMineprepTickInterval(
     TEXT("Mineprep.TickInterval"),
     GMineprepTickInterval,
     TEXT("设置Mineprep Editor Tick时间间隔(秒)。\n")
-    TEXT("默认值: 0.5"),
+    TEXT("默认值: 9999999 (即不会触发Tick操作)"),
     ECVF_Default
 );
 
