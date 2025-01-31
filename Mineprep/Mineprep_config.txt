@@ -50,6 +50,6 @@
         "LeftControl": "LeftControl",
         "LeftAlt": "LeftControl",
         "SpaceBar": "SpaceBar",
-        "NumPadZero": "None"
+        "NumPadZero": "NumPadZero"
     }
 }

@@ -23,5 +23,11 @@ private:
 	void ExecuteKey7Command();
 	void ExecuteKey8Command();
 	void ExecuteKey9Command();
+	void ExecuteKeyViewCamCommand();
+	void ExecuteKeyAlignCamCommand();
+	void ExecuteKeySetParentCommand();
+	void ExecuteKeyRenderImageCommand();
+	void ExecuteKeyRenderVideoCommand();
+
 	void ExecuteBlueprintEvent(FName EventName);
 };

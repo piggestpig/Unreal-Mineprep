@@ -41,16 +41,21 @@ public:
 
     virtual void RegisterCommands() override
     {
-        UI_COMMAND(Key0Command, "快捷键 Key0", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Zero, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key1Command, "快捷键 Key1", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::One, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key2Command, "快捷键 Key2", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Two, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key3Command, "快捷键 Key3", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Three, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key4Command, "快捷键 Key4", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Four, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key5Command, "快捷键 Key5", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Five, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key6Command, "快捷键 Key6", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Six, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key7Command, "快捷键 Key7", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Seven, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key8Command, "快捷键 Key8", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Eight, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key9Command, "快捷键 Key9", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中修改操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Nine, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key0Command, "快捷键 Key0", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Zero, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key1Command, "快捷键 Key1", "【预设】切换新旧Gizmo小工具", EUserInterfaceActionType::Button, FInputChord(EKeys::One, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key2Command, "快捷键 Key2", "【预设】启用/禁用预览摄像机窗口", EUserInterfaceActionType::Button, FInputChord(EKeys::Two, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key3Command, "快捷键 Key3", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Three, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key4Command, "快捷键 Key4", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Four, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key5Command, "快捷键 Key5", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Five, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key6Command, "快捷键 Key6", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Six, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key7Command, "快捷键 Key7", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Seven, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key8Command, "快捷键 Key8", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Eight, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(Key9Command, "快捷键 Key9", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Nine, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(KeyViewCamCommand, "快捷键 KeyViewCam", "进入摄像机视图", EUserInterfaceActionType::Button, FInputChord(EKeys::NumPadZero));
+        UI_COMMAND(KeyAlignCamCommand, "快捷键 KeyAlignCam", "对齐摄像机至视图", EUserInterfaceActionType::Button, FInputChord(EKeys::NumPadZero, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(KeySetParentCommand, "快捷键 KeySetParent", "绑定父级至最后一个视口选中项", EUserInterfaceActionType::Button, FInputChord(EKeys::P, EModifierKey::Control | EModifierKey::Alt));
+        UI_COMMAND(KeyRenderImageCommand, "快捷键 KeyRenderImage", "渲染图片", EUserInterfaceActionType::Button, FInputChord(EKeys::F12));
+        UI_COMMAND(KeyRenderVideoCommand, "快捷键 KeyRenderVideo", "渲染视频", EUserInterfaceActionType::Button, FInputChord(EKeys::F12, EModifierKey::Control));
     }
 
 public:
@@ -64,6 +69,11 @@ public:
     TSharedPtr<FUICommandInfo> Key7Command;
     TSharedPtr<FUICommandInfo> Key8Command;
     TSharedPtr<FUICommandInfo> Key9Command;
+    TSharedPtr<FUICommandInfo> KeyViewCamCommand;
+    TSharedPtr<FUICommandInfo> KeyAlignCamCommand;
+    TSharedPtr<FUICommandInfo> KeySetParentCommand;
+    TSharedPtr<FUICommandInfo> KeyRenderImageCommand;
+    TSharedPtr<FUICommandInfo> KeyRenderVideoCommand;
 };
 
 class FMineprepEditorTicker : public FTickableEditorObject
@@ -318,6 +328,11 @@ void FMineprepModule::StartupModule()
     CommandList->MapAction(FMineprepCommands::Get().Key7Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey7Command));
     CommandList->MapAction(FMineprepCommands::Get().Key8Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey8Command));
     CommandList->MapAction(FMineprepCommands::Get().Key9Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey9Command));
+    CommandList->MapAction(FMineprepCommands::Get().KeyViewCamCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keyViewCam"))));
+    CommandList->MapAction(FMineprepCommands::Get().KeyAlignCamCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keyAlignCam"))));
+    CommandList->MapAction(FMineprepCommands::Get().KeySetParentCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keySetParent"))));
+    CommandList->MapAction(FMineprepCommands::Get().KeyRenderImageCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keyRenderImage"))));
+    CommandList->MapAction(FMineprepCommands::Get().KeyRenderVideoCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keyRenderVideo"))));
 
     // 创建编辑器Ticker
     MineprepEditorTicker = MakeShareable(new FMineprepEditorTicker());
@@ -353,6 +368,11 @@ void FMineprepModule::ExecuteKey6Command() {ExecuteBlueprintEvent(TEXT("key6"));
 void FMineprepModule::ExecuteKey7Command() {ExecuteBlueprintEvent(TEXT("key7"));}
 void FMineprepModule::ExecuteKey8Command() {ExecuteBlueprintEvent(TEXT("key8"));}
 void FMineprepModule::ExecuteKey9Command() {ExecuteBlueprintEvent(TEXT("key9"));}
+void FMineprepModule::ExecuteKeyViewCamCommand() {ExecuteBlueprintEvent(TEXT("keyViewCam"));}
+void FMineprepModule::ExecuteKeyAlignCamCommand() {ExecuteBlueprintEvent(TEXT("keyAlignCam"));}
+void FMineprepModule::ExecuteKeySetParentCommand() {ExecuteBlueprintEvent(TEXT("keySetParent"));}
+void FMineprepModule::ExecuteKeyRenderImageCommand() {ExecuteBlueprintEvent(TEXT("keyRenderImage"));}
+void FMineprepModule::ExecuteKeyRenderVideoCommand() {ExecuteBlueprintEvent(TEXT("keyRenderVideo"));}
 
 void FMineprepModule::ExecuteBlueprintEvent(FName EventName)
 {
