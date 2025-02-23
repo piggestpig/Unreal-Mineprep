@@ -361,12 +361,14 @@ FString Umineprep::GetProjectSetting(const FString& SettingName)
 
         for (const TSharedPtr<ISettingsCategory>& Category : Categories)
         {
+            UE_LOG(LogTemp, Display, TEXT("Category Name: %s"), *Category->GetName().ToString());
             // 遍历所有分段
             TArray<TSharedPtr<ISettingsSection>> Sections;
             Category->GetSections(Sections);
 
             for (const TSharedPtr<ISettingsSection>& Section : Sections)
             {
+                UE_LOG(LogTemp, Display, TEXT("Section Name: %s"), *Section->GetName().ToString());
                 if (UObject* SectionObj = Section->GetSettingsObject().Get())
                 {
                     // 遍历设置对象的所有属性
@@ -400,12 +402,22 @@ void Umineprep::OpenProjectSetting(const FName& ContainerName, const FName& Cate
 bool Umineprep::ExposeStructVariables(UUserDefinedStruct* Structure) 
 {
     if (!Structure) return false;
+
+    Structure->Modify();
+    bool bModified = false;
     for (TFieldIterator<FProperty> PropIt(Structure); PropIt; ++PropIt)
     {
         FProperty* Property = *PropIt;
+        // 添加CPF_Interp标志
         Property->SetPropertyFlags(CPF_Interp);
-        Structure->Modify();
         UE_LOG(LogTemp, Display, TEXT("Property Name: %s"), *PropIt->GetName());
+        bModified = true;
     }
-    return true;
+
+    if (bModified)
+    {
+        Structure->MarkPackageDirty();
+        Structure->PostEditChange();
+    }
+    return bModified;
 }
