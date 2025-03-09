@@ -1,0 +1,265 @@
+﻿原名,<中文>,<English>,<繁體中文>
+皮肤,皮肤,Skin,皮膚
+ParentSpaceControlData,父空间控制数据,ParentSpaceControlData,父空間控制資料
+Body Modifier Data,身体修改器数据,Body Modifier Data,身體修改器資料
+Physics Movement Type,物理运动类型,Physics Movement Type,物理運動類型
+ConstraintProfile,约束配置文件,ConstraintProfile,約束設定檔
+WorldSpaceControlData,世界空间控制数据,WorldSpaceControlData,世界空間控制資料
+时间,时间,Time,時間
+角度,角度,Angle,角度
+使用Actor旋转,使用Actor旋转,Use Actor Rotation,使用Actor旋轉
+时间流逝速度,时间流逝速度,Time Dilation Speed,時間流逝速度
+云,云,Cloud,雲
+方块云运动方向,方块云运动方向,Block Cloud Movement Direction,方塊雲運動方向
+日光/月光/环境光强度,日光/月光/环境光强度,Sun/Moon/Ambient Light Intensity,日光/月光/環境光強度
+日/月柔和阴影,日/月柔和阴影,Sun/Moon Soft Shadows,日/月柔和陰影
+日/月间接光照明,日/月间接光照明,Sun/Moon Indirect Lighting,日/月間接光照明
+日/月体积光效应,日/月体积光效应,Sun/Moon Volumetric Lighting,日/月體積光效應
+体积雾（丁达尔光）,体积雾（丁达尔光）,Volumetric Fog (Tyndall Effect),體積霧（丁達爾光）
+雾密度,雾密度,Fog Density,霧密度
+雾高度衰减,雾高度衰减,Fog Height Falloff,霧高度衰減
+散射分布(各向异性),散射分布(各向异性),Scattering Distribution (Anisotropic),散射分佈(各向異性)
+Refresh material,刷新材质,Refresh Material,刷新材質
+Colors determined by sun position,颜色由太阳位置决定,Colors Determined by Sun Position,顏色由太陽位置決定
+Sun height,太阳高度,Sun Height,太陽高度
+Sun brightness,太阳亮度,Sun Brightness,太陽亮度
+Horizon Falloff,地平线衰减,Horizon Falloff,地平線衰減
+Zenith Color,天顶颜色,Zenith Color,天頂顏色
+Horizon color,地平线颜色,Horizon Color,地平線顏色
+Cloud color,云颜色,Cloud Color,雲顏色
+Overall Color,整体颜色,Overall Color,整體顏色
+Cloud speed,云移动速度,Cloud Speed,雲移動速度
+Cloud opacity,云不透明度,Cloud Opacity,雲不透明度
+Stars brightness,星星亮度,Stars Brightness,星星亮度
+阻隔(渲染为透明),阻隔(渲染为透明),Blocking (Rendered as Transparent),阻隔(渲染為透明)
+画质预设,画质预设,Graphics Preset,畫質預設
+旧_画质预设,旧_画质预设,Old_Graphics Preset,舊_畫質預設
+旧_DLSS/FSR,旧_DLSS/FSR,Old_DLSS/FSR,舊_DLSS/FSR
+旧_随机种子,旧_随机种子,Old_Random Seed,舊_隨機種子
+摄像机后期优先级,摄像机后期优先级,Camera Post-Processing Priority,攝影機後製優先級
+自定义按键映射,自定义按键映射,Custom Key Mapping,自訂按鍵映射
+DLSS/FSR,DLSS/FSR,DLSS/FSR,DLSS/FSR
+全局重力,全局重力,Global Gravity,全域重力
+全局随机种子,全局随机种子,Global Random Seed,全域隨機種子
+按名称调用函数,按名称调用函数,Call Function by Name,依名稱呼叫函式
+骨骼,骨骼,Bone,骨骼
+遥控信号源(Actor),遥控信号源(Actor),Remote Signal Source (Actor),遙控訊號源(Actor)
+遥控目标(类),遥控目标(类),Remote Target (Class),遙控目標(類)
+用tag过滤目标(可留空),用tag过滤目标(可留空),Filter Targets by Tag (Optional),用tag過濾目標(可留空)
+最大遥控距离(m),最大遥控距离(m),Max Remote Distance (m),最大遙控距離(m)
+信号传播速度(m/s),信号传播速度(m/s),Signal Propagation Speed (m/s),訊號傳播速度(m/s)
+Debug,调试,Debug,偵錯
+刷新随机种子,刷新随机种子,Refresh Random Seed,刷新隨機種子
+刷新状态,刷新状态,Refresh Status,刷新狀態
+平滑移动/旋转,平滑移动/旋转,Smooth Movement/Rotation,平滑移動/旋轉
+视野(°)/光圈(F),视野(°)/光圈(F),Field of View (°)/Aperture (F),視野(°)/光圈(F)
+画面尺寸,画面尺寸,Frame Size,畫面尺寸
+追踪目标,追踪目标,Tracking Target,追蹤目標
+聚焦与变焦,聚焦与变焦,Focus & Zoom,聚焦與變焦
+其他功能,其他功能,Other Features,其他功能
+颜色,颜色,Color,顏色
+自发光强度,自发光强度,Emissive Intensity,自發光強度
+录制的摄像机晃动,录制的摄像机晃动,Recorded Camera Shake,錄製的攝影機晃動
+目标摄像机,目标摄像机,Target Camera,目標攝影機
+用tag获取摄像机,用tag获取摄像机,Get Camera by Tag,用tag取得攝影機
+瞳距 （mm）,瞳距（毫米）,Interpupillary Distance (mm),瞳距（mm）
+预览时捕获每帧,预览时捕获每帧,Capture Every Frame During Preview,預覽時擷取每幀
+预览分辨率 (默认540p),预览分辨率（默认540p）,Preview Resolution (Default 540p),預覽解析度（預設540p）
+瞳距,瞳距,Interpupillary Distance,瞳距
+分辨率,分辨率,Resolution,解析度
+聚光灯/面光/点光,聚光灯/面光/点光,Spotlight/Area Light/Point Light,聚光燈/面光/點光
+亮度,亮度,Brightness,亮度
+体积光强度,体积光强度,Volumetric Light Intensity,體積光強度
+光束分散程度,光束分散程度,Light Beam Dispersion,光束分散程度
+光束变化速度,光束变化速度,Light Beam Variation Speed,光束變化速度
+立方体渲染目标纹理,立方体渲染目标纹理,Cube Render Target Texture,立方體渲染目標紋理
+传送目的地材质,传送目的地材质,Teleport Destination Material,傳送目的地材質
+捕获每帧,捕获每帧,Capture Every Frame,擷取每幀
+传送门特效材质,传送门特效材质,Portal Effect Material,傳送門特效材質
+缩放,缩放,Zoom,縮放
+方块数量,方块数量,Block Count,方塊數量
+悬空放置,悬空放置,Air Placement,懸空放置
+自定义曲线区域,自定义曲线区域,Custom Curve Area,自訂曲線區域
+比例（方块1:方块2）,比例（方块1:方块2）,Ratio (Block1:Block2),比例（方塊1:方塊2）
+方块模型,方块模型,Block Model,方塊模型
+方块模型2,方块模型2,Block Model 2,方塊模型2
+偏移,偏移,Offset,偏移
+随机旋转,随机旋转,Random Rotation,隨機旋轉
+location,位置,Location,位置
+Mesh,网格体,Mesh,網格體
+grid,网格,Grid,網格
+stackup,堆叠,Stackup,堆疊
+Mesh2,网格体2,Mesh2,網格體2
+密度(%),密度(%),Density (%),密度(%)
+最小间距,最小间距,Minimum Spacing,最小間距
+生物1,生物1,Creature 1,生物1
+生物2,生物2,Creature 2,生物2
+生物3,生物3,Creature 3,生物3
+生物4,生物4,Creature 4,生物4
+mob1,生物1,Mob1,生物1
+mob2,生物2,Mob2,生物2
+mob3,生物3,Mob3,生物3
+mob4,生物4,Mob4,生物4
+density1,密度1,Density1,密度1
+density2,密度2,Density2,密度2
+density3,密度3,Density3,密度3
+density4,密度4,Density4,密度4
+offset,偏移,Offset,偏移
+对象->函数,对象->函数,Object -> Function,物件->函式
+预览画质,预览画质,Preview Quality,預覽畫質
+预览帧率上限,预览帧率上限,Preview Frame Rate Limit,預覽幀率上限
+渲染画质,渲染画质,Rendering Quality,渲染畫質
+网格体,网格体,Mesh,網格體
+初速度,初速度,Initial Velocity,初速度
+物品名称,物品名称,Item Name,物品名稱
+路标,路标,Waypoint,路標
+到达半径,到达半径,Arrival Radius,抵達半徑
+循环,循环,Loop,循環
+当前路标,当前路标,Current Waypoint,當前路標
+后期景深模糊,后期景深模糊,Post Depth of Field Blur,後製景深模糊
+模糊衰减变换XY,模糊衰减变换XY,Blur Falloff Transform XY,模糊衰減變換XY
+优先级,优先级,Priority,優先級
+追踪设置,追踪设置,Tracking Settings,追蹤設定
+额外旋转,额外旋转,Extra Rotation,額外旋轉
+长宽比,长宽比,Aspect Ratio,長寬比
+遮幅,遮幅,Letterbox,遮幅
+启用正交投影：距离,启用正交投影：距离,Enable Orthographic Projection: Distance,啟用正交投影：距離
+启用希区柯克变焦：偏移,启用希区柯克变焦：偏移,Enable Hitchcock Zoom: Offset,啟用希區考克變焦：偏移
+同步追踪的目标,同步追踪的目标,Synchronized Tracking Target,同步追蹤的目標
+聚焦设置,聚焦设置,Focus Settings,聚焦設定
+动作（1）,动作（1）,Action (1),動作（1）
+动作（2）,动作（2）,Action (2),動作（2）
+动作（3）,动作（3）,Action (3),動作（3）
+动作表情混入混出时间,动作表情混入混出时间,Action Blend In/Out Time,動作表情混入混出時間
+播放动作时禁用移动输入,播放动作时禁用移动输入,Disable Movement Input During Action Playback,播放動作時停用移動輸入
+NPC循环播放动作1,NPC循环播放动作1,NPC Loop Action 1,NPC循環播放動作1
+表情（4）,表情（4）,Expression (4),表情（4）
+表情（5）,表情（5）,Expression (5),表情（5）
+表情（6）,表情（6）,Expression (6),表情（6）
+SpringArmLength,弹簧臂长度,Spring Arm Length,彈簧臂長度
+SocketOffset,插槽偏移,Socket Offset,插槽偏移
+TranslationLagSpeed,位移延迟速度,Translation Lag Speed,位移延遲速度
+FieldOfView,视野,Field of View,視野
+TransitionSpeed,过渡速度,Transition Speed,過渡速度
+ActionType,动作类型,Action Type,動作類型
+HasFrontLedge,有前边缘,Has Front Ledge,有前邊緣
+FrontLedgeLocation,前边缘位置,Front Ledge Location,前邊緣位置
+FrontLedgeNormal,前边缘法线,Front Ledge Normal,前邊緣法線
+HasBackLedge,有后边缘,Has Back Ledge,有後邊緣
+BackLedgeLocation,后边缘位置,Back Ledge Location,後邊緣位置
+BackLedgeNormal,后边缘法线,Back Ledge Normal,後邊緣法線
+HasBackFloor,有后地板,Has Back Floor,有後地板
+BackFloorLocation,后地板位置,Back Floor Location,後地板位置
+ObstacleHeight,障碍高度,Obstacle Height,障礙高度
+ObstacleDepth,障碍深度,Obstacle Depth,障礙深度
+BackLedgeHeight,后边缘高度,Back Ledge Height,後邊緣高度
+HitComponent,击中组件,Hit Component,擊中組件
+ChosenMontage,选择蒙太奇,Chosen Montage,選擇蒙太奇
+StartTime,开始时间,Start Time,開始時間
+PlayRate,播放速率,Play Rate,播放速率
+Gait,步态,Gait,步態
+Speed,速度,Speed,速度
+GridColor,网格颜色,Grid Color,網格顏色
+SurfaceColor,表面颜色,Surface Color,表面顏色
+GridSizes,网格尺寸,Grid Sizes,網格尺寸
+FogColor,雾颜色,Fog Color,霧顏色
+DecalColor,贴花颜色,Decal Color,貼花顏色
+BlockColors,方块颜色,Block Colors,方塊顏色
+Randomize Button,随机化按钮,Randomize Button,隨機化按鈕
+MinTransformOffset,最小变换偏移,Min Transform Offset,最小變換偏移
+MaxTransformOffset,最大变换偏移,Max Transform Offset,最大變換偏移
+Name,名称,Name,名稱
+AutoNameFromHeight,根据高度自动命名,Auto Name from Height,依高度自動命名
+UseLevelVisualsColor,使用关卡视觉效果颜色,Use Level Visuals Color,使用關卡視覺效果顏色
+ColorGroup,颜色组,Color Group,顏色群組
+MaterialParams,材质参数,Material Parameters,材質參數
+BaseMaterial,基础材质,Base Material,基礎材質
+ButtonName,按钮名称,Button Name,按鈕名稱
+ExecuteConsoleCommand,执行控制台命令,Execute Console Command,執行控制台指令
+ConsoleCommand,控制台命令,Console Command,控制台指令
+Color,颜色,Color,顏色
+TextColor,文本颜色,Text Color,文字顏色
+PlateScale,面板缩放,Plate Scale,面板縮放
+StyleIndex,样式索引,Style Index,樣式索引
+LevelStyles,关卡样式,Level Styles,關卡樣式
+DestinationName,目标名称,Destination Name,目的地名稱
+Destination,目标,Destination,目的地
+解算器,解算器,Solver,解算器
+变换,变换,Transform,變換
+权重,权重,Weight,權重
+浓度,浓度,Concentration,濃度
+松散度,松散度,Looseness,鬆散度
+移动速度,移动速度,Movement Speed,移動速度
+移动方向,移动方向,Movement Direction,移動方向
+手动指定摄像机,手动指定摄像机,Manual Camera Assignment,手動指定攝影機
+摄像机移动/旋转延迟,摄像机移动/旋转延迟,Camera Movement/Rotation Delay,攝影機移動/旋轉延遲
+切换XY轴方向,切换XY轴方向,Swap XY Axis Direction,切換XY軸方向
+重力,重力,Gravity,重力
+速度（包含正负方向）,速度（包含正负方向）,Speed (Including Direction),速度（包含正負方向）
+材质,材质,Material,材質
+CamStyle_Far,远距摄像机风格,Camera Style_Far,遠距攝影機風格
+CamStyle_Close,近距摄像机风格,Camera Style_Close,近距攝影機風格
+CamStyle_Aim,瞄准摄像机风格,Camera Style_Aim,瞄準攝影機風格
+WalkSpeeds,行走速度,Walk Speeds,行走速度
+RunSpeeds,跑步速度,Run Speeds,跑步速度
+SprintSpeeds,冲刺速度,Sprint Speeds,衝刺速度
+CrouchSpeeds,蹲伏速度,Crouch Speeds,蹲伏速度
+CameraDistanceMultiplier,摄像机距离倍率,Camera Distance Multiplier,攝影機距離倍率
+头部模型,头部模型,Head Model,頭部模型
+身体模型,身体模型,Body Model,身體模型
+右手物品,右手物品,Right Hand Item,右手物品
+左手物品,左手物品,Left Hand Item,左手物品
+自定义键控动画,自定义键控动画,Custom Keyed Animation,自訂鍵控動畫
+头发,头发,Hair,頭髮
+披风/鞘翅,披风/鞘翅,Cape/Elytra,披風/鞘翅
+披风贴图,披风贴图,Cape Texture,披風貼圖
+自动爬墙/多次尝试跳跃,自动爬墙/多次尝试跳跃,Auto Wall Climb/Multi-Jump,自動爬牆/多次嘗試跳躍
+NPC跑步跟随目标,NPC跑步跟随目标,NPC Run to Follow Target,NPC跑步跟隨目標
+面向玩家/目标,面向玩家/目标,Face Player/Target,面向玩家/目標
+物理交互（纠正穿模）,物理交互（纠正穿模）,Physics Interaction (Fix Clipping),物理交互（修正穿模）
+物理模拟权重,物理模拟权重,Physics Simulation Weight,物理模擬權重
+物理动画参数,物理动画参数,Physics Animation Parameters,物理動畫參數
+局部禁用物理模拟,局部禁用物理模拟,Locally Disable Physics Simulation,局部停用物理模擬
+禁用物理模拟的骨骼,禁用物理模拟的骨骼,Bones with Disabled Physics Simulation,禁用物理模擬的骨骼
+⚠重力方向,⚠重力方向,⚠Gravity Direction,⚠重力方向
+碰撞debug,碰撞调试,Collision Debug,碰撞偵錯
+NPC跟随路标,NPC跟随路标,NPC Follow Waypoints,NPC跟隨路標
+RandomSeedOffset,随机种子偏移,Random Seed Offset,隨機種子偏移
+键盘灵敏度,键盘灵敏度,Keyboard Sensitivity,鍵盤靈敏度
+鼠标灵敏度,鼠标灵敏度,Mouse Sensitivity,滑鼠靈敏度
+空气阻力减速,空气阻力减速,Air Resistance Deceleration,空氣阻力減速
+最大速度,最大速度,Max Speed,最大速度
+横滚带动偏航转向速率,横滚带动偏航转向速率,Roll-Induced Yaw Rate,橫滾帶動偏航轉向速率
+摄像机焦距,摄像机焦距,Camera Focal Length,攝影機焦距
+反转鼠标Y轴,反转鼠标Y轴,Invert Mouse Y-Axis,反轉滑鼠Y軸
+Actor,角色,Actor,角色
+静态网格体,静态网格体,Static Mesh,靜態網格體
+静态网格体组件,静态网格体组件,Static Mesh Component,靜態網格體組件
+纹理,纹理,Texture,紋理
+骨骼网格体,骨骼网格体,Skeletal Mesh,骨骼網格體
+骨骼网格体组件,骨骼网格体组件,Skeletal Mesh Component,骨骼網格體組件
+同步材质至头部,同步材质至头部,Sync Material to Head,同步材質至頭部
+动画库,动画库,Animation Library,動畫庫
+潜行/走路/跑步速度,潜行/走路/跑步速度,Crouch/Walk/Run Speed,潛行/走路/跑步速度
+马鞍,马鞍,Saddle,馬鞍
+自定义皮肤0贴图,自定义皮肤0贴图,Custom Skin 0 Texture,自訂皮膚0貼圖
+随机皮肤,随机皮肤,Random Skin,隨機皮膚
+◆遥控灯光,◆遥控灯光,◆Remote Control Lights,◆遙控燈光
+◆切换表情,◆切换表情,◆Switch Facial Expression,◆切換表情
+◆切换动作,◆切换动作,◆Switch Action,◆切換動作
+◆断肢,◆断肢,◆Dismember,◆斷肢
+◆瘫痪,◆瘫痪,◆Paralyze,◆癱瘓
+◆冲击,◆冲击,◆Impulse,◆衝擊
+◆起身并恢复动画,◆起身并恢复动画,◆Rise & Restore Animation,◆起身並恢復動畫
+◆开始/停止跑步,◆开始/停止跑步,◆Start/End Run,◆開始/停止跑步
+◆开始跳跃,◆开始跳跃,◆Jump,◆開始跳躍
+◆小键盘物理事件,◆小键盘物理事件,◆Keypad Physical Event,◆小鍵盤物理事件
+◆批量切换表情,◆批量切换表情,◆Batch Switch Facial Expression,◆批量切換表情
+◆批量切换动作,◆批量切换动作,◆Batch Switch Action,◆批量切換動作
+◆批量断肢,◆批量断肢,◆Batch Dismember,◆批量斷肢
+◆批量瘫痪,◆批量瘫痪,◆Batch Paralyze,◆批量癱瘓
+◆批量冲击,◆批量冲击,◆Batch Impulse,◆批量衝擊
+◆批量起身,◆批量起身,◆Batch Rise,◆批量起身
+◆批量开始/停止跑步,◆批量开始/停止跑步,◆Batch Start/End Run,◆批量開始/停止跑步
+◆批量跳跃,◆批量跳跃,◆Batch Jump,批量跳躍
+◆批量小键盘物理事件,◆批量小键盘物理事件,◆Batch Keypad Physical Event,◆批量小鍵盤物理事件

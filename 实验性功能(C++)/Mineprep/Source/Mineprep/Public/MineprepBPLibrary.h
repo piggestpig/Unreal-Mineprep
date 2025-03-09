@@ -21,38 +21,68 @@
 #include "ISettingsEditorModule.h"
 #include "ISettingsCategory.h"
 #include "Engine/UserDefinedStruct.h"
+#include "CoreMinimal.h"
+#include "Engine/UserDefinedStruct.h"
+#include "Engine/Blueprint.h"
+#include "UObject/UnrealType.h"
+#include "Engine/BlueprintGeneratedClass.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "K2Node_FunctionEntry.h"
+#include "UObject/Class.h"
 #include "MineprepBPLibrary.generated.h"
+
 
 UCLASS()
 class Umineprep : public UBlueprintFunctionLibrary
 {
 	GENERATED_UCLASS_BODY()
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Editor UI Scale", Keywords = "Mineprep UI Scale Editor"), Category = "Mineprep|实验性功能(C++)")
+	//设置编辑器UI缩放
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static float SetEditorUIScale(float Scale);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Widget Text Under Mouse", Keywords = "Mineprep UI Widget Text"), Category = "Mineprep|实验性功能(C++)")
+	//获取鼠标指针下的文本
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static FString GetWidgetTextUnderMouse();
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Tick Run On Any Thread", Keywords = "Mineprep Tick Thread"), Category = "Mineprep|实验性功能(C++)") 
+	//启用Tick多线程
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static void SetTickRunOnAnyThread(UObject* Object, bool bRunOnAnyThread);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Material Info", Keywords = "Mineprep Material Info"), Category = "Mineprep|实验性功能(C++)")
+	//辅助函数，获取材质信息
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static FComponentMaterialInfo GetMaterialInfo(UMovieSceneComponentMaterialTrack* Track);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Clean Material", Keywords = "Mineprep Material Clean"), Category = "Mineprep|实验性功能(C++)")
+	//清理材质节点
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool CleanMaterial(UMaterial* Material);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Project Setting", Keywords = "Mineprep Settings"), Category = "Mineprep|实验性功能(C++)")
+	//修改项目设置
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool SetProjectSetting(const FString& SettingName, const FString& Value);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Project Setting", Keywords = "Mineprep Settings"), Category = "Mineprep|实验性功能(C++)")
+	//获取项目设置
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static FString GetProjectSetting(const FString& SettingName);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Open Project Setting", Keywords = "Mineprep Settings"), Category = "Mineprep|实验性功能(C++)")
+	//打开项目设置栏目
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static void OpenProjectSetting(const FName& ContainerName, const FName& CategoryName, const FName& SectionName);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Expose Struct Variables"), Category = "Mineprep|实验性功能(C++)")
+	//公开结构体变量的关键帧按钮
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool ExposeStructVariables(UUserDefinedStruct* Structure); 
+
+	//打印公开的蓝图变量和函数名
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static void GatherPropertyNames(UObject* BlueprintObject);
+
+	//为蓝图变量或函数注入DisplayName元数据
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static bool InjectDisplayName(UObject* BlueprintObject, const TMap<FString, FString>& PropertyDisplayMap, const bool save = false, const bool debug = false);
+
+	//为蓝图变量或函数设置工具提示
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static bool SetPropertyTooltip(UObject* BlueprintObject, const TMap<FString, FString>& PropertyTooltipMap, const bool save = false, const bool debug = false);
 };
 

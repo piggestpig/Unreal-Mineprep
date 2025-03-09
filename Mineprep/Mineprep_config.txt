@@ -1,6 +1,6 @@
 {
     "Settings": {
-        "init": "false",
+        "init": "true",
         "ue_language": "zh-Hans",
         "b_viewport_selected": "true",
         "b_asset_folder": "false",
@@ -13,14 +13,17 @@
         "roughness": "0.7",
         "b_collision": "true",
         "b_gradient_animated_texture": "false",
-        "texture_pack_path": "默认 (mc 1.20)",
+        "texture_pack_path": "【MC 1.20】",
         "lang_index": "1",
-        "blender_path": "E:\\blender\\blender-4.3.2-windows-x64\\blender.exe",
+        "blender_path": "",
         "GPU": "1",
         "TTS": "false",
-        "memory_preload": "false",
+        "memory_preload": false,
         "ffmpeg_path": "",
-        "smooth_roll": "true"
+        "smooth_roll": "true",
+        "hover_toolbar": "false",
+        "tkinter_scale": "3",
+        "installer_dir": "E:\\github\\Unreal-MCprep"
     },
     "ProjectSettings": {
         "bDefaultFeatureAutoExposure": "false",

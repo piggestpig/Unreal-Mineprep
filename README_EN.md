@@ -1,5 +1,55 @@
 # Unreal-Mineprep
 
+中文 | [**English**](./README_EN.md) | [**繁體中文**](./README_ZH-Hant.md)
+
+✨这是一个正在开发中的UE5插件，继承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的实用功能，并加入一些新的资产，为制作MC动画带来便利
+
+![image](Readme素材/0.4-pre2封面图.jpg)
+
+![image](Readme素材/插件展示.jpg)
+
+*本插件与Minecraft、MCprep官方没有直接联系，在其建议下插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆（0.3及之前的版本已经归档，就不做修改了）。  
+在v1.0正式发布前，插件主要供内部使用，可能存在兼容性问题和潜在的 ~~bug~~ 特性。之后会逐步修复并写一些使用教程（但这应该是很久以后的事了）
+
+## 安装方法（适用于0.4+版本）
+
+### ① 使用安装包（推荐）
+1、下载Mineprep插件，建议保存在纯英文路径下。  
+- 你可以在右侧的`Releases`部分下载较为稳定的大版本；或者点击上面的绿色`Code`按钮 -> `Download Zip`，下载最新快照版本。
+
+2、解压安装包，使用Blender打开里面的`Mineprep_installer.blend`文件。
+> Unreal Mineprep是在Blender MCprep的基础上开发的，部分功能会远程调用MCprep里的函数。如果你是Blender用户那就好极了！
+- 如果你没有Blender，可以前往[Blender官网](https://www.blender.org/download/)下载，建议选择"Windows Portable"版本，无需安装，解压即用。当然也可以在[Steam](https://store.steampowered.com/app/365670/Blender/)等其他平台下载。
+- 此外，我们还推荐你在Blender中安装[MCprep插件](https://theduckcow.com/dev/blender/mcprep/)。
+
+3、点击▶️运行脚本，会弹出菜单和安装引导，目前提供了`创建新的工程文件`和`安装至现有工程`两个选项，还可以选择实验性功能、插件设置等内容。然后就能一键安装了。
+
+### ② 手动安装
+需要复制Mineprep内容文件夹+修改项目设置，稍后会更新详细步骤
+
+## 生物
+- Mineprep提供了MC原版生物模型，可以通过生成器面板放置
+- 目前有骨骼网格体和自动化NPC两种类型。所有生物都可以更换材质，两脚生物可以添加通用的IK绑定
+- 当前版本支持：猪、牛、羊、马（驴、骡、僵尸马、骷髅马）、僵尸、尸壳、溺尸、骷髅、凋灵骷髅、流浪者、沼骸、猪灵、猪灵蛮兵、掠夺者、卫道士、铁傀儡
+- 更多内容正在更新中
+
+## 语言本地化
+- Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体中文
+  - **安装包**会根据Blender的偏好设置选择语言。本地化内容以字典的形式写在代码中，参见[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
+  - **插件面板**上方有选择语言的按钮，在启动时会根据UE的偏好设置选择语言。本地化内容保存在[语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv)中
+  - 安装实验性功能后，可以点击**顶部菜单栏-MC-开发-注入本地化变量名**，进一步翻译细节面板中的变量和函数。这是一个正在开发中的新功能。本地化内容保存在[变量显示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)中
+- 更多内容正在更新中
+
+## 开源协议
+- 在制作插件时，我原来用的是GPL-3.0协议，但是现在包含了虚幻引擎的官方示例+源代码，它们好像和开源许可证不兼容 (*´･д･)? 所以这里就先不放License文件了。
+- 在大部分情况下，你可以免费使用本插件。(UE5.3及更早的版本不向影视创作者收费，UE5.4开始对年收入超过100万美元的用户按席位收费，显然我们不会达到收费门槛hhh)  
+具体参见[Epic Games的用户协议](https://www.unrealengine.com/zh-CN/eula)
+- 以后考虑做一个Mineprep Lite，只留下准备场景、更换材质等核心功能，没有官方素材和引擎源码。这样安装会简单很多，也能放GPL-3.0协议了
+- 同时，Mineprep引用了许多第三方插件和资源，在此向他们表示感谢。我们在[ResourceLicenses](./Readme素材/ResourcesLicenses)文件夹中收录了一些许可证和作者留言。如有遗漏可以拉一个Pull Request进行补充
+
+
+# Unreal-Mineprep
+
 English | [**中文**](./README.md) | [**繁體中文**](./README_ZH-Hant.md)
 
 ✨This is a UE5 plugin that inherits the practical features of [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/), and adds some new assets to facilitate the creation of MC animations.
@@ -8,62 +58,47 @@ English | [**中文**](./README.md) | [**繁體中文**](./README_ZH-Hant.md)
 
 ![image](Readme素材/插件展示_EN.jpg)
 
-*This plugin is not affiliated with Minecraft or MCprep. Upon their suggestion, we changed the name from Unreal MCprep to Unreal Mineprep to avoid confusion (versions 0.3 and earlier have been archived so they remain unchanged).
+*This plugin is not affiliated with Minecraft or MCprep. Upon their suggestion, we changed the name from Unreal MCprep to Unreal Mineprep to avoid confusion (versions 0.3 and earlier have been archived so they remain unchanged).  
+Before the official release of v1.0, the plugin is mainly for internal use, so there may be compatibility issues and potential ~~bugs~~ features. We will gradually fix them and write some tutorials (though it will be a long way off).
 
-> Currently there is no user tutorial •ࡇ• — Before the official release of v1.0, the plugin is mainly for internal use, and we haven't planned to deal with compatibility and potential ~~bugs~~ features. If you don't have Unreal Engine, you can download the packed demo from the Release section to experience this plugin's demonstration.
+## Installation (for version 0.4+)
 
-## Installation (for version 0.3+)
-1. Download the MCprep folder and place it in the "content" directory of your UE project (do not place it in other paths).
+### ① Use the installer (recommended)
+1. Download the Mineprep plugin, preferably save it in a pure English path.
+- You can download more stable major versions in the `Releases` section on the right; or click the green `Code` button above -> `Download Zip` to download the latest snapshot version.
 
-2. Enable the following built-in plugins:
-- Python Editor Script Plugin
-- Movie Render Queue
-- Movie Render Queue Additional Render Passes
-- OpenColorlO (OCIO)
-- Apple Prores Media
-- NiagaraFluids
-- Motion Trajectory
-- Motion Warping
-- Pose Search
-- Animation Warping
-- Animation Locomotion Library
-- Chooser
-- Deformer Graph
-- Text 3D
-- Metasound
-- PhysicsControl
-- Procedural Content Generation Framework (PCG)
-- Mover(not necessary for now)
-- Take Recorder (not necessary for now)
-- Chaos Flesh (not necessary for now)
-- Motion Design (not necessary for now)
+2. Unzip the installer and open the `Mineprep_installer.blend` file with Blender.
+> Unreal Mineprep is developed based on Blender MCprep, and some functions will remotely call functions in MCprep. If you are a Blender user, that's great!
+- If you don't have Blender, you can download it from the [Blender website](https://www.blender.org/download/). We recommend choosing the "Windows Portable" version, which does not require installation. Of course, you can also download it from other platforms such as [Steam](https://store.steampowered.com/app/365670/Blender/).
 
-Restart Unreal Engine, right-click on the Mineprep blueprint, and click "Run Editor Utility Widget". Most of the plugin's functions should now be available!
+3. Click ▶️ to run the script, a menu and installation guide will pop up. Currently, there are two options: `Create a new project file` and `Install to an existing project`. You can also choose experimental features, plugin settings, etc. Then you can start the automatic installation.
 
-3. Download and install [TApython](https://github.com/cgerchenhp/UE_TAPython_Plugin_Release) and [DLSS](https://developer.nvidia.com/rtx/dlss/get-started) to use additional features like auto sway. These need to be installed manually, which can be a bit tricky for beginners (Remember the first time you installed mods for MC? Forge, Fabric, pre-request... It was truly a bit difficult. ~~Oh you say play the Bedrock Edition, never mind then~~). The installation process will be simplified in the future!
+### ② Manual installation
+You need to copy the Mineprep content folder + modify the project settings. Detailed steps will be updated later.
 
-4. Download [Blender](https://www.blender.org/download/) and install [MCprep](https://theduckcow.com/dev/blender/mcprep/), then configure the Blender path in the Mineprep panel to use the block and item spawner.
-
-5. If you want to render videos, remember to click "Init Video Render" in the plugin panel and then restart. Note that we use [ffmpeg](https://ffmpeg.org/download.html) for video encoding, and its storage path, which is your project file path, cannot contain non-ascii characters. (Besides, click "Experimental Features" and restart to unlock VR stereoscopic rendering. If you don't use it, you needn't click it.)
 
 ## Mobs
-- Mineprep provides MC mobs that can be placed through the spawner panel; there are two types: skeletal mesh and automated NPC.
-- 0.4-pre2 supports Pig, Cow, Sheep, Horse (Donkey, Mule, Zombie Horse, Skeleton Horse), Zombie, Husk, Drowned, Skeleton, Wither Skeleton, Stray, Bogged, Piglin, Piglin Brute, Pillager, Vindicator, and Iron Golem.
-- "Steve" and "Alex" represent generic player models that can change skins.
+- Mineprep provides Minecraft mobs which can be placed through the spawner panel.
+- Currently, there are skeletal meshes and automated NPCs. All mobs can change materials, and humanoids can add universal IK bindings.
+- Current version supports: pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, husk, piglin, piglin brute, pillager, vindicator, iron golem.
 - More content is WIP.
+
 
 ## Localization
-- Mineprep offers extensible multi-language support. Currently, the plugin panel is the most complete one, with support for Simplified Chinese, English, and Traditional Chinese. They are translated according to the standardized names in MC Java Edition.
-- More content is WIP.
+- Mineprep provides an extensible multi-language translation, currently supporting Chinese/English/Traditional
+  - The **installer** will select the language based on Blender's preference settings. Localization content is written in the form of a dictionary in the code, see [Mineprep_installer.blend](./Mineprep_installer.blend) or [Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
+  - The **plugin panel** has a button to select the language, which will be selected based on UE's preference settings at startup. Localization content is saved in [语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv)
+  - After enabling experimental features, you can click **Top Menu-MC-Development-Inject Localization Variable Names** to further translate the variables and functions in the detail panel. This is a new feature under development. Localization content is saved in [变量显示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)
+- More content is WIP
+
 
 ## License
-- When creating the plugin, I first used the GPL-3.0 license, but then discovered that UE's source code EULA is incompatible with open-source licenses (*´･д･)? So for now there is no License file here. In short:
-- In most cases, you can use this plugin for free.
-> UE5.4 charges film makers with annual revenue over $1 million per seat. Apparently we won't reach that threshold hhh (UE5.3 and earlier versions even didn't  charge the film industry, but engine content is not backward compatible, so the latest Mineprep can only be used in higher versions).
-- Without an open-source license on GitHub, it is private by default, so you can't modify the plugin and sell it. Given the inclusion of engine source code and official assets, UE5's EULA is incompatible with open-source licenses. You should edit it for personal use only.
-> Interesting fact: open-source ≠ public ≠ free. For example, you can find Unreal Engine source code on GitHub, but it uses Epic Games' own EULA. Open-source is related to the License file.
-- Thanks to all the software and plugins referenced, including Unreal Engine, Minecraft, Blender, MCprep, FFmpeg, TApython, DLSS, etc. When using relevant content, you can also check their requirements — for example, MCprep requires you to own a legitimate copy of Minecraft, and UE's official assets can only be used within Unreal Engine.
-- In the future, we may consider making a Mineprep Lite, which only includes core features like prep scene and swap texture, without official assets and engine source code. This will make installation much simpler and I can put a GPL-3.0 license there.
+- My plugin once used the GPL-3.0 license, but now it includes Unreal's example contents & source code, which seem to be incompatible with open-source licenses (*´･д･)? So currently I don't put any license file here.
+- In most cases, you can use the plugin for free. (UE5.3 and earlier versions are free for video production; UE5.4 and later charge users with an annual income exceeding $1 million per seat. Obviously we won't reach the charging threshold hhh)
+  - See [Epic Games' EULA](https://www.unrealengine.com/eula) for details
+- In the future, we plan to make a lite version of Mineprep, which only retains core functions such as preparing scenes, changing materials, etc., without official assets and engine source code. This will make installation much simpler and allow the use of the GPL-3.0 license.
+- At the same time, Mineprep references many third-party plugins and resources. We have included some licenses and author notes in the [ResourceLicenses](./Readme素材/ResourcesLicenses) folder. If there are omissions, you can submit a Pull Request to supplement them.
+
 
 ## Version Updates
 

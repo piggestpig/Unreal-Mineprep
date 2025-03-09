@@ -1,5 +1,5 @@
-﻿Mineprep:0.4,中文,English,繁體中文,,,,<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,,<3:预设素材>,<3:Preset>,<3:預設素材>,,,,<4:附加组件>,<4:Attach>,<4:附加組件>,,,,<5:提示框>,<5:Tooltip>,<5:提示框>,,,,,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,,<7:事件>,<7:Events>,<7:事件>
-0,准备场景,Prep Scene,準備場景,,,,Steve 普通人模,Steve,Steve 普通人模,,,,,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,,3D摄像机组,3D camera rig,3D攝像機組,,,,111,,,,,,,"低
+﻿Mineprep:0.4,中文,English,繁體中文,,,,<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,,<3:预设素材>,<3:Preset>,<3:預設素材>,,,,<4:附加组件>,<4:Attach>,<4:附加組件>,,,,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,,<7:事件>,<7:Events>,<7:事件>
+0,准备场景,Prep Scene,準備場景,,,,Steve 普通人模,Steve,Steve 普通人模,,,,,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,,（即将废弃）Mineprep 3D摄像机组,（To be deprecated）Mineprep 3D Camera Rig,（即將廢棄）Mineprep 3D攝像機組,,,,渲染图像（F12）,Render Image（F12）,渲染圖像（F12）,,,,,"低
 中
 高
 极高","Low
@@ -9,7 +9,7 @@ Epic","低
 中
 高
 極高",,,,,遥控灯光,Remote Control Lights,遙控燈光
-1,更换材质,Swap Texture,更換材質,,,,Alex 细手臂人模,Alex (slim),Alex 細手臂人模,,,,,可交互2D水面,Interactive 2D Water,可交互2D水面,,,,末影粒子,Ender Particles,末影粒子,,,,,,,,,,,"8bit 4:2:0#yuv420p
+1,更换材质,Swap Texture,更換材質,,,,Alex 细手臂人模,Alex (slim),Alex 細手臂人模,,,,,可交互2D水面,Interactive 2D Water,可交互2D水面,,,,末影粒子,Ender Particles,末影粒子,,,,渲染动画（Ctrl+F12）,Render Animation（Ctrl+F12）,渲染動畫（Ctrl+F12）,,,,,"8bit 4:2:0#yuv420p
 8bit 4:2:2#yuv422p
 8bit 4:4:4#yuv444p
 10bit 4:2:0#yuv420p10le
@@ -28,17 +28,74 @@ Epic","低
 10bit 4:2:2#yuv422p10le
 10bit 4:4:4#yuv444p10le
 8bit 4:2:0+Alpha#yuva420p",,,,,切换表情,Switch Facial Expression,切換表情
-2,批量处理对象 :,Target :,批量處理對象：,,,,Steve+表情,Steve_face,Steve+表情,,,,,可交互3D水池,Interactive 3D Water Pool,可交互3D水池,,,,爆炸粒子,Explosion Particles,爆炸粒子,,,,,,,,,,,,,,,,,,切换动作,Switch Action,切換動作
-3,视口选中项,Viewport selected,視口選中項,,,,Alex 细手臂+表情,Alex (slim)_face,Alex 細手臂+表情,,,,,摇臂摄像机,Crane Camera,搖臂攝像機,,,,“通用跟踪目标” tag,“Followed Target”  tag,“通用跟踪目標” tag,,,,,,,,,,,,,,,,,,断肢,Dismember,斷肢
-4,资产文件夹,Asset folder,資產文件夾,,,,Steve 模块化绑定,Steve_modular rig,Steve_模塊化綁定,,,,,曲线引导粒子,Curve Guide Particles,曲線引導粒子,,,,“碰撞” tag,“collider”  tag,“碰撞” tag,,,,,,,,,,,,,,,,,,瘫痪,Paralyze,癱瘓
-5,Blender路径,Blender path,Blender路徑,,,,Steve 直角弯折,Steve_angular bent,Steve_直角彎折,,,,,滚动方块,Rolling Block,滾動方塊,,,,同步摄像机,Sync Camera,同步攝像機,,,,,,,,,,,,,,,,,,冲击,Impulse,衝擊
+2,批量处理对象 :,Target :,批量處理對象：,,,,Steve+表情,Steve_face,Steve+表情,,,,,可交互3D水池,Interactive 3D Water Pool,可交互3D水池,,,,爆炸粒子,Explosion Particles,爆炸粒子,,,,打开输出文件夹,Open Output Folder,打開輸出文件夾,,,,,"2K.mp4
+2K_HDR.mp4
+2K_透明.mov
+2K_3D.mov
+4K_VR全景.mp4
+2K.png
+2K_线性.exr
+2K_ACES.exr","2K.mp4
+2K_HDR.mp4
+2K_RGBA transparent.mov
+2K_3D stereo.mov
+4K_360°VR.mp4
+2K.png
+2K_linear.exr
+2K_ACES.exr","2K.mp4
+2K_HDR.mp4
+2K_透明.mov
+2K_3D.mov
+4K_VR全景.mp4
+2K.png
+2K_綫性.exr
+2K_ACES.exr",,,,,切换动作,Switch Action,切換動作
+3,视口选中项,Viewport selected,視口選中項,,,,Alex 细手臂+表情,Alex (slim)_face,Alex 細手臂+表情,,,,,摇臂摄像机,Crane Camera,搖臂攝像機,,,,“通用跟踪目标” tag,“Followed Target”  tag,“通用跟踪目標” tag,,,,重启Mineprep插件面板,Restart Mineprep Panel,重啓Mineprep插件面板,,,,,"普通 (sRGB)
+HDR (Rec2100 PQ)
+ACEScg
+线性 (linear)","sRGB
+HDR (Rec2100 PQ)
+ACEScg
+linear","普通 (sRGB)
+HDR (Rec2100 PQ)
+ACEScg
+綫性 (linear)",,,,,断肢,Dismember,斷肢
+4,资产文件夹,Asset folder,資產文件夾,,,,Steve 模块化绑定,Steve_modular rig,Steve_模塊化綁定,,,,,曲线引导粒子,Curve Guide Particles,曲線引導粒子,,,,“碰撞” tag,“collider”  tag,“碰撞” tag,,,,开发,Dev,開發,,,,,"1080p#1920x1080
+2K#2560x1440
+4K#3840x2160
+VR_4K (2:1)#4096x2048
+VR_8K (2:1)#8192x4096
+DCI_2K (1.89:1)#2048x1080
+DCI_4K (1.89:1)#4096x2160
+老电影 4:3#1920x1440
+宽屏 2.39:1#3440x1440
+竖屏 9:16#1080x1920","1080p#1920x1080
+2K#2560x1440
+4K#3840x2160
+VR_4K (2:1)#4096x2048
+VR_8K (2:1)#8192x4096
+DCI_2K (1.89:1)#2048x1080
+DCI_4K (1.89:1)#4096x2160
+Classic film 4:3#1920x1440
+Widescreen 2.39:1#3440x1440
+Portrait 9:16#1080x1920","1080p#1920x1080
+2K#2560x1440
+4K#3840x2160
+VR_4K (2:1)#4096x2048
+VR_8K (2:1)#8192x4096
+DCI_2K (1.89:1)#2048x1080
+DCI_4K (1.89:1)#4096x2160
+老電影 4:3#1920x1440
+寬屏 2.39:1#3440x1440
+竪屏 9:16#1080x1920",,,,,瘫痪,Paralyze,癱瘓
+5,Blender路径,Blender path,Blender路徑,,,,Steve 直角弯折,Steve_angular bent,Steve_直角彎折,,,,,滚动方块,Rolling Block,滾動方塊,,,,同步摄像机,Sync Camera,同步攝像機,,,,调试,Debug,調試,,,,,,,,,,,,冲击,Impulse,衝擊
 6,重载材质属性,Overwrite Material Input,重載材質屬性,,,,Steve [NPC],Steve [NPC],Steve [NPC],,,,,粒子自碰撞,Self-collision Particles,粒子自碰撞,,,,灯光遥控,Light Remote Controller,燈光遙控,,,,,,,,,,,,,,,,,,起身并恢复动画,Rise & Restore Animation,起身並恢復動畫
 7,金属度,Metallic,金屬度,,,,Steve 高级运动匹配NPC,Advanced NPC,Steve 高級運動匹配NPC,,,,,落叶粒子,Falling Leaves,落葉粒子,,,,脚步粒子,Footstep Particles,脚步粒子,,,,,,,,,,,,,,,,,,开始/停止跑步,Start/End Run,開始/停止跑步
 8,高光度,Specular,高光度,,,,僵尸,Zombie,喪屍/殭屍,,,,,飞行摄像机,FPV Flying Camera,飛行攝像機,,,,阻隔（渲染为透明）,Alpha Holdout,阻隔（渲染為透明）,,,,,,,,,,,,,,,,,,开始跳跃,Jump,開始跳躍
-9,粗糙度,Roughness,粗糙度,,,,僵尸 [NPC],Zombie [NPC],喪屍/殭屍 [NPC],,,,,下雨粒子,Rain Particles,下雨粒子,,,,,,,,,,,,,,,,,,,,,,,,小键盘物理事件,Keypad Physical Event,小鍵盤物理事件
-10,植物摇摆,Sway,植物搖擺,,,,尸壳,Husk,屍殼,,,,,下雪粒子,Snow Particles,下雪粒子,,,,,,,,,,,,,,,,,,,,,,,,批量切换表情,Batch Switch Facial Expression,批量切換表情
-11,摇摆幅度,Sway strength,搖擺幅度,,,,尸壳 [NPC],Husk [NPC],屍殼 [NPC],,,,,爆炸粒子,Explosion Particles,爆炸粒子,,,,,,,,,,,,,,,,,,,,,,,,批量切换动作,Batch Switch Action,批量切換動作
-12,摇摆速度,Sway speed,搖擺速度,,,,溺尸,Drowned,溺屍/沉屍,,,,,软体史蒂夫,Soft Body Steve,軟體史蒂夫,,,,,,,,,,,,,,,,,,,,,,,,批量断肢,Batch Dismember,批量斷肢
+9,粗糙度,Roughness,粗糙度,,,,僵尸 [NPC],Zombie [NPC],喪屍/殭屍 [NPC],,,,,下雨粒子,Rain Particles,下雨粒子,,,,nDisplay 3D摄像机组,nDisplay 3D Camera Rig,nDisplay 3D攝像機組,,,,,,,,,,,,,,,,,,小键盘物理事件,Keypad Physical Event,小鍵盤物理事件
+10,植物摇摆,Sway,植物搖擺,,,,尸壳,Husk,屍殼,,,,,下雪粒子,Snow Particles,下雪粒子,,,,局部调色蒙版(2D),Color Correction Window(2D),局部調色蒙版(2D),,,,,,,,,,,,,,,,,,批量切换表情,Batch Switch Facial Expression,批量切換表情
+11,摇摆幅度,Sway strength,搖擺幅度,,,,尸壳 [NPC],Husk [NPC],屍殼 [NPC],,,,,爆炸粒子,Explosion Particles,爆炸粒子,,,,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,,,批量切换动作,Batch Switch Action,批量切換動作
+12,摇摆速度,Sway speed,搖擺速度,,,,溺尸,Drowned,溺屍/沉屍,,,,,软体史蒂夫,Soft Body Steve,軟體史蒂夫,,,,绑定父级至最后选中项,Set Parent to the last selected one,綁定父級至最後選中項,,,,,,,,,,,,,,,,,,批量断肢,Batch Dismember,批量斷肢
 13,预设 :,Preset :,預設：,,,,溺尸 [NPC],Drowned [NPC],溺屍/沉屍 [NPC],,,,,MC像素文字(3D),MC Pixel Text (3D),MC像素文字(3D),,,,,,,,,,,,,,,,,,,,,,,,批量瘫痪,Batch Paralyze,批量癱瘓
 14,初始化视频渲染,Init Video Render,初始化視頻渲染,,,,猪灵,Piglin,豬人/豬布林,,,,,同步玩家摄像机,Sync Player Camera,同步玩家攝像機,,,,,,,,,,,,,,,,,,,,,,,,批量冲击,Batch Impulse,批量衝擊
 15,打开输出文件夹,Open Output Folder,打開輸出資料夾,,,,猪灵 [NPC],Piglin [NPC],豬人/豬布林 [NPC],,,,,丁达尔体积光,God Rays,丁達爾體積光,,,,,,,,,,,,,,,,,,,,,,,,批量起身并恢复动画,Batch Rise,批量起身並恢復動畫
@@ -48,9 +105,9 @@ Epic","低
 19,时间采样数,Temporal samples,時間採樣數,,,,卫道士 [NPC],Vindicator [NPC],衛道士 [NPC],,,,,堆放方块,Pile Up Blocks,堆放方塊,,,,,,,,,,,,,,,,,,,,,,,,,,
 20,色彩管理,Color space,色彩管理,,,,掠夺者,Pillager,掠奪者,,,,,背景生物散布器,Background Animal Scatter,背景生物散佈器,,,,,,,,,,,,,,,,,,,,,,,,,,
 21,全景渲染,VR panorama render,全景渲染,,,,掠夺者 [NPC],Pillager [NPC],掠奪者 [NPC],,,,,MC摄像机,MC Camera,MC攝像機,,,,,,,,,,,,,,,,,,,,,,,,,,
-22,输出视频,Output a video,輸出視頻,,,,骷髅,Skeleton,骷髏,,,,,空物体（路标）,Target Point (Empty),空物體（路標）,,,,,,,,,,,,,,,,,,,,,,,,,,
-23,视频编码,Encoder,視頻編碼,,,,骷髅 [NPC],Skeleton [NPC],骷髏 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-24,硬件加速,Hardware,硬件加速,,,,凋灵骷髅,Wither Skeleton,凋零骷髏,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+22,输出视频,Output a video,輸出視頻,,,,骷髅,Skeleton,骷髏,,,,,空物体(路标),Target Point (Empty),空物體(路標),,,,,,,,,,,,,,,,,,,,,,,,,,
+23,视频编码,Encoder,視頻編碼,,,,骷髅 [NPC],Skeleton [NPC],骷髏 [NPC],,,,,局部调色蒙版(2D),Color Correction Window(2D),局部調色蒙版(2D),,,,,,,,,,,,,,,,,,,,,,,,,,
+24,硬件加速,Hardware,硬件加速,,,,凋灵骷髅,Wither Skeleton,凋零骷髏,,,,,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,,,,,,,,,,,
 25,色度抽样,Color codec,色度抽樣,,,,凋灵骷髅 [NPC],Wither Skeleton [NPC],凋零骷髏 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 26,质量,Quality,質量,,,,流浪者,Stray,流浪者/流髑,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 27,是HDR视频,HDR video,是HDR視頻,,,,流浪者 [NPC],Stray [NPC],流浪者/流髑 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -135,3 +192,5 @@ Epic","低
 106,环境光遮蔽,Ambient Occlusion,環境光遮蔽,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 107,距离,Distance,距離,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 108,平滑滚动面板,Smooth Rolling,平滑滾動面板,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+109,渲染音频,Render Audio,渲染音頻,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+110,鼠标悬停时打开此面板,Open This Panel When Hovering,鼠標懸停時打開此面板,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
