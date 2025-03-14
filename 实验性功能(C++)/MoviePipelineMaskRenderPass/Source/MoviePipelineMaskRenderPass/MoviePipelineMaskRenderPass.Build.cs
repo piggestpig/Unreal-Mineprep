@@ -11,7 +11,8 @@ public class MoviePipelineMaskRenderPass : ModuleRules
 				"Core",
 				"CoreUObject",
 				"Engine",
-				"Json"
+				"Json",
+				"ImageCore",
 			}
 		);
 
@@ -23,6 +24,7 @@ public class MoviePipelineMaskRenderPass : ModuleRules
                 "RHI",
 				"ActorLayerUtilities",
 				"OpenColorIO",
+				"SlateCore",
 			}
 		);
 

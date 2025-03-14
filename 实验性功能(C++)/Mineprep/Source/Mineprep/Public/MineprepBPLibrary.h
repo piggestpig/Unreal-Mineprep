@@ -21,6 +21,7 @@
 #include "ISettingsEditorModule.h"
 #include "ISettingsCategory.h"
 #include "Engine/UserDefinedStruct.h"
+#include "StructUtils/UserDefinedStruct.h"  // UE5.5中的新路径
 #include "CoreMinimal.h"
 #include "Engine/UserDefinedStruct.h"
 #include "Engine/Blueprint.h"

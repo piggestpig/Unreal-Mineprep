@@ -142,6 +142,9 @@ protected:
 	void GetFieldOfView(float& OutHorizontal, float& OutVertical, const bool bInStereo) const;
 	FIntPoint GetPaneResolution(const FIntPoint& InSize) const;
 	FIntPoint GetPayloadPaneResolution(const FIntPoint& InSize, IViewCalcPayload* OptPayload) const;
+
+	virtual void UpdateTelemetry(FMoviePipelineShotRenderTelemetry* InTelemetry) const override;
+
 public:
 
 	/**
@@ -178,7 +181,7 @@ public:
 
 	/**Advance used only. Allows you to override the Horizontal Field of View (if not zero). Can cause crashes or incomplete panoramas.*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category = "Panoramic Settings")
-	float HorzFieldOfView = 120.f;
+	float HorzFieldOfView = 0.f;
 
 	/**Advance used only. Allows you to override the Vertical Field of View (if not zero). Can cause crashes or incomplete panoramas.*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category = "Panoramic Settings")

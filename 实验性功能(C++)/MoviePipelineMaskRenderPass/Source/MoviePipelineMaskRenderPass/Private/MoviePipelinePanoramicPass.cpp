@@ -12,12 +12,14 @@
 #include "MovieRenderOverlappedImage.h"
 #include "MoviePipelineOutputBuilder.h"
 #include "MoviePipelinePanoramicBlender.h"
+#include "MoviePipelineTelemetry.h"
 #include "OpenColorIODisplayExtension.h"
 #include "TextureResource.h"
 #include "SceneUtils.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(MoviePipelinePanoramicPass)
 
+//////////////////////////////////////Mineprep
 UMoviePipelinePanoramicPass::UMoviePipelinePanoramicPass() 
 	: UMoviePipelineImagePassBase()
 	, NumHorizontalSteps(5)
@@ -52,7 +54,8 @@ namespace MoviePipeline
 
 			return Results;
 		};
-
+		
+		//////////////////////////////////////Mineprep
 		void GetCameraOrientationForStereo(FVector& OutLocation, FRotator& OutRotation, FRotator& OutLocalRotation, const FPanoPane& InPane, const int32 InStereoIndex, const bool bInPrevPosition, const bool bStereo)
 		{
 			// ToDo: This 110 (-55, 55) comes from TwinMotion who uses a hard-coded number of v-steps, may need adjusting.
@@ -240,8 +243,8 @@ FIntPoint UMoviePipelinePanoramicPass::GetPaneResolution(const FIntPoint& InSize
 void UMoviePipelinePanoramicPass::GetFieldOfView(float& OutHorizontal, float& OutVertical, const bool bInStereo) const
 {
 	// ToDo: These should probably be mathematically derived based on numSteps
-	OutHorizontal =  HorzFieldOfView > 0 ? HorzFieldOfView : 90.f;
-	OutVertical =  VertFieldOfView > 0 ? VertFieldOfView : 90.f;
+	OutHorizontal = bInStereo ? 30.f : HorzFieldOfView > 0 ? HorzFieldOfView : 90.f;
+	OutVertical = bInStereo ? 80.f : VertFieldOfView > 0 ? VertFieldOfView : 90.f;
 }
 
 FSceneView* UMoviePipelinePanoramicPass::GetSceneViewForSampleState(FSceneViewFamily* ViewFamily, FMoviePipelineRenderPassMetrics& InOutSampleState, IViewCalcPayload* OptPayload)
@@ -424,6 +427,7 @@ void UMoviePipelinePanoramicPass::RenderSample_GameThreadImpl(const FMoviePipeli
 				Pane.EyeConvergenceDistance = EyeConvergenceDistance;
 				Pane.bUseLocalRotation = bFollowCameraOrientation;
 
+				//////////////////////////////////////Mineprep
 				// Get the actual camera location/rotation for this particular pane, the above values are from the global camera.
 				MoviePipeline::Panoramic::GetCameraOrientationForStereo(/*Out*/ Pane.CameraLocation, /*Out*/ Pane.CameraRotation, /*Out*/ Pane.CameraLocalRotation, Pane, StereoIndex, /*bInPrevPos*/ false, bStereo);
 				FRotator DummyPrevLocalRot;
@@ -464,6 +468,13 @@ void UMoviePipelinePanoramicPass::RenderSample_GameThreadImpl(const FMoviePipeli
 
 				FCanvas Canvas = FCanvas(RenderTarget, nullptr, GetPipeline()->GetWorld(), ViewFamily->GetFeatureLevel(), FCanvas::CDM_DeferDrawing, 1.0f);
 				GetRendererModule().BeginRenderingViewFamily(&Canvas, ViewFamily.Get());
+				
+				ENQUEUE_RENDER_COMMAND(TransitionTextureSRVState)(
+				[RenderTarget](FRHICommandListImmediate& RHICmdList) mutable
+				{
+					// Transition our render target from a render target view to a shader resource view to allow the UMG preview material to read from this Render Target.
+					RHICmdList.Transition(FRHITransitionInfo(RenderTarget->GetRenderTargetTexture(), ERHIAccess::RTV, ERHIAccess::SRVGraphicsPixel));
+				});
 
 				// Schedule a readback and then high-res accumulation.
 				ScheduleReadbackAndAccumulation(InOutSampleState, Pane, Canvas);
@@ -557,4 +568,9 @@ void UMoviePipelinePanoramicPass::ScheduleReadbackAndAccumulation(const FMoviePi
 			LocalSurfaceQueue->OnRenderTargetReady_RenderThread(RenderTarget->GetRenderTargetTexture(), FramePayload, MoveTemp(Callback));
 		});
 
+}
+
+void UMoviePipelinePanoramicPass::UpdateTelemetry(FMoviePipelineShotRenderTelemetry* InTelemetry) const
+{
+	InTelemetry->bUsesPanoramic = true;
 }

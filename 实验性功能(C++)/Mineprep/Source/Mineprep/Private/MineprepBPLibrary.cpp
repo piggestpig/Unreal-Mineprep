@@ -311,7 +311,7 @@ bool Umineprep::SetProjectSetting(const FString& SettingName, const FString& Val
                             
                             // 设置属性值
                             void* ValuePtr = Property->ContainerPtrToValuePtr<void>(SectionObj);
-                            Property->ImportText(*Value, ValuePtr, 0, SectionObj);
+                            Property->ImportText_Direct(*Value, ValuePtr, SectionObj, 0 );
 
                             // 通知更改
                             FPropertyChangedEvent ChangeEvent(Property);
@@ -319,7 +319,7 @@ bool Umineprep::SetProjectSetting(const FString& SettingName, const FString& Val
                             
                             // 保存配置到相应的 ini 文件
                             const FString& ConfigFileName = SectionObj->GetDefaultConfigFilename();
-                            SectionObj->UpdateDefaultConfigFile(ConfigFileName);
+                            SectionObj->TryUpdateDefaultConfigFile(ConfigFileName,true);
                             
                             // 调用 SaveConfig() 来确保更改被立即写入
                             SectionObj->SaveConfig();
@@ -381,7 +381,7 @@ FString Umineprep::GetProjectSetting(const FString& SettingName)
                             const void* PropertyValue = Property->ContainerPtrToValuePtr<void>(SectionObj);
                             
                             // 将属性值转换为字符串
-                            Property->ExportTextItem(OutString, PropertyValue, PropertyValue, SectionObj, PPF_None);
+                            Property->ExportTextItem_Direct(OutString, PropertyValue, PropertyValue, SectionObj, PPF_None);
                             
                             return OutString;
                         }

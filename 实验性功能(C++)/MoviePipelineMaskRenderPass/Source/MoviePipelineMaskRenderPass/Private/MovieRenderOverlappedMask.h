@@ -35,6 +35,12 @@ public:
 	{
 	}
 
+	static FName GetName()
+	{
+		static FName Name = FName("MaskOverlappedAccumulator");
+		return Name;
+	}
+
 	/**
 	 * Allocates memory.
 	 *
