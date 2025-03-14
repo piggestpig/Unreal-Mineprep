@@ -101,7 +101,41 @@ localization = {
         28: "It can improve image quality and frame rate, even saving VRAM",
         29: "You need to download it manually, only once for each UE version:"
     },
+    'zh_TW': {
+        1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
+        2: "---Mineprep v0.4 安裝嚮導---",
+        3: "歡迎使用Mineprep！",
+        4: "· 此安裝包適用於 Windows + UE5.4",
+        5: "· 非實驗性功能也許能兼容Mac和高版本UE",
+        6: "· 重複安裝會直接覆蓋原文件",
+        7: "· 安裝前建議關閉虛幻引擎",
+        8: "請點擊下方按鈕選擇安裝模式，並根據提示執行操作",
+        9: "新建UE工程文件",
+        10: "安裝至現有工程",
+        11: "選擇安裝路徑",
+        12: "警告: 文件夾路徑包含中文或非ASCII字符！可能會導致部分功能失效",
+        13: "實驗性功能:",
+        14: "Mineprep C++ 擴展模組",
+        15: "解鎖雙目立體全景渲染",
+        16: "修復UE4官方新手教程",
+        17: "插件設置:",
+        18: "手動指定FFmpeg路徑 (如ffmpeg.exe)",
+        19: "路徑",
+        20: "內存預加載",
+        21: "     · 打開插件時加載所有資源，啟動速度較慢，但運行更流暢",
+        22: "選擇工程目錄 (包含.uproject的文件夾)",
+        23: "警告: 未找到.uproject文件！請確認當前文件夾為UE工程根目錄",
+        24: "安裝完成！",
+        25: "Mineprep已經可以使用了",
+        26: "打開工程文件",
+        27: "另外，我們推薦您安裝超分辨率插件",
+        28: "它可以提升畫質和幀率，甚至節約顯存",
+        29: "您需要手動下載安裝，一個虛幻引擎版本只需要安裝一次："
+    },
 }
+
+localization['zh_HANS'] = localization['zh_CN']
+localization['zh_HANT'] = localization['zh_TW']
 
 def loc(index=0, preview="-------本地化文本-------"):
     if lang in localization and index in localization[lang]:
@@ -185,11 +219,11 @@ def install():
     
     config['Settings']['memory_preload'] = mc.ini_memory
     config['Settings']['installer_dir'] = file_dir.replace("\\\\", "\\").replace("/", "\\")
+    config['Settings']['blender_path'] = blender_path.replace("\\\\", "\\").replace("/", "\\")
     if mc.ini_ffmpeg:
         config['Settings']['init'] = "true"
         config['Settings']['ffmpeg_path'] = mc.ffmpeg_path.replace("\\\\", "\\").replace("/", "\\")
-        config['Settings']['blender_path'] = blender_path.replace("\\\\", "\\").replace("/", "\\")
-    
+
     with open(mineprep_ini, 'w', encoding='utf-8') as file:
         json.dump(config, file, ensure_ascii=False, indent=4)
 

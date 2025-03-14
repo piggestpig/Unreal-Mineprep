@@ -4,28 +4,42 @@
 
 ✨这是一个正在开发中的UE5插件，继承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的实用功能，并加入一些新的资产，为制作MC动画带来便利
 
-![image](Readme素材/0.4-pre2封面图.jpg)
+![image](Readme素材/0.4封面图.jpg)
 
 ![image](Readme素材/插件展示.jpg)
 
-*本插件与Minecraft、MCprep官方没有直接联系，在其建议下插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆（0.3及之前的版本已经归档，就不做修改了）。  
+*本插件与Minecraft、MCprep官方没有直接联系，在其建议下插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆（0.3及之前的版本已经归档，就不做修改了）。
+
 在v1.0正式发布前，插件主要供内部使用，可能存在兼容性问题和潜在的 ~~bug~~ 特性。之后会逐步修复并写一些使用教程（但这应该是很久以后的事了）
 
 ## 安装方法（适用于0.4+版本）
 
 ### ① 使用安装包（推荐）
-1、下载Mineprep插件，建议保存在纯英文路径下。  
+#### 1、下载Mineprep插件，建议保存在纯英文路径下。  
 - 你可以在右侧的`Releases`部分下载较为稳定的大版本；或者点击上面的绿色`Code`按钮 -> `Download Zip`，下载最新快照版本。
 
-2、解压安装包，使用Blender打开里面的`Mineprep_installer.blend`文件。
-> Unreal Mineprep是在Blender MCprep的基础上开发的，部分功能会远程调用MCprep里的函数。如果你是Blender用户那就好极了！
+#### 2、解压安装包，使用Blender打开里面的`Mineprep_installer.blend`文件。
+- Unreal Mineprep是在Blender MCprep的基础上开发的，部分功能会远程调用MCprep里的函数。如果你是Blender用户那就好极了！
 - 如果你没有Blender，可以前往[Blender官网](https://www.blender.org/download/)下载，建议选择"Windows Portable"版本，无需安装，解压即用。当然也可以在[Steam](https://store.steampowered.com/app/365670/Blender/)等其他平台下载。
 - 此外，我们还推荐你在Blender中安装[MCprep插件](https://theduckcow.com/dev/blender/mcprep/)。
 
-3、点击▶️运行脚本，会弹出菜单和安装引导，目前提供了`创建新的工程文件`和`安装至现有工程`两个选项，还可以选择实验性功能、插件设置等内容。然后就能一键安装了。
+#### 3、点击▶️运行脚本，会弹出菜单和安装引导
+- 目前提供了`创建新的工程文件`和`安装至现有工程`两个选项，还可以选择实验性功能、插件设置等内容。然后就能一键安装了。
 
 ### ② 手动安装
 需要复制Mineprep内容文件夹+修改项目设置，稍后会更新详细步骤
+
+
+## 兼容性
+Mineprep 0.4使用windows+UE5.4开发。
+
+安装包和插件的非实验性功能理论上是跨平台的，并且支持更高的引擎版本，但是尚未经过测试。
+
+> [!WARNING]  
+> 实验性功能完全不支持其他平台和引擎版本。请勿在安装时勾选，否则工程文件打都打不开，一上来就报错！！
+
+另外，插件附带了windows版的ffmpeg用于视频编码。mac用户目前需要手动下载并在安装时指定路径  
+
 
 ## 生物
 - Mineprep提供了MC原版生物模型，可以通过生成器面板放置
@@ -34,11 +48,12 @@
 - 更多内容正在更新中
 
 ## 语言本地化
-- Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体中文
-  - **安装包**会根据Blender的偏好设置选择语言。本地化内容以字典的形式写在代码中，参见[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
-  - **插件面板**上方有选择语言的按钮，在启动时会根据UE的偏好设置选择语言。本地化内容保存在[语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv)中
-  - 安装实验性功能后，可以点击**顶部菜单栏-MC-开发-注入本地化变量名**，进一步翻译细节面板中的变量和函数。这是一个正在开发中的新功能。本地化内容保存在[变量显示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)中
-- 更多内容正在更新中
+Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体中文
+- **安装包**会根据Blender的偏好设置选择语言。本地化内容以字典的形式写在代码中，参见[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
+- **插件面板**上方有选择语言的按钮，在启动时会根据UE的偏好设置选择语言。本地化内容保存在[语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv)中
+- **安装实验性功能**之后，可以点击**顶部菜单栏-MC-开发-注入本地化变量名**，进一步翻译细节面板中的变量和函数。这是一个正在开发中的新功能。本地化内容保存在[变量显示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)中
+
+更多内容正在更新中
 
 ## 开源协议
 - 在制作插件时，我原来用的是GPL-3.0协议，但是现在包含了虚幻引擎的官方示例+源代码，它们好像和开源许可证不兼容 (*´･д･)? 所以这里就先不放License文件了。
@@ -47,7 +62,21 @@
 - 以后考虑做一个Mineprep Lite，只留下准备场景、更换材质等核心功能，没有官方素材和引擎源码。这样安装会简单很多，也能放GPL-3.0协议了
 - 同时，Mineprep引用了许多第三方插件和资源，在此向他们表示感谢。我们在[ResourceLicenses](./Readme素材/ResourcesLicenses)文件夹中收录了一些许可证和作者留言。如有遗漏可以拉一个Pull Request进行补充
 
+
 ## 版本更新
+
+### 0.4 : 足迹与故事
+![image](Readme素材/0.4封面图.jpg)
+0.4版本正式发布了！这是一个重大更新，包含了许多新功能和改进，也是最后一个支持UE5.4的版本。
+快来看看有哪些新功能吧
+
+![image](Readme素材/0.4更新汇总1.jpg)
+![image](Readme素材/0.4更新汇总2.jpg)
+- 以上是精彩集锦，更多内容参见下方的快照。
+- 从这个版本起，我们不在Releases中发布内容示例场景，而是打包当前库，下载解压后能看到安装包和各种资源。（之后考虑在其他地方发布内容示例和精简版插件）
+
+<details>
+<summary> 📜展开快照 </summary>
 
 #### 0.4-RC1
 - 这是0.4版本的最后一次内容更新！安装包已经准备就绪
@@ -59,7 +88,7 @@
 - 表情动画预设使用统一的形态键动画，可以兼容不同模型了
 - 修复了一部分因改变重力方向产生的bug。简单NPC能正确地在墙上随机移动和跟随目标了。第三人称运动匹配角色的bug仍然比较多
 - 现在每个生物都有了自己的随机种子，实现更精细的控制。你可以在MC导播台修改或刷新全局随机种子。
-- 准备材质的“次表面散射”精简为一个RGBA颜色参数，其中RGB决定颜色，A决定次表面不透明度
+- 准备材质的“次表面散射”精简为一个RGBA颜色参数，其中RGB决定颜色，A决定次表面不透明度。同时修复了一些bug
 - 大改并统一了摄像机的功能和参数。“MC摄像机”、“摇臂摄像机”和“导轨摄像机”现在可以设置平滑移动/旋转、视野、光圈、画面尺寸和遮幅、追踪目标、聚焦目标/正交/自动希区柯克变焦、后期移轴模糊和局部模糊。
 - 修复了大量录制动画的bug和闪退问题。“MC第一人称摄像机”能录制摄像机晃动了，结束后需要点击插件面板“处理录制的动画”按钮。“第三人称运动匹配玩家”能直接记录摄像机运动了，无需同步玩家摄像机
 - MC导播台新增DLSS/FSR选项，安装相关插件后，可以设置超分辨率、光线重构（目前视图预览和渲染似乎不一致）和帧生成（仅限独立窗口游戏模式，不支持渲染）
@@ -84,7 +113,9 @@
 - 顶部菜单栏新增一些调试和开发功能。安装实验性功能后，点击**顶部菜单栏-MC-开发-注入本地化变量名**，可以翻译细节面板中的变量和函数名称！
 - 新增多种MC字体，包括Minecraft-Five，Minecraft-Seven，Minecraft-Ten，Unifont，Standard Galactic Alphabet，illageralt，可以在“MC像素文字(3D)”中使用
 - 优化了光追半透明下的水材质
-- 好消息：我从GitHub上拉取引擎源码，UE5.5.4即将修复中文文件夹层级错乱的bug！泪目！！！DLSS4也支持UE5.5了，终于可以更新了！Mineprep 0.4 将会是最后一个支持UE5.4的版本
+- 放置方块和物品时会自动把“移动性”设为“可移动”
+- 预设素材新增`局部调色蒙版(2D)`、`局部调色区域(3D)`、`空物体(路标)`。安装实验性功能后，可以使用Ctrl+Alt+0快速放置空物体；附加组件新增绑定父级至最后选中项，即之前的Ctrl+Alt+P快捷键
+- 好消息：UE5.5.4终于修复了中文文件夹层级错乱的bug！泪目！！！DLSS也支持UE5.5了，总算可以更新了！Mineprep 0.4 将会是最后一个支持UE5.4的版本
 
 #### 25w05a
 - 插件安装包制作完成！Mineprep 0.4很快就能发布了
@@ -239,6 +270,8 @@
 - “MC天空”新增“散射分布（各向异性）”属性，数值越大，光源附近的雾越浓，需要开启体积雾才能生效
 - 重新制作了`同步玩家摄像机`，可以修改缓动程度，并为之后动态切换角色做好准备
 - 初步制作了蜘蛛群粒子模板
+
+</details>
 
 #### 0.4-pre2
 ![image](Readme素材/0.4-pre2封面图.jpg)

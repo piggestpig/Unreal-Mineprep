@@ -16,14 +16,14 @@
         "texture_pack_path": "【MC 1.20】",
         "lang_index": "1",
         "blender_path": "",
-        "GPU": "1",
+        "GPU": "0",
         "TTS": "false",
         "memory_preload": false,
         "ffmpeg_path": "",
         "smooth_roll": "true",
         "hover_toolbar": "false",
         "tkinter_scale": "3",
-        "installer_dir": "E:\\github\\Unreal-MCprep"
+        "installer_dir": ""
     },
     "ProjectSettings": {
         "bDefaultFeatureAutoExposure": "false",

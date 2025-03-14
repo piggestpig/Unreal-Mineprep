@@ -4,28 +4,42 @@
 
 ✨這是一個正在開發中的UE5插件，繼承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的實用功能，並加入一些新的資產，爲製作MC動畫帶來便利
 
-![image](Readme素材/0.4-pre2封面图.jpg)
+![image](Readme素材/0.4封面图.jpg)
 
 ![image](Readme素材/插件展示.jpg)
 
-*本插件與Minecraft、MCprep官方沒有直接聯繫，在其建議下插件名稱由Unreal MCprep更改爲Unreal Mineprep，以避免混淆（0.3及之前的版本已經歸檔，就不做修改了）。  
+*本插件與Minecraft、MCprep官方沒有直接聯繫，在其建議下插件名稱由Unreal MCprep更改爲Unreal Mineprep，以避免混淆（0.3及之前的版本已經歸檔，就不做修改了）。
+
 在v1.0正式發佈前，插件主要供內部使用，可能存在兼容性問題和潛在的 ~~bug~~ 特性。之後會逐步修復並寫一些使用教程（但這應該是很久以後的事了）
 
 ## 安裝方法（適用於0.4+版本）
 
 ### ① 使用安裝包（推薦）
-1、下載Mineprep插件，建議保存在純英文路徑下。  
+#### 1、下載Mineprep插件，建議保存在純英文路徑下。  
 - 你可以在右側的`Releases`部分下載較爲穩定的大版本；或者點擊上面的綠色`Code`按鈕 -> `Download Zip`，下載最新快照版本。
 
-2、解壓安裝包，使用Blender打開裏面的`Mineprep_installer.blend`文件。
-> Unreal Mineprep是在Blender MCprep的基礎上開發的，部分功能會遠程調用MCprep裏的函數。如果你是Blender用戶那就好極了！
+#### 2、解壓安裝包，使用Blender打開裏面的`Mineprep_installer.blend`文件。
+- Unreal Mineprep是在Blender MCprep的基礎上開發的，部分功能會遠程調用MCprep裏的函數。如果你是Blender用戶那就好極了！
 - 如果你沒有Blender，可以前往[Blender官網](https://www.blender.org/download/)下載，建議選擇"Windows Portable"版本，無需安裝，解壓即用。當然也可以在[Steam](https://store.steampowered.com/app/365670/Blender/)等其他平臺下載。
 - 此外，我們還推薦你在Blender中安裝[MCprep插件](https://theduckcow.com/dev/blender/mcprep/)。
 
-3、點擊▶️運行腳本，會彈出菜單和安裝引導，目前提供了`創建新的工程文件`和`安裝至現有工程`兩個選項，還可以選擇實驗性功能、插件設置等內容。然後就能一鍵安裝了。
+#### 3、點擊▶️運行腳本，會彈出菜單和安裝引導
+- 目前提供了`創建新的工程文件`和`安裝至現有工程`兩個選項，還可以選擇實驗性功能、插件設置等內容。然後就能一鍵安裝了。
 
 ### ② 手動安裝
 需要複製Mineprep內容文件夾+修改項目設置，稍後會更新詳細步驟
+
+
+## 兼容性
+Mineprep 0.4使用windows+UE5.4開發。
+
+安裝包和插件的非實驗性功能理論上是跨平臺的，並且支持更高的引擎版本，但是尚未經過測試。
+
+> [!WARNING]  
+> 實驗性功能完全不支持其他平臺和引擎版本。請勿在安裝時勾選，否則工程文件打都打不開，一上來就報錯！！
+
+另外，插件附帶了windows版的ffmpeg用於視頻編碼。mac用戶目前需要手動下載並在安裝時指定路徑
+
 
 ## 生物
 - Mineprep提供了MC原版生物模型，可以通過生成器面板放置
@@ -34,20 +48,34 @@
 - 更多內容正在更新中
 
 ## 語言本地化
-- Mineprep提供了可拓展的多語言翻譯，目前支持中文/英文/繁體中文
-  - **安裝包**會根據Blender的偏好設置選擇語言。本地化內容以字典的形式寫在代碼中，參見[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
-  - **插件面板**上方有選擇語言的按鈕，在啓動時會根據UE的偏好設置選擇語言。本地化內容保存在[語言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv)中
-  - 安裝實驗性功能後，可以點擊**頂部菜單欄-MC-開發-注入本地化變量名**，進一步翻譯細節面板中的變量和函數。這是一個正在開發中的新功能。本地化內容保存在[變量顯示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)中
-- 更多內容正在更新中
+Mineprep提供了可拓展的多語言翻譯，目前支持中文/英文/繁體中文
+- **安裝包**會根據Blender的偏好設置選擇語言。本地化內容以字典的形式寫在代碼中，參見[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
+- **插件面板**上方有選擇語言的按鈕，在啓動時會根據UE的偏好設置選擇語言。本地化內容保存在[語言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv)中
+- **安裝實驗性功能**之後，可以點擊**頂部菜單欄-MC-開發-注入本地化變量名**，進一步翻譯細節面板中的變量和函數。這是一個正在開發中的新功能。本地化內容保存在[變量顯示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)中
+
+更多內容正在更新中
 
 ## 開源協議
 - 在製作插件時，我原來用的是GPL-3.0協議，但是現在包含了虛幻引擎的官方示例+源代碼，它們好像和開源許可證不兼容 (*´･д･)? 所以這裏就先不放License文件了。
 - 在大部分情況下，你可以免費使用本插件。(UE5.3及更早的版本不向影視創作者收費，UE5.4開始對年收入超過100萬美元的用戶按席位收費，顯然我們不會達到收費門檻hhh)  
 具體參見[Epic Games的用戶協議](https://www.unrealengine.com/zh-CN/eula)
 - 以後考慮做一個Mineprep Lite，只留下準備場景、更換材質等核心功能，沒有官方素材和引擎源碼。這樣安裝會簡單很多，也能放GPL-3.0協議了
-- 同時，Mineprep引用了許多第三方插件和資源，在此向他們表示感謝。我們在[ResourceLicenses](./Readme素材/ResourcesLicenses)文件夾中收錄了一些許可證和作者留言。如有遺漏可以拉一個Pull Request進行補充
+- 同時，Mineprep引用了許多第三方插件和資源，在此向他們表示感謝。我們在[ResourceLicenses](./Readme素材/ResourceLicenses)文件夾中收錄了一些許可證和作者留言。如有遺漏可以拉一個Pull Request進行補充
 
 ## 版本更新
+
+## 0.4 : 足跡與故事
+![image](Readme素材/0.4封面图.jpg)
+0.4版本正式發佈了！這是一個重大更新，包含了許多新功能和改進，也是最後一個支持UE5.4的版本。
+快來看看有哪些新功能吧
+
+![image](Readme素材/0.4更新汇总1.jpg)
+![image](Readme素材/0.4更新汇总2.jpg)
+- 以上是精彩集錦，更多內容參見下方的快照。
+- 從這個版本起，我們不在Releases中發佈內容示例場景，而是打包當前庫，下載解壓後能看到安裝包和各種資源。（之後考慮在其他地方發佈內容示例和精簡版插件）
+
+<details>
+<summary> 📜展开快照 </summary>
 
 #### 0.4-RC1
 - 這是0.4版本的最後一次內容更新！安裝包已經準備就緒
@@ -239,6 +267,8 @@
 - “MC天空”新增“散射分佈（各向異性）”屬性，數值越大，光源附近的霧越濃，需要開啓體積霧才能生效
 - 重新制作了`同步玩家攝像機`，可以修改緩動程度，併爲之後動態切換角色做好準備
 - 初步製作了蜘蛛羣粒子模板
+
+</details>
 
 #### 0.4-pre2
 ![image](Readme素材/0.4-pre2封面图.jpg)
