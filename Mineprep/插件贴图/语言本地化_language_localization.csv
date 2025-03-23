@@ -105,7 +105,7 @@ DCI_4K (1.89:1)#4096x2160
 19,时间采样数,Temporal samples,時間採樣數,,,,卫道士 [NPC],Vindicator [NPC],衛道士 [NPC],,,,,堆放方块,Pile Up Blocks,堆放方塊,,,,,,,,,,,,,,,,,,,,,,,,,,
 20,色彩管理,Color space,色彩管理,,,,掠夺者,Pillager,掠奪者,,,,,背景生物散布器,Background Animal Scatter,背景生物散佈器,,,,,,,,,,,,,,,,,,,,,,,,,,
 21,全景渲染,VR panorama render,全景渲染,,,,掠夺者 [NPC],Pillager [NPC],掠奪者 [NPC],,,,,MC摄像机,MC Camera,MC攝像機,,,,,,,,,,,,,,,,,,,,,,,,,,
-22,输出视频,Output a video,輸出視頻,,,,骷髅,Skeleton,骷髏,,,,,空物体(路标),Target Point (Empty),空物體(路標),,,,,,,,,,,,,,,,,,,,,,,,,,
+22,输出视频,Output a video,輸出視頻,,,,骷髅,Skeleton,骷髏,,,,,路标(触发器),Target Point (Trigger),路標(觸發器),,,,,,,,,,,,,,,,,,,,,,,,,,
 23,视频编码,Encoder,視頻編碼,,,,骷髅 [NPC],Skeleton [NPC],骷髏 [NPC],,,,,局部调色蒙版(2D),Color Correction Window(2D),局部調色蒙版(2D),,,,,,,,,,,,,,,,,,,,,,,,,,
 24,硬件加速,Hardware,硬件加速,,,,凋灵骷髅,Wither Skeleton,凋零骷髏,,,,,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,,,,,,,,,,,
 25,色度抽样,Color codec,色度抽樣,,,,凋灵骷髅 [NPC],Wither Skeleton [NPC],凋零骷髏 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
