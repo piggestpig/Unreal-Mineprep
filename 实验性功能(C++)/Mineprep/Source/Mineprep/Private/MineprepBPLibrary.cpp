@@ -808,3 +808,40 @@ bool Umineprep::SetPropertyTooltip(UObject* BlueprintObject, const TMap<FString,
 
     return bSuccess;
 }
+
+
+void Umineprep::BindNiagaraParam(UMovieSceneNiagaraParameterTrack* ParameterTrack, FNiagaraVariable Parameter, TArray<uint8> DefaultValueData)
+{   
+
+    if (ParameterTrack != nullptr)
+    {
+        UMovieSceneNiagaraVectorParameterTrack *VectorTrack = Cast<UMovieSceneNiagaraVectorParameterTrack>(ParameterTrack);
+        if (VectorTrack != nullptr)
+        {
+            VectorTrack->SetChannelsUsed(DefaultValueData.Num()/sizeof(float));
+        }
+
+        ParameterTrack->SetParameter(Parameter);
+        ParameterTrack->SetDisplayName(FText::FromName(Parameter.GetName()));
+        UMovieSceneSection* ParameterSection = ParameterTrack->CreateNewSection();
+        ParameterTrack->SetSectionChannelDefaults(ParameterSection, DefaultValueData);
+        ParameterSection->SetRange(TRange<FFrameNumber>::All());
+        ParameterTrack->AddSection(*ParameterSection);
+    }
+}
+
+
+void Umineprep::SetGlobalGravity(FVector Gravity, float DeltaSeconds)
+{
+    UWorld* World = GWorld;
+    FPhysScene* PhysScene = World->GetPhysicsScene();
+    PhysScene->SetUpForFrame(
+        &Gravity,
+        DeltaSeconds,
+        UPhysicsSettings::Get()->MinPhysicsDeltaTime,
+        UPhysicsSettings::Get()->MaxPhysicsDeltaTime,
+        UPhysicsSettings::Get()->MaxSubstepDeltaTime,
+        UPhysicsSettings::Get()->MaxSubsteps,
+        UPhysicsSettings::Get()->bSubstepping
+    );
+}

@@ -45,7 +45,8 @@
         "EncodeSettings_High": "-preset medium -qp 19 -global_quality 19",
         "EncodeSettings_Epic": "-preset slow -qp 16 -global_quality 16",
         "VideoCodec": "libx265",
-        "AudioCodec": "aac"
+        "AudioCodec": "aac",
+        "bAutoActivateMotionDesignViewport": "false"
     },
     "key_map": {
         "W": "W",

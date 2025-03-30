@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "Mineprep.h"
+#include "Selection.h"
 #include "Framework/Commands/Commands.h"
 #include "Framework/Commands/UICommandList.h"
 #include "Framework/Commands/InputChord.h"
@@ -14,6 +15,10 @@
 #include "Framework/MultiBox/MultiBoxDefs.h"
 #include "Styling/SlateIconFinder.h"
 #include "Tracks/MovieSceneMaterialTrack.h"
+#include "NiagaraTypes.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
+#include "MovieScene/Parameters/MovieSceneNiagaraParameterTrack.h"
 
 // 添加控制台变量
 static float GMineprepTickInterval = 9999999.0f;
@@ -145,15 +150,146 @@ static FSlateIcon GetKeyframeIcon(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TShar
 
 static void OnAddKeyframeClicked(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TSharedPtr<IPropertyHandle> PropertyHandle)
 {
-    if (PropertyHandle.IsValid())
+    if (!PropertyHandle.IsValid())
     {
-        // 获取参数类型和值
-        FString ParamType;
-        if (FProperty* Property = PropertyHandle->GetProperty())
-        {
-            ParamType = Property->GetCPPType();
-        }
+        return;
+    }
 
+    // 获取参数类型和值
+    FString ParamType;
+    FProperty* Property = PropertyHandle->GetProperty();
+    if (Property)
+    {
+        ParamType = Property->GetCPPType();
+    }
+
+    //获取显示名称
+    FString DisplayName = PropertyHandle->GetPropertyDisplayName().ToString();
+    
+    FString ParamValueStr;
+    PropertyHandle->GetValueAsFormattedString(ParamValueStr);
+
+    // 获取参数路径，用于判断是否为Niagara参数
+    FString PropertyPath = PropertyHandle->GetProperty()->GetPathName();
+    static const FString NiagaraParamPath("/Engine/Transient.StructOnScope:");
+    bool bIsNiagaraParam = PropertyPath.StartsWith(NiagaraParamPath);
+
+    if (bIsNiagaraParam)
+    {
+        // 处理Niagara参数
+        UNiagaraComponent* NiagaraComponent = nullptr;
+        
+        // 尝试获取当前选中的Actor和组件
+        USelection* SelectedActors = GEditor->GetSelectedActors();
+        for (FSelectionIterator Iter(*SelectedActors); Iter; ++Iter)
+        {
+            AActor* Actor = Cast<AActor>(*Iter);
+            if (!Actor)
+            {
+                continue;
+            }
+    
+            // 检查Actor的组件
+            TArray<UActorComponent*> Components;
+            Actor->GetComponents(UNiagaraComponent::StaticClass(), Components);
+            
+            if (Components.Num() > 0)
+            {
+                // 使用最后选中的Actor中的第一个NiagaraComponent
+                NiagaraComponent = Cast<UNiagaraComponent>(Components[0]);
+                
+                // 如果有多个NiagaraComponent，尝试查找当前在细节面板中显示的那个
+                if (Components.Num() > 1)
+                {
+                    USelection* SelectedComponents = GEditor->GetSelectedComponents();
+                    for (FSelectionIterator CompIter(*SelectedComponents); CompIter; ++CompIter)
+                    {
+                        UNiagaraComponent* SelNiagaraComp = Cast<UNiagaraComponent>(*CompIter);
+                        if (SelNiagaraComp && Components.Contains(SelNiagaraComp))
+                        {
+                            NiagaraComponent = SelNiagaraComp;
+                            break;
+                        }
+                    }
+                }
+                
+                break;
+            }
+        }
+    
+        if (NiagaraComponent)
+        {
+            // 从系统中获取正确的Niagara变量
+            FNiagaraVariable NiagaraVar;
+            UNiagaraSystem* System = NiagaraComponent->GetAsset();
+            
+            if (System)
+            {
+                TArray<FNiagaraVariable> ParameterVariables;
+                System->GetExposedParameters().GetUserParameters(ParameterVariables);
+                
+                // 查找匹配的参数名
+                for (const FNiagaraVariable& ParamVar : ParameterVariables)
+                {
+                    if (ParamVar.GetName().ToString() == DisplayName)
+                    {
+                        NiagaraVar = ParamVar;
+                        break;
+                    }
+                }
+                
+                if (!NiagaraVar.IsValid())
+                {
+                    UE_LOG(LogTemp, Error, TEXT("未找到匹配的Niagara变量"));
+                    return;
+                }
+
+                
+                // 调用事件
+                FString BlueprintPath = TEXT("/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C");
+                if (UClass* LoadedClass = LoadClass<UObject>(nullptr, *BlueprintPath))
+                {
+                    if (UObject* CustomHotkeyWidget = NewObject<UObject>(GetTransientPackage(), LoadedClass))
+                    {
+                        if (UFunction* KeyVarFunc = CustomHotkeyWidget->FindFunction(FName(TEXT("KeyVariable"))))
+                        {
+                            struct
+                            {
+                                USceneComponent* Component;
+                                FComponentMaterialInfo MaterialInfo;
+                                FMaterialParameterInfo ParamInfo;
+                                FString ParamType;
+                                FString ParamValue;
+                                FString ParamName;
+                                FNiagaraVariable NiagaraVar;
+                            } Params;
+    
+                            Params.Component = NiagaraComponent;
+                            Params.MaterialInfo = FComponentMaterialInfo(); // 空MaterialInfo
+                            Params.ParamInfo = FMaterialParameterInfo();    // 空ParamInfo
+                            Params.ParamType = ParamType;
+                            Params.ParamValue = ParamValueStr;
+                            Params.ParamName = DisplayName;
+                            Params.NiagaraVar = NiagaraVar;
+    
+                            CustomHotkeyWidget->ProcessEvent(KeyVarFunc, &Params);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("无法获取Niagara系统资产"));
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("未找到选中的NiagaraComponent"));
+        }
+    }
+    else
+    {
+        // 处理材质参数
         TSharedPtr<IPropertyHandle> ParentHandle = PropertyHandle->GetParentHandle();
         if (!ParentHandle.IsValid())
         {
@@ -173,10 +309,6 @@ static void OnAddKeyframeClicked(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TShare
         {
             ParamInfo = *static_cast<FMaterialParameterInfo*>(ValuePtr);
         }
-
-        // 获取参数值
-        FString ParamValueStr;
-        PropertyHandle->GetValueAsFormattedString(ParamValueStr);
 
         // 获取材质实例
         TArray<UObject*> OuterObjects;
@@ -216,15 +348,17 @@ static void OnAddKeyframeClicked(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TShare
                         {
                             if (UObject* CustomHotkeyWidget = NewObject<UObject>(GetTransientPackage(), LoadedClass))
                             {
-                                if (UFunction* KeyMatFunc = CustomHotkeyWidget->FindFunction(FName(TEXT("KeyMaterial"))))
+                                if (UFunction* KeyVarFunc = CustomHotkeyWidget->FindFunction(FName(TEXT("KeyVariable"))))
                                 {
                                     struct
                                     {
-                                        UMeshComponent* Component;
+                                        USceneComponent* Component;
                                         FComponentMaterialInfo MaterialInfo;
                                         FMaterialParameterInfo ParamInfo;
                                         FString ParamType;
                                         FString ParamValue;
+                                        FString ParamName;
+                                        FNiagaraVariable NiagaraVar;
                                     } Params;
 
                                     Params.Component = MeshComp;
@@ -232,8 +366,10 @@ static void OnAddKeyframeClicked(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TShare
                                     Params.ParamInfo = ParamInfo;
                                     Params.ParamType = ParamType;
                                     Params.ParamValue = ParamValueStr;
+                                    Params.ParamName = DisplayName;
+                                    Params.NiagaraVar = FNiagaraVariable(); // 空NiagaraVar
 
-                                    CustomHotkeyWidget->ProcessEvent(KeyMatFunc, &Params);
+                                    CustomHotkeyWidget->ProcessEvent(KeyVarFunc, &Params);
                                 }
                             }
                         }
@@ -262,19 +398,26 @@ static bool IsKeyframeButtonVisible(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TSh
     return true;
 }
 
-static bool IsDynamicParameterProperty(const TSharedPtr<IPropertyHandle>& PropertyHandle)
+static bool IsPropertyKeyframable(const TSharedPtr<IPropertyHandle>& PropertyHandle)
 {
     if (!PropertyHandle.IsValid() || PropertyHandle->GetProperty() == nullptr)
     {
         return false;
     }
 
+    static const FString NiagaraParamPath("/Engine/Transient.StructOnScope:");
     static const FName ScalarParamName("ScalarParameterValues");
     static const FName VectorParamName("VectorParameterValues");
     static const FName TextureParamName("TextureParameterValues");
 
-    // 只检查直接父级，判断是否属于动态材质参数
     TSharedPtr<IPropertyHandle> ParentHandle = PropertyHandle->GetParentHandle();
+    FString PropertyPath = PropertyHandle->GetProperty()->GetPathName();
+
+    if (PropertyPath.StartsWith(NiagaraParamPath) && PropertyHandle->GetProperty()->GetMetaData(FName("Category")).IsEmpty())
+    {
+        return true;
+    }
+
     if (ParentHandle.IsValid())
     {
         if (FProperty* ParentProperty = ParentHandle->GetProperty())
@@ -293,9 +436,9 @@ static bool IsDynamicParameterProperty(const TSharedPtr<IPropertyHandle>& Proper
 static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtensionArgs& Args, TArray<FPropertyRowExtensionButton>& OutExtensionButtons)
 {
     TSharedPtr<IPropertyHandle> PropertyHandle = Args.PropertyHandle;
-    if (!PropertyHandle.IsValid() || !IsDynamicParameterProperty(PropertyHandle))
+    if (!IsPropertyKeyframable(PropertyHandle))
     {
-        return; 
+        return;
     }
 
     FPropertyRowExtensionButton& CreateKey = OutExtensionButtons.AddDefaulted_GetRef();

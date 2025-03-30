@@ -30,6 +30,11 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "K2Node_FunctionEntry.h"
 #include "UObject/Class.h"
+#include "NiagaraTypes.h"
+#include "MovieScene/Parameters/MovieSceneNiagaraVectorParameterTrack.h"
+#include "PhysicsInterfaceDeclaresCore.h"
+#include "PhysicsEngine/PhysicsSettings.h"
+#include "Physics/Experimental/PhysScene_Chaos.h"
 #include "MineprepBPLibrary.generated.h"
 
 
@@ -85,5 +90,13 @@ class Umineprep : public UBlueprintFunctionLibrary
 	//为蓝图变量或函数设置工具提示
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool SetPropertyTooltip(UObject* BlueprintObject, const TMap<FString, FString>& PropertyTooltipMap, const bool save = false, const bool debug = false);
+
+	//设置Niagara参数轨道绑定的变量
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static void BindNiagaraParam(UMovieSceneNiagaraParameterTrack* ParameterTrack, FNiagaraVariable Parameter, TArray<uint8> DefaultValueData);
+
+	//修改全局重力方向
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static void SetGlobalGravity(FVector Gravity, float DeltaSeconds);
 };
 
