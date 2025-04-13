@@ -441,10 +441,45 @@ static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtension
         return;
     }
 
+    // 创建参数名到工具提示的映射
+    static TMap<FString, FString> ParamTooltipMap = {
+        { TEXT("发光亮度"), TEXT("发光亮度\n如果要照亮场景，着色模型必须是默认\nGlow Strength\nTo lit up the scene, set Shading Model to Default") },
+        { TEXT("[着色模型] 1默认/2次表面"), TEXT("[着色模型] 1 默认 / 2 次表面\n如果要通过自发光照亮场景，必须设为默认\n[Shading Model] 1 Default / 2 Subsurface\nOnly Default can lit up the scene") },
+        { TEXT("摇摆幅度"), TEXT("摇摆幅度\nSway Strength") },
+        { TEXT("摇摆速度"), TEXT("摇摆速度\nSway Speed") },
+        { TEXT("法线强度"), TEXT("法线强度\nNormal Strength") },
+        { TEXT("破碎程度"), TEXT("破碎程度\nDestroy Stage") },
+        { TEXT("次表面颜色RGB+不透明度A"), TEXT("次表面颜色RGB+不透明度A\nSubsurface Color RGB + Opacity A") },
+        { TEXT("纹理颜色"), TEXT("纹理颜色\nTexture Color") },
+        { TEXT("动画速度/U缩放/V缩放"), TEXT("动画速度/U缩放/V缩放\nAnimation Speed / U Scale / V Scale") },
+        { TEXT("反转:纹理/金属/高光/粗糙"), TEXT("反转:纹理/金属/高光/粗糙\nInvert: Texture / Metallic / Specular / Roughness") },
+        { TEXT("金属/高光/粗糙/各向异性"), TEXT("金属/高光/粗糙/各向异性\nMetallic / Specular / Roughness / Anisotropy") },
+        { TEXT("附魔缩放/速度/对比度/底色"), TEXT("附魔缩放/速度/对比度/底色\nEnchant Scale / Speed / Contrast / Base Color") },
+        { TEXT("附魔颜色"), TEXT("附魔颜色\nEnchant Color") },
+        { TEXT("切线贴图"), TEXT("切线贴图\nTangent Tex") },
+        { TEXT("法线贴图"), TEXT("法线贴图\nNormal Tex") },
+        { TEXT("粗糙贴图"), TEXT("粗糙贴图\nRoughness Tex") },
+        { TEXT("纹理贴图"), TEXT("纹理贴图\nTexture") },
+        { TEXT("自发光蒙版"), TEXT("自发光蒙版\nEmissive Mask") },
+        { TEXT("金属贴图"), TEXT("金属贴图\nMetallic Tex") },
+        { TEXT("高光贴图"), TEXT("高光贴图\nSpecular Tex") }
+    };
+
+    // 查找并应用工具提示
+    FString ParamNameStr = PropertyHandle->GetPropertyDisplayName().ToString();
+    FText ParamTooltip;
+    if (const FString* TooltipPtr = ParamTooltipMap.Find(ParamNameStr))
+    {
+        ParamTooltip = FText::FromString(*TooltipPtr);
+        PropertyHandle->SetToolTipText(ParamTooltip);
+        ParamTooltip = FText::Format(FText::FromString("{0}{1}"), FText::FromString("\n\n"), FText::FromString(*TooltipPtr));
+    }
+
     FPropertyRowExtensionButton& CreateKey = OutExtensionButtons.AddDefaulted_GetRef();
     CreateKey.Icon = TAttribute<FSlateIcon>::Create(TAttribute<FSlateIcon>::FGetter::CreateStatic(&GetKeyframeIcon, Args.OwnerTreeNode, PropertyHandle));
     CreateKey.Label = NSLOCTEXT("PropertyEditor", "CreateKey", "Create Key");
-    CreateKey.ToolTip = NSLOCTEXT("PropertyEditor", "CreateKeyToolTip", "Add a keyframe for this property.");
+    static FText baseTooltip = NSLOCTEXT("PropertyEditor", "CreateKeyToolTip", "Add a keyframe for this property.");
+    CreateKey.ToolTip = FText::Format(FText::FromString("{0}{1}"), baseTooltip, ParamTooltip);
     CreateKey.UIAction = FUIAction(
         FExecuteAction::CreateStatic(&OnAddKeyframeClicked, Args.OwnerTreeNode, PropertyHandle),
         FCanExecuteAction::CreateStatic(&IsKeyframeButtonEnabled, Args.OwnerTreeNode),
