@@ -250,13 +250,14 @@ def install():
     if not config.has_section(RENDER):
         config.add_section(RENDER)
     config.set(RENDER, 'r.DefaultFeature.AutoExposure', 'False')
-    config.set(RENDER, 'r.raytracing', 'True')
-    config.set(RENDER, 'r.raytracing.shadows', 'True')
-    config.set(RENDER, 'r.lumen.hardwareraytracing', 'True')
-    config.set(RENDER, 'r.allowstaticlighting', 'False')
-    config.set(RENDER, 'r.customdepth', '3')
-    config.set(RENDER, 'r.postprocessing.propagatealpha', '1')
-    config.set(RENDER, 'r.skincache.scenememorylimitinmb', '1024.0')
+    config.set(RENDER, 'r.RayTracing', 'True')
+    config.set(RENDER, 'r.RayTracing.Shadows', 'True')
+    config.set(RENDER, 'r.Lumen.HardwareRayTracing', 'True')
+    config.set(RENDER, 'r.AllowStaticLighting', 'False')
+    config.set(RENDER, 'r.CustomDepth', '3')
+    config.set(RENDER, 'r.PostProcessing.PropagateAlpha', 'True')
+    config.set(RENDER, 'r.Deferred.SupportPrimitiveAlphaHoldout', 'True')
+    config.set(RENDER, 'r.SkinCache.SceneMemoryLimitInMB', '1024.0')
 
     with open(DefaultEngine_ini, 'w', encoding='utf-8') as f:
         config.write(f)
