@@ -23,7 +23,7 @@
         "smooth_roll": "true",
         "hover_toolbar": "false",
         "tkinter_scale": "3",
-        "installer_dir": "E:\\github\\Unreal-MCprep"
+        "installer_dir": "E:\\github\\Unreal-Mineprep"
     },
     "ProjectSettings": {
         "bDefaultFeatureAutoExposure": "false",
