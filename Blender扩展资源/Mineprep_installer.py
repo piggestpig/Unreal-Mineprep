@@ -37,13 +37,14 @@ exp_dir = join(file_dir, '实验性功能(C++)', 'Mineprep')
 vr3d_dir = join(file_dir, '实验性功能(C++)', 'MoviePipelineMaskRenderPass')
 tutorial_dir = join(file_dir, '实验性功能(C++)', 'GuidedTutorials')
 blender_path = bpy.app.binary_path
+resource_pack_path = join(file_dir, 'Blender扩展资源', 'mc_default')
 
 localization = {
     'zh_CN': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.4 安装向导---",
+        2: "---Mineprep v0.5-pre1 安装向导---",
         3: "欢迎使用Mineprep！",
-        4: "· 此安装包适用于 Windows + UE5.4",
+        4: "· 此安装包适用于 Windows + UE5.5",
         5: "· 非实验性功能也许能兼容Mac和高版本UE",
         6: "· 重复安装会直接覆盖原文件",
         7: "· 安装前建议关闭虚幻引擎",
@@ -68,7 +69,8 @@ localization = {
         26: "打开工程文件",
         27: "另外，我们推荐您安装超分辨率插件",
         28: "它可以提升画质和帧率，甚至节约显存",
-        29: "您需要手动下载安装，一个虚幻引擎版本只需要安装一次："
+        29: "您需要手动下载安装，一个虚幻引擎版本只需要安装一次：",
+        30: "请勿移动或删除安装包，插件可能会引用其中资源"
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -99,7 +101,8 @@ localization = {
         26: "Open project file",
         27: "By the way, we recommend installing upscaling plugins",
         28: "It can improve image quality and frame rate, even saving VRAM",
-        29: "You need to download it manually, only once for each UE version:"
+        29: "You need to download it manually, only once for each UE version:",
+        30: "Don't move or delete the installer, resources may be referenced."
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -130,7 +133,8 @@ localization = {
         26: "打開工程文件",
         27: "另外，我們推薦您安裝超分辨率插件",
         28: "它可以提升畫質和幀率，甚至節約顯存",
-        29: "您需要手動下載安裝，一個虛幻引擎版本只需要安裝一次："
+        29: "您需要手動下載安裝，一個虛幻引擎版本只需要安裝一次：",
+        30: "請勿移動或刪除安裝包，插件可能會引用其中資源"
     },
 }
 
@@ -220,6 +224,7 @@ def install():
     config['Settings']['memory_preload'] = mc.ini_memory
     config['Settings']['installer_dir'] = file_dir.replace("\\\\", "\\").replace("/", "\\")
     config['Settings']['blender_path'] = blender_path.replace("\\\\", "\\").replace("/", "\\")
+    config['Settings']['texture_pack_path'] = resource_pack_path.replace("\\\\", "\\").replace("/", "\\")
     if mc.ini_ffmpeg:
         config['Settings']['init'] = "true"
         config['Settings']['ffmpeg_path'] = mc.ffmpeg_path.replace("\\\\", "\\").replace("/", "\\")
@@ -258,6 +263,12 @@ def install():
     config.set(RENDER, 'r.PostProcessing.PropagateAlpha', 'True')
     config.set(RENDER, 'r.Deferred.SupportPrimitiveAlphaHoldout', 'True')
     config.set(RENDER, 'r.SkinCache.SceneMemoryLimitInMB', '1024.0')
+
+    GC = '/Script/Engine.GarbageCollectionSettings'
+    if not config.has_section(GC):
+        config.add_section(GC)
+    config.set(GC, 'gc.AssetClustreringEnabled', 'True')
+    config.set(GC, 'gc.ActorClusteringEnabled', 'True')
 
     with open(DefaultEngine_ini, 'w', encoding='utf-8') as f:
         config.write(f)
@@ -427,6 +438,7 @@ class Finish(bpy.types.Operator):
 
         box = self.layout.box()
         box.label(text=loc(25,"Mineprep已经可以使用了"))
+        box.label(text=loc(30,"请勿移动或删除安装包，插件可能会引用其中资源"))
         button = box.operator(CustomButton.bl_idname, text=loc(26,"打开工程文件"))
         abs_path = get_abs_path(mc.install_path)
         uproject_files = [f for f in os.listdir(abs_path) if f.endswith('.uproject')]

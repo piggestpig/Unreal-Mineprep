@@ -15,7 +15,9 @@ replacements = {
     "沼骸": "沼骸",
     "猪": "豬",
     "马": "馬",
-    "铁傀儡": "鐵巨人"
+    "铁傀儡": "鐵巨人",
+    "蠹虫": "蠹魚",
+    "末影螨": "終界蟎",
 }
 
 # 定义简转繁转换器
@@ -30,6 +32,10 @@ def translate_readme(content):
     content = converter.convert(content)
 
     content = content.replace("封面圖","封面图")
+    content = content.replace("更新彙總","更新汇总")
+    content = content.replace("Blender擴展資源/","Blender扩展资源/")
+    content = content.replace("插件貼圖/語言本地化","插件贴图/语言本地化")
+    content = content.replace("/實驗性功能(C++)/Mineprep/Content/變量顯示名","/实验性功能(C++)/Mineprep/Content/变量显示名")
     
     return content
 

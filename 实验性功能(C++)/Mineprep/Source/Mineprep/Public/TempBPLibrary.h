@@ -3,11 +3,8 @@
 // #pragma once
 
 // #include "CoreMinimal.h"
+// #include "Framework/Commands/InputChord.h"
 // #include "Kismet/BlueprintFunctionLibrary.h"
-// #include "Engine/UserDefinedStruct.h"
-// #include "Engine/Blueprint.h"
-// #include "NiagaraTypes.h"
-// #include "MovieScene/Parameters/MovieSceneNiagaraParameterTrack.h"
 // #include "TempBPLibrary.generated.h"
 
 // /**
@@ -19,8 +16,6 @@
 // 	GENERATED_BODY()
 
 // public:
-// 	//
-// 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
-// 	static void PrintParameter
 
+// };
 

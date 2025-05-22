@@ -3,31 +3,16 @@
 #pragma once
 
 #include "Modules/ModuleManager.h"
+#include "Delegates/Delegate.h" // 添加委托头文件
 
 class FMineprepModule : public IModuleInterface
 {
 public:
-
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
-
+	
 private:
-	void ExecuteKey0Command();
-	void ExecuteKey1Command();
-	void ExecuteKey2Command();
-	void ExecuteKey3Command();
-	void ExecuteKey4Command();
-	void ExecuteKey5Command();
-	void ExecuteKey6Command();
-	void ExecuteKey7Command();
-	void ExecuteKey8Command();
-	void ExecuteKey9Command();
-	void ExecuteKeyViewCamCommand();
-	void ExecuteKeyAlignCamCommand();
-	void ExecuteKeySetParentCommand();
-	void ExecuteKeyRenderImageCommand();
-	void ExecuteKeyRenderVideoCommand();
-
-	void ExecuteBlueprintEvent(FName EventName);
+	// 引擎初始化后的委托句柄
+	FDelegateHandle PostEngineInitDelegateHandle;
 };

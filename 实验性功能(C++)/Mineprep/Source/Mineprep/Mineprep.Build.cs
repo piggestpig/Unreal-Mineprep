@@ -52,6 +52,7 @@ public class Mineprep : ModuleRules
 				"MovieSceneTracks",
 				"SettingsEditor",
 				"BlueprintGraph",
+				"EditorSubsystem",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

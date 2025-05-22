@@ -19,6 +19,7 @@
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "MovieScene/Parameters/MovieSceneNiagaraParameterTrack.h"
+#include "MineprepSubsystem.h"
 
 // 添加控制台变量
 static float GMineprepTickInterval = 9999999.0f;
@@ -32,55 +33,6 @@ static FAutoConsoleVariableRef CVarMineprepTickInterval(
 
 #define LOCTEXT_NAMESPACE "FMineprepModule"
 
-class FMineprepCommands : public TCommands<FMineprepCommands>
-{
-public:
-    FMineprepCommands()
-        : TCommands<FMineprepCommands>(
-            TEXT("Mineprep自定义快捷键"),
-            LOCTEXT("Mineprep自定义快捷键", "Mineprep自定义快捷键"),
-            NAME_None,
-            FAppStyle::GetAppStyleSetName())
-    {
-    }
-
-    virtual void RegisterCommands() override
-    {
-        UI_COMMAND(Key0Command, "快捷键 Key0", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Zero, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key1Command, "快捷键 Key1", "【预设】切换新旧Gizmo小工具", EUserInterfaceActionType::Button, FInputChord(EKeys::One, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key2Command, "快捷键 Key2", "【预设】启用/禁用预览摄像机窗口", EUserInterfaceActionType::Button, FInputChord(EKeys::Two, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key3Command, "快捷键 Key3", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Three, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key4Command, "快捷键 Key4", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Four, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key5Command, "快捷键 Key5", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Five, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key6Command, "快捷键 Key6", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Six, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key7Command, "快捷键 Key7", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Seven, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key8Command, "快捷键 Key8", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Eight, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(Key9Command, "快捷键 Key9", "可在Plugins文件夹的“Mineprep自定义快捷键”蓝图中添加自定义操作", EUserInterfaceActionType::Button, FInputChord(EKeys::Nine, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(KeyViewCamCommand, "快捷键 KeyViewCam", "进入摄像机视图", EUserInterfaceActionType::Button, FInputChord(EKeys::NumPadZero));
-        UI_COMMAND(KeyAlignCamCommand, "快捷键 KeyAlignCam", "对齐摄像机至视图", EUserInterfaceActionType::Button, FInputChord(EKeys::NumPadZero, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(KeySetParentCommand, "快捷键 KeySetParent", "绑定父级至最后一个视口选中项", EUserInterfaceActionType::Button, FInputChord(EKeys::P, EModifierKey::Control | EModifierKey::Alt));
-        UI_COMMAND(KeyRenderImageCommand, "快捷键 KeyRenderImage", "渲染图片", EUserInterfaceActionType::Button, FInputChord(EKeys::F12));
-        UI_COMMAND(KeyRenderVideoCommand, "快捷键 KeyRenderVideo", "渲染视频", EUserInterfaceActionType::Button, FInputChord(EKeys::F12, EModifierKey::Control));
-    }
-
-public:
-    TSharedPtr<FUICommandInfo> Key0Command;
-    TSharedPtr<FUICommandInfo> Key1Command;
-    TSharedPtr<FUICommandInfo> Key2Command;
-    TSharedPtr<FUICommandInfo> Key3Command;
-    TSharedPtr<FUICommandInfo> Key4Command;
-    TSharedPtr<FUICommandInfo> Key5Command;
-    TSharedPtr<FUICommandInfo> Key6Command;
-    TSharedPtr<FUICommandInfo> Key7Command;
-    TSharedPtr<FUICommandInfo> Key8Command;
-    TSharedPtr<FUICommandInfo> Key9Command;
-    TSharedPtr<FUICommandInfo> KeyViewCamCommand;
-    TSharedPtr<FUICommandInfo> KeyAlignCamCommand;
-    TSharedPtr<FUICommandInfo> KeySetParentCommand;
-    TSharedPtr<FUICommandInfo> KeyRenderImageCommand;
-    TSharedPtr<FUICommandInfo> KeyRenderVideoCommand;
-};
-
 class FMineprepEditorTicker : public FTickableEditorObject
 {
 public:
@@ -90,36 +42,27 @@ public:
         
         if (TimeSinceLastTick >= GMineprepTickInterval)
         {
-            // 延迟加载蓝图资产
-            if (!CustomHotkeyWidget.IsValid())
+            // 使用MineprepSubsystem获取快捷键对象
+            if (GEditor)
             {
-                FString BlueprintPath = TEXT("/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C");
-                UClass* LoadedClass = LoadClass<UObject>(nullptr, *BlueprintPath);
-                if (LoadedClass)
+                UMineprepSubsystem* MineprepSubsystem = GEditor->GetEditorSubsystem<UMineprepSubsystem>();
+                if (MineprepSubsystem)
                 {
-                    CustomHotkeyWidget = NewObject<UObject>(GetTransientPackage(), LoadedClass);
-                }
-                else
-                {
-                    UE_LOG(LogTemp, Error, TEXT("无法加载蓝图类: %s"), *BlueprintPath);
-                    TimeSinceLastTick = 0.0f;
-                    return;
+                    UObject* HotkeyObject = MineprepSubsystem->GetHotkeyObject();
+                    if (HotkeyObject)
+                    {
+                        // 通过反射调用Run函数
+                        if (UFunction* RunFunc = HotkeyObject->FindFunction(FName(TEXT("Run"))))
+                        {
+                            HotkeyObject->ProcessEvent(RunFunc, nullptr);
+                        }
+                        else
+                        {
+                            UE_LOG(LogTemp, Error, TEXT("无法找到Run函数"));
+                        }
+                    }
                 }
             }
-
-            // 通过反射调用Run函数
-            if (CustomHotkeyWidget.IsValid())
-            {
-                if (UFunction* RunFunc = CustomHotkeyWidget->FindFunction(FName(TEXT("Run"))))
-                {
-                    CustomHotkeyWidget->ProcessEvent(RunFunc, nullptr);
-                }
-                else
-                {
-                    UE_LOG(LogTemp, Error, TEXT("无法找到函数"));
-                }
-            }
-            
             TimeSinceLastTick = 0.0f;
         }
     }
@@ -137,7 +80,6 @@ public:
 
 private:
     float TimeSinceLastTick = 0.0f;
-    TWeakObjectPtr<UObject> CustomHotkeyWidget;
 };
 
 static TSharedPtr<FMineprepEditorTicker> MineprepEditorTicker;
@@ -441,38 +383,34 @@ static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtension
         return;
     }
 
-    // 创建参数名到工具提示的映射
-    static TMap<FString, FString> ParamTooltipMap = {
-        { TEXT("发光亮度"), TEXT("发光亮度\n如果要照亮场景，着色模型必须是默认\nGlow Strength\nTo lit up the scene, set Shading Model to Default") },
-        { TEXT("[着色模型] 1默认/2次表面"), TEXT("[着色模型] 1 默认 / 2 次表面\n如果要通过自发光照亮场景，必须设为默认\n[Shading Model] 1 Default / 2 Subsurface\nOnly Default can lit up the scene") },
-        { TEXT("摇摆幅度"), TEXT("摇摆幅度\nSway Strength") },
-        { TEXT("摇摆速度"), TEXT("摇摆速度\nSway Speed") },
-        { TEXT("法线强度"), TEXT("法线强度\nNormal Strength") },
-        { TEXT("破碎程度"), TEXT("破碎程度\nDestroy Stage") },
-        { TEXT("次表面颜色RGB+不透明度A"), TEXT("次表面颜色RGB+不透明度A\nSubsurface Color RGB + Opacity A") },
-        { TEXT("纹理颜色"), TEXT("纹理颜色\nTexture Color") },
-        { TEXT("动画速度/U缩放/V缩放"), TEXT("动画速度/U缩放/V缩放\nAnimation Speed / U Scale / V Scale") },
-        { TEXT("反转:纹理/金属/高光/粗糙"), TEXT("反转:纹理/金属/高光/粗糙\nInvert: Texture / Metallic / Specular / Roughness") },
-        { TEXT("金属/高光/粗糙/各向异性"), TEXT("金属/高光/粗糙/各向异性\nMetallic / Specular / Roughness / Anisotropy") },
-        { TEXT("附魔缩放/速度/对比度/底色"), TEXT("附魔缩放/速度/对比度/底色\nEnchant Scale / Speed / Contrast / Base Color") },
-        { TEXT("附魔颜色"), TEXT("附魔颜色\nEnchant Color") },
-        { TEXT("切线贴图"), TEXT("切线贴图\nTangent Tex") },
-        { TEXT("法线贴图"), TEXT("法线贴图\nNormal Tex") },
-        { TEXT("粗糙贴图"), TEXT("粗糙贴图\nRoughness Tex") },
-        { TEXT("纹理贴图"), TEXT("纹理贴图\nTexture") },
-        { TEXT("自发光蒙版"), TEXT("自发光蒙版\nEmissive Mask") },
-        { TEXT("金属贴图"), TEXT("金属贴图\nMetallic Tex") },
-        { TEXT("高光贴图"), TEXT("高光贴图\nSpecular Tex") }
-    };
-
-    // 查找并应用工具提示
+    // 获取参数名
     FString ParamNameStr = PropertyHandle->GetPropertyDisplayName().ToString();
     FText ParamTooltip;
-    if (const FString* TooltipPtr = ParamTooltipMap.Find(ParamNameStr))
+    
+    // 从Mineprep子系统获取自定义快捷键对象
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
     {
-        ParamTooltip = FText::FromString(*TooltipPtr);
-        PropertyHandle->SetToolTipText(ParamTooltip);
-        ParamTooltip = FText::Format(FText::FromString("{0}{1}"), FText::FromString("\n\n"), FText::FromString(*TooltipPtr));
+        // 通过调用GetMatParamTooltip函数获取工具提示
+        if (UFunction* GetTooltipFunc = HotkeyObject->FindFunction(FName("GetMatParamTooltip")))
+        {
+            struct {
+                FString ParamName;
+                FString ReturnValue;
+            } Params;
+            
+            Params.ParamName = ParamNameStr;
+            Params.ReturnValue = "";
+            
+            HotkeyObject->ProcessEvent(GetTooltipFunc, &Params);
+            
+            if (!Params.ReturnValue.IsEmpty())
+            {
+                ParamTooltip = FText::FromString(Params.ReturnValue);
+                PropertyHandle->SetToolTipText(ParamTooltip);
+                ParamTooltip = FText::Format(FText::FromString("{0}{1}"), FText::FromString("\n\n"), FText::FromString(Params.ReturnValue));
+            }
+        }
     }
 
     FPropertyRowExtensionButton& CreateKey = OutExtensionButtons.AddDefaulted_GetRef();
@@ -489,41 +427,53 @@ static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtension
 
 void FMineprepModule::StartupModule()
 {
-    // 注册命令
-    FMineprepCommands::Register();
-
-    // 绑定命令
-    const FLevelEditorModule& LevelEditorModule = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
-    TSharedPtr<FUICommandList> CommandList = LevelEditorModule.GetGlobalLevelEditorActions();
-
-    CommandList->MapAction(FMineprepCommands::Get().Key0Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey0Command));
-    CommandList->MapAction(FMineprepCommands::Get().Key1Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey1Command));
-    CommandList->MapAction(FMineprepCommands::Get().Key2Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey2Command));
-    CommandList->MapAction(FMineprepCommands::Get().Key3Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey3Command));
-    CommandList->MapAction(FMineprepCommands::Get().Key4Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey4Command));
-    CommandList->MapAction(FMineprepCommands::Get().Key5Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey5Command));
-    CommandList->MapAction(FMineprepCommands::Get().Key6Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey6Command));
-    CommandList->MapAction(FMineprepCommands::Get().Key7Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey7Command));
-    CommandList->MapAction(FMineprepCommands::Get().Key8Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey8Command));
-    CommandList->MapAction(FMineprepCommands::Get().Key9Command, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteKey9Command));
-    CommandList->MapAction(FMineprepCommands::Get().KeyViewCamCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keyViewCam"))));
-    CommandList->MapAction(FMineprepCommands::Get().KeyAlignCamCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keyAlignCam"))));
-    CommandList->MapAction(FMineprepCommands::Get().KeySetParentCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keySetParent"))));
-    CommandList->MapAction(FMineprepCommands::Get().KeyRenderImageCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keyRenderImage"))));
-    CommandList->MapAction(FMineprepCommands::Get().KeyRenderVideoCommand, FExecuteAction::CreateRaw(this, &FMineprepModule::ExecuteBlueprintEvent, FName(TEXT("keyRenderVideo"))));
-
     // 创建编辑器Ticker
     MineprepEditorTicker = MakeShareable(new FMineprepEditorTicker());
 
     // 注册全局行扩展处理程序
     FPropertyEditorModule& PropertyEditorModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
     PropertyEditorModule.GetGlobalRowExtensionDelegate().AddStatic(&RegisterKeyframeExtensionHandler);
+    
+    // 延迟绑定快捷键，直到引擎完全初始化  还有插件
+    PostEngineInitDelegateHandle = FCoreDelegates::OnAllModuleLoadingPhasesComplete.AddLambda([]() 
+    {
+        if (!GEditor)
+        {
+            UE_LOG(LogTemp, Error, TEXT("无法绑定快捷键：GEditor不可用"));
+            return;
+        }
+
+        // 获取Mineprep子系统
+        UMineprepSubsystem* MineprepSubsystem = GEditor->GetEditorSubsystem<UMineprepSubsystem>();
+        if (MineprepSubsystem)
+        {
+            // 先初始化快捷键对象，然后再从中加载快捷键
+            UObject* HotkeyObject = MineprepSubsystem->GetHotkeyObject();
+            if (!HotkeyObject)
+            {
+                UE_LOG(LogTemp, Error, TEXT("无法创建快捷键对象，无法加载快捷键"));
+                return;
+            }
+            
+            // 从蓝图对象加载快捷键
+            MineprepSubsystem->LoadHotkeysFromFile();
+            UE_LOG(LogTemp, Display, TEXT("Mineprep快捷键注册完成"));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("无法获取MineprepSubsystem，快捷键将不可用"));
+        }
+    });
 }
 
 void FMineprepModule::ShutdownModule()
 {
-    // 注销命令
-    FMineprepCommands::Unregister();
+    // 移除PostEngineInit委托
+    if (PostEngineInitDelegateHandle.IsValid())
+    {
+        FCoreDelegates::OnPostEngineInit.Remove(PostEngineInitDelegateHandle);
+        PostEngineInitDelegateHandle.Reset();
+    }
 
     // 重置编辑器Ticker
     MineprepEditorTicker.Reset();
@@ -533,47 +483,6 @@ void FMineprepModule::ShutdownModule()
     {
         FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
         PropertyEditorModule.GetGlobalRowExtensionDelegate().RemoveAll(this);
-    }
-}
-
-void FMineprepModule::ExecuteKey0Command() {ExecuteBlueprintEvent(TEXT("key0"));}
-void FMineprepModule::ExecuteKey1Command() {ExecuteBlueprintEvent(TEXT("key1"));}
-void FMineprepModule::ExecuteKey2Command() {ExecuteBlueprintEvent(TEXT("key2"));}
-void FMineprepModule::ExecuteKey3Command() {ExecuteBlueprintEvent(TEXT("key3"));}
-void FMineprepModule::ExecuteKey4Command() {ExecuteBlueprintEvent(TEXT("key4"));}
-void FMineprepModule::ExecuteKey5Command() {ExecuteBlueprintEvent(TEXT("key5"));}
-void FMineprepModule::ExecuteKey6Command() {ExecuteBlueprintEvent(TEXT("key6"));}
-void FMineprepModule::ExecuteKey7Command() {ExecuteBlueprintEvent(TEXT("key7"));}
-void FMineprepModule::ExecuteKey8Command() {ExecuteBlueprintEvent(TEXT("key8"));}
-void FMineprepModule::ExecuteKey9Command() {ExecuteBlueprintEvent(TEXT("key9"));}
-void FMineprepModule::ExecuteKeyViewCamCommand() {ExecuteBlueprintEvent(TEXT("keyViewCam"));}
-void FMineprepModule::ExecuteKeyAlignCamCommand() {ExecuteBlueprintEvent(TEXT("keyAlignCam"));}
-void FMineprepModule::ExecuteKeySetParentCommand() {ExecuteBlueprintEvent(TEXT("keySetParent"));}
-void FMineprepModule::ExecuteKeyRenderImageCommand() {ExecuteBlueprintEvent(TEXT("keyRenderImage"));}
-void FMineprepModule::ExecuteKeyRenderVideoCommand() {ExecuteBlueprintEvent(TEXT("keyRenderVideo"));}
-
-void FMineprepModule::ExecuteBlueprintEvent(FName EventName)
-{
-    FString BlueprintPath = TEXT("/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C");
-    UClass* LoadedClass = LoadClass<UObject>(nullptr, *BlueprintPath);
-    if (LoadedClass)
-    {
-        UObject* CustomHotkeyWidget = NewObject<UObject>(GetTransientPackage(), LoadedClass);
-        if (CustomHotkeyWidget)
-        {
-            if (UFunction* Func = CustomHotkeyWidget->FindFunction(EventName))
-            {
-                CustomHotkeyWidget->ProcessEvent(Func, nullptr);
-            }
-            else
-            {
-                UE_LOG(LogTemp, Error, TEXT("无法找到 %s 函数"), *EventName.ToString());
-            }
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("无法加载蓝图类: %s"), *BlueprintPath);
     }
 }
 

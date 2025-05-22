@@ -4,7 +4,7 @@ English | [**中文**](./README.md) | [**繁體中文**](./README_ZH-Hant.md)
 
 ✨This is a UE5 plugin that inherits the practical features of [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/), and adds some new assets to facilitate the creation of MC animations.
 
-![image](Readme素材/0.4封面图.jpg)
+![image](Readme素材/0.5-pre1封面图.jpg)
 
 ![image](Readme素材/插件展示_EN.jpg)
 
@@ -30,7 +30,7 @@ You need to copy the Mineprep content folder + modify the project settings. Deta
 
 
 ## Compatibility
-Mineprep 0.4 is developed on Windows + UE5.4.
+Mineprep 0.5-pre1 is developed on Windows + UE5.5.
 
 The installer and non-experimental features of the plugin are expected to be cross-platform and support higher engine versions, but they haven't been tested yet.
 
@@ -43,8 +43,8 @@ In addition, the plugin comes with the Windows version of ffmpeg for video encod
 
 ## Mobs
 - Mineprep provides Minecraft mobs which can be placed through the spawner panel.
-- Currently, there are skeletal meshes and automated NPCs. All mobs can change materials, and humanoids can add universal IK bindings.
-- Current version supports: pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, husk, piglin, piglin brute, pillager, vindicator, iron golem.
+- Currently, there are skeletal meshes and automated NPCs. Some mobs have vertex-animated instance model for large crowd particles. All mobs can change materials, and humanoids can add universal IK bindings.
+- Current version supports: Steve/Alex player, pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, husk, piglin, piglin brute, pillager, vindicator, iron golem, silverfish, endermite, spider (cave spider).
 - More content is WIP.
 
 
@@ -66,6 +66,24 @@ See [Epic Games' EULA](https://www.unrealengine.com/eula) for details
 
 
 ## Version Updates
+
+#### 0.5-pre1
+![image](Readme素材/0.5-pre1封面图.jpg)
+The first preview version of Mineprep 0.5 is here, and the new animation "Silverfish Rush" has been released!
+> This might be the last version supporting UE5.5—we'll be upgrading the engine soon, with non-experimental features already adapted for UE5.6.
+- Swarm particles now have global inter-particle collision functionality with "write" and "read" options, which will consume more GPU performance and VRAM
+- Regular models for silverfish, endermites, and spiders (cave spiders) have been added to the mob spawner, NPCs will be added in future updates
+- Improved the language localization module, which now generates pickle cache from CSV files when opening the plugin panel or switching languages, removing spaces and improving loading speed. - - Filter property columns have been added to each section for mob spawner/preset materials/attachment components panel
+- Added 10 `type filters` to the generator panel: left-click to select this type, middle-click to select only this type, right-click to exclude this type. A `Try spawn baby mobs` button has also been added next to the spawner options
+- [Experimental] The shortcut panel now includes `editor shortcut` binding entries, allowing you to freely add or modify shortcuts for greater convenience!
+- Modified NPC auxiliary collision boxes, which are now dynamically generated according to parameters in the details panel. You can also bind collision boxes to other parts using statements like head.ear_l, see tooltip for details. Auxiliary collision boxes are now available for regular models. "Background Animal Scatter" disables collision boxes by default to improve performance
+- Third-person motion matching player (advanced NPCs) now come with the global force field for particles and materials
+- Added `dust particles`
+- Added `MC_Head_Face2D` and 2D facial skin materials, with facial animations completely controlled by material parameters. More features are in development and will be applicable to all mobs in the future
+- The default MC resource pack is now included in the installer package. During installation, it's no longer copied but linked via file paths, significantly improving installation speed.
+- Fixed a bug where placing blocks and items would fail due to asset naming conflicts
+
+
 
 ### 0.4 : Trails and Tails
 ![image](Readme素材/0.4封面图.jpg)
