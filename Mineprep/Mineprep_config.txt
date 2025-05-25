@@ -18,7 +18,7 @@
         "blender_path": "E:\\blender\\blender-4.4.0-windows-x64\\blender.exe",
         "GPU": "1",
         "TTS": "false",
-        "memory_preload": "false",
+        "memory_preload": false,
         "ffmpeg_path": "",
         "smooth_roll": "true",
         "hover_toolbar": "false",
