@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright Epic Games, Inc. All Rights Reserved.
 
 #pragma once
 
@@ -6,19 +6,16 @@
 #include "Graph/Renderers/MovieGraphDeferredPass.h"
 #include "Graph/Renderers/MovieGraphImagePassBase.h"
 
-struct FMovieGraphObjectIdMaskSampleAccumulationArgs : MoviePipeline::IMoviePipelineAccumulationArgs
+/**
+* This needs to inherit from FMovieGraphRenderDataAccumulationArgs because there's a static cast in the shared baseclass used for post-render accumulation.
+*/
+struct FMovieGraphObjectIdMaskSampleAccumulationArgs : UE::MovieGraph::Rendering::FMovieGraphRenderDataAccumulationArgs
 {
-	TWeakPtr<MoviePipeline::IMoviePipelineOverlappedAccumulator, ESPMode::ThreadSafe> ImageAccumulator;
-	UE::MovieGraph::DefaultRenderer::FSurfaceAccumulatorPool::FInstancePtr AccumulatorInstance;
-
 	/** The number of layers that the accumulator will be generating. */
 	int32 NumOutputLayers;
 
 	/** The mapping of a HitProxy index to the data associated with the HitProxy. */
 	TSharedPtr<TMap<int32, UE::MoviePipeline::FMoviePipelineHitProxyCacheValue>> CacheData;
-
-	/** The output merger that the accumulator should send pixel data to. */
-	TSharedPtr<UE::MovieGraph::IMovieGraphOutputMerger, ESPMode::ThreadSafe> OutputMerger;
 
 	/** The node that is using this accumulator. */
 	TWeakObjectPtr<UMovieGraphRenderPassNode> RenderPassNode;
@@ -37,6 +34,10 @@ struct FMovieGraphObjectIdPass : UE::MovieGraph::Rendering::FMovieGraphDeferredP
 	virtual TSharedRef<MoviePipeline::IMoviePipelineAccumulationArgs> GetOrCreateAccumulator(TObjectPtr<UMovieGraphDefaultRenderer> InGraphRenderer, const UE::MovieGraph::FMovieGraphSampleState& InSampleState) const override;
 	virtual FAccumulatorSampleFunc GetAccumulateSampleFunction() const override;
 	// ~FMovieGraphImagePassBase Interface
+
+	// FMovieGraphDeferredPass Interface
+	virtual void Render(const FMovieGraphTraversalContext& InFrameTraversalContext, const FMovieGraphTimeStepData& InTimeData) override;
+	// ~FMovieGraphDeferredPass Interface
 
 	/** Gets the ObjectID acceleration data for a specific branch (will be nullptr if not found). */
 	static UE::MoviePipeline::FObjectIdAccelerationData* GetAccelerationData(const FName& InBranchName);

@@ -2,16 +2,47 @@
 
 #include "MovieGraphObjectIdPass.h"
 
-#include "MovieGraphObjectIdNode.h"
+#include "Graph/MovieGraphObjectIdNode.h"
 #include "MoviePipelineHashUtils.h"
 #include "MoviePipelineObjectIdUtils.h"
+#include "MoviePipelineQueue.h"
 #include "Graph/MovieGraphBlueprintLibrary.h"
 #include "Graph/MovieGraphPipeline.h"
+#include "Graph/Nodes/MovieGraphCameraNode.h"
 #include "Graph/Nodes/MovieGraphImagePassBaseNode.h"
 
 namespace UE::MovieGraph
 {
-	static void AccumulateSampleObjectId_TaskThread(TUniquePtr<FImagePixelData>&& InPixelData, const FMovieGraphSampleState InSampleState, const TSharedRef<::MoviePipeline::IMoviePipelineAccumulationArgs> InAccumulatorArgs)
+	/**
+	 * Gets the typename that will be used in the cryptomatte metadata ("typename" here is an official term in the cryptomatte spec). This is also
+	 * the name of the layer without the numerical suffix.
+	 */
+	static FString GetCryptomatteTypename(const FMovieGraphRenderDataIdentifier& InRenderDataIdentifier, const bool bIsMultiCam)
+	{
+		FString CryptomatteTypename = FString::Format(TEXT("{0}_{1}"), {InRenderDataIdentifier.LayerName, InRenderDataIdentifier.RendererName});
+
+		// Include the camera name if there is more than one camera being rendered.
+		if (bIsMultiCam)
+		{
+			CryptomatteTypename = FString::Format(TEXT("{0}_{1}"), {InRenderDataIdentifier.CameraName, CryptomatteTypename});
+		}
+
+		return CryptomatteTypename;
+	}
+
+	/** Gets the typename hash used as part of the cryptomatte metadata. Eg, "cryptomatte/<typename_hash>/..." */
+	static FString GetTypenameHash(const FMovieGraphRenderDataIdentifier& InRenderDataIdentifier)
+	{
+		// Note that the name hash includes the camera name as well because there may be multiple cameras rendered within one layer. Each layer/camera
+		// combination needs its own unique typename hash so it has a distinct entry in the metadata.
+		const uint32 NameHash = ::MoviePipeline::HashNameToId(TCHAR_TO_UTF8(*(InRenderDataIdentifier.LayerName + InRenderDataIdentifier.CameraName)));
+		FString TypenameHashString = FString::Printf(TEXT("%08x"), NameHash);
+		TypenameHashString.LeftInline(7);
+
+		return TypenameHashString;
+	}
+	
+	static void AccumulateSampleObjectId_TaskThread(TUniquePtr<FImagePixelData>&& InPixelData, const TSharedRef<FMovieGraphSampleState> InSampleState, const TSharedRef<::MoviePipeline::IMoviePipelineAccumulationArgs> InAccumulatorArgs)
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(AccumulateSampleObjectId_TaskThread);
 
@@ -19,12 +50,12 @@ namespace UE::MovieGraph
 
 		// Associate the sample state with the image as payload data, this allows downstream systems to fetch the values without us having to store the data
 		// separately and ensure they stay paired the whole way down.
-		TSharedPtr<FMovieGraphSampleState> SampleStatePayload = MakeShared<FMovieGraphSampleState>(InSampleState);
+		TSharedPtr<FMovieGraphSampleState> SampleStatePayload = InSampleState->Copy();
 		SamplePixelData->SetPayload(StaticCastSharedPtr<IImagePixelDataPayload>(SampleStatePayload));
 		
 		const TSharedRef<FMovieGraphObjectIdMaskSampleAccumulationArgs> ObjectIdArgs = StaticCastSharedRef<FMovieGraphObjectIdMaskSampleAccumulationArgs>(InAccumulatorArgs);
 
-		const TSharedPtr<IMovieGraphOutputMerger, ESPMode::ThreadSafe> OutputMergerPin = ObjectIdArgs->OutputMerger;
+		const TSharedPtr<IMovieGraphOutputMerger, ESPMode::ThreadSafe> OutputMergerPin = ObjectIdArgs->OutputMerger.Pin();
 		if (!OutputMergerPin.IsValid())
 		{
 			return;
@@ -45,9 +76,7 @@ namespace UE::MovieGraph
 
 		const TSharedPtr<FMaskOverlappedAccumulator, ESPMode::ThreadSafe> AccumulatorPin = StaticCastWeakPtr<FMaskOverlappedAccumulator>(ObjectIdArgs->ImageAccumulator).Pin();
 
-		// TODO: Need a way to detect if this is the first tile *in addition to* the first temporal sample
-		// For the first sample in a new output, we allocate memory
-		if (SampleStatePayload->TraversalContext.Time.bIsFirstTemporalSampleForFrame)
+		if (!AccumulatorPin->bIsInitialized)
 		{
 			LLM_SCOPE_BYNAME(TEXT("MoviePipeline/ImageAccumulatorInitMemory"));
 			
@@ -107,16 +136,26 @@ namespace UE::MovieGraph
 			MoviePipeline::FObjectIdAccelerationData* AccelData = FMovieGraphObjectIdPass::GetAccelerationData(SampleStatePayload->TraversalContext.RenderDataIdentifier.RootBranchName);
 			check(AccelData);
 
+			// If there are multiple cameras being rendered, layer names should include the camera name
+			bool bIsMultiCam = false;
+			{
+				const UMovieGraphCameraSettingNode* CameraNode = SampleStatePayload->TraversalContext.Time.EvaluatedConfig->GetSettingForBranch<UMovieGraphCameraSettingNode>(UMovieGraphNode::GlobalsPinName);
+				bIsMultiCam = (CameraNode && CameraNode->bRenderAllCameras) && (SampleStatePayload->TraversalContext.Shot->SidecarCameras.Num() > 1);
+			}
+
 			// Add in the object ID metadata. This cannot be done in the node's GetFormatResolveArgs() because the manifest is only known after render-time,
 			// and the manifest data is destroyed during node teardown (and teardown occurs before the metadata is finalized and the file written to disk)
-			UpdateCryptomatteMetadata(*AccelData, SampleStatePayload->TraversalContext.RenderDataIdentifier.RendererName, SampleStatePayload->AdditionalFileMetadata);
+			const FMovieGraphRenderDataIdentifier& RenderDataIdentifier = SampleStatePayload->TraversalContext.RenderDataIdentifier;
+			const FString CryptomatteTypename = GetCryptomatteTypename(RenderDataIdentifier, bIsMultiCam);
+			const FString TypenameHash = GetTypenameHash(RenderDataIdentifier);
+			UpdateCryptomatteMetadata(*AccelData, TypenameHash, CryptomatteTypename, SampleStatePayload->AdditionalFileMetadata);
 
 			for (int32 Index = 0; Index < ObjectIdArgs->NumOutputLayers; Index++)
 			{
 				// We unfortunately can't share ownership of the payload from the last sample due to the changed pass identifiers and layer name.
 				TSharedRef<FMovieGraphSampleState, ESPMode::ThreadSafe> NewPayload = SampleStatePayload->Copy();
 				FMovieGraphRenderDataIdentifier NewIdentifier = FMovieGraphRenderDataIdentifier(SampleStatePayload->TraversalContext.RenderDataIdentifier);
-				NewIdentifier.SubResourceName =  NewIdentifier.RendererName + FString::Printf(TEXT("%02d"), Index);
+				NewIdentifier.SubResourceName = CryptomatteTypename + FString::Printf(TEXT("%02d"), Index);
 				NewPayload->TraversalContext.RenderDataIdentifier = NewIdentifier;
 
 				// Update the layer name to be exactly what is needed for the Cryptomatte specification. The "name" in the metadata must match up
@@ -133,7 +172,7 @@ namespace UE::MovieGraph
 				TUniquePtr<TImagePixelData<FLinearColor>> FinalPixelData = MakeUnique<TImagePixelData<FLinearColor>>(FIntPoint(FullSizeX, FullSizeY), MoveTemp(OutputLayers[Index]), NewPayload);
 
 				// Send each layer to the Output Builder
-				ObjectIdArgs->OutputMerger->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(FinalPixelData));
+				OutputMergerPin->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(FinalPixelData));
 			}
 			
 			// Free the memory in the accumulator now that we've extracted all
@@ -148,7 +187,7 @@ FMovieGraphObjectIdPass::FMovieGraphObjectIdPass()
 
 void FMovieGraphObjectIdPass::Setup(TWeakObjectPtr<UMovieGraphDefaultRenderer> InRenderer, TWeakObjectPtr<UMovieGraphImagePassBaseNode> InRenderPassNode, const FMovieGraphRenderPassLayerData& InLayer)
 {
-	FMovieGraphImagePassBase::Setup(InRenderer, InRenderPassNode, InLayer);
+	FMovieGraphDeferredPass::Setup(InRenderer, InRenderPassNode, InLayer);
 
 	LayerData = InLayer;
 
@@ -160,8 +199,8 @@ void FMovieGraphObjectIdPass::Setup(TWeakObjectPtr<UMovieGraphDefaultRenderer> I
 		NewIdentifier.RootBranchName = LayerData.BranchName;
 		NewIdentifier.LayerName = LayerData.LayerName;
 		NewIdentifier.RendererName = InRenderPassNode->GetRendererName();
-		NewIdentifier.SubResourceName = NewIdentifier.RendererName + FString::Printf(TEXT("%02d"), Index);
-		NewIdentifier.CameraName = InLayer.CameraName;
+		NewIdentifier.CameraName = LayerData.CameraName;
+		NewIdentifier.SubResourceName = UE::MovieGraph::GetCryptomatteTypename(NewIdentifier, InLayer.NumCameras > 1) + FString::Printf(TEXT("%02d"), Index);
 		
 		RenderDataIdentifiers.Add(NewIdentifier);
 	}
@@ -171,13 +210,6 @@ void FMovieGraphObjectIdPass::Setup(TWeakObjectPtr<UMovieGraphDefaultRenderer> I
 	RenderDataIdentifier = RenderDataIdentifiers[0];
 
 	UE::MoviePipeline::FObjectIdAccelerationData& AccelData = AccelerationDataByBranch.Add(LayerData.BranchName);
-
-	// Static metadata needed for Cryptomatte
-	const uint32 NameHash = ::MoviePipeline::HashNameToId(TCHAR_TO_UTF8(*InRenderPassNode->GetRendererName()));
-	FString PassIdentifierHashAsShortString = FString::Printf(TEXT("%08x"), NameHash);
-	PassIdentifierHashAsShortString.LeftInline(7);
-
-	AccelData.PassIdentifierHashAsShortString = PassIdentifierHashAsShortString;
 	AccelData.JsonManifest = MakeShared<FJsonObject>();
 	AccelData.Cache = MakeShared<TMap<int32, UE::MoviePipeline::FMoviePipelineHitProxyCacheValue>>();
 	AccelData.Cache->Reserve(1000);
@@ -193,13 +225,6 @@ void FMovieGraphObjectIdPass::Setup(TWeakObjectPtr<UMovieGraphDefaultRenderer> I
 		check(ObjectIdNode);
 		UpdateManifestAccelerationData(AccelData, ObjectIdNode->IdType);
 	}
-	
-	SceneViewState.Allocate(InRenderer->GetWorld()->GetFeatureLevel());
-
-	// The InRenderPassNode is not initialized with user's config. Use InLayer to 
-	// initialize the frames to delay for post submission.
-	UMovieGraphRenderPassNode* RenderPassNode = InLayer.RenderPassNode.Get();
-	FramesToDelayPostSubmission = RenderPassNode ? RenderPassNode->GetCoolingDownFrameCount() : 0;
 }
 
 void FMovieGraphObjectIdPass::Teardown()
@@ -224,6 +249,24 @@ UMovieGraphImagePassBaseNode* FMovieGraphObjectIdPass::GetParentNode(UMovieGraph
 	}
 
 	return ParentNode;
+}
+
+void FMovieGraphObjectIdPass::Render(const FMovieGraphTraversalContext& InFrameTraversalContext, const FMovieGraphTimeStepData& InTimeData)
+{
+	FMovieGraphDeferredPass::Render(InFrameTraversalContext, InTimeData);
+	
+
+	UMovieGraphObjectIdNode* ParentNode = Cast<UMovieGraphObjectIdNode>(GetParentNode(InTimeData.EvaluatedConfig));
+	check(ParentNode);
+	
+	UE::MoviePipeline::FObjectIdAccelerationData* AccelData = GetAccelerationData(LayerData.BranchName);
+	check(AccelData);
+	
+	// This needs to be updated every frame. It's also important to call this AFTER the render finishes; HitProxy IDs will be out-of-date
+	// before the render starts. Render property changes made during the frame (via modifiers) will invalidate the HitProxy IDs in the global array,
+	// and those invalidations happen only once Render() is called (thus we need to wait until after Render() before updating the cache to
+	// get the new IDs).
+	UpdateManifestAccelerationData(*AccelData, ParentNode->IdType);
 }
 
 TSharedRef<MoviePipeline::IMoviePipelineAccumulationArgs> FMovieGraphObjectIdPass::GetOrCreateAccumulator(TObjectPtr<UMovieGraphDefaultRenderer> InGraphRenderer, const UE::MovieGraph::FMovieGraphSampleState& InSampleState) const

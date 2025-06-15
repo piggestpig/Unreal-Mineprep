@@ -1,6 +1,6 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "MovieGraphObjectIdNode.h"
+#include "Graph/MovieGraphObjectIdNode.h"
 
 #include "Editor/EditorPerProjectUserSettings.h"
 #include "MovieGraphObjectIdPass.h"

@@ -2,55 +2,49 @@
 #pragma once
 
 #include "MovieRenderPipelineDataTypes.h"
+#include "MoviePipelinePanoramicBlenderBase.h"
 
 // Forward Declares
 struct FImagePixelData;
 class UMoviePipeline;
 
-class FMoviePipelinePanoramicBlender : public MoviePipeline::IMoviePipelineOutputMerger
+namespace UE::MoviePipeline
 {
-public:
-	FMoviePipelinePanoramicBlender(TSharedPtr<MoviePipeline::IMoviePipelineOutputMerger> InOutputMerger, const FIntPoint InOutputResolution);
-public:
-	virtual FMoviePipelineMergerOutputFrame& QueueOutputFrame_GameThread(const FMoviePipelineFrameOutputState& CachedOutputState) override;
-	virtual void OnCompleteRenderPassDataAvailable_AnyThread(TUniquePtr<FImagePixelData>&& InData) override;
-	virtual void OnSingleSampleDataAvailable_AnyThread(TUniquePtr<FImagePixelData>&& InData) override;
-	virtual void AbandonOutstandingWork() override;
-	virtual int32 GetNumOutstandingFrames() const override { return PendingData.Num(); }
-
-private:
-	struct FPanoramicBlendData
+	/**
+	* The FMoviePipelinePanoramicBlender acts as an intermediate destination before the regular OutputMerger of the MoviePipeline. To reuse the multi-sample accumulation code,
+	* we run those accumulations and tell them to send the results to the output merger, but we've replaced the standard Movie Pipeline output merger with an instance of
+	* this class, and it then takes all the samples for the frame and blends them into one larger output image. Then once all of the samples come in for a given output image,
+	* it is passed onto the regular MoviePipeline output merger.
+	*/
+	class FMoviePipelinePanoramicBlender : public ::MoviePipeline::IMoviePipelineOutputMerger
 	{
-		double BlendStartTime;
-		double BlendEndTime;
-		bool bFinished;
-		FIntPoint OutputBoundsMin;
-		FIntPoint OutputBoundsMax;
-		int32 PixelWidth;
-		int32 PixelHeight;
-		TArray<FLinearColor> Data;
-		int32 EyeIndex;
-		TSharedPtr<struct FPanoramicImagePixelDataPayload> OriginalDataPayload;
+	public:
+		FMoviePipelinePanoramicBlender(TSharedPtr<::MoviePipeline::IMoviePipelineOutputMerger> InOutputMerger, const FIntPoint InOutputResolution);
+	public:
+		virtual FMoviePipelineMergerOutputFrame& QueueOutputFrame_GameThread(const FMoviePipelineFrameOutputState& CachedOutputState) override;
+		virtual void OnCompleteRenderPassDataAvailable_AnyThread(TUniquePtr<FImagePixelData>&& InData) override;
+		virtual void OnSingleSampleDataAvailable_AnyThread(TUniquePtr<FImagePixelData>&& InData) override;
+		virtual void AbandonOutstandingWork() override;
+		virtual int32 GetNumOutstandingFrames() const override;
+	private:
+		struct FPoolEntry
+		{
+			FMoviePipelinePanoramicBlenderBase Blender;
+			bool bActive;
+			int32 OutputFrameNumber;
+			int32 EyeIndex; // 新增：区分左右眼
+			std::atomic<int32> NumCompletedAccumulations;
+		};
+
+		// Pool entries are allocated as pointers on the heap so that if the array is resized while a thread is
+		// working on a previous frame, it doesn't have the memory moved out from underneath it.
+		TArray<TUniquePtr<FPoolEntry>> PendingData;
+
+		FCriticalSection GlobalQueueDataMutex;
+
+		// OutputResolution为单眼分辨率，输出时如为立体需高度翻倍
+		FIntPoint OutputResolution;
+
+		TWeakPtr<::MoviePipeline::IMoviePipelineOutputMerger> OutputMerger;
 	};
-
-	struct FPanoramicOutputFrame
-	{
-		// Eye Index to Blend Data. Eye Index will be -1 when not using Stereo.
-		TMap<int32, TArray<TSharedPtr<FPanoramicBlendData>>> BlendedData;
-
-		// The total number of samples we have to wait for to finish blending before being 'done'.
-		int32 NumSamplesTotal;
-
-		TArray<FLinearColor> OutputEquirectangularMap;
-	};
-
-	/** Data that is expected but not fully available yet. */
-	TMap<FMoviePipelineFrameOutputState, TSharedPtr<FPanoramicOutputFrame>> PendingData;
-
-	/** Mutex that protects adding/updating/removing from PendingData */
-	FCriticalSection GlobalQueueDataMutex;
-	FCriticalSection OutputDataMutex;
-	FIntPoint OutputEquirectangularMapSize;
-
-	TWeakPtr<MoviePipeline::IMoviePipelineOutputMerger> OutputMerger;
-};
+}

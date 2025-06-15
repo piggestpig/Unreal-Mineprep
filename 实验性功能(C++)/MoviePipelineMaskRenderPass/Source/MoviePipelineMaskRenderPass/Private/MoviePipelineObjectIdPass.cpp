@@ -97,17 +97,7 @@ void UMoviePipelineObjectIdRenderPass::SetupImpl(const MoviePipeline::FMoviePipe
 	AccumulatorPool = MakeShared<TAccumulatorPool<FMaskOverlappedAccumulator>, ESPMode::ThreadSafe>(6);
 
 	UE::MoviePipeline::FObjectIdAccelerationData AccelData = UE::MoviePipeline::FObjectIdAccelerationData();
-
-	// Static metadata needed for Cryptomatte
-	uint32 NameHash = MoviePipeline::HashNameToId(TCHAR_TO_UTF8(*PassIdentifier.Name));
-	FString PassIdentifierHashAsShortString = FString::Printf(TEXT("%08x"), NameHash);
-	PassIdentifierHashAsShortString.LeftInline(7);
-
-	AccelData.PassIdentifierHashAsShortString = PassIdentifierHashAsShortString;
-
-	
 	AccelData.JsonManifest = MakeShared<FJsonObject>();
-
 	AccelData.Cache = MakeShared<TMap<int32, UE::MoviePipeline::FMoviePipelineHitProxyCacheValue>>();
 	AccelData.Cache->Reserve(1000);
 
@@ -185,14 +175,13 @@ void UMoviePipelineObjectIdRenderPass::RenderSample_GameThreadImpl(const FMovieP
 		RHICmdList.Transition(FRHITransitionInfo(RenderTarget->GetRenderTargetTexture(), ERHIAccess::RTV, ERHIAccess::SRVGraphicsPixel));
 	});
 	
-
 	// Update the data in place, no need to copy back to the annotation.
 	UE::MoviePipeline::FObjectIdAccelerationData AccelData = ManifestAnnotation.GetAnnotation(this);
 	UE::MoviePipeline::UpdateManifestAccelerationData(AccelData, IdType);
 	ManifestAnnotation.AddAnnotation(this, AccelData);
 
 	// Update ObjectID-related file metadata
-	UpdateCryptomatteMetadata(AccelData, PassIdentifier.Name, InOutSampleState.OutputState.FileMetadata);
+	UpdateCryptomatteMetadata(AccelData, GetTypenameHash(), PassIdentifier.Name, InOutSampleState.OutputState.FileMetadata);
 
 	// Main Render Pass
 	{
@@ -252,6 +241,15 @@ void UMoviePipelineObjectIdRenderPass::RenderSample_GameThreadImpl(const FMovieP
 
 void UMoviePipelineObjectIdRenderPass::PostRendererSubmission(const FMoviePipelineRenderPassMetrics& InSampleState)
 {
+}
+
+FString UMoviePipelineObjectIdRenderPass::GetTypenameHash() const
+{
+	const uint32 NameHash = MoviePipeline::HashNameToId(TCHAR_TO_UTF8(*PassIdentifier.Name));
+	FString TypenameHashString = FString::Printf(TEXT("%08x"), NameHash);
+	TypenameHashString.LeftInline(7);
+
+	return TypenameHashString;
 }
 
 namespace MoviePipeline

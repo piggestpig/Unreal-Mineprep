@@ -710,7 +710,7 @@ bool Umineprep::SetPropertyTooltip(UObject* BlueprintObject, const TMap<FString,
             }
         }
     }
-    // 处理蓝图资产
+    // 处理蓝图资产的变量和函数
     else if (Blueprint)
     {
         // 先检查变量
@@ -749,7 +749,7 @@ bool Umineprep::SetPropertyTooltip(UObject* BlueprintObject, const TMap<FString,
             }
         }
 
-        // 检查所有蓝图函数
+        // 然后检查所有蓝图函数
         for (UEdGraph* FunctionGraph : Blueprint->FunctionGraphs)
         {
             if (!FunctionGraph) continue;
@@ -844,4 +844,10 @@ void Umineprep::SetGlobalGravity(FVector Gravity, float DeltaSeconds)
         UPhysicsSettings::Get()->MaxSubsteps,
         UPhysicsSettings::Get()->bSubstepping
     );
+}
+
+
+void Umineprep::SwitchEditorMode(FName ModeID)
+{
+	GLevelEditorModeTools().ActivateMode(ModeID);
 }

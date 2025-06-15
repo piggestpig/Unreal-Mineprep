@@ -35,8 +35,9 @@
 #include "PhysicsInterfaceDeclaresCore.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 #include "Physics/Experimental/PhysScene_Chaos.h"
-#include "MineprepBPLibrary.generated.h"
+#include "EditorModeManager.h"
 
+#include "MineprepBPLibrary.generated.h"
 
 UCLASS()
 class Umineprep : public UBlueprintFunctionLibrary
@@ -98,5 +99,11 @@ class Umineprep : public UBlueprintFunctionLibrary
 	//修改全局重力方向
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static void SetGlobalGravity(FVector Gravity, float DeltaSeconds);
+
+	// 切换编辑器模式
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static void SwitchEditorMode(FName ModeID = TEXT("EM_ScriptableToolsEditorMode"));
+
+
 };
 

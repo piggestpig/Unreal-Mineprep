@@ -89,8 +89,7 @@ namespace UE::MoviePipeline
 		{
 			return !Cache.IsValid()
 				&& !JsonManifest.IsValid()
-				&& JsonManifestCachedOutput.Len() == 0
-				&& PassIdentifierHashAsShortString.Len() == 0;
+				&& JsonManifestCachedOutput.Len() == 0;
 		}
 
 		/** Maps a HitProxy index to the data associated with the HitProxy. */
@@ -101,9 +100,6 @@ namespace UE::MoviePipeline
 
 		/** A cached and serialized version of the JsonManifest data. */
 		FString JsonManifestCachedOutput;
-
-		/** The pass identifier that is used within Cryptomatte metadata keys like `cryptomatte/<pass_id>/name`. */
-		FString PassIdentifierHashAsShortString;
 	};
 
 	struct FObjectIdMaskSampleAccumulationArgs : ::MoviePipeline::IMoviePipelineAccumulationArgs
@@ -349,12 +345,11 @@ namespace UE::MoviePipeline
 		});
 	}
 
-	static void UpdateCryptomatteMetadata(const FObjectIdAccelerationData& InAccelData, const FString& InLayerName, TMap<FString, FString>& InOutMetadataMap)
+	static void UpdateCryptomatteMetadata(const FObjectIdAccelerationData& InAccelData, const FString& InTypenameHash, const FString& InLayerName, TMap<FString, FString>& InOutMetadataMap)
 	{
-		const FString PassIdentifierHashAsShortString = InAccelData.PassIdentifierHashAsShortString;
-		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/manifest"), *PassIdentifierHashAsShortString), InAccelData.JsonManifestCachedOutput);
-		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/name"), *PassIdentifierHashAsShortString), InLayerName);
-		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/hash"), *PassIdentifierHashAsShortString), TEXT("MurmurHash3_32"));
-		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/conversion"), *PassIdentifierHashAsShortString), TEXT("uint32_to_float32"));
+		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/manifest"), *InTypenameHash), InAccelData.JsonManifestCachedOutput);
+		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/name"), *InTypenameHash), InLayerName);
+		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/hash"), *InTypenameHash), TEXT("MurmurHash3_32"));
+		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/conversion"), *InTypenameHash), TEXT("uint32_to_float32"));
 	}
 }

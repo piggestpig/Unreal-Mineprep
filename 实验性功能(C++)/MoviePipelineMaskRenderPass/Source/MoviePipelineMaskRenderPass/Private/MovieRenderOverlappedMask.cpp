@@ -17,7 +17,7 @@ void FMaskOverlappedAccumulator::InitMemory(FIntPoint InPlaneSize)
 	SCOPE_CYCLE_COUNTER(STAT_InitMemory);
 	PlaneSize.X = InPlaneSize.X;
 	PlaneSize.Y = InPlaneSize.Y;
-
+	bIsInitialized = true;
 	ImageData.SetNumUninitialized(InPlaneSize.X * InPlaneSize.Y);
 	WeightPlane.Init(PlaneSize);
 }
@@ -45,10 +45,11 @@ void FMaskOverlappedAccumulator::Reset()
 	PlaneSize.X = 0;
 	PlaneSize.Y = 0;
 
-	// Let the desctructor clean up
+	// Let the destructor clean up
 	ImageData.Reset();
 	SparsePixelData.Reset();
 	WeightPlane.Reset();
+	bIsInitialized = false;
 }
 
 void FMaskOverlappedAccumulator::AccumulatePixelData(const TArray<float>& InLayerIds, const FColor* InPixelWeights, FIntPoint InPixelDataSize, FIntPoint InTileOffset, FVector2D InSubpixelOffset, const MoviePipeline::FTileWeight1D& WeightX, const MoviePipeline::FTileWeight1D& WeightY)

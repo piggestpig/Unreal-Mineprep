@@ -31,7 +31,8 @@ public:
 	 * Default constructor.
 	 */
 	FMaskOverlappedAccumulator()
-		: PlaneSize(0,0)
+		: bIsInitialized(false)
+		, PlaneSize(0,0)
 	{
 	}
 
@@ -93,6 +94,9 @@ protected:
 		const TArray<float>& WeightDataX,
 		const TArray<float>& WeightDataY);
 public:
+	/** Has InitMemory been called to allocate memory for this accumulator. */
+	bool bIsInitialized;
+
 	/** Width and height of each tile in pixels */
 	FIntPoint PlaneSize;
 

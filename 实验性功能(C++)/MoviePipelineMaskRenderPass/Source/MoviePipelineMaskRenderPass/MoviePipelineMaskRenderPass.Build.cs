@@ -13,6 +13,7 @@ public class MoviePipelineMaskRenderPass : ModuleRules
 				"Engine",
 				"Json",
 				"ImageCore",
+				"MovieScene",
 			}
 		);
 
