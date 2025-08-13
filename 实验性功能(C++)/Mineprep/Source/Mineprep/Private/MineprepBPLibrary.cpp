@@ -851,3 +851,8 @@ void Umineprep::SwitchEditorMode(FName ModeID)
 {
 	GLevelEditorModeTools().ActivateMode(ModeID);
 }
+
+bool Umineprep::IsEditorModeActive(FName ModeID)
+{
+    return GLevelEditorModeTools().IsModeActive(ModeID);
+}

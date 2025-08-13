@@ -104,6 +104,9 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static void SwitchEditorMode(FName ModeID = TEXT("EM_ScriptableToolsEditorMode"));
 
+	//获取某个编辑器模式是否激活
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static bool IsEditorModeActive(FName ModeID = TEXT("EM_Default"));
 
 };
 
