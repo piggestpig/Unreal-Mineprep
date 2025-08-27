@@ -1,6 +1,8 @@
 # 点击上方的 ▶️ 按钮开始安装
 # Click the ▶️ button above to start installation
 
+把等号右边的数改为1可以强制显示简体中文 = 0
+
 import bpy
 import os
 from os.path import join
@@ -19,7 +21,7 @@ class MineprepProperties(bpy.types.PropertyGroup):
     exp_vr3d: bpy.props.BoolProperty(default=True)
     exp_tutorial: bpy.props.BoolProperty()
     ini_ffmpeg: bpy.props.BoolProperty()
-    ini_memory: bpy.props.BoolProperty()
+    ini_memory: bpy.props.BoolProperty(default=True)
     install_mode: bpy.props.IntProperty()
 
 bpy.utils.register_class(MineprepProperties)
@@ -44,7 +46,7 @@ localization = {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
         2: "---Mineprep v0.5-pre1 安装向导---",
         3: "欢迎使用Mineprep！",
-        4: "· 此安装包适用于 Windows + UE5.5",
+        4: "· 此安装包适用于 Windows + UE5.6",
         5: "· 非实验性功能也许能兼容Mac和高版本UE",
         6: "· 重复安装会直接覆盖原文件",
         7: "· 安装前建议关闭虚幻引擎",
@@ -61,7 +63,7 @@ localization = {
         18: "手动指定FFmpeg路径 (如ffmpeg.exe)",
         19: "路径",
         20: "内存预加载",
-        21: "     · 打开插件时加载所有资源，启动速度较慢，但运行更流畅",
+        21: "     · 启动时在后台异步加载所有资源，减少运行时卡顿",
         22: "选择工程目录 (包含.uproject的文件夹)",
         23: "警告: 未找到.uproject文件！请确认当前文件夹为UE工程根目录",
         24: "安装完成！",
@@ -70,14 +72,14 @@ localization = {
         27: "另外，我们推荐您安装超分辨率插件",
         28: "它可以提升画质和帧率，甚至节约显存",
         29: "您需要手动下载安装，一个虚幻引擎版本只需要安装一次：",
-        30: "请勿移动或删除安装包，插件可能会引用其中资源"
+        30: "不建议移动或删除安装包，插件可能会引用其中资源"
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
         2: "---Mineprep v0.4 Installer---",
         3: "Welcome to Mineprep!",
-        4: "· This installer is designed for Windows + UE5.4",
-        5: "· Non-experimental features may be compatible with Mac and UE5.5+",
+        4: "· This installer is designed for Windows + UE5.6",
+        5: "· Non-experimental features may be compatible with Mac and higher engine version",
         6: "· Reinstalling will overwrite the original files",
         7: "· It is recommended to close Unreal Engine before installation",
         8: "Click one button below to select an installation mode",
@@ -93,7 +95,7 @@ localization = {
         18: "Manually specify FFmpeg path (such as ffmpeg.exe)",
         19: "Path",
         20: "Memory preload",
-        21: "     · Load all resources at start. It takes time but runs smoother",
+        21: "     · Async load all assets at start, reducing runtime stut",
         22: "Select project directory (folder containing .uproject)",
         23: ".uproject file not found! Please make sure it's the correct directory",
         24: "Installation completed!",
@@ -102,13 +104,13 @@ localization = {
         27: "By the way, we recommend installing upscaling plugins",
         28: "It can improve image quality and frame rate, even saving VRAM",
         29: "You need to download it manually, only once for each UE version:",
-        30: "Don't move or delete the installer, resources may be referenced."
+        30: "You may not move or delete the installer, resources may be referenced."
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
         2: "---Mineprep v0.4 安裝嚮導---",
         3: "歡迎使用Mineprep！",
-        4: "· 此安裝包適用於 Windows + UE5.4",
+        4: "· 此安裝包適用於 Windows + UE5.6",
         5: "· 非實驗性功能也許能兼容Mac和高版本UE",
         6: "· 重複安裝會直接覆蓋原文件",
         7: "· 安裝前建議關閉虛幻引擎",
@@ -125,7 +127,7 @@ localization = {
         18: "手動指定FFmpeg路徑 (如ffmpeg.exe)",
         19: "路徑",
         20: "內存預加載",
-        21: "     · 打開插件時加載所有資源，啟動速度較慢，但運行更流暢",
+        21: "     · 啓動時在後臺異步加載所有資源，減少運行時卡頓",
         22: "選擇工程目錄 (包含.uproject的文件夾)",
         23: "警告: 未找到.uproject文件！請確認當前文件夾為UE工程根目錄",
         24: "安裝完成！",
@@ -134,7 +136,7 @@ localization = {
         27: "另外，我們推薦您安裝超分辨率插件",
         28: "它可以提升畫質和幀率，甚至節約顯存",
         29: "您需要手動下載安裝，一個虛幻引擎版本只需要安裝一次：",
-        30: "請勿移動或刪除安裝包，插件可能會引用其中資源"
+        30: "不建議移動或刪除安裝包，插件可能會引用其中資源"
     },
 }
 
@@ -142,7 +144,9 @@ localization['zh_HANS'] = localization['zh_CN']
 localization['zh_HANT'] = localization['zh_TW']
 
 def loc(index=0, preview="-------本地化文本-------"):
-    if lang in localization and index in localization[lang]:
+    if 把等号右边的数改为1可以强制显示简体中文 and index in localization['zh_CN'] :
+        return localization['zh_CN'][index]
+    elif lang in localization and index in localization[lang]:
         return localization[lang][index]
     elif index in localization['en_US'] :
         return localization['en_US'][index]
@@ -304,7 +308,7 @@ class Welcome(bpy.types.Operator):
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_popup(self, width=400)
+        return context.window_manager.invoke_popup(self, width=440)
 
     def draw(self, context):
         box = self.layout.box()

@@ -18,12 +18,15 @@
         "blender_path": "E:\\blender\\blender-4.5.0-windows-x64\\blender.exe",
         "GPU": "1",
         "TTS": "false",
-        "memory_preload": false,
+        "memory_preload": "false",
         "ffmpeg_path": "",
         "smooth_roll": "true",
         "hover_toolbar": "false",
         "tkinter_scale": "3",
-        "installer_dir": "E:\\github\\Unreal-Mineprep"
+        "installer_dir": "E:\\github\\Unreal-Mineprep",
+        "render_map": "/Game/MCmap.MCmap",
+        "render_sequence": "/Game/Mineprep/Render/MC临时序列.MC临时序列",
+        "render_preset": "/Game/Mineprep/Render/Mineprep自定义渲染配置.Mineprep自定义渲染配置"
     },
     "ProjectSettings": {
         "bDefaultFeatureAutoExposure": "false",
