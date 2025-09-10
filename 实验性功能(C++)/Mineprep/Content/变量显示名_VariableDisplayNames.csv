@@ -1,367 +1,562 @@
-﻿原名,<中文>,<English>,<繁體中文>
-ActionType,动作类型,Action Type,動作類型
-Actor,角色,Actor,角色
-AutoNameFromHeight,根据高度自动命名,Auto Name from Height,依高度自動命名
-BackFloorLocation,后地板位置,Back Floor Location,後地板位置
-BackLedgeHeight,后边缘高度,Back Ledge Height,後邊緣高度
-BackLedgeLocation,后边缘位置,Back Ledge Location,後邊緣位置
-BackLedgeNormal,后边缘法线,Back Ledge Normal,後邊緣法線
-BaseMaterial,基础材质,Base Material,基礎材質
-BlockColors,方块颜色,Block Colors,方塊顏色
-Body Modifier Data,身体修改器数据,Body Modifier Data,身體修改器資料
-ButtonName,按钮名称,Button Name,按鈕名稱
-CamStyle_Aim,瞄准摄像机风格,Camera Style_Aim,瞄準攝影機風格
-CamStyle_Close,近距摄像机风格,Camera Style_Close,近距攝影機風格
-CamStyle_Far,远距摄像机风格,Camera Style_Far,遠距攝影機風格
-CameraDistanceMultiplier,摄像机距离倍率,Camera Distance Multiplier,攝影機距離倍率
-ChosenMontage,选择蒙太奇,Chosen Montage,選擇蒙太奇
-Cloud color,云颜色,Cloud Color,雲顏色
-Cloud opacity,云不透明度,Cloud Opacity,雲不透明度
-Cloud speed,云移动速度,Cloud Speed,雲移動速度
-Color,颜色,Color,顏色
-ColorGroup,颜色组,Color Group,顏色群組
-Colors determined by sun position,颜色由太阳位置决定,Colors Determined by Sun Position,顏色由太陽位置決定
-ConsoleCommand,控制台命令,Console Command,控制台指令
-ConstraintProfile,约束配置文件,Constraint Profile,約束設定檔
-CrouchSpeeds,蹲伏速度,Crouch Speeds,蹲伏速度
-DLSS/FSR,DLSS/FSR,DLSS/FSR,DLSS/FSR
-Debug,调试,Debug,偵錯
-DecalColor,贴花颜色,Decal Color,貼花顏色
-Destination,目标,Destination,目的地
-DestinationName,目标名称,Destination Name,目的地名稱
-ExecuteConsoleCommand,执行控制台命令,Execute Console Command,執行控制台指令
-FieldOfView,视野,Field of View,視野
-FogColor,雾颜色,Fog Color,霧顏色
-FrontLedgeLocation,前边缘位置,Front Ledge Location,前邊緣位置
-FrontLedgeNormal,前边缘法线,Front Ledge Normal,前邊緣法線
-Gait,步态,Gait,步態
-GridColor,网格颜色,Grid Color,網格顏色
-GridSizes,网格尺寸,Grid Sizes,網格尺寸
-HasBackFloor,有后地板,Has Back Floor,有後地板
-HasBackLedge,有后边缘,Has Back Ledge,有後邊緣
-HasFrontLedge,有前边缘,Has Front Ledge,有前邊緣
-HitComponent,击中组件,Hit Component,擊中組件
-Horizon Falloff,地平线衰减,Horizon Falloff,地平線衰減
-Horizon color,地平线颜色,Horizon Color,地平線顏色
-Json缓存,Json缓存,Json Cache,Json緩存
-LevelStyles,关卡样式,Level Styles,關卡樣式
-MaterialParams,材质参数,Material Parameters,材質參數
-MaxTransformOffset,最大变换偏移,Max Transform Offset,最大變換偏移
-Mesh,网格体,Mesh,網格體
-Mesh2,网格体2,Mesh2,網格體2
-MinTransformOffset,最小变换偏移,Min Transform Offset,最小變換偏移
-NPC循环播放动作1,NPC循环播放动作1,NPC Loop Action 1,NPC循環播放動作1
-NPC跑步跟随目标,NPC跑步跟随目标,NPC Run to Follow Target,NPC跑步跟隨目標
-NPC跟随路标,NPC跟随路标,NPC Follow Waypoints,NPC跟隨路標
-Name,名称,Name,名稱
-ObstacleDepth,障碍深度,Obstacle Depth,障礙深度
-ObstacleHeight,障碍高度,Obstacle Height,障礙高度
-Overall Color,整体颜色,Overall Color,整體顏色
-ParentSpaceControlData,父空间控制数据,Parent Space Control Data,父空間控制資料
-Physics Movement Type,物理运动类型,Physics Movement Type,物理運動類型
-PlateScale,面板缩放,Plate Scale,面板縮放
-PlayRate,播放速率,Play Rate,播放速率
-RandomSeedOffset,随机种子偏移,Random Seed Offset,隨機種子偏移
-Randomize Button,随机化按钮,Randomize Button,隨機化按鈕
-Refresh material,刷新材质,Refresh Material,刷新材質
-RunSpeeds,跑步速度,Run Speeds,跑步速度
-SetJson缓存,设置Json缓存,Set Json Cache,設置Json緩存
-Set右手物品,设置右手物品,Set Right Hand Item,設置右手物品
-Set头部模型,设置头部模型,Set Head Model,設置頭部模型
-Set左手物品,设置左手物品,Set Left Hand Item,設置左手物品
-Set总时间-用于关键帧,设置总时间-用于关键帧,Set Total Time-For Keyframes,設置總時間-用於關鍵幀
-Set破碎程度,设置破碎程度,Set Destruction Level,設置破碎程度
-Set身体模型,设置身体模型,Set Body Model,設置身體模型
-SocketOffset,插槽偏移,Socket Offset,插槽偏移
-Speed,速度,Speed,速度
-SpringArmLength,弹簧臂长度,Spring Arm Length,彈簧臂長度
-SprintSpeeds,冲刺速度,Sprint Speeds,衝刺速度
-Stars brightness,星星亮度,Stars Brightness,星星亮度
-StartTime,开始时间,Start Time,開始時間
-StyleIndex,样式索引,Style Index,樣式索引
-Sun brightness,太阳亮度,Sun Brightness,太陽亮度
-Sun height,太阳高度,Sun Height,太陽高度
-SurfaceColor,表面颜色,Surface Color,表面顏色
-TextColor,文本颜色,Text Color,文字顏色
-TransitionSpeed,过渡速度,Transition Speed,過渡速度
-TranslationLagSpeed,位移延迟速度,Translation Lag Speed,位移延遲速度
-UseLevelVisualsColor,使用关卡视觉效果颜色,Use Level Visuals Color,使用關卡視覺效果顏色
-WalkSpeeds,行走速度,Walk Speeds,行走速度
-WorldSpaceControlData,世界空间控制数据,World Space Control Data,世界空間控制資料
-Zenith Color,天顶颜色,Zenith Color,天頂顏色
-debug,调试,Debug,偵錯
-density1,密度1,Density1,密度1
-density2,密度2,Density2,密度2
-density3,密度3,Density3,密度3
-density4,密度4,Density4,密度4
-grid,网格,Grid,網格
-location,位置,Location,位置
-mob1,生物1,Mob1,生物1
-mob2,生物2,Mob2,生物2
-mob3,生物3,Mob3,生物3
-mob4,生物4,Mob4,生物4
-offset,偏移,Offset,偏移
-stackup,堆叠,Stackup,堆疊
-◆冲击,◆冲击,◆Impulse,◆衝擊
-◆切换动作,◆切换动作,◆Switch Action,◆切換動作
-◆切换表情,◆切换表情,◆Switch Facial Expression,◆切換表情
-◆小键盘物理事件,◆小键盘物理事件,◆Keypad Physical Event,◆小鍵盤物理事件
-◆开始/停止跑步,◆开始/停止跑步,◆Start/End Run,◆開始/停止跑步
-◆开始跳跃,◆开始跳跃,◆Jump,◆開始跳躍
-◆批量冲击,◆批量冲击,◆Batch Impulse,◆批量衝擊
-◆批量切换动作,◆批量切换动作,◆Batch Switch Action,◆批量切換動作
-◆批量切换表情,◆批量切换表情,◆Batch Switch Facial Expression,◆批量切換表情
-◆批量小键盘物理事件,◆批量小键盘物理事件,◆Batch Keypad Physical Event,◆批量小鍵盤物理事件
-◆批量开始/停止跑步,◆批量开始/停止跑步,◆Batch Start/End Run,◆批量開始/停止跑步
-◆批量断肢,◆批量断肢,◆Batch Dismember,◆批量斷肢
-◆批量瘫痪,◆批量瘫痪,◆Batch Paralyze,◆批量癱瘓
-◆批量破坏,◆批量破坏,◆Batch Destroy,◆批量破壞
-◆批量起身,◆批量起身,◆Batch Rise,◆批量起身
-◆批量跳跃,◆批量跳跃,◆Batch Jump,◆批量跳躍
-◆断肢,◆断肢,◆Dismember,◆斷肢
-◆生命周期轨道,◆生命周期轨道,◆Lifecycle Track,◆生命週期軌道
-◆瘫痪,◆瘫痪,◆Paralyze,◆癱瘓
-◆破坏,◆破坏,◆Destroy,◆破壞
-◆缓存轨道,◆缓存轨道,◆Cache Track,◆緩存軌道
-◆触发器轨道,◆触发器轨道,◆Trigger Track,◆觸發器軌道
-◆起身并恢复动画,◆起身并恢复动画,◆Rise & Restore Animation,◆起身並恢復動畫
-◆遥控灯光,◆遥控灯光,◆Remote Control Lights,◆遙控燈光
-⚠重力方向,⚠重力方向,⚠Gravity Direction,⚠重力方向
-➡️-X,➡️-X,➡️-X,➡️-X
-⬅️X,⬅️X,⬅️X,⬅️X
-⬆️Y,⬆️Y,⬆️Y,⬆️Y
-⬇️-Y,⬇️-Y,⬇️-Y,⬇️-Y
-云,云,Cloud,雲
-亮度,亮度,Brightness,亮度
-从类放置模型并选中,从类放置模型并选中,Place and Select Model from Class,從類放置模型並選中
-优先级,优先级,Priority,優先級
-传送目的地材质,传送目的地材质,Teleport Destination Material,傳送目的地材質
-传送门特效材质,传送门特效材质,Portal Effect Material,傳送門特效材質
-体积光强度,体积光强度,Volumetric Light Intensity,體積光強度
-体积光效应(日/月/环境光),体积光效应(日/月/环境光),Volumetric Light Effect (Sun/Moon/Ambient),體積光效應(日/月/環境光)
-体积雾各向异性,体积雾各向异性,Volumetric Fog Anisotropy,體積霧各向異性
-体积雾开始/结束/淡入距离,体积雾开始/结束/淡入距离,Volumetric Fog Start/End/Fade Distance,體積霧開始/結束/淡入距離
-体积雾颜色,体积雾颜色,Volumetric Fog Color,體積霧顏色
-体积雾（丁达尔光）,体积雾（丁达尔光）,Volumetric Fog (Tyndall Effect),體積霧（丁達爾光）
-作用于粒子系统-倍率,作用于粒子系统-倍率,Effect on Particle System-Multiplier,作用於粒子系統-倍率
-使用Actor旋转,使用Actor旋转,Use Actor Rotation,使用Actor旋轉
-保存方块路径,保存方块路径,Save Block Path,保存方塊路徑
-信号传播速度(m/s),信号传播速度(m/s),Signal Propagation Speed (m/s),訊號傳播速度(m/s)
-偏移,偏移,Offset,偏移
-光束分散程度,光束分散程度,Light Beam Dispersion,光束分散程度
-光束变化速度,光束变化速度,Light Beam Variation Speed,光束變化速度
-全局力场数组,全局力场数组,Global Force Field Array,全域力場數組
-全局重力,全局重力,Global Gravity,全域重力
-全局随机种子,全局随机种子,Global Random Seed,全域隨機種子
-全语言搜索列,全语言搜索列,All Language Search Column,全語言搜索列
-其他功能,其他功能,Other Features,其他功能
-写入设置ini,写入设置ini,Write Settings ini,寫入設置ini
-分辨率,分辨率,Resolution,解析度
-切换XY轴方向,切换XY轴方向,Swap XY Axis Direction,切換XY軸方向
-初速度,初速度,Initial Velocity,初速度
-到达半径,到达半径,Arrival Radius,抵達半徑
-刷新力场,刷新力场,Refresh Force Field,刷新力場
-刷新枚举选项,刷新枚举选项,Refresh Enum Options,刷新枚舉選項
-刷新状态,刷新状态,Refresh Status,刷新狀態
-刷新附魔材质,刷新附魔材质,Refresh Enchantment Material,刷新附魔材質
-刷新随机种子,刷新随机种子,Refresh Random Seed,刷新隨機種子
-动作表情混入混出时间,动作表情混入混出时间,Action Blend In/Out Time,動作表情混入混出時間
-动作（1）,动作（1）,Action (1),動作（1）
-动作（2）,动作（2）,Action (2),動作（2）
-动作（3）,动作（3）,Action (3),動作（3）
-动画库,动画库,Animation Library,動畫庫
-动画速度1/2,动画速度1/2,Animation Speed 1/2,動畫速度1/2
-反转鼠标Y轴,反转鼠标Y轴,Invert Mouse Y-Axis,反轉滑鼠Y軸
-变换,变换,Transform,變換
-可以悬停,可以悬停,Can Hover,可以懸停
-可以拖动,可以拖动,Can Drag,可以拖動
-可以滚动,可以滚动,Can Scroll,可以滾動
-右手物品,右手物品,Right Hand Item,右手物品
-同步材质至头部,同步材质至头部,Sync Material to Head,同步材質至頭部
-同步追踪的目标,同步追踪的目标,Synchronized Tracking Target,同步追蹤的目標
-后期景深模糊,后期景深模糊,Post Depth of Field Blur,後製景深模糊
-向量,向量,Vector,向量
-启用,启用,Enable,啟用
-启用全局力场,启用全局力场,Enable Global Force Field,啟用全域力場
-启用后期模糊,启用后期模糊,Enable Post-Processing Blur,啟用後製模糊
-启用希区柯克变焦：偏移,启用希区柯克变焦：偏移,Enable Hitchcock Zoom: Offset,啟用希區考克變焦：偏移
-启用正交投影：距离,启用正交投影：距离,Enable Orthographic Projection: Distance,啟用正交投影：距離
-启用碰撞,启用碰撞,Enable Collision,啟用碰撞
-启用示波器,启用示波器,Enable Oscilloscope,啟用示波器
-启用辅助碰撞箱,启用辅助碰撞箱,Enable Auxiliary Collision Box,啟用輔助碰撞箱
-命中,命中,Hit,命中
-头发,头发,Hair,頭髮
-头部模型,头部模型,Head Model,頭部模型
-密度(%),密度(%),Density (%),密度(%)
-对象->函数,对象->函数,Object->Function,物件->函式
-导播台,导播台,Director's Console,導播台
-局部禁用物理模拟,局部禁用物理模拟,Locally Disable Physics Simulation,局部停用物理模擬
-左手物品,左手物品,Left Hand Item,左手物品
-平滑移动/旋转,平滑移动/旋转,Smooth Movement/Rotation,平滑移動/旋轉
-当前路标,当前路标,Current Waypoint,當前路標
-录制的摄像机晃动,录制的摄像机晃动,Recorded Camera Shake,錄製的攝影機晃動
-循环,循环,Loop,循環
-快捷键,快捷键,Shortcut Keys,快捷鍵
-总时间-用于关键帧,总时间-用于关键帧,Total Time-For Keyframes,總時間-用於關鍵幀
-悬空放置,悬空放置,Air Placement,懸空放置
-手动指定摄像机,手动指定摄像机,Manual Camera Assignment,手動指定攝影機
-披风/鞘翅,披风/鞘翅,Cape/Elytra,披風/鞘翅
-披风贴图,披风贴图,Cape Texture,披風貼圖
-按名称调用函数,按名称调用函数,Call Function by Name,依名稱呼叫函式
-捕获每帧,捕获每帧,Capture Every Frame,擷取每幀
-提示,提示,Hint,提示
-插件面板,插件面板,Plugin Panel,插件面板
-摄像机后期优先级,摄像机后期优先级,Camera Post-Processing Priority,攝影機後製優先級
-摄像机焦距,摄像机焦距,Camera Focal Length,攝影機焦距
-摄像机移动/旋转延迟,摄像机移动/旋转延迟,Camera Movement/Rotation Delay,攝影機移動/旋轉延遲
-播放动作时禁用移动输入,播放动作时禁用移动输入,Disable Movement Input During Action Playback,播放動作時停用移動輸入
-放置模型并选中,放置模型并选中,Place and Select Model,放置模型並選中
-散射分布(各向异性),散射分布(各向异性),Scattering Distribution (Anisotropic),散射分佈(各向異性)
-方块云运动方向,方块云运动方向,Block Cloud Movement Direction,方塊雲運動方向
-方块数量,方块数量,Block Count,方塊數量
-方块日月大小,方块日月大小,Block Sun/Moon Size,方塊日月大小
-方块模型,方块模型,Block Model,方塊模型
-方块模型2,方块模型2,Block Model 2,方塊模型2
-日/月体积光效应,日/月体积光效应,Sun/Moon Volumetric Lighting,日/月體積光效應
-日/月柔和阴影,日/月柔和阴影,Sun/Moon Soft Shadows,日/月柔和陰影
-日/月间接光照明,日/月间接光照明,Sun/Moon Indirect Lighting,日/月間接光照明
-日光/月光/环境光强度,日光/月光/环境光强度,Sun/Moon/Ambient Light Intensity,日光/月光/環境光強度
-日月投射光线追踪阴影,日月投射光线追踪阴影,Sun/Moon Ray Traced Shadows,日月投射光線追蹤陰影
-日期(天数),日期(天数),Date (Days),日期(天數)
-旧_DLSS/FSR,旧_DLSS/FSR,Old_DLSS/FSR,舊_DLSS/FSR
-旧_画质预设,旧_画质预设,Old_Graphics Preset,舊_畫質預設
-旧_随机种子,旧_随机种子,Old_Random Seed,舊_隨機種子
-时间,时间,Time,時間
-时间(小时),时间(小时),Time (Hours),時間(小時)
-时间流逝速度,时间流逝速度,Time Dilation Speed,時間流逝速度
-是否面向目标,是否面向目标,Face Target,是否面向目標
-显示名称,显示名称,Display Name,顯示名稱
-显示碰撞箱,显示碰撞箱,Show Collision Box,顯示碰撞框
+﻿◆开始/停止跑步,◆开始/停止跑步,◆Start/Stop Run,◆開始/停止跑步
+CamStyle_Close,CamStyle_Close,CamStyle_Close,CamStyle_Close
 更新本地化文本,更新本地化文本,Update Localized Text,更新本地化文本
-最后选定的Actor,最后选定的Actor,Last Selected Actor,最後選定的Actor
-最大速度,最大速度,Max Speed,最大速度
-最大遥控距离(m),最大遥控距离(m),Max Remote Distance (m),最大遙控距離(m)
-最小间距,最小间距,Minimum Spacing,最小間距
-权重,权重,Weight,權重
-材质,材质,Material,材質
+乱转,乱转,Random Turn,亂轉
+方块模型2,方块模型2,Block Model 2,方塊模型2
+Side,侧面,Side,側面
+随机初始动画->权重/速度/偏移_0,随机初始动画->权重/速度/偏移_0,Random Initial Animation->Weight/Speed/Offset_0,隨機初始動畫->權重/速度/偏移_0
+反转鼠标Y轴,反转鼠标Y轴,Invert Mouse Y-Axis,反轉滑鼠Y軸
+旋转摆,旋转摆,Rotation Pendulum,旋轉擺
+旧_画质预设,旧_画质预设,Old_Graphics Preset,舊_畫質預設
+顶点动画数据集2,顶点动画数据集2,Vertex Animation Dataset 2,頂點動畫數據集2
+状态机<->运动匹配,状态机<->运动匹配,State Machine<->Motion Matching,狀態機<->運動匹配
+显示名称,显示名称,Display Name,顯示名稱
 松散度,松散度,Looseness,鬆散度
-柔和阴影(日/月),柔和阴影(日/月),Soft Shadows (Sun/Moon),柔和陰影(日/月)
-标量,标量,Scalar,標量
-检测实验性功能,检测实验性功能,Check Experimental Features,檢測實驗性功能
-模型,模型,Model,模型
-模糊衰减变换XY,模糊衰减变换XY,Blur Falloff Transform XY,模糊衰減變換XY
-横滚带动偏航转向速率,横滚带动偏航转向速率,Roll-Induced Yaw Rate,橫滾帶動偏航轉向速率
-段内搜索名称所在行,段内搜索名称所在行,Line Number of Name in Section,段內搜尋名稱所在行
-比例（方块1:方块2）,比例（方块1:方块2）,Ratio (Block1:Block2),比例（方塊1:方塊2）
-浓度,浓度,Concentration,濃度
-添加tag,添加标签,Add Tag,添加標籤
-添加组件,添加组件,Add Component,添加組件
-渲染画质,渲染画质,Rendering Quality,渲染畫質
-潜行/走路/跑步速度,潜行/走路/跑步速度,Crouch/Walk/Run Speed,潛行/走路/跑步速度
-灯光亮度缓存,灯光亮度缓存,Light Brightness Cache,燈光亮度緩存
-物品栏,物品栏,Inventory,物品欄
-物品栏显示长度,物品栏显示长度,Inventory Display Length,物品欄顯示長度
-物品栏缩放,物品栏缩放,Inventory Scaling,物品欄縮放
-物理交互（纠正穿模）,物理交互（纠正穿模）,Physics Interaction (Fix Clipping),物理交互（修正穿模）
-物理动画参数,物理动画参数,Physics Animation Parameters,物理動畫參數
-物理模拟权重,物理模拟权重,Physics Simulation Weight,物理模擬權重
-生物1,生物1,Creature 1,生物1
-生物2,生物2,Creature 2,生物2
-生物3,生物3,Creature 3,生物3
-生物4,生物4,Creature 4,生物4
-用tag获取摄像机,用标签获取摄像机,Get Camera by Tag,用標籤獲取攝影機
-用tag过滤目标(可留空),用标签过滤目标(可留空),Filter Targets by Tag (Optional),用標籤過濾目標(可留空)
-画质预设,画质预设,Graphics Preset,畫質預設
-画面尺寸,画面尺寸,Frame Size,畫面尺寸
-瘫痪生物,瘫痪生物,Paralyze Creature,癱瘓生物
-皮肤,皮肤,Skin,皮膚
-目标摄像机,目标摄像机,Target Camera,目標攝影機
-相对偏移,相对偏移,Relative Offset,相對偏移
+动画1,动画1,Animation 1,動畫1
+方块日月大小,方块日月大小,Block Sun/Moon Size,方塊日月大小
+刷新状态,刷新状态,Refresh Status,刷新狀態
 瞳距,瞳距,Interpupillary Distance,瞳距
-瞳距 （mm）,瞳距（毫米）,Interpupillary Distance (mm),瞳距（mm）
-破碎程度,破碎程度,Destruction Level,破碎程度
+随机偏移,随机偏移,Random Offset,隨機偏移
+随机初始动画->权重/速度/偏移,随机初始动画->权重/速度/偏移,Random Initial Animation->Weight/Speed/Offset,隨機初始動畫->權重/速度/偏移
+重载所有材质,重载所有材质,Reload All Materials,重載所有材質
+◆批量断肢,◆批量断肢,◆Batch Dismember,◆批量斷肢
+BlendOutTime,混合淡出时间,Blend Out Time,混合淡出時間
+Sun brightness,太阳亮度,Sun Brightness,太陽亮度
+抠像渲染目标,抠像渲染目标,Chroma Key Render Target,抠像渲染目標
+背景透明,背景透明,Background Transparency,背景透明
+缓存对象,缓存对象,Cache Object,緩存物件
+向量,向量,Vector,向量
+比例（方块1:方块2）,比例（方块1:方块2）,Ratio (Block1:Block2),比例（方塊1:方塊2）
+三分量时间偏移,三分量时间偏移,Three-Component Time Offset,三分量時間偏移
 碰撞debug,碰撞调试,Collision Debug,碰撞偵錯
-禁用物理模拟的骨骼,禁用物理模拟的骨骼,Bones with Disabled Physics Simulation,禁用物理模擬的骨骼
-移动方向,移动方向,Movement Direction,移動方向
-移动粒子速度下限,移动粒子速度下限,Minimum Particle Movement Speed,移動粒子速度下限
-移动速度,移动速度,Movement Speed,移動速度
-空气阻力减速,空气阻力减速,Air Resistance Deceleration,空氣阻力減速
-立方体渲染目标纹理,立方体渲染目标纹理,Cube Render Target Texture,立方體渲染目標紋理
-简单描边,简单描边,Simple Outline,簡單描邊
-纹理,纹理,Texture,紋理
-编辑器快捷键绑定,编辑器快捷键绑定,Editor Shortcut Binding,編輯器快捷鍵綁定
-缩放,缩放,Zoom,縮放
+多帧渲染目标数组,多帧渲染目标数组,Multi-Frame Render Target Array,多幀渲染目標數組
+随机偏差,随机偏差,Random Deviation,隨機偏差
+-还原,-还原,-Restore,-還原
+Horizon color,地平线颜色,Horizon Color,地平線顏色
+分辨率,分辨率,Resolution,解析度
+披风贴图,披风贴图,Cape Texture,披風貼圖
+画面尺寸,画面尺寸,Frame Size,畫面尺寸
+平滑移动/旋转,平滑移动/旋转,Smooth Movement/Rotation,平滑移動/旋轉
+描边,描边,Outline,描邊
 网格体,网格体,Mesh,網格體
-聚光灯/面光/点光,聚光灯/面光/点光,Spotlight/Area Light/Point Light,聚光燈/面光/點光
-聚焦与变焦,聚焦与变焦,Focus & Zoom,聚焦與變焦
-聚焦设置,聚焦设置,Focus Settings,聚焦設定
+悬空放置,悬空放置,Air Placement,懸空放置
+边缘光,边缘光,Edge Light,邊緣光
 自动爬墙/多次尝试跳跃,自动爬墙/多次尝试跳跃,Auto Wall Climb/Multi-Jump,自動爬牆/多次嘗試跳躍
-自发光强度,自发光强度,Emissive Intensity,自發光強度
-自定义按键映射,自定义按键映射,Custom Key Mapping,自訂按鍵映射
-自定义曲线区域,自定义曲线区域,Custom Curve Area,自訂曲線區域
 自定义皮肤0贴图,自定义皮肤0贴图,Custom Skin 0 Texture,自訂皮膚0貼圖
+DestinationName,目标名称,Destination Name,目的地名稱
+随机皮肤->权重,随机皮肤->权重,Random Skin->Weight,隨機皮膚->權重
+◆批量破坏,◆批量破坏,◆Batch Destroy,◆批量破壞
+面向玩家/目标,面向玩家/目标,Face Player/Target,面向玩家/目標
+高光,高光,Specular,高光
+日光/月光/环境光强度,日光/月光/环境光强度,Sun/Moon/Ambient Light Intensity,日光/月光/環境光強度
+日期(天数),日期(天数),Date (Days),日期(天數)
+追踪设置,追踪设置,Tracking Settings,追蹤設定
+弹出对话框,弹出对话框,Pop-up Dialog,彈出對話框
+渲染目标,渲染目标,Render Target,渲染目標
+导入模型,导入模型,Import Model,匯入模型
+日/月间接光照明,日/月间接光照明,Sun/Moon Indirect Lighting,日/月間接光照明
+掉落数量/概率,掉落数量/概率,Drop Quantity/Probability,掉落數量/概率
+辅助碰撞箱,辅助碰撞箱,Auxiliary Collision Box,輔助碰撞箱
+体积雾颜色,体积雾颜色,Volumetric Fog Color,體積霧顏色
+Sun height,太阳高度,Sun Height,太陽高度
+物理模拟权重,物理模拟权重,Physics Simulation Weight,物理模擬權重
+初始颜色,初始颜色,Initial Color,初始顏色
+路标,路标,Waypoint,路標
+缓冲,缓冲,Buffer,緩衝
+优先级,优先级,Priority,優先級
+◆批量开始/停止跑步,◆批量开始/停止跑步,◆Batch Start/Stop Run,◆批量開始/停止跑步
+Destination,目标,Destination,目的地
+动画数组,动画数组,Animation Array,動畫數組
+◆批量跳跃,◆批量跳跃,◆Batch Jump,◆批量跳躍
+全局重力,全局重力,Global Gravity,全域重力
+Mesh,网格体,Mesh,網格體
+HasBackFloor,有后地板,Has Back Floor,有後地板
+速度（包含正负方向）,速度（包含正负方向）,Speed (Including Direction),速度（包含正負方向）
+检测表面光照,检测表面光照,Detect Surface Lighting,檢測表面光照
+启用示波器,启用示波器,Enable Oscilloscope,啟用示波器
+体积光效应(日/月/环境光),体积光效应(日/月/环境光),Volumetric Light Effect (Sun/Moon/Ambient),體積光效應(日/月/環境光)
+◆断肢,◆断肢,◆Dismember,◆斷肢
+刷新附魔材质,刷新附魔材质,Refresh Enchantment Material,刷新附魔材質
+后期景深模糊,后期景深模糊,Post Depth of Field Blur,後製景深模糊
+VolumeMultiplier,体积倍率,Volume Multiplier,體積倍率
+亮度,亮度,Brightness,亮度
+动画库,动画库,Animation Library,動畫庫
+BackFloorLocation,后地板位置,Back Floor Location,後地板位置
+自定义按键映射,自定义按键映射,Custom Key Mapping,自訂按鍵映射
+长宽比,长宽比,Aspect Ratio,長寬比
+读取段落某格文本,读取段落某格文本,Read Section Cell Text,讀取段落某格文本
+用python调用函数,用python调用函数,Call Function with Python,用python呼叫函式
+更换与优化材质,更换与优化材质,Replace and Optimize Materials,更換與優化材質
+体积光强度,体积光强度,Volumetric Light Intensity,體積光強度
+角度,角度,Angle,角度
+刷新枚举选项,刷新枚举选项,Refresh Enum Options,刷新枚舉選項
+Gait,步态,Gait,步態
+聚光灯/面光/点光,聚光灯/面光/点光,Spotlight/Area Light/Point Light,聚光燈/面光/點光
+灯光亮度缓存,灯光亮度缓存,Light Brightness Cache,燈光亮度緩存
+SurfaceColor,表面颜色,Surface Color,表面顏色
+目标点生成方式,目标点生成方式,Target Point Generation Method,目標點生成方式
+缓入模式,缓入模式,Ease In Mode,緩入模式
+ColorGroup,颜色组,Color Group,顏色群組
+静态网格体组件,静态网格体组件,Static Mesh Component,靜態網格體組件
+⇄影响子项,⇄影响子项,⇄Affect Children,⇄影響子項
+骨骼网格体,骨骼网格体,Skeletal Mesh,骨骼網格體
+刷新力场,刷新力场,Refresh Force Field,刷新力場
+骨骼网格体组件,骨骼网格体组件,Skeletal Mesh Component,骨骼網格體組件
+基础运动,基础运动,Base Movement,基礎運動
+背面遮罩层,背面遮罩层,Back Mask Layer,背面遮罩層
+BackLedgeNormal,后边缘法线,Back Ledge Normal,後邊緣法線
+Debug,调试,Debug,偵錯
+StartTime,开始时间,Start Time,開始時間
+获取模型,获取模型,Get Model,獲取模型
+启用物理交互,启用物理交互,Enable Physics Interaction,啟用物理交互
+导入纹理,导入纹理,Import Texture,匯入紋理
+刷新,刷新,Refresh,刷新
+播放速度缓入缓出随机偏移,播放速度缓入缓出随机偏移,Playback Speed Ease In/Out Random Offset,播放速度緩入緩出隨機偏移
+旋转对齐,旋转对齐,Rotation Alignment,旋轉對齊
+身体模型,身体模型,Body Model,身體模型
+MC脚步声音效,MC脚步声音效,MC Footstep Sound Effect,MC腳步聲音效
+激活颜色,激活颜色,Activation Color,激活顏色
+Horizon Falloff,地平线衰减,Horizon Falloff,地平線衰減
+GridSizes,网格尺寸,Grid Sizes,網格尺寸
+次表面,次表面,Subsurface,次表面
+优化纹理贴图,优化纹理贴图,Optimize Texture Mapping,優化紋理貼圖
+披风/鞘翅,披风/鞘翅,Cape/Elytra,披風/鞘翅
+用作遮罩层,用作遮罩层,Use as Mask Layer,用作遮罩層
+动画速度1/2,动画速度1/2,Animation Speed 1/2,動畫速度1/2
+递归搜索材质节点,递归搜索材质节点,Recursive Search Material Nodes,遞歸搜尋材質節點
+其他功能,其他功能,Other Features,其他功能
+变形器,变形器,Deformer,變形器
+◆批量冲击,◆批量冲击,◆Batch Impulse,◆批量衝擊
+AutoNameFromHeight,根据高度自动命名,Auto Name from Height,依高度自動命名
+缓存帧数,缓存帧数,Cache Frame Count,緩存幀數
+雾内散射颜色,雾内散射颜色,Fog In-Scattering Color,霧內散射顏色
+日/月体积光效应,日/月体积光效应,Sun/Moon Volumetric Lighting,日/月體積光效應
+散射分布(各向异性),散射分布(各向异性),Scattering Distribution (Anisotropic),散射分佈(各向異性)
+debug,调试,Debug,偵錯
+潜行/走路/跑步速度,潜行/走路/跑步速度,Crouch/Walk/Run Speed,潛行/走路/跑步速度
+字体,字体,Font,字體
+纹理贴图,纹理贴图,Texture Mapping,紋理貼圖
+自定义曲线区域,自定义曲线区域,Custom Curve Area,自訂曲線區域
+表情（5）,表情（5）,Expression (5),表情（5）
+横滚带动偏航转向速率,横滚带动偏航转向速率,Roll-Induced Yaw Rate,橫滾帶動偏航轉向速率
+FieldOfView,视野,Field of View,視野
+物理Ⅰ,物理Ⅰ,Physics I,物理Ⅰ
+保持原色(无光照),保持原色(无光照),Keep Original Color (No Lighting),保持原色(無光照)
+设置声音物理材质,设置声音物理材质,Set Sound Physics Material,設置聲音物理材質
+最大待机时间,最大待机时间,Max Idle Time,最大待機時間
+摇晃弹跳振动轨道,摇晃弹跳振动轨道,Shake Bounce Vibration Track,搖晃彈跳振動軌道
+*免抠,*免抠,*Chroma Key,*免抠
+雾高度衰减,雾高度衰减,Fog Height Falloff,霧高度衰減
+播放时禁用移动输入,播放时禁用移动输入,Disable Movement Input During Playback,播放時停用移動輸入
+静态网格体,静态网格体,Static Mesh,靜態網格體
+标量,标量,Scalar,標量
+播放速度0,播放速度0,Playback Speed 0,播放速度0
+Actor-变量名,Actor-变量名,Actor-Variable Name,Actor-變數名
+运行时破坏方块时间,运行时破坏方块时间,Runtime Block Destruction Time,運行時破壞方塊時間
+快捷键,快捷键,Shortcut Keys,快捷鍵
+Actor,角色,Actor,角色
+◆触发器轨道,◆触发器轨道,◆Trigger Track,◆觸發器軌道
+添加组件,添加组件,Add Component,添加組件
+RotationAngleThreshold,旋转角度阈值,Rotation Angle Threshold,旋轉角度閾值
+BaseMaterial,基础材质,Base Material,基礎材質
+遮幅,遮幅,Letterbox,遮幅
+◆小键盘物理事件,◆小键盘物理事件,◆Keypad Physical Event,◆小鍵盤物理事件
+立方体渲染目标纹理,立方体渲染目标纹理,Cube Render Target Texture,立方體渲染目標紋理
+获取(临时)时间线,获取(临时)时间线,Get (Temporary) Timeline,獲取(臨時)時間線
+生物2,生物2,Creature 2,生物2
+未设置遮罩时清除后方遮罩,未设置遮罩时清除后方遮罩,Clear Back Mask When Mask Not Set,未設置遮罩時清除後方遮罩
+边距,边距,Margin,邊距
+density1,密度1,Density1,密度1
+mob3,生物3,Mob3,生物3
+◆起身并恢复动画,◆起身并恢复动画,◆Rise & Restore Animation,◆起身並恢復動畫
+光束变化速度,光束变化速度,Light Beam Variation Speed,光束變化速度
+生物4,生物4,Creature 4,生物4
+物理交互（纠正穿模）,物理交互（纠正穿模）,Physics Interaction (Fix Clipping),物理交互（修正穿模）
+BlockColors,方块颜色,Block Colors,方塊顏色
+间接光照(日/月/环境光),间接光照(日/月/环境光),Indirect Lighting (Sun/Moon/Ambient),間接光照(日/月/環境光)
+序号类型挑选权重循环次数,序号类型挑选权重循环次数,Index Type Pick Weight Loop Count,序號類型挑選權重循環次數
+视口移动/旋转速度,视口移动/旋转速度,Viewport Movement/Rotation Speed,視埠移動/旋轉速度
+柔和阴影(日/月),柔和阴影(日/月),Soft Shadows (Sun/Moon),柔和陰影(日/月)
+grid,网格,Grid,網格
+初速度,初速度,Initial Velocity,初速度
+内存预加载对象,内存预加载对象,Memory Preload Object,記憶體預載物件
+显示碰撞箱,显示碰撞箱,Show Collision Box,顯示碰撞框
+后期效果渲染目标,后期效果渲染目标,Post-Processing Render Target,後製效果渲染目標
+切换XY轴方向,切换XY轴方向,Swap XY Axis Direction,切換XY軸方向
+瞳距 （mm）,瞳距（毫米）,Interpupillary Distance (mm),瞳距（mm）
+总时间-用于关键帧,总时间-用于关键帧,Total Time-For Keyframes,總時間-用於關鍵幀
+动作（2）,动作（2）,Action (2),動作（2）
+HitComponent,击中组件,Hit Component,擊中組件
+重载材质交互半径,重载材质交互半径,Reload Material Interaction Radius,重載材質交互半徑
+销毁类的所有Actor,销毁类的所有Actor,Destroy All Actors of Class,銷毀類的所有Actor
+mob2,生物2,Mob2,生物2
+目标点,目标点,Target Point,目標點
+BlendInTime,混合淡入时间,Blend In Time,混合淡入時間
+递归搜索纹理,递归搜索纹理,Recursive Search Texture,遞歸搜尋紋理
+结尾复原,结尾复原,End Restore,結尾復原
+录制摄像机运动,录制摄像机运动,Record Camera Movement,錄製攝影機運動
+重力,重力,Gravity,重力
+阴影,阴影,Shadow,陰影
+Cloud opacity,云不透明度,Cloud Opacity,雲不透明度
+设置Actor标签+后缀,设置Actor标签+后缀,Set Actor Tag+Suffix,設置Actor標籤+後綴
+动画2,动画2,Animation 2,動畫2
+初始背景,初始背景,Initial Background,初始背景
+运动匹配动画库,运动匹配动画库,Motion Matching Animation Library,運動匹配動畫庫
+材质,材质,Material,材質
+键盘灵敏度,键盘灵敏度,Keyboard Sensitivity,鍵盤靈敏度
+添加tag,添加标签,Add Tag,添加標籤
+激活背景,激活背景,Activate Background,激活背景
+从类放置模型并选中,从类放置模型并选中,Place and Select Model from Class,從類放置模型並選中
+location,位置,Location,位置
+日/月柔和阴影,日/月柔和阴影,Sun/Moon Soft Shadows,日/月柔和陰影
+运动绑定,运动绑定,Motion Binding,運動綁定
+头发,头发,Hair,頭髮
+Physics Movement Type,物理运动类型,Physics Movement Type,物理運動類型
+RunSpeeds,跑步速度,Run Speeds,跑步速度
+体积雾（丁达尔光）,体积雾（丁达尔光）,Volumetric Fog (Tyndall Effect),體積霧（丁達爾光）
+ChosenMontage,选择蒙太奇,Chosen Montage,選擇蒙太奇
+覆盖设置ini,覆盖设置ini,Override Settings ini,覆蓋設置ini
+动作（1）,动作（1）,Action (1),動作（1）
+播放速度3,播放速度3,Playback Speed 3,播放速度3
+相对偏移,相对偏移,Relative Offset,相對偏移
+预览帧率上限,预览帧率上限,Preview Frame Rate Limit,預覽幀率上限
+⬆️Y,⬆️Y,⬆️Y,⬆️Y
+序号,序号,Index,序號
+缩放-随机缩放,缩放-随机缩放,Scale-Random Scale,縮放-隨機縮放
+聚焦设置,聚焦设置,Focus Settings,聚焦設定
+纹理,纹理,Texture,紋理
+*绿幕,*绿幕,*Green Screen,*綠幕
+预览时捕获每帧,预览时捕获每帧,Capture Every Frame During Preview,預覽時擷取每幀
+调整工具菜单位置,调整工具菜单位置,Adjust Tool Menu Position,調整工具選單位置
+动画03：挑选权重,动画03：挑选权重,Animation 03: Pick Weight,動畫03：挑選權重
+新函数,新函数,New Function,新函式
+当前状态,当前状态,Current State,當前狀態
+放大入场,放大入场,Zoom In Entrance,放大入場
+动画风格,动画风格,Animation Style,動畫風格
+Colors determined by sun position,颜色由太阳位置决定,Colors Determined by Sun Position,顏色由太陽位置決定
+变换,变换,Transform,變換
+BackLedgeHeight,后边缘高度,Back Ledge Height,後邊緣高度
+同步Mineprep后期处理体积,同步Mineprep后期处理体积,Sync Mineprep Post-Processing Volume,同步Mineprep後製處理體積
+模型,模型,Model,模型
+↪用作可叠加遮罩(背面),↪用作可叠加遮罩(背面),↪Use as Overlay Mask (Back),↪用作可疊加遮罩(背面)
+光束分散程度,光束分散程度,Light Beam Dispersion,光束分散程度
+颜色,颜色,Color,顏色
+density4,密度4,Density4,密度4
+重新初始化,重新初始化,Reinitialize,重新初始化
+目标actor,目标角色,Target Actor,目標角色
+到达半径,到达半径,Arrival Radius,抵達半徑
+时间,时间,Time,時間
+NPC跟随路标,NPC跟随路标,NPC Follow Waypoints,NPC跟隨路標
+动画类型,动画类型,Animation Type,動畫類型
+遥控目标(类),遥控目标(类),Remote Target (Class),遙控目標(類)
+设置材质实例参数,设置材质实例参数,Set Material Instance Parameters,設置材質實例參數
+次数,次数,Count,次數
+ConstraintProfile,约束配置文件,Constraint Profile,約束設定檔
+⬇️-Y,⬇️-Y,⬇️-Y,⬇️-Y
+限制小数位数,限制小数位数,Limit Decimal Places,限制小數位數
+偏移,偏移,Offset,偏移
+保存方块路径,保存方块路径,Save Block Path,保存方塊路徑
+ObstacleHeight,障碍高度,Obstacle Height,障礙高度
+额外旋转,额外旋转,Extra Rotation,額外旋轉
+跳跃,跳跃,Jump,跳躍
+时间(小时),时间(小时),Time (Hours),時間(小時)
+FK绑定,FK绑定,FK Binding,FK綁定
+触发计数,触发计数,Trigger Count,觸發計數
+TextColor,文本颜色,Text Color,文字顏色
+长宽,长宽,Dimensions,長寬
+FogColor,雾颜色,Fog Color,霧顏色
+优化材质,优化材质,Optimize Material,優化材質
+局部禁用物理模拟,局部禁用物理模拟,Locally Disable Physics Simulation,局部停用物理模擬
+加载刷新对象,加载刷新对象,Load Refresh Object,載入刷新物件
+运行时额外旋转,运行时额外旋转,Runtime Extra Rotation,運行時額外旋轉
+MaterialParams,材质参数,Material Parameters,材質參數
+FrontLedgeLocation,前边缘位置,Front Ledge Location,前邊緣位置
+CamStyle_Aim,瞄准摄像机风格,Camera Style_Aim,瞄準攝影機風格
+同步材质至头部,同步材质至头部,Sync Material to Head,同步材質至頭部
+加载材质实例,加载材质实例,Load Material Instance,載入材質實例
+向量颜色,向量颜色,Vector Color,向量顏色
+CamStyle_Far,远距摄像机风格,Camera Style_Far,遠距攝影機風格
+马鞍,马鞍,Saddle,馬鞍
+遥控信号源(Actor),遥控信号源(Actor),Remote Signal Source (Actor),遙控訊號源(Actor)
+自动更新,自动更新,Auto Update,自動更新
+动作表情混入混出时间,动作表情混入混出时间,Action Blend In/Out Time,動作表情混入混出時間
+禁用物理交互,禁用物理交互,Disable Physics Interaction,禁用物理交互
+生成后期处理体积,生成后期处理体积,Generate Post-Processing Volume,生成後製處理體積
+后处理(带景深),后处理(带景深),Post-Processing (with Depth of Field),後處理(帶景深)
+UseLevelVisualsColor,使用关卡视觉效果颜色,Use Level Visuals Color,使用關卡視覺效果顏色
+density3,密度3,Density3,密度3
+◆批量瘫痪,◆批量瘫痪,◆Batch Paralyze,◆批量癱瘓
+右手物品,右手物品,Right Hand Item,右手物品
+重载运行分辨率(%),重载运行分辨率(%),Reload Runtime Resolution (%),重載運行解析度(%)
+摇摆,摇摆,Sway,搖擺
+检测实验性功能,检测实验性功能,Check Experimental Features,檢測實驗性功能
+段内搜索名称所在行,段内搜索名称所在行,Line Number of Name in Section,段內搜尋名稱所在行
+随机流,随机流,Random Stream,隨機流
+密度(%),密度(%),Density (%),密度(%)
+读取某格注释,读取某格注释,Read Cell Comment,讀取某格註釋
+随机初始动画时间,随机初始动画时间,Random Initial Animation Time,隨機初始動畫時間
+更新状态,更新状态,Update Status,更新狀態
+Event,事件,Event,事件
+◆瘫痪,◆瘫痪,◆Paralyze,◆癱瘓
+随机皮肤->权重_0,随机皮肤->权重_0,Random Skin->Weight_0,隨機皮膚->權重_0
+同步追踪的目标,同步追踪的目标,Synchronized Tracking Target,同步追蹤的目標
+最小间距,最小间距,Minimum Spacing,最小間距
+启用后期模糊,启用后期模糊,Enable Post-Processing Blur,啟用後製模糊
+mob4,生物4,Mob4,生物4
+◆遥控灯光,◆遥控灯光,◆Remote Control Lights,◆遙控燈光
+◆开始跳跃,◆开始跳跃,◆Jump,◆開始跳躍
+可以悬停,可以悬停,Can Hover,可以懸停
+重复模式,重复模式,Repeat Mode,重複模式
+物理绑定,物理绑定,Physics Binding,物理綁定
+CrouchSpeeds,蹲伏速度,Crouch Speeds,蹲伏速度
+◆批量起身,◆批量起身,◆Batch Rise,◆批量起身
+最后选定的Actor,最后选定的Actor,Last Selected Actor,最後選定的Actor
+全局力场数组,全局力场数组,Global Force Field Array,全域力場數組
+是像素贴图,是像素贴图,Is Pixel Texture,是像素貼圖
+GridColor,网格颜色,Grid Color,網格顏色
+皮肤,皮肤,Skin,皮膚
+手动指定摄像机,手动指定摄像机,Manual Camera Assignment,手動指定攝影機
+全语言搜索列,全语言搜索列,All Language Search Column,全語言搜索列
+面向目标,面向目标,Face Target,面向目標
+物品栏显示长度,物品栏显示长度,Inventory Display Length,物品欄顯示長度
+物理Ⅱ,物理Ⅱ,Physics II,物理Ⅱ
+左手物品,左手物品,Left Hand Item,左手物品
+ConsoleCommand,控制台命令,Console Command,控制台指令
+表情（6）,表情（6）,Expression (6),表情（6）
+解算器,解算器,Solver,解算器
+默认破坏时长,默认破坏时长,Default Destruction Duration,預設破壞時長
+bDeleteCurveOnRevert,撤销时删除曲线,bDelete Curve On Revert,撤銷時刪除曲線
+缩放XYZ强度,缩放XYZ强度,Scale XYZ Intensity,縮放XYZ強度
+朝向轴,朝向轴,Facing Axis,朝向軸
+启用碰撞,启用碰撞,Enable Collision,啟用碰撞
+MinTransformOffset,最小变换偏移,Min Transform Offset,最小變換偏移
+摄像机焦距,摄像机焦距,Camera Focal Length,攝影機焦距
+Name,名称,Name,名稱
+自动更新数量上限,自动更新数量上限,Auto Update Quantity Limit,自動更新數量上限
+写入设置ini,写入设置ini,Write Settings ini,寫入設置ini
+PitchMultiplier,俯仰倍率,Pitch Multiplier,俯仰倍率
+启用辅助碰撞箱,启用辅助碰撞箱,Enable Auxiliary Collision Box,啟用輔助碰撞箱
+Stars brightness,星星亮度,Stars Brightness,星星亮度
+↧ -Z,↧ -Z,↧ -Z,↧ -Z
+添加tag（collider）,添加标签（碰撞器）,Add Tag (Collider),添加標籤（碰撞器）
+方块模型,方块模型,Block Model,方塊模型
+悬停背景,悬停背景,Hover Background,懸停背景
+整理录制的动画,整理录制的动画,Organize Recorded Animation,整理錄製的動畫
+TransitionSpeed,过渡速度,Transition Speed,過渡速度
+方块数量,方块数量,Block Count,方塊數量
+等待时间,等待时间,Wait Time,等待時間
+缩放,缩放,Zoom,縮放
+获取处理对象,获取处理对象,Get Process Object,獲取處理物件
+LOD&Nanite函数,LOD&Nanite函数,LOD & Nanite Function,LOD&Nanite函式
+视野(°)/光圈(F),视野(°)/光圈(F),Field of View (°)/Aperture (F),視野(°)/光圈(F)
+RandomSeedOffset,随机种子偏移,Random Seed Offset,隨機種子偏移
+动画->属性,动画->属性,Animation->Property,動畫->屬性
+TranslationAngleThreshold,位移角度阈值,Translation Angle Threshold,位移角度閾值
+更新全场,更新全场,Update All,更新全場
+DLSS/FSR,DLSS/FSR,DLSS/FSR,DLSS/FSR
+Cloud speed,云移动速度,Cloud Speed,雲移動速度
+WorldSpaceControlData,世界空间控制数据,World Space Control Data,世界空間控制資料
+ExecuteConsoleCommand,执行控制台命令,Execute Console Command,執行控制台指令
+追踪目标,追踪目标,Tracking Target,追蹤目標
+起身过渡,起身过渡,Rise Transition,起身過渡
+SpringArmLength,弹簧臂长度,Spring Arm Length,彈簧臂長度
+SocketOffset,插槽偏移,Socket Offset,插槽偏移
+NPC跑步跟随目标,NPC跑步跟随目标,NPC Run to Follow Target,NPC跑步跟隨目標
+IK绑定,IK绑定,IK Binding,IK綁定
+准备/更换材质,准备/更换材质,Prepare/Replace Material,準備/更換材質
+stackup,堆叠,Stackup,堆疊
+⚠重力方向,⚠重力方向,⚠Gravity Direction,⚠重力方向
+最大速度,最大速度,Max Speed,最大速度
+曲线终点距离(m),曲线终点距离(m),Curve End Distance (m),曲線終點距離(m)
+设置参数,设置参数,Set Parameters,設置參數
+CameraDistanceMultiplier,摄像机距离倍率,Camera Distance Multiplier,攝影機距離倍率
+权重,权重,Weight,權重
+缩小消失,缩小消失,Shrink Disappear,縮小消失
+点头,点头,Nod,點頭
+生物3,生物3,Creature 3,生物3
+锁定此工具菜单,锁定此工具菜单,Lock This Tool Menu,鎖定此工具選單
+目标角色,目标角色,Target Character,目標角色
+PlayRate,播放速率,Play Rate,播放速率
+加载渲染预设,加载渲染预设,Load Rendering Preset,載入渲染預設
+随机皮肤,随机皮肤,Random Skin,隨機皮膚
+预览画质,预览画质,Preview Quality,預覽畫質
+用tag获取摄像机,用标签获取摄像机,Get Camera by Tag,用標籤獲取攝影機
+传送门特效材质,传送门特效材质,Portal Effect Material,傳送門特效材質
+*蓝幕,*蓝幕,*Blue Screen,*藍幕
+更新镜头试拍录制器,更新镜头试拍录制器,Update Shot Recorder,更新鏡頭試拍錄製器
+初始化跳过缓动,初始化跳过缓动,Initialize Skip Tween,初始化跳過緩動
+自发光,自发光,Emissive,自發光
+禁用物理模拟的骨骼,禁用物理模拟的骨骼,Bones with Disabled Physics Simulation,禁用物理模擬的骨骼
+聚焦与变焦,聚焦与变焦,Focus & Zoom,聚焦與變焦
+振动,振动,Vibration,振動
+放置模型并选中,放置模型并选中,Place and Select Model,放置模型並選中
+按名称调用函数,按名称调用函数,Call Function by Name,依名稱呼叫函式
+是否面向目标,是否面向目标,Face Target,是否面向目標
+旧_DLSS/FSR,旧_DLSS/FSR,Old_DLSS/FSR,舊_DLSS/FSR
+HasFrontLedge,有前边缘,Has Front Ledge,有前邊緣
+ParentSpaceControlData,父空间控制数据,Parent Space Control Data,父空間控制資料
+云,云,Cloud,雲
+Refresh material,刷新材质,Refresh Material,刷新材質
+物理动画参数,物理动画参数,Physics Animation Parameters,物理動畫參數
+DecalColor,贴花颜色,Decal Color,貼花顏色
+重载材质时间,重载材质时间,Reload Material Time,重載材質時間
+传送目的地材质,传送目的地材质,Teleport Destination Material,傳送目的地材質
+整体沿曲线运动,整体沿曲线运动,Overall Curve Movement,整體沿曲線運動
+图片边框填充,图片边框填充,Image Border Fill,圖片邊框填充
+点击自动切换状态,点击自动切换状态,Click to Auto Switch State,點擊自動切換狀態
+拉伸图像,拉伸图像,Stretch Image,拉伸圖像
+提示,提示,Hint,提示
+打乱,打乱,Shuffle,打亂
+WalkSpeeds,行走速度,Walk Speeds,行走速度
+◆缓存轨道,◆缓存轨道,◆Cache Track,◆緩存軌道
+体积雾各向异性,体积雾各向异性,Volumetric Fog Anisotropy,體積霧各向異性
+播放速度（对应03）,播放速度（对应03）,Playback Speed (Corresponding to 03),播放速度（對應03）
+bInvert,反转,bInvert,反轉
+🌫️雾密度/高度衰减,🌫️雾密度/高度衰减,🌫️Fog Density/Height Falloff,🌫️霧密度/高度衰減
+渲染画质,渲染画质,Rendering Quality,渲染畫質
+动作（3）,动作（3）,Action (3),動作（3）
+◆切换动作,◆切换动作,◆Switch Action,◆切換動作
+ButtonName,按钮名称,Button Name,按鈕名稱
+Zenith Color,天顶颜色,Zenith Color,天頂顏色
+简单描边,简单描边,Simple Outline,簡單描邊
+PCGactor,PCG角色,PCG Actor,PCG角色
+预览分辨率 (默认540p),预览分辨率（默认540p）,Preview Resolution (Default 540p),預覽解析度（預設540p）
+播放速度1,播放速度1,Playback Speed 1,播放速度1
+获取世界,获取世界,Get World,獲取世界
+混合时间,混合时间,Blend Time,混合時間
+骨骼,骨骼,Bone,骨骼
+Mesh2,网格体2,Mesh2,網格體2
+空气阻力减速,空气阻力减速,Air Resistance Deceleration,空氣阻力減速
+offset,偏移,Offset,偏移
+移动方向,移动方向,Movement Direction,移動方向
+旋转,旋转,Rotation,旋轉
+旋转XYZ强度,旋转XYZ强度,Rotation XYZ Intensity,旋轉XYZ強度
+播放速度2,播放速度2,Playback Speed 2,播放速度2
+浓度,浓度,Concentration,濃度
+启用正交投影：距离,启用正交投影：距离,Enable Orthographic Projection: Distance,啟用正交投影：距離
+调试缓动,调试缓动,Debug Tween,偵錯緩動
+脉冲按压,脉冲按压,Pulse Press,脈衝按壓
+启用希区柯克变焦：偏移,启用希区柯克变焦：偏移,Enable Hitchcock Zoom: Offset,啟用希區考克變焦：偏移
+对象-变量名,对象-变量名,Object-Variable Name,物件-變數名
+启用全局力场,启用全局力场,Enable Global Force Field,啟用全域力場
+曲线,曲线,Curve,曲線
+◆批量小键盘物理事件,◆批量小键盘物理事件,◆Batch Keypad Physical Event,◆批量小鍵盤物理事件
+MaxTransformOffset,最大变换偏移,Max Transform Offset,最大變換偏移
+CurveName,曲线名称,Curve Name,曲線名稱
+BackLedgeLocation,后边缘位置,Back Ledge Location,後邊緣位置
+硬切,硬切,Hard Cut,硬切
+目标组件,目标组件,Target Component,目標組件
+物品栏,物品栏,Inventory,物品欄
+曲线采样跨度,曲线采样跨度,Curve Sampling Span,曲線採樣跨度
+自定义曲线,自定义曲线,Custom Curve,自訂曲線
+表情（4）,表情（4）,Expression (4),表情（4）
+全局随机种子,全局随机种子,Global Random Seed,全域隨機種子
+⬅️X,⬅️X,⬅️X,⬅️X
+方块云运动方向,方块云运动方向,Block Cloud Movement Direction,方塊雲運動方向
+预览文本,预览文本,Preview Text,預覽文本
+简单碰撞+准备材质,简单碰撞+准备材质,Simple Collision + Prepare Material,簡單碰撞+準備材質
+跑步跟随,跑步跟随,Run Follow,跑步跟隨
+Speed,速度,Speed,速度
+整齐,整齐,Neat,整齊
+物理Ⅲ,物理Ⅲ,Physics III,物理Ⅲ
+Json缓存,Json缓存,Json Cache,Json緩存
+导入视频,导入视频,Import Video,匯入影片
+Cloud color,云颜色,Cloud Color,雲顏色
+鼠标灵敏度,鼠标灵敏度,Mouse Sensitivity,滑鼠靈敏度
+缓出模式,缓出模式,Ease Out Mode,緩出模式
+时间流逝速度,时间流逝速度,Time Dilation Speed,時間流逝速度
+对象->函数,对象->函数,Object->Function,物件->函式
+命中,命中,Hit,命中
+亮度映射曲线,亮度映射曲线,Brightness Mapping Curve,亮度映射曲線
+◆批量切换动作,◆批量切换动作,◆Batch Switch Action,◆批量切換動作
+插件面板,插件面板,Plugin Panel,插件面板
+移动速度,移动速度,Movement Speed,移動速度
+纹理尺寸XY/缩放XY,纹理尺寸XY/缩放XY,Texture Size XY/Scale XY,紋理尺寸XY/縮放XY
+Body Modifier Data,身体修改器数据,Body Modifier Data,身體修改器資料
+控制对象,控制对象,Control Object,控制物件
+正面遮罩层,正面向罩层,Front Mask Layer,正面向罩層
+使用Actor旋转,使用Actor旋转,Use Actor Rotation,使用Actor旋轉
+LevelStyles,关卡样式,Level Styles,關卡樣式
+自发光强度,自发光强度,Emissive Intensity,自發光強度
+体积雾开始/结束/淡入距离,体积雾开始/结束/淡入距离,Volumetric Fog Start/End/Fade Distance,體積霧開始/結束/淡入距離
+全选,全选,Select All,全選
+TranslationLagSpeed,位移延迟速度,Translation Lag Speed,位移延遲速度
+可以拖动,可以拖动,Can Drag,可以拖動
+物理Ⅴ,物理Ⅴ,Physics V,物理Ⅴ
+画质预设,画质预设,Graphics Preset,畫質預設
+◆冲击,◆冲击,◆Impulse,◆衝擊
 自定义键控动画,自定义键控动画,Custom Keyed Animation,自訂鍵控動畫
 草方块使用泥土材质,草方块使用泥土材质,Grass Block Uses Dirt Material,草方塊使用泥土材質
-获取世界,获取世界,Get World,獲取世界
-获取处理对象,获取处理对象,Get Process Object,獲取處理物件
-获取模型,获取模型,Get Model,獲取模型
-获取设置ini,获取设置ini,Get Settings ini,獲取設置ini
-落地粒子z轴触发速度,落地粒子z轴触发速度,Ground Particle Z-Axis Trigger Speed,落地粒子z軸觸發速度
-表情（4）,表情（4）,Expression (4),表情（4）
-表情（5）,表情（5）,Expression (5),表情（5）
-表情（6）,表情（6）,Expression (6),表情（6）
-覆盖设置ini,覆盖设置ini,Override Settings ini,覆蓋設置ini
-视口移动/旋转速度,视口移动/旋转速度,Viewport Movement/Rotation Speed,視埠移動/旋轉速度
-视野(°)/光圈(F),视野(°)/光圈(F),Field of View (°)/Aperture (F),視野(°)/光圈(F)
-角度,角度,Angle,角度
-解算器,解算器,Solver,解算器
+目标摄像机,目标摄像机,Target Camera,目標攝影機
+信号传播速度(m/s),信号传播速度(m/s),Signal Propagation Speed (m/s),訊號傳播速度(m/s)
+↪用作可叠加遮罩,↪用作可叠加遮罩,↪Use as Overlay Mask,↪用作可疊加遮罩
+➡️-X,➡️-X,➡️-X,➡️-X
+日月投射光线追踪阴影,日月投射光线追踪阴影,Sun/Moon Ray Traced Shadows,日月投射光線追蹤陰影
+ObstacleDepth,障碍深度,Obstacle Depth,障礙深度
+作用于粒子系统-倍率,作用于粒子系统-倍率,Effect on Particle System-Multiplier,作用於粒子系統-倍率
+漂浮,漂浮,Float,漂浮
 触发python脚本,触发python脚本,Trigger Python Script,觸發python腳本
-触发计数,触发计数,Trigger Count,觸發計數
-设置Actor标签+后缀,设置Actor标签+后缀,Set Actor Tag+Suffix,設置Actor標籤+後綴
-读取某格注释,读取某格注释,Read Cell Comment,讀取某格註釋
-读取段落某格文本,读取段落某格文本,Read Section Cell Text,讀取段落某格文本
-跑步跟随,跑步跟随,Run Follow,跑步跟隨
-路标,路标,Waypoint,路標
-身体模型,身体模型,Body Model,身體模型
-辅助碰撞箱,辅助碰撞箱,Auxiliary Collision Box,輔助碰撞箱
-运行时破坏方块时间,运行时破坏方块时间,Runtime Block Destruction Time,運行時破壞方塊時間
-追踪目标,追踪目标,Tracking Target,追蹤目標
-追踪设置,追踪设置,Tracking Settings,追蹤設定
-选中方块序号,选中方块序号,Selected Block Index,選中方塊序號
-速度（包含正负方向）,速度（包含正负方向）,Speed (Including Direction),速度（包含正負方向）
-遥控信号源(Actor),遥控信号源(Actor),Remote Signal Source (Actor),遙控訊號源(Actor)
-遥控目标(类),遥控目标(类),Remote Target (Class),遙控目標(類)
-遮幅,遮幅,Letterbox,遮幅
-重力,重力,Gravity,重力
-重载材质交互半径,重载材质交互半径,Reload Material Interaction Radius,重載材質交互半徑
-重载材质时间,重载材质时间,Reload Material Time,重載材質時間
-销毁类的所有Actor,销毁类的所有Actor,Destroy All Actors of Class,銷毀類的所有Actor
-键盘灵敏度,键盘灵敏度,Keyboard Sensitivity,鍵盤靈敏度
-长宽比,长宽比,Aspect Ratio,長寬比
-间接光照(日/月/环境光),间接光照(日/月/环境光),Indirect Lighting (Sun/Moon/Ambient),間接光照(日/月/環境光)
+BlendOutCondition,混合淡出条件,Blend Out Condition,混合淡出條件
+循环时长,循环时长,Loop Duration,循環時長
+头部模型,头部模型,Head Model,頭部模型
+速度-动画曲线,速度-动画曲线,Speed-Animation Curve,速度-動畫曲線
+掉落物模型,掉落物模型,Drop Item Model,掉落物模型
+指定纵轴分辨率,指定纵轴分辨率,Specify Vertical Resolution,指定縱軸解析度
+弹性按压,弹性按压,Elastic Press,彈性按壓
+Overall Color,整体颜色,Overall Color,整體顏色
+刷新随机种子,刷新随机种子,Refresh Random Seed,刷新隨機種子
+编辑器视口线条追踪,编辑器视口线条追踪,Editor Viewport Line Tracing,編輯器視埠線條追蹤
+状态机动画,状态机动画,State Machine Animation,狀態機動畫
 阻隔(渲染为透明),阻隔(渲染为透明),Blocking (Rendered as Transparent),阻隔(渲染為透明)
-限制小数位数,限制小数位数,Limit Decimal Places,限制小數位數
-随机旋转,随机旋转,Random Rotation,隨機旋轉
-随机流,随机流,Random Stream,隨機流
-随机皮肤,随机皮肤,Random Skin,隨機皮膚
-雾内散射颜色,雾内散射颜色,Fog In-Scattering Color,霧內散射顏色
+读取设置json,读取设置json,Read Settings json,讀取設置json
+SprintSpeeds,冲刺速度,Sprint Speeds,衝刺速度
+动画0,动画0,Animation 0,動畫0
+默认(可递归),默认(可递归),Default (Recursive),預設(可遞歸)
+HasBackLedge,有后边缘,Has Back Ledge,有後邊緣
 雾密度,雾密度,Fog Density,霧密度
-雾高度衰减,雾高度衰减,Fog Height Falloff,霧高度衰減
-静态网格体,静态网格体,Static Mesh,靜態網格體
-静态网格体组件,静态网格体组件,Static Mesh Component,靜態網格體組件
-面向玩家/目标,面向玩家/目标,Face Player/Target,面向玩家/目標
-面向目标,面向目标,Face Target,面向目標
 顶点动画数据集1,顶点动画数据集1,Vertex Animation Dataset 1,頂點動畫數據集1
-顶点动画数据集2,顶点动画数据集2,Vertex Animation Dataset 2,頂點動畫數據集2
-预览分辨率 (默认540p),预览分辨率（默认540p）,Preview Resolution (Default 540p),預覽解析度（預設540p）
-预览帧率上限,预览帧率上限,Preview Frame Rate Limit,預覽幀率上限
-预览时捕获每帧,预览时捕获每帧,Capture Every Frame During Preview,預覽時擷取每幀
-预览画质,预览画质,Preview Quality,預覽畫質
-颜色,颜色,Color,顏色
-额外旋转,额外旋转,Extra Rotation,額外旋轉
-马鞍,马鞍,Saddle,馬鞍
-骨骼,骨骼,Bone,骨骼
-骨骼网格体,骨骼网格体,Skeletal Mesh,骨骼網格體
-骨骼网格体组件,骨骼网格体组件,Skeletal Mesh Component,骨骼網格體組件
-鼠标灵敏度,鼠标灵敏度,Mouse Sensitivity,滑鼠靈敏度
-🌫️雾密度/高度衰减,🌫️雾密度/高度衰减,🌫️Fog Density/Height Falloff,🌫️霧密度/高度衰減
+清除,清除,Clear,清除
+density2,密度2,Density2,密度2
+动画3,动画3,Animation 3,動畫3
+瘫痪生物,瘫痪生物,Paralyze Creature,癱瘓生物
+最大遥控距离(m),最大遥控距离(m),Max Remote Distance (m),最大遙控距離(m)
+播放动作时禁用移动输入,播放动作时禁用移动输入,Disable Movement Input During Action Playback,播放動作時停用移動輸入
+FrontLedgeNormal,前边缘法线,Front Ledge Normal,前邊緣法線
+捕获每帧,捕获每帧,Capture Every Frame,擷取每幀
+PlateScale,面板缩放,Plate Scale,面板縮放
+随机旋转,随机旋转,Random Rotation,隨機旋轉
+StyleIndex,样式索引,Style Index,樣式索引
+破碎程度,破碎程度,Destruction Level,破碎程度
+绑定EV100可视性,绑定EV100可视性,Bind EV100 Visibility,綁定EV100可視性
+运动时长,运动时长,Motion Duration,運動時長
+SamplesPerSecond,采样每秒,Samples Per Second,採樣每秒
+“折叠面板修改名称”,“折叠面板修改名称”,“Fold Panel Modify Name”,“摺疊面板修改名稱”
+挑选权重,挑选权重,Pick Weight,挑選權重
+清除材质实例参数,清除材质实例参数,Clear Material Instance Parameters,清除材質實例參數
+物品栏缩放,物品栏缩放,Inventory Scaling,物品欄縮放
+平滑更新速度,平滑更新速度,Smooth Update Speed,平滑更新速度
+Color,颜色,Color,顏色
+选中方块序号,选中方块序号,Selected Block Index,選中方塊序號
+mob1,生物1,Mob1,生物1
+循环,循环,Loop,循環
+录制的摄像机晃动,录制的摄像机晃动,Recorded Camera Shake,錄製的攝影機晃動
+旧_随机种子,旧_随机种子,Old_Random Seed,舊_隨機種子
+◆破坏,◆破坏,◆Destroy,◆破壞
+整体速度/强度/增量/缓动,整体速度/强度/增量/缓动,Overall Speed/Intensity/Increment/Ease,整體速度/強度/增量/緩動
+模糊衰减变换XY,模糊衰减变换XY,Blur Falloff Transform XY,模糊衰減變換XY
+位置XYZ强度,位置XYZ强度,Position XYZ Intensity,位置XYZ強度
+禁止颜色,禁止颜色,Prohibited Color,禁止顏色
+获取设置ini,获取设置ini,Get Settings ini,獲取設置ini
+用tag过滤目标(可留空),用标签过滤目标(可留空),Filter Targets by Tag (Optional),用標籤過濾目標(可留空)
+状态机速度->动画映射曲线,状态机速度->动画映射曲线,State Machine Speed->Animation Mapping Curve,狀態機速度->動畫映射曲線
+摄像机后期优先级,摄像机后期优先级,Camera Post-Processing Priority,攝影機後製優先級
+生物1,生物1,Creature 1,生物1
+Randomize Button,随机化按钮,Randomize Button,隨機化按鈕
+当前路标,当前路标,Current Waypoint,當前路標
+NPC循环播放动作1,NPC循环播放动作1,NPC Loop Action 1,NPC循環播放動作1
+附加粒子（模型/骨骼）,附加粒子（模型/骨骼）,Attach Particles (Model/Bone),附加粒子（模型/骨骼）
+绑定父级,绑定父级,Bind Parent,綁定父級
+◆生命周期轨道,◆生命周期轨道,◆Lifecycle Track,◆生命週期軌道
+可以滚动,可以滚动,Can Scroll,可以滾動
+ActionType,动作类型,Action Type,動作類型
+摄像机移动/旋转延迟,摄像机移动/旋转延迟,Camera Movement/Rotation Delay,攝影機移
