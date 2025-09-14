@@ -26,7 +26,8 @@ replacements = {
     "快乐恶魂": "快樂幽靈",
     "小恶魂": "小幽靈",
     "恶魂": "地獄幽靈",
-    "豹猫": "豹貓(山貓)"
+    "豹猫": "豹貓(山貓)",
+    "中文 | [**English**](./README_EN.md) | [**繁體中文**](./README_ZH-Hant.md)" : "繁體中文 | [**English**](./README_EN.md) | [**中文**](./README.md)",
 }
 
 replace_back = {

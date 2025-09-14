@@ -44,7 +44,7 @@ In addition, the plugin comes with the Windows version of ffmpeg for video encod
 ## Mobs
 - Mineprep provides Minecraft mobs which can be placed through the spawner panel.
 - Currently, there are skeletal meshes and automated NPCs. Some mobs have vertex-animated instance model for large crowd particles. All mobs can change materials, and humanoids may  add universal IK bindings.
-- Current version supports: Steve/Alex player, pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, husk, piglin, piglin brute, pillager, vindicator, iron golem, silverfish, endermite, spider (cave spider), villager, blaze, wither, hoglin, snow golem, wolf, cat, allay, wandering trader, and ocelot.
+- Current version supports: Steve/Alex player, pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, husk, piglin, piglin brute, pillager, vindicator, iron golem, silverfish, endermite, spider (cave spider), villager, blaze, wither, hoglin, snow golem, wolf, cat, allay, wandering trader, ocelot, ghast, ghasting, happy ghast.
 - More content is WIP.
 
 
@@ -73,7 +73,7 @@ See [Epic Games' EULA](https://www.unrealengine.com/eula) for details
 Mineprep 0.5-pre2 brings stage achievements in creature model overhaul, along with many new media playback and post-compositing assets. We used them to create the cat meme "Picking Up a Happy Little Soul Reaper."
 > Note that this version has new bugs due to upgrading to UE5.6 (such as corrupted MC pixel text and crashes when enabling physics interaction on third-person motion matching characters), which we currently avoid by disabling certain settings. Final fixes will require the release of Mineprep 0.5.
 
-- Added models for `Villager`, `Blaze`, `Wither`, `Hoglin`, `Snow Golem`, `Wolf`, `Cat`, `Allay`, `Wandering Trader`, and `Ocelot`.
+- Added models for `Villager`, `Blaze`, `Wither`, `Hoglin`, `Snow Golem`, `Wolf`, `Cat`, `Allay`, `Wandering Trader`, `Ocelot`, `Ghast`, `Ghasting`, `Happy Ghast`
   - Among them, Villager and Wandering Trader include NPC versions.
   - Villagers have specialized materials that allow switching professions and biomes by changing texture maps.
 - All mobs are configured with bone-level retargeting settings. Humans and animals can share animation sequences, with better results than before. Many old animations have been cleaned up, and new ones have been created.

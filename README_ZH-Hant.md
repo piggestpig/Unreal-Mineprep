@@ -1,6 +1,6 @@
 # Unreal-Mineprep
 
-中文 | [**English**](./README_EN.md) | [**繁體中文**](./README_ZH-Hant.md)
+繁體中文 | [**English**](./README_EN.md) | [**中文**](./README.md)
 
 ✨這是一個正在開發中的UE5插件，繼承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的實用功能，並加入一些新的資產，爲製作MC動畫帶來便利
 
