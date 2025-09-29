@@ -44,7 +44,7 @@ resource_pack_path = join(file_dir, 'Blender扩展资源', 'mc_default')
 localization = {
     'zh_CN': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5-pre1 安装向导---",
+        2: "---Mineprep v0.5 安装向导---",
         3: "欢迎使用Mineprep！",
         4: "· 此安装包适用于 Windows + UE5.6",
         5: "· 非实验性功能也许能兼容Mac和高版本UE",
@@ -76,7 +76,7 @@ localization = {
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.4 Installer---",
+        2: "---Mineprep v0.5 Installer---",
         3: "Welcome to Mineprep!",
         4: "· This installer is designed for Windows + UE5.6",
         5: "· Non-experimental features may be compatible with Mac and higher engine version",
@@ -108,7 +108,7 @@ localization = {
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.4 安裝嚮導---",
+        2: "---Mineprep v0.5 安裝嚮導---",
         3: "歡迎使用Mineprep！",
         4: "· 此安裝包適用於 Windows + UE5.6",
         5: "· 非實驗性功能也許能兼容Mac和高版本UE",
@@ -190,13 +190,34 @@ def get_abs_path(path):
         abs_path = path
     return os.path.normpath(abs_path)
 
+def extract_zip(zip_path, extract_to):
+    # 检查是否已解压（去掉.zip后缀的路径）
+    if os.path.exists(zip_path.replace('.zip', '')):
+        return
+
+    # 分卷解压
+    part1 = zip_path + '.001'
+    if os.path.exists(part1):
+        temp_zip = zip_path + '.temp'
+        with open(temp_zip, 'wb') as output:
+            i = 1
+            while os.path.exists(f"{zip_path}.{i:03d}"):
+                with open(f"{zip_path}.{i:03d}", 'rb') as part:
+                    output.write(part.read())
+                i += 1
+        with zipfile.ZipFile(temp_zip, 'r') as zip_ref:
+            zip_ref.extractall(extract_to)
+        os.remove(temp_zip)
+    else:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_to)
+
 def install():
     install_path = get_abs_path(mc.install_path)
     if mc.install_path == "":
         raise FileNotFoundError(loc(1, "⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠"))
     if not mc.ffmpeg_path:
-        with zipfile.ZipFile(ffmpeg_zipfile, 'r') as zip_ref:
-            zip_ref.extractall(join(file_dir, 'Mineprep', 'Render'))
+        extract_zip(ffmpeg_zipfile, join(file_dir, 'Mineprep', 'Render'))
     if not os.path.exists(install_path):
         os.makedirs(install_path)
     
