@@ -24,10 +24,12 @@
         "hover_toolbar": "false",
         "tkinter_scale": "3",
         "installer_dir": "E:\\github\\Unreal-Mineprep",
-        "render_map": "/Game/MCmap.MCmap",
-        "render_sequence": "/Game/Mineprep/Render/MC临时序列.MC临时序列",
+        "render_map": "/Game/大平原.大平原",
+        "render_sequence": "/Game/HDR测试.HDR测试",
         "render_preset": "/Game/Mineprep/Render/Mineprep自定义渲染配置.Mineprep自定义渲染配置",
-        "megalights_shadow_mode": "0"
+        "megalights_shadow_mode": "0",
+        "HDR_SceneColorMultiplier": "2.0",
+        "HDR_UI_Luminance": "250.0"
     },
     "ProjectSettings": {
         "bDefaultFeatureAutoExposure": "false",

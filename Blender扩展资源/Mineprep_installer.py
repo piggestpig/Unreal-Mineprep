@@ -288,6 +288,9 @@ def install():
     config.set(RENDER, 'r.PostProcessing.PropagateAlpha', 'True')
     config.set(RENDER, 'r.Deferred.SupportPrimitiveAlphaHoldout', 'True')
     config.set(RENDER, 'r.SkinCache.SceneMemoryLimitInMB', '1024.0')
+    config.set(RENDER, 'rhi.Bindless.Resources', 'Enabled')
+    config.set(RENDER, 'rhi.Bindless.Samplers', 'Enabled')
+    config.set(RENDER, 'rhi.Bindless', 'Enabled')
 
     GC = '/Script/Engine.GarbageCollectionSettings'
     if not config.has_section(GC):
