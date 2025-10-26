@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1760856661.7015593,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
+﻿Mineprep:0.5 | 时间戳1761115237.7336745,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve 普通人模,Steve,Steve 普通人模,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,📸,（即将废弃）Mineprep 3D摄像机组,（To be deprecated）Mineprep 3D Camera Rig,（即將廢棄）Mineprep 3D攝像機組,,,,渲染图像（F12）,Render Image（F12）,渲染圖像（F12）,,,,,"低
 中
 高
@@ -9,25 +9,25 @@ Epic","低
 中
 高
 極高",,,,,遥控灯光,Remote Control Lights,遙控燈光
-1,更换材质,Swap Texture,更換材質,,,👤,Alex 细手臂人模,Alex (slim),Alex 細手臂人模,,,,🌊,可交互2D水面,Interactive 2D Water,可交互2D水面,,,✨🟨,末影粒子,Ender Particles,末影粒子,,,,渲染动画（Ctrl+F12）,Render Animation（Ctrl+F12）,渲染動畫（Ctrl+F12）,,,,,"8bit 4:2:0#yuv420p
-8bit 4:2:2#yuv422p
-8bit 4:4:4#yuv444p
-10bit 4:2:0#yuv420p10le
-10bit 4:2:2#yuv422p10le
-10bit 4:4:4#yuv444p10le
-8bit 4:2:0+Alpha#yuva420p","8bit 4:2:0#yuv420p
-8bit 4:2:2#yuv422p
-8bit 4:4:4#yuv444p
-10bit 4:2:0#yuv420p10le
-10bit 4:2:2#yuv422p10le
-10bit 4:4:4#yuv444p10le
-8bit 4:2:0+Alpha#yuva420p","8bit 4:2:0#yuv420p
-8bit 4:2:2#yuv422p
-8bit 4:4:4#yuv444p
-10bit 4:2:0#yuv420p10le
-10bit 4:2:2#yuv422p10le
-10bit 4:4:4#yuv444p10le
-8bit 4:2:0+Alpha#yuva420p",,,,,切换表情,Switch Facial Expression,切換表情
+1,更换材质,Swap Texture,更換材質,,,👤,Alex 细手臂人模,Alex (slim),Alex 細手臂人模,,,,🌊,可交互2D水面,Interactive 2D Water,可交互2D水面,,,✨🟨,末影粒子,Ender Particles,末影粒子,,,,渲染动画（Ctrl+F12）,Render Animation（Ctrl+F12）,渲染動畫（Ctrl+F12）,,,,,"8bit 4:2:0#8bit420
+8bit 4:2:2#8bit422
+8bit 4:4:4#8bit444
+10bit 4:2:0#10bit420
+10bit 4:2:2#10bit422
+10bit 4:4:4#10bit444
+8bit 4:2:0+Alpha#8bit420a","8bit 4:2:0#8bit420
+8bit 4:2:2#8bit422
+8bit 4:4:4#8bit444
+10bit 4:2:0#10bit420
+10bit 4:2:2#10bit422
+10bit 4:4:4#10bit444
+8bit 4:2:0+Alpha#8bit420a","8bit 4:2:0#8bit420
+8bit 4:2:2#8bit422
+8bit 4:4:4#8bit444
+10bit 4:2:0#10bit420
+10bit 4:2:2#10bit422
+10bit 4:4:4#10bit444
+8bit 4:2:0+Alpha#8bit420a",,,,,切换表情,Switch Facial Expression,切換表情
 2,批量处理对象 :,Target :,批量處理對象：,,,👤,Steve+表情,Steve_face,Steve+表情,,,,🌊,可交互3D水池,Interactive 3D Water Pool,可交互3D水池,,,✨,爆炸粒子,Explosion Particles,爆炸粒子,,,,打开输出文件夹,Open Output Folder,打開輸出文件夾,,,,,"2K.mp4
 2K_HDR.mp4
 2K_透明.mov
@@ -101,7 +101,22 @@ FPV Drone","無
 第一人稱
 第三人稱
 FPV飛行",,,,,冲击,Impulse,衝擊
-6,重载材质属性,Overwrite Material Input,重載材質屬性,,,👤,Steve [NPC],Steve [NPC],Steve [NPC],,,,✨,粒子自碰撞,Self-collision Particles,粒子自碰撞,,,！,！,！,！,,,,添加MC关卡序列,Add MC Sequence,添加MC關卡序列,,,,,,,,,,,,起身并恢复动画,Rise & Restore Animation,起身並恢復動畫
+6,重载材质属性,Overwrite Material Input,重載材質屬性,,,👤,Steve [NPC],Steve [NPC],Steve [NPC],,,,✨,粒子自碰撞,Self-collision Particles,粒子自碰撞,,,！,！,！,！,,,,添加MC关卡序列,Add MC Sequence,添加MC關卡序列,,,,,"CPU (慢)#CPU
+Nvidia GPU#Nvidia
+Intel GPU#Intel
+AMD GPU#AMD
+Apple GPU#Apple
+Vulkan#Vulkan","CPU (slow)#CPU
+Nvidia GPU#Nvidia
+Intel GPU#Intel
+AMD GPU#AMD
+Apple GPU#Apple
+Vulkan#Vulkan","CPU (慢)#CPU
+Nvidia GPU#Nvidia
+Intel GPU#Intel
+AMD GPU#AMD
+Apple GPU#Apple
+Vulkan#Vulkan",,,,,起身并恢复动画,Rise & Restore Animation,起身並恢復動畫
 7,金属度,Metallic,金屬度,,,👤,Steve 高级运动匹配NPC,Advanced NPC,Steve 高級運動匹配NPC,,,,✨,落叶粒子,Falling Leaves,落葉粒子,,,✨,脚步粒子,Footstep Particles,脚步粒子,,,,① 保存渲染设置并切换空关卡,"① Save render config, open empty map",① 保存渲染設定並切換空關卡,,,,,,,,,,,,开始/停止跑步,Start/End Run,開始/停止跑步
 8,高光度,Specular,高光度,,,🟩,僵尸,Zombie,喪屍(殭屍),,,,📸,飞行摄像机,FPV Flying Camera,飛行攝像機,,,🔧,阻隔（渲染为透明）,Alpha Holdout,阻隔（渲染為透明）,,,,② 从空关卡渲染动画(节约显存),② Then render animation (save VRAM),② 從空關卡渲染動畫(節省顯存),,,,,,,,,,,,开始跳跃,Jump,開始跳躍
 9,粗糙度,Roughness,粗糙度,,,🟩,僵尸 [NPC],Zombie [NPC],喪屍(殭屍) [NPC],,,,✨🌊,下雨粒子,Rain Particles,下雨粒子,,,📸,nDisplay 3D摄像机组,nDisplay 3D Camera Rig,nDisplay 3D攝像機組,,,,,,,,,,,,,,,,,,小键盘物理事件,Keypad Physical Event,小鍵盤物理事件

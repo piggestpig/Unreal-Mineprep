@@ -18,7 +18,7 @@
         "blender_path": "E:\\blender\\blender-4.5.0-windows-x64\\blender.exe",
         "GPU": "1",
         "TTS": "false",
-        "memory_preload": "true",
+        "memory_preload": "false",
         "ffmpeg_path": "",
         "smooth_roll": "true",
         "hover_toolbar": "false",
@@ -28,7 +28,7 @@
         "render_sequence": "/Game/HDR测试.HDR测试",
         "render_preset": "/Game/Mineprep/Render/Mineprep自定义渲染配置.Mineprep自定义渲染配置",
         "megalights_shadow_mode": "0",
-        "HDR_SceneColorMultiplier": "2.0",
+        "HDR_SceneColorMultiplier": "2.5",
         "HDR_UI_Luminance": "250.0"
     },
     "ProjectSettings": {
