@@ -270,7 +270,7 @@ def install():
     config.set(CLI, 'VideoCodec', 'libx265')
     config.set(CLI, 'AudioCodec', 'aac')
     config.set(CLI, 'OutputFileExtension', 'mp4')
-    config.set(CLI, 'CommandLineFormat', r'"-hide_banner -y -loglevel error {AdditionalLocalArgs} {Quality} \"{OutputPath}\""')
+    config.set(CLI, 'CommandLineFormat', r'"-hide_banner -y -loglevel error {AdditionalLocalArgs}"')
     config.set(CLI, 'EncodeSettings_Low', '-preset fast -qp 28 -global_quality 28')
     config.set(CLI, 'EncodeSettings_Med', '-preset medium -qp 23 -global_quality 23')
     config.set(CLI, 'EncodeSettings_High', '-preset medium -qp 19 -global_quality 16')
@@ -291,6 +291,7 @@ def install():
     config.set(RENDER, 'rhi.Bindless.Resources', 'Enabled')
     config.set(RENDER, 'rhi.Bindless.Samplers', 'Enabled')
     config.set(RENDER, 'rhi.Bindless', 'Enabled')
+    config.set(RENDER, 'r.Translucency.HeterogeneousVolumes', 'True')
 
     GC = '/Script/Engine.GarbageCollectionSettings'
     if not config.has_section(GC):
