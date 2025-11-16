@@ -1,22 +1,31 @@
 import bpy
 import re
 
-def link(name_1,name_2a,name_2b,name_3,name_4):
+def link(name_1, name_2_candidates, target_name, name_3, name_4):
 	try:
 		node1 = material.node_tree.nodes.get(name_1)
-		try:
-			node2 = material.node_tree.nodes.get(name_2a)
-			node2.name = name_2b
-		except:
-			pass
-		try:
-			node2 = material.node_tree.nodes.get(name_2b)
-		except:
-			pass
-		node1out = node1.outputs.get(name_3)
-		node2in = node2.inputs.get(name_4)
-		# 连接节点
-		material.node_tree.links.new(node1out, node2in)
+		node2 = None
+		
+		# 遍历候选名称，找到第一个存在的节点
+		if isinstance(name_2_candidates, str):
+			name_2_candidates = [name_2_candidates]
+
+		#在数组中附加去除空格的副本
+		name_2_candidates += [name.strip() for name in name_2_candidates]
+
+		for candidate_name in name_2_candidates:
+			node2 = material.node_tree.nodes.get(candidate_name)
+			if node2:
+				# 如果找到节点且需要重命名
+				if target_name and candidate_name != target_name:
+					node2.name = target_name
+				break
+		
+		if node2:
+			node1out = node1.outputs.get(name_3)
+			node2in = node2.inputs.get(name_4)
+			# 连接节点
+			material.node_tree.links.new(node1out, node2in)
 	except:
 		pass
 	
@@ -29,12 +38,12 @@ for obj in selected_objects:
 	for slot in obj.material_slots:
 		# 获取当前材质
 		material = slot.material
-		link("Diffuse Texture","原理化BSDF","Principled BSDF","Color","Base Color")
-		link("Diffuse Texture","原理化BSDF","Principled BSDF","Alpha","Alpha")
-		link("Specular Texture","原理化BSDF","Principled BSDF","Color","Specular")
-		link("Specular Texture","原理化BSDF","Principled BSDF","Color","Roughness")
-		link("Normal Texture","法线贴图","Normal Map","Color","Color")
-		link("Principled BSDF","材质输出","Material Output","BSDF","Surface")
+		link("Diffuse Texture", ["原理化 BSDF", "Principled BSDF"], "Principled BSDF", "Color", "Base Color")
+		link("Diffuse Texture", ["原理化 BSDF", "Principled BSDF"], "Principled BSDF", "Alpha", "Alpha")
+		link("Specular Texture", ["原理化 BSDF", "Principled BSDF"], "Principled BSDF", "Color", "Specular")
+		link("Specular Texture", ["原理化 BSDF", "Principled BSDF"], "Principled BSDF", "Color", "Roughness")
+		link("Normal Texture", ["法线贴图", "Normal Map"], "Normal Map", "Color", "Color")
+		link("Principled BSDF", ["材质输出", "Material Output"], "Material Output", "BSDF", "Surface")
 
 # 遍历所有的材质
 for material in bpy.data.materials:

@@ -15,7 +15,7 @@
         "b_gradient_animated_texture": "false",
         "texture_pack_path": "E:/github/Unreal-Mineprep/Blender扩展资源/mc_default",
         "lang_index": "1",
-        "blender_path": "E:\\blender\\blender-4.5.0-windows-x64\\blender.exe",
+        "blender_path": "E:\\blender\\blender-5.0.0-beta+v50.1f5254094830-windows.amd64-release\\blender.exe",
         "GPU": "1",
         "TTS": "false",
         "memory_preload": "false",
