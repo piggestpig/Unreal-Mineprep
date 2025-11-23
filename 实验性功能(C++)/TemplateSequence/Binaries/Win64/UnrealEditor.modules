@@ -1,0 +1,8 @@
+{
+	"BuildId": "47537391",
+	"Modules": 
+	{
+		"TemplateSequence": "UnrealEditor-TemplateSequence.dll",
+		"TemplateSequenceEditor": "UnrealEditor-TemplateSequenceEditor.dll"
+	}
+}

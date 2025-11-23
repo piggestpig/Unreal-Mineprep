@@ -55,10 +55,10 @@ localization = {
         10: "安装至现有工程",
         11: "选择安装路径",
         12: "警告: 文件夹路径包含中文或非ASCII字符！可能会导致部分功能失效",
-        13: "实验性功能:",
+        13: "实验性功能 (仅支持Windows+UE5.6):",
         14: "Mineprep C++ 拓展模块",
         15: "解锁双目立体全景渲染",
-        16: "修复UE4官方新手教程",
+        16: "修复UE4官方新手教程", #5.7 扩展模板序列以支持双精度浮点和向量属性乘数
         17: "插件设置:",
         18: "手动指定FFmpeg路径 (如ffmpeg.exe)",
         19: "路径",
@@ -87,10 +87,10 @@ localization = {
         10: "Install to an existing project",
         11: "Installation directory",
         12: "The path contains non-ASCII characters! Some functions may be broken",
-        13: "Experimental features:",
+        13: "Experimental features (only for Windows+UE5.6):",
         14: "Mineprep C++ extensions",
         15: "Unlock VR stereoscopic rendering",
-        16: "Fix UE4 official beginner tutorials",
+        16: "Fix UE4 official beginner tutorials", #5.7 Extend Template Sequence with float64 & vector property multiplier
         17: "Plugin settings:",
         18: "Manually specify FFmpeg path (such as ffmpeg.exe)",
         19: "Path",
@@ -119,10 +119,10 @@ localization = {
         10: "安裝至現有工程",
         11: "選擇安裝路徑",
         12: "警告: 文件夾路徑包含中文或非ASCII字符！可能會導致部分功能失效",
-        13: "實驗性功能:",
+        13: "實驗性功能 (僅支持Windows+UE5.6):",
         14: "Mineprep C++ 擴展模組",
         15: "解鎖雙目立體全景渲染",
-        16: "修復UE4官方新手教程",
+        16: "修復UE4官方新手教程", #5.7 擴展模板序列以支援雙精度浮點與向量屬性乘數
         17: "插件設置:",
         18: "手動指定FFmpeg路徑 (如ffmpeg.exe)",
         19: "路徑",
@@ -439,7 +439,7 @@ class Installer2(bpy.types.Operator):
                 box.label(text=loc(23,"警告: 未找到.uproject文件！请确认当前文件夹为UE工程根目录"), icon='ERROR')
         
         layout.separator(type='LINE')
-        layout.label(text=loc(13,"实验性功能:"))
+        layout.label(text=loc(13,"实验性功能(仅适用于Windows+UE5.6):"))
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
         layout.prop(mc, "exp_vr3d", text=loc(15,"解锁双目立体全景渲染"))
         layout.prop(mc, "exp_tutorial", text=loc(16,"修复UE4官方新手教程"))
