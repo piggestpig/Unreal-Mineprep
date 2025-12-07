@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1763447934.1369936,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
+﻿Mineprep:0.5 | 时间戳1765118916.6801605,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve 普通人模,Steve,Steve 普通人模,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,x,废弃,Deprecated,廢棄,,,,渲染图像（F12）,Render Image（F12）,渲染圖像（F12）,,,,,"低
 中
 高
@@ -155,39 +155,39 @@ Red-Cyan Anaglyph","兩組獨立輸出
 左右並排 FSBS
 上下並列 FTB
 紅藍濾色",,,,,开始跳跃,Jump,開始跳躍
-9,粗糙度,Roughness,粗糙度,,,🟩,僵尸 [NPC],Zombie [NPC],喪屍(殭屍) [NPC],,,,✨🌊,下雨粒子,Rain Particles,下雨粒子,,,📸,nDisplay 3D摄像机组,nDisplay 3D Camera Rig,nDisplay 3D攝像機組,,,,,,,,,,,,,,,,,,小键盘物理事件,Keypad Physical Event,小鍵盤物理事件
+9,粗糙度,Roughness,粗糙度,,,🟩👤,僵尸 [NPC],Zombie [NPC],喪屍(殭屍) [NPC],,,,✨🌊,下雨粒子,Rain Particles,下雨粒子,,,📸,nDisplay 3D摄像机组,nDisplay 3D Camera Rig,nDisplay 3D攝像機組,,,,,,,,,,,,,,,,,,小键盘物理事件,Keypad Physical Event,小鍵盤物理事件
 10,植物摇摆,Sway,植物搖擺,,,🟩,尸壳,Husk,屍殼,,,,✨🌊,下雪粒子,Snow Particles,下雪粒子,,,💡,局部调色遮罩(2D),Color Correction Window(2D),局部調色遮罩(2D),,,,,,,,,,,,,,,,,,批量切换表情,Batch Switch Facial Expression,批量切換表情
-11,摇摆幅度,Sway strength,搖擺幅度,,,🟩,尸壳 [NPC],Husk [NPC],屍殼 [NPC],,,,✨,爆炸粒子,Explosion Particles,爆炸粒子,,,💡,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,,,批量切换动作,Batch Switch Action,批量切換動作
+11,摇摆幅度,Sway strength,搖擺幅度,,,🟩👤,尸壳 [NPC],Husk [NPC],屍殼 [NPC],,,,✨,爆炸粒子,Explosion Particles,爆炸粒子,,,💡,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,,,批量切换动作,Batch Switch Action,批量切換動作
 12,摇摆速度,Sway speed,搖擺速度,,,🟩🌊,溺尸,Drowned,溺屍(沉屍),,,,👤,软体史蒂夫,Soft Body Steve,軟體史蒂夫,,,🔧,绑定父级至最后选中项,Set Parent to the last selected one,綁定父級至最後選中項,,,,,,,,,,,,,,,,,,批量断肢,Batch Dismember,批量斷肢
-13,加载预设 :,Load Preset :,加載預設：,,,🟩🌊,溺尸 [NPC],Drowned [NPC],溺屍(沉屍) [NPC],,,,🔧,MC像素文字,MC Pixel Text,MC像素文字,,,✨𝓕,粒子/材质力场,Particle/Matertial Force Field,粒子/材質力場,,,,,,,,,,,,,,,,,,批量瘫痪,Batch Paralyze,批量癱瘓
+13,加载预设 :,Load Preset :,加載預設：,,,🟩🌊👤,溺尸 [NPC],Drowned [NPC],溺屍(沉屍) [NPC],,,,🔧,MC像素文字,MC Pixel Text,MC像素文字,,,✨𝓕,粒子/材质力场,Particle/Matertial Force Field,粒子/材質力場,,,,,,,,,,,,,,,,,,批量瘫痪,Batch Paralyze,批量癱瘓
 14,倍率,Mult,倍率,,,🟥,猪灵,Piglin,豬人(豬布林),,,,📸,同步玩家摄像机,Sync Player Camera,同步玩家攝像機,,,🔧,动态设计效应器,Motion Design Effector,動態設計效應器,,,,,,,,,,,,,,,,,,批量冲击,Batch Impulse,批量衝擊
-15,打开输出文件夹,Open Output Folder,打開輸出資料夾,,,🟥,猪灵 [NPC],Piglin [NPC],豬人(豬布林) [NPC],,,,💡,丁达尔体积光,God Rays Light,丁達爾體積光,,,🔧,简单倒角覆层材质,Simple Bevel Overlay Material,簡單倒角覆層材質,,,,,,,,,,,,,,,,,,批量起身并恢复动画,Batch Rise,批量起身並恢復動畫
+15,打开输出文件夹,Open Output Folder,打開輸出資料夾,,,🟥👤,猪灵 [NPC],Piglin [NPC],豬人(豬布林) [NPC],,,,💡,丁达尔体积光,God Rays Light,丁達爾體積光,,,🔧,简单倒角覆层材质,Simple Bevel Overlay Material,簡單倒角覆層材質,,,,,,,,,,,,,,,,,,批量起身并恢复动画,Batch Rise,批量起身並恢復動畫
 16,输出图片序列帧格式,Image sequence :,輸出圖片序列幀格式,,,🟥,猪灵蛮兵,Piglin Brute,殘暴豬人(豬布林蠻兵),,,,💡,动态体积雾,Dynamic Volumetric Fog,動態體積霧,,,🔧,简单跟随路径运动,Simple Follow Path Move,簡單跟隨路徑運動,,,,,,,,,,,,,,,,,,批量开始/停止跑步,Batch Start/End Run,批量開始/停止跑步
-17,分辨率,Resolution,分辨率,,,🟥,猪灵蛮兵 [NPC],Piglin Brute [NPC],殘暴豬人(豬布林蠻兵) [NPC],,,,📸,导轨摄像机,Rail Camera,導軌攝像機,,,🔧,摇晃振动弹跳轨道,Shake/Vibrate/Bounce Track,搖晃振動彈跳軌道,,,,,,,,,,,,,,,,,,批量开始跳跃,Batch Jump,批量開始跳躍
+17,分辨率,Resolution,分辨率,,,🟥👤,猪灵蛮兵 [NPC],Piglin Brute [NPC],殘暴豬人(豬布林蠻兵) [NPC],,,,📸,导轨摄像机,Rail Camera,導軌攝像機,,,🔧,摇晃振动弹跳轨道,Shake/Vibrate/Bounce Track,搖晃振動彈跳軌道,,,,,,,,,,,,,,,,,,批量开始跳跃,Batch Jump,批量開始跳躍
 18,采样数,Samples,採樣數,,,🟩,卫道士,Vindicator,衛道士,,,,✨,流体化自碰撞粒子,Fluid-style Collision Particles,流體化自碰撞粒子,,,🔧,空物体,Null Object,空物體,,,,,,,,,,,,,,,,,,批量小键盘物理事件,Batch Keypad Physical Event,批量小鍵盤物理事件
-19,空间x时间,Spatial x Temporal,空間x時間,,,🟩,卫道士 [NPC],Vindicator [NPC],衛道士 [NPC],,,,🧱,堆放方块,Pile Up Blocks,堆放方塊,,,,,,,,,,,,,,,,,,,,,,,,,,
+19,空间x时间,Spatial x Temporal,空間x時間,,,🟩👤,卫道士 [NPC],Vindicator [NPC],衛道士 [NPC],,,,🧱,堆放方块,Pile Up Blocks,堆放方塊,,,,,,,,,,,,,,,,,,,,,,,,,,
 20,色彩管理,Color space,色彩管理,,,🟩,掠夺者,Pillager,掠奪者,,,,🧱👪🟩,背景生物散布器,Background Animal Scatter,背景生物散佈器,,,,,,,,,,,,,,,,,,,,,,,,,,
-21,全景渲染,VR panorama render,全景渲染,,,🟩,掠夺者 [NPC],Pillager [NPC],掠奪者 [NPC],,,,📸,MC摄像机,MC Camera,MC攝像機,,,,,,,,,,,,,,,,,,,,,,,,,,
+21,全景渲染,VR panorama render,全景渲染,,,🟩👤,掠夺者 [NPC],Pillager [NPC],掠奪者 [NPC],,,,📸,MC摄像机,MC Camera,MC攝像機,,,,,,,,,,,,,,,,,,,,,,,,,,
 22,输出视频,Output a video,輸出視頻,,,🟩,骷髅,Skeleton,骷髏,,,,🔧,路标(触发器),Target Point (Trigger),路標(觸發器),,,,,,,,,,,,,,,,,,,,,,,,,,
-23,视频编码,Encoder,視頻編碼,,,🟩,骷髅 [NPC],Skeleton [NPC],骷髏 [NPC],,,,💡,局部调色遮罩(2D),Color Correction Window(2D),局部調色遮罩(2D),,,,,,,,,,,,,,,,,,,,,,,,,,
+23,视频编码,Encoder,視頻編碼,,,🟩👤,骷髅 [NPC],Skeleton [NPC],骷髏 [NPC],,,,💡,局部调色遮罩(2D),Color Correction Window(2D),局部調色遮罩(2D),,,,,,,,,,,,,,,,,,,,,,,,,,
 24,硬件加速,Hardware,硬件加速,,,🟥,凋灵骷髅,Wither Skeleton,凋零骷髏,,,,💡,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,,,,,,,,,,,
-25,色度抽样,Color codec,色度抽樣,,,🟥,凋灵骷髅 [NPC],Wither Skeleton [NPC],凋零骷髏 [NPC],,,,✨👪🟩,蜘蛛群粒子,Spider Swarm Particles,蜘蛛群粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
+25,色度抽样,Color codec,色度抽樣,,,🟥👤,凋灵骷髅 [NPC],Wither Skeleton [NPC],凋零骷髏 [NPC],,,,✨👪🟩,蜘蛛群粒子,Spider Swarm Particles,蜘蛛群粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
 26,质量,Quality,質量,,,🟩,流浪者,Stray,流浪者(流髑),,,,✨👪🟩,虫群粒子(蠹虫),Bug Swarm Particles (Silverfish),蟲群粒子(蠹魚),,,,,,,,,,,,,,,,,,,,,,,,,,
-27,是HDR视频,HDR video,是HDR視頻,,,🟩,流浪者 [NPC],Stray [NPC],流浪者(流髑) [NPC],,,,✨👪🟨,虫群粒子(末影螨),Bug Swarm Particles (Endermite),蟲群粒子(終界蟎),,,,,,,,,,,,,,,,,,,,,,,,,,
+27,是HDR视频,HDR video,是HDR視頻,,,🟩👤,流浪者 [NPC],Stray [NPC],流浪者(流髑) [NPC],,,,✨👪🟨,虫群粒子(末影螨),Bug Swarm Particles (Endermite),蟲群粒子(終界蟎),,,,,,,,,,,,,,,,,,,,,,,,,,
 28,更新渲染配置,Update Config,更新渲染配置,,,🟩,沼骸,Bogged,沼骨(沼骸),,,,𝓕,径向力场,Radial Force,徑向力場,,,,,,,,,,,,,,,,,,,,,,,,,,
-29,附魔,Enchant,附魔,,,🟩,沼骸 [NPC],Bogged [NPC],沼骨(沼骸) [NPC],,,,🧱,距离场碰撞箱包裹器,SDF Collision Wrapper,距離場碰撞箱包裹器,,,,,,,,,,,,,,,,,,,,,,,,,,
+29,附魔,Enchant,附魔,,,🟩👤,沼骸 [NPC],Bogged [NPC],沼骨(沼骸) [NPC],,,,🧱,距离场碰撞箱包裹器,SDF Collision Wrapper,距離場碰撞箱包裹器,,,,,,,,,,,,,,,,,,,,,,,,,,
 30,祛魔,Disenchant,祛魔,,,🟩,猪,Pig,豬,,,,✨,灰尘粒子,Dust Particles,灰塵粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
-31,时间 (h),Time (h),時間 (h),,,🟩,猪 [NPC],Pig [NPC],豬 [NPC],,,,🧱👪🟩,观众人群散布器,Spectator Crowd Scatter,觀衆人群散佈器,,,,,,,,,,,,,,,,,,,,,,,,,,
+31,时间 (h),Time (h),時間 (h),,,🟩👤,猪 [NPC],Pig [NPC],豬 [NPC],,,,🧱👪🟩,观众人群散布器,Spectator Crowd Scatter,觀衆人群散佈器,,,,,,,,,,,,,,,,,,,,,,,,,,
 32,太阳角度,Sun angle,太陽角度,,,🟩,马,Horse,馬,,,,🔧,遮罩层,Mask Layer,遮罩層,,,,,,,,,,,,,,,,,,,,,,,,,,
-33,颜色,Color,顏色,,,🟩,马 [NPC],Horse [NPC],馬 [NPC],,,,📸,媒体抠像播放器,Media Keying Player,媒體摳像播放器,,,,,,,,,,,,,,,,,,,,,,,,,,
+33,颜色,Color,顏色,,,🟩👤,马 [NPC],Horse [NPC],馬 [NPC],,,,📸,媒体抠像播放器,Media Keying Player,媒體摳像播放器,,,,,,,,,,,,,,,,,,,,,,,,,,
 34,速度,Speed,速度,,,👤,Alex 长发大眼睛高级NPC,Alex (Hair&eyes) Advanced NPC,Alex 長髮大眼睛高級NPC,,,,🧱👪📸,媒体抠像散布器,Media Keying Scatter,媒體摳像散佈器,,,,,,,,,,,,,,,,,,,,,,,,,,
 35,缩放,Scale,縮放,,,👤,拖拽布偶史蒂夫,Dragging Ragdoll Steve,拖拽布偶史蒂夫,,,,✨👪📸,媒体抠像粒子,Media Keying Particles,媒體摳像粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
 36,对比度,Contrast,對比度,,,🟩,铁傀儡,Iron Golem,鐵魔像(鐵巨人),,,,🔧,空物体,Empty Control,空物體,,,,,,,,,,,,,,,,,,,,,,,,,,
-37,自定义帧率,Custom FPS,自定義幀率,,,🟩,铁傀儡 [NPC],Iron Golem [NPC],鐵魔像(鐵巨人) [NPC],,,,📸,监控摄像机,Monitor Camera,監控攝像機,,,,,,,,,,,,,,,,,,,,,,,,,,
+37,自定义帧率,Custom FPS,自定義幀率,,,🟩👤,铁傀儡 [NPC],Iron Golem [NPC],鐵魔像(鐵巨人) [NPC],,,,📸,监控摄像机,Monitor Camera,監控攝像機,,,,,,,,,,,,,,,,,,,,,,,,,,
 38,输出名称,File Name,輸出名稱,,,🟩,牛,Cow,牛,,,,🟩,营火,Campfire,營火,,,,,,,,,,,,,,,,,,,,,,,,,,
-39,启用碰撞,Collision,啟用碰撞,,,🟩,牛 [NPC],Cow [NPC],牛 [NPC],,,,✨,营火烟雾粒子,Campfire Smoke Particles,營火烟霧粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
+39,启用碰撞,Collision,啟用碰撞,,,🟩👤,牛 [NPC],Cow [NPC],牛 [NPC],,,,✨,营火烟雾粒子,Campfire Smoke Particles,營火烟霧粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
 40,自发光,Glow,自發光,,,🟩,羊,Sheep,羊,,,,✨,爆装备粒子,Loot Drop Particles,爆裝備粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
-41,照明强度,Illuminance,照明強度,,,🟩,羊 [NPC],Sheep [NPC],羊 [NPC],,,,✨,爱心粒子,Breeding-Heart Particles,愛心粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
+41,照明强度,Illuminance,照明強度,,,🟩👤,羊 [NPC],Sheep [NPC],羊 [NPC],,,,✨,爱心粒子,Breeding-Heart Particles,愛心粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
 42,自身亮度,Self-brightness,自身亮度,,,🟩,蠹虫,Silverfish,蠹魚,,,,✨,喷溅药水粒子,Splash Potion Particles,飛濺藥水粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
 43,灯光排除,Light Linking,燈光排除,,,🟨,末影螨,Endermite,終界蟎,,,,🔧,UI界面编辑器,UI Editor,UI界面編輯器,,,,,,,,,,,,,,,,,,,,,,,,,,
 44,灯光组,Light group,燈光組,,,🟩,蜘蛛,Spider,蜘蛛,,,,🧱,远景地形生成器,Distant Landscape Generator,遠景地形生成器,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -196,7 +196,7 @@ Red-Cyan Anaglyph","兩組獨立輸出
 47,渐变动画纹理,Gradient Animated Texture,漸變動畫紋理,,,🟥,快乐恶魂,Happy Ghast,快樂幽靈,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 48,投射阴影,Cast shadow,投射陰影,,,🟥,小恶魂,Ghastling,幽靈仔(小幽靈),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 49,材质包路径,Texture pack path,材質包路徑,,,🟩,村民,Villager,村民,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-50,放置方块,Block,放置方塊,,,🟩,村民 [NPC],Villager [NPC],村民 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+50,放置方块,Block,放置方塊,,,🟩👤,村民 [NPC],Villager [NPC],村民 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 51,放置物品,Item,放置物品,,,🟥✨,烈焰人,Blaze,烈焰使者,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 52,过滤名称,Filter,過濾名稱,,,🟥,凋灵,Wither,凋零,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 53,辉光,Bloom,輝光,,,🟥,疣猪兽,Hoglin,野豬獸(豬布獸),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -205,23 +205,23 @@ Red-Cyan Anaglyph","兩組獨立輸出
 56,动态模糊,Motion Blur,動態模糊,,,🟩,猫,Cat,貓,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 57,最大值,Max blur,最大值,,,🟩,悦灵,Allay,悅灵,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 58,光程,Light Paths,光程,,,🟩,流浪商人,Wandering Trader,流浪商人,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-59,反射次数,Reflection,反射次數,,,🟩,流浪商人 [NPC],Wandering Trader [NPC],流浪商人 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-60,折射次数,Refraction,折射次數,,,🟩,豹猫,Ocelot,豹貓(山貓),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-61,色彩管理,Color management,色彩管理,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-62,自动曝光,Auto exposure,自動曝光,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-63,曝光补偿,Exposure,曝光補償,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-64,阴影对比度,Shadow,陰影對比度,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-65,高光对比度,Highlight,高光對比度,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-66,红蓝3D叠加输出,3D red-cyan anaglyph,紅藍3D疊加輸出,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-67,锐化,Sharpen,銳化,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-68,附加组件,Append,附加組件,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-69,放置生物,Mobs,放置生物,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-70,预设素材,Preset,預設素材,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-71,生成 MC 天空,Create MC Sky,生成 MC 天空,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-72,光线追踪半透明,RT Translucency,光綫追蹤半透明,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-73,卷积辉光,Convolution Bloom,捲積輝光,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-74,卷积阈值,Conv-Threshold,捲積閾值,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-75,卷积倍率,Conv-Mult,捲積倍率,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+59,反射次数,Reflection,反射次數,,,🟩👤,流浪商人 [NPC],Wandering Trader [NPC],流浪商人 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+60,折射次数,Refraction,折射次數,,,🟩👤,豹猫,Ocelot,豹貓(山貓),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+61,色彩管理,Color management,色彩管理,,,🟩👤,豹猫 [NPC],Ocelot [NPC],豹貓(山貓) [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+62,自动曝光,Auto exposure,自動曝光,,,🟩👤,蠹虫 [NPC],Silverfish [NPC],蠹魚 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+63,曝光补偿,Exposure,曝光補償,,,🟨👤,末影螨 [NPC],Endermite [NPC],終界蟎 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+64,阴影对比度,Shadow,陰影對比度,,,🟩👤,蜘蛛 [NPC],Spider [NPC],蜘蛛 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+65,高光对比度,Highlight,高光對比度,,,🟩👤,洞穴蜘蛛 [NPC],Cave Spider [NPC],洞穴蜘蛛 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+66,红蓝3D叠加输出,3D red-cyan anaglyph,紅藍3D疊加輸出,,,🟥👤,恶魂 [NPC],Ghast [NPC],地獄幽靈 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+67,锐化,Sharpen,銳化,,,🟥👤,快乐恶魂 [NPC],Happy Ghast [NPC],快樂幽靈 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+68,附加组件,Append,附加組件,,,🟥👤,小恶魂 [NPC],Ghastling [NPC],幽靈仔(小幽靈) [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+69,放置生物,Mobs,放置生物,,,🟥✨👤,烈焰人 [NPC],Blaze [NPC],烈焰使者 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+70,预设素材,Preset,預設素材,,,🟥👤,凋灵 [NPC],Wither [NPC],凋零 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+71,生成 MC 天空,Create MC Sky,生成 MC 天空,,,🟥👤,疣猪兽 [NPC],Hoglin [NPC],野豬獸(豬布獸) [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+72,光线追踪半透明,RT Translucency,光綫追蹤半透明,,,🟩👤,雪傀儡 [NPC],Snow Golem [NPC],雪人 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+73,卷积辉光,Convolution Bloom,捲積輝光,,,🟩👤,狼 [NPC],Wolf [NPC],狼 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+74,卷积阈值,Conv-Threshold,捲積閾值,,,🟩👤,猫 [NPC],Cat [NPC],貓 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+75,卷积倍率,Conv-Mult,捲積倍率,,,🟩👤,悦灵 [NPC],Allay [NPC],悅灵 [NPC],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 76,仅复杂碰撞,Complex Only,僅複雜碰撞,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 77,材质,Material,材質,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 78,覆层材质,Overlay,覆層材質,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
