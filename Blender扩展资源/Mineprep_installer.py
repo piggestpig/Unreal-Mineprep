@@ -12,6 +12,7 @@ import zipfile
 import configparser
 import json
 import subprocess
+from pathlib import Path
 
 class MineprepProperties(bpy.types.PropertyGroup):
     install_path: bpy.props.StringProperty(subtype='DIR_PATH')
@@ -38,13 +39,22 @@ mineprep_dir = join(file_dir, 'Mineprep')
 exp_dir = join(file_dir, '实验性功能(C++)', 'Mineprep')
 vr3d_dir = join(file_dir, '实验性功能(C++)', 'MoviePipelineMaskRenderPass')
 tutorial_dir = join(file_dir, '实验性功能(C++)', 'GuidedTutorials')
+#template_sequence_dir = join(file_dir, '实验性功能(C++)', 'TemplateSequence')
 blender_path = bpy.app.binary_path
 resource_pack_path = join(file_dir, 'Blender扩展资源', 'mc_default')
+
+#查找或创建文件
+def find_or_create(file_path):
+    path = Path(file_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.touch()
+    return path
 
 localization = {
     'zh_CN': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5 安装向导---",
+        2: "---Mineprep v0.5-pre3 安装向导---",
         3: "欢迎使用Mineprep！",
         4: "· 此安装包适用于 Windows + UE5.6",
         5: "· 非实验性功能也许能兼容Mac和高版本UE",
@@ -76,7 +86,7 @@ localization = {
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5 Installer---",
+        2: "---Mineprep v0.5-pre3 Installer---",
         3: "Welcome to Mineprep!",
         4: "· This installer is designed for Windows + UE5.6",
         5: "· Non-experimental features may be compatible with Mac and higher engine version",
@@ -108,7 +118,7 @@ localization = {
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5 安裝嚮導---",
+        2: "---Mineprep v0.5-pre3 安裝嚮導---",
         3: "歡迎使用Mineprep！",
         4: "· 此安裝包適用於 Windows + UE5.6",
         5: "· 非實驗性功能也許能兼容Mac和高版本UE",
@@ -242,7 +252,7 @@ def install():
         shutil.copytree(tutorial_dir, join(install_path, 'Plugins', 'GuidedTutorials'), dirs_exist_ok=True)
     
     #修改插件配置文件
-    mineprep_ini = os.path.join(install_path, 'Content', 'Mineprep', 'Mineprep_config.txt')
+    mineprep_ini = join(install_path, 'Content', 'Mineprep', 'Mineprep_config.txt')
     with open(mineprep_ini, 'r', encoding='utf-8') as file:
         config = json.load(file)
     
@@ -250,16 +260,15 @@ def install():
     config['Settings']['installer_dir'] = file_dir.replace("\\\\", "\\").replace("/", "\\")
     config['Settings']['blender_path'] = blender_path.replace("\\\\", "\\").replace("/", "\\")
     config['Settings']['texture_pack_path'] = resource_pack_path.replace("\\\\", "\\").replace("/", "\\")
+    config['Settings']['init'] = "true"
     if mc.ini_ffmpeg:
-        config['Settings']['init'] = "true"
         config['Settings']['ffmpeg_path'] = mc.ffmpeg_path.replace("\\\\", "\\").replace("/", "\\")
 
     with open(mineprep_ini, 'w', encoding='utf-8') as file:
         json.dump(config, file, ensure_ascii=False, indent=4)
 
     #修改项目配置文件
-    DefaultEngine_ini = os.path.join(install_path, 'Config', 'DefaultEngine.ini')
-    DefaultInput_ini = os.path.join(install_path, 'Config', 'DefaultInput.ini')
+    DefaultEngine_ini = find_or_create(join(install_path, 'Config', 'DefaultEngine.ini'))
     config = configparser.ConfigParser(allow_no_value=True, strict=False)
     config.read(DefaultEngine_ini, encoding='utf-8')
 
@@ -302,6 +311,8 @@ def install():
     with open(DefaultEngine_ini, 'w', encoding='utf-8') as f:
         config.write(f)
 
+    #修改输入配置文件
+    DefaultInput_ini = find_or_create(join(install_path, 'Config', 'DefaultInput.ini'))
     config = configparser.ConfigParser(allow_no_value=True, strict=False)
     config.read(DefaultInput_ini, encoding='utf-8')
 
@@ -313,6 +324,18 @@ def install():
     with open(DefaultInput_ini, 'w', encoding='utf-8') as f:
         config.write(f)
 
+    # 为UE5.7启用无绑定渲染
+    WindowsEngine_ini = find_or_create(join(install_path, 'Config', 'Windows', 'WindowsEngine.ini'))
+    config = configparser.ConfigParser(allow_no_value=True, strict=False)
+    config.read(WindowsEngine_ini, encoding='utf-8')
+
+    BINDLESS = 'ShaderPlatformConfig PCD3D_SM6'
+    if not config.has_section(BINDLESS):
+        config.add_section(BINDLESS)
+
+    config.set(BINDLESS, 'BindlessConfiguration', 'All')
+    with open(WindowsEngine_ini, 'w', encoding='utf-8') as f:
+        config.write(f)
 
 class CustomButton(bpy.types.Operator):
     bl_idname = "custom.button"

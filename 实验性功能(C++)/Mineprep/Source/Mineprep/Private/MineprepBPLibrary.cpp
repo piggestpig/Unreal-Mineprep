@@ -428,6 +428,7 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject)
 
     UUserDefinedStruct* UserStruct = Cast<UUserDefinedStruct>(BlueprintObject);
     UBlueprint* Blueprint = Cast<UBlueprint>(BlueprintObject);
+    UUserDefinedEnum* UserEnum = Cast<UUserDefinedEnum>(BlueprintObject);
 
     // 处理用户自定义结构体
     if (UserStruct)
@@ -448,18 +449,59 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject)
                         PropertyName = PropertyName.Left(UnderscoreIndex);
                     }
                 }
-                UE_LOG(LogTemp, Display, TEXT("结构体变量：%s"), *PropertyName);
+                
+                // 获取用于Polyglot本地化的Key（Namespace固定为"UObjectDisplayNames"）
+                FString LocalizationKey = Property->GetFullGroupName(false);
+                UE_LOG(LogTemp, Display, TEXT("【结构体变量】%s······%s"), *LocalizationKey, *PropertyName);
             }
         }
     }
+    // 处理用户自定义枚举
+    else if (UserEnum)
+    {
+        FString EnumName = UserEnum->GetName();
 
+        // 遍历所有枚举值
+        for (int32 i = 0; i < UserEnum->NumEnums() - 1; ++i)  // NumEnums() - 1 排除隐藏的 _MAX 值
+        {
+            FString EnumValueName = UserEnum->GetNameStringByIndex(i);
+            FString DisplayName = UserEnum->GetDisplayNameTextByIndex(i).ToString();
+            //去除空格
+            FString KeyName = DisplayName.Replace(TEXT(" "), TEXT(""));
+            
+            // 获取枚举值的本地化Key：枚举资产名称.枚举值名称
+            FString LocalizationKey = FString::Printf(TEXT("%s.%s"), *EnumName, *KeyName);
+            UE_LOG(LogTemp, Display, TEXT("【枚举值】\"%s\",\"%s\""), *LocalizationKey, *DisplayName);
+        }
+    }
     // 处理蓝图资产
     else if (Blueprint)
     {
+        // 获取生成的类，用于获取实际的FProperty
+        UBlueprintGeneratedClass* GeneratedClass = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass);
+        
         for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
         {
             if (VarDesc.PropertyFlags & CPF_DisableEditOnInstance) continue; // 检查变量是否公开
-            UE_LOG(LogTemp, Display, TEXT("蓝图变量：%s"), *VarDesc.VarName.ToString());
+            
+            FString LocalizationKey;
+            // 尝试从生成的类中获取对应的FProperty以获取准确的Key
+            if (GeneratedClass)
+            {
+                FProperty* Property = GeneratedClass->FindPropertyByName(VarDesc.VarName);
+                if (Property)
+                {
+                    LocalizationKey = Property->GetFullGroupName(false);
+                }
+            }
+            
+            if (LocalizationKey.IsEmpty())
+            {
+                // 如果无法获取，使用蓝图路径作为备用Key
+                LocalizationKey = FString::Printf(TEXT("%s_C.%s"), *Blueprint->GetPathName(), *VarDesc.VarName.ToString());
+            }
+            
+            UE_LOG(LogTemp, Display, TEXT("【蓝图变量】%s······%s"), *LocalizationKey, *VarDesc.VarName.ToString());
         }
 
         for (UEdGraph* FunctionGraph : Blueprint->FunctionGraphs)
@@ -480,7 +522,23 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject)
             }
             else continue; // 如果没有入口节点，跳过此函数
 
-            UE_LOG(LogTemp, Display, TEXT("蓝图函数：%s"), *FunctionName);
+            // 函数的Key通常是 "ClassName.FunctionName"
+            FString LocalizationKey;
+            if (GeneratedClass)
+            {
+                UFunction* Function = GeneratedClass->FindFunctionByName(FName(*FunctionName));
+                if (Function)
+                {
+                    LocalizationKey = Function->GetFullGroupName(false);
+                }
+            }
+            
+            if (LocalizationKey.IsEmpty())
+            {
+                LocalizationKey = FString::Printf(TEXT("%s_C.%s"), *Blueprint->GetPathName(), *FunctionName);
+            }
+            
+            UE_LOG(LogTemp, Display, TEXT("【蓝图函数】%s······%s"), *LocalizationKey, *FunctionName);
         }
     }
 }

@@ -20,6 +20,7 @@
 #include "NiagaraSystem.h"
 #include "MovieScene/Parameters/MovieSceneNiagaraParameterTrack.h"
 #include "MineprepSubsystem.h"
+#include "Interfaces/IPluginManager.h"
 
 // 添加控制台变量
 static float GMineprepTickInterval = 9999999.0f;

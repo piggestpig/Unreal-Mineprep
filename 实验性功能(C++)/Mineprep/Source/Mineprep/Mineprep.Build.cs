@@ -53,6 +53,12 @@ public class Mineprep : ModuleRules
 				"SettingsEditor",
 				"BlueprintGraph",
 				"EditorSubsystem",
+				"NiagaraEditor", // 添加 NiagaraEditor 模块依赖，用于 UNiagaraScriptVariable
+				// Bevel渲染系统依赖
+				"RenderCore",
+				"RHI",
+				"Renderer",
+				"Projects",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

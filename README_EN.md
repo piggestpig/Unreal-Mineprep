@@ -4,7 +4,7 @@ English | [**中文**](./README.md) | [**繁體中文**](./README_ZH-Hant.md)
 
 ✨This is a UE5 plugin that inherits the practical features of [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/), and adds some new assets to facilitate the creation of MC animations.
 
-![image](Readme素材/0.5-pre2封面图.jpg)
+![image](Readme素材/0.5-pre3封面图.jpg)
 
 ![image](Readme素材/插件展示_EN.jpg)
 

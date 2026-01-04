@@ -21,6 +21,7 @@
 #include "ISettingsEditorModule.h"
 #include "ISettingsCategory.h"
 #include "Engine/UserDefinedStruct.h"
+#include "Engine/UserDefinedEnum.h"
 #include "StructUtils/UserDefinedStruct.h"  // UE5.5中的新路径
 #include "CoreMinimal.h"
 #include "Engine/UserDefinedStruct.h"
@@ -84,12 +85,12 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static void GatherPropertyNames(UObject* BlueprintObject);
 
-	//为蓝图变量或函数注入DisplayName元数据
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	//为蓝图变量或函数注入DisplayName元数据，已弃用
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)", meta=(DeprecatedFunction))
 	static bool InjectDisplayName(UObject* BlueprintObject, const TMap<FString, FString>& PropertyDisplayMap, const bool save = false, const bool debug = false);
 
 	//为蓝图变量或函数设置工具提示
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)", meta=(DeprecatedFunction))
 	static bool SetPropertyTooltip(UObject* BlueprintObject, const TMap<FString, FString>& PropertyTooltipMap, const bool save = false, const bool debug = false);
 
 	//设置Niagara参数轨道绑定的变量

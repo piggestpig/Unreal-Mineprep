@@ -29,9 +29,10 @@
         "render_preset": "/Game/Mineprep/Render/Mineprep自定义渲染配置.Mineprep自定义渲染配置",
         "megalights_shadow_mode": "0",
         "HDR_SceneColorMultiplier": "2.0",
-        "HDR_UI_Luminance": "250.0",
+        "HDR_UI_Luminance": "200.0",
         "open_file_after_render": "true",
-        "render_finish_sound": ""
+        "render_finish_sound": "",
+        "ui_scale": "1.0"
     },
     "ProjectSettings": {
         "bDefaultFeatureAutoExposure": "false",

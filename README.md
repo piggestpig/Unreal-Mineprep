@@ -4,7 +4,7 @@
 
 ✨这是一个正在开发中的UE5插件，继承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的实用功能，并加入一些新的资产，为制作MC动画带来便利
 
-![image](Readme素材/0.5-pre2封面图.jpg)
+![image](Readme素材/0.5-pre3封面图.jpg)
 
 ![image](Readme素材/插件展示.jpg)
 
