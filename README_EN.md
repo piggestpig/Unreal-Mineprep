@@ -44,12 +44,12 @@ In addition, the plugin comes with the Windows version of ffmpeg for video encod
 ## Mobs
 - Mineprep provides Minecraft mobs which can be placed through the spawner panel.
 - Currently, there are skeletal meshes and automated NPCs. Some mobs have vertex-animated instance model for large crowd particles. All mobs can change materials, and humanoids may  add universal IK bindings.
-- Current version supports: Steve/Alex player, pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, husk, piglin, piglin brute, pillager, vindicator, iron golem, silverfish, endermite, spider (cave spider), villager, blaze, wither, hoglin, snow golem, wolf, cat, allay, wandering trader, and ocelot.
+- Current version supports: Steve/Alex player, pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, husk, piglin, piglin brute, pillager, vindicator, iron golem, silverfish, endermite, spider (cave spider), villager, blaze, wither, hoglin, snow golem, wolf, cat, allay, wandering trader, ocelot, ghast, ghastling, happy ghast.
 - More content is WIP.
 
 
 ## Localization
-Mineprep provides an extensible multi-language translation, currently supporting Chinese/English/Traditional
+Mineprep provides an extensible multi-language translation, currently supporting Chinese/English/Traditional Chinese
 - The **installer** will select the language based on Blender's preference settings. Localization content is written in the form of a dictionary in the code, see [Mineprep_installer.blend](./Mineprep_installer.blend) or [Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
 - The **plugin panel** has a button to select the language, which will be selected based on UE's preference settings at startup. Localization content is saved in [语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv)
 - After enabling experimental features, you can click **Top Menu-MC-Development-Inject Localization Variable Names** to further translate the variables and functions in the detail panel. This is a new feature under development. Localization content is saved in [变量显示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)
@@ -70,8 +70,8 @@ See [Epic Games' EULA](https://www.unrealengine.com/eula) for details
 #### 0.5-pre2
 ![image](Readme素材/0.5-pre2封面图.jpg)
 
-Mineprep 0.5-pre2 brings stage achievements in creature model overhaul, along with many new media playback and post-compositing assets. We used them to create the cat meme "Picking Up a Happy Little Soul Reaper."
-> Note that this version has new bugs due to upgrading to UE5.6 (such as corrupted MC pixel text and crashes when enabling physics interaction on third-person motion matching characters), which we currently avoid by disabling certain settings. Final fixes will require the release of Mineprep 0.5.
+Mineprep 0.5-pre2 carries out a phased overhaul of mobs and rigs, along with many new media playback and compositing assets. We have created a cat meme *Adopt a Happy Little Ghastling*.
+> Note: This release has some new bugs due to upgrading to UE5.6 (such as broken MC Pixel Text and crashes when enabling physics interaction on motion matching players). We currently avoid them by disabling certain settings. Please wait for Mineprep 0.5 for fixes.
 
 - Added models for `Villager`, `Blaze`, `Wither`, `Hoglin`, `Snow Golem`, `Wolf`, `Cat`, `Allay`, `Wandering Trader`, and `Ocelot`.
   - Among them, Villager and Wandering Trader include NPC versions.
@@ -80,15 +80,15 @@ Mineprep 0.5-pre2 brings stage achievements in creature model overhaul, along wi
 - Spectator crowd scatter completes first-stage development, allowing random skin and action settings.
 - Added `Campfire`, `Campfire Smoke Particles`, `Loot Drop Particles`, `Breeding-Heart Particles`, and `Splash Potion Particles`.
 - Added `Monitor Camera`, which captures the scene and writes to a render target texture for display elsewhere. Currently supports three modes: "Default (Recursive)", "Post-Processing (with Depth of Field)", and "Transparent Background".
-- Modified material parameters, added `Vertex Color`, automatically recognized during prep scene, and reads plant colors from different biomes when set to 1, suitable for USD models exported from MiEx. "[Shading Model] 1 Default/2 Subsurface" has been deprecated, changed to the original `Illumination Intensity`, ≥0 uses subsurface, <0 takes absolute value and uses default lighting.
+- Modified material parameters, added `Vertex Color`, which can be automatically applied during prep scene. By setting it to 1, the material will read biome colors for plants, suitable for USD models exported from MiEx. "[Shading Model] 1 Default/2 Subsurface" has been deprecated, changed to the original `Illumination Intensity`, ≥0 uses subsurface, <0 takes absolute value and uses default lighting.
 > Unreal Engine's emissive is quite tricky (╯°口°)╯ Some models can glow with subsurface, some only support default lighting. Some models can only adjust illumination intensity in subsurface, but switching to default lighting doesn't work either. Anyway, try different combinations of emissive brightness and illumination intensity.
-- Added a button next to "Place Items" for `Select Transparent Image, Import as 3D Model`, which also remotely calls the MCprep plugin in Blender.
-- Added `Skip Smooth Motion for Initialization` option to "MC Camera", "Crane Camera", and "Rail Camera", which disables tweening at the start of editor view and rendering, immediately moving to the desired position. Added `Direct Cut` button for switching cameras on the timeline, this is the first transition feature.
+- Added a button `Select Transparent Image, Import as 3D Model` next to the "Item" spawner. It also needs remote function call to Blender MCprep.
+- Added `Skip Smooth Motion for Initialization` option to "MC Camera", "Crane Camera", and "Rail Camera", which disables tweening at the start of editor view and rendering, immediately moving to the desired position. Added `Direct Cut` button for switching cameras on the timeline - this is the first one of the transition features.
 - "Memory Preload" and "Inject Localized Variable Names" now load resources asynchronously in the background to improve smoothness.
 - Updated "Shake Bounce Vibration Track", which calculates the current moment based on the starting frame and adds more presets.
 - "Media Keying Player" maintains consistent height when switching between different assets, and allows custom scaling when "Stretch Image" is set to 0. Added `Is Pixel Texture` option and some animation presets.
 - `Recording Subpanel` added many parameters: Use Current Timeline, Create Copy, Record Animation Directly to Objects, Create Subsequences per Object, Recording Frame Rate, Countdown Before Recording, and Game Mode. After recording, animation clips are automatically processed, fixing the bug of recording particles when destroying blocks.
-- Added a rendering mode menu to the top MC menu bar:  
+- Added a new rendering mode to the "MC" menu on the top bar:  
 ① Save render settings and switch to empty level  
 ② Render animation from empty level (save VRAM)
 - Updated glow parameters in the Other Tools subpanel, with separate threshold and multiplier settings for normal and convolution modes.
@@ -96,7 +96,7 @@ Mineprep 0.5-pre2 brings stage achievements in creature model overhaul, along wi
 - Added a snap to -Z axis button to the director station, fixed collision detection bugs.
 - Lowered the default vignette intensity of Mineprep post-processing volume to speed up exposure adjustment.
 - Fixed UV mapping issues with skeleton skins.
-- Fixed the bug where the "Mask Layer" display box did not scale correctly.
+- Fixed the bug where the "Stencil Mask Layer" display box did not scale correctly.
 - Fixed the issue where "God Rays Light" beams did not diverge.
 - Fixed the issue where "VFX Nether Portal" appeared when viewed from an inclined angle.
 - Fixed bugs where materials and camera shakes were not loaded correctly.
