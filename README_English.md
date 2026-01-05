@@ -1,6 +1,6 @@
 # Unreal-Mineprep
 
-English | [**中文**](./README.md) | [**繁體中文**](./README_ZH-Hant.md)
+English | [**中文**](./README.md) | [**繁體中文**](./README_繁體中文.md)
 
 ✨This is a UE5 plugin that inherits the practical features of [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/), and adds some new assets to facilitate the creation of MC animations.
 
@@ -12,9 +12,9 @@ English | [**中文**](./README.md) | [**繁體中文**](./README_ZH-Hant.md)
 
 Before the official release of v1.0, the plugin is mainly for internal use, so there may be compatibility issues and potential ~~bugs~~ features. We will gradually fix them and write some tutorials (though it will be a long way off).
 
-## Installation (for version 0.4+)
+## Installation
 
-### ① Use the installer (recommended)
+### ① Use the installer (Recommended, for version 0.4+)
 #### 1. Download the Mineprep plugin, preferably save it in a pure English path.
 - You can download more stable major versions in the `Releases` section on the right; or click the green `Code` button above -> `Download Zip` to download the latest snapshot version.
 
@@ -35,24 +35,22 @@ Mineprep 0.5-pre1 is developed on Windows + UE5.5.
 The installer and non-experimental features of the plugin are expected to be cross-platform and support higher engine versions, but they haven't been tested yet.
 
 > [!WARNING]  
-> Experimental features are NOT supported on other platforms and engine versions. Do not check the box during installation, otherwise the project can not open at all !!
+> Experimental features are NOT supported on other platforms and engine versions, unless recompilation from source. Do not check the box on macOS, otherwise the project can not open at all !!
 
-In addition, the plugin comes with the Windows version of ffmpeg for video encoding. Mac users currently need to download it manually and specify the path during installation. The new ffmpeg 8.0 version has changed its HDR encoding settings, which may cause color abnormalities. Currently, it is recommended to use version 7.1 or lower.
-
+In addition, the plugin comes with the Windows version of ffmpeg for video encoding. Mac users currently need to download it manually and specify the path during installation. Please use ffmpeg 8.0 or higher versions.
 
 
 ## Mobs
 - Mineprep provides Minecraft mobs which can be placed through the spawner panel.
 - Currently, there are skeletal meshes and automated NPCs. Some mobs have vertex-animated instance model for large crowd particles. All mobs can change materials, and humanoids may  add universal IK bindings.
-- Current version supports: Steve/Alex player, pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, husk, piglin, piglin brute, pillager, vindicator, iron golem, silverfish, endermite, spider (cave spider), villager, blaze, wither, hoglin, snow golem, wolf, cat, allay, wandering trader, ocelot, ghast, ghasting, happy ghast.
+- Current version supports: Steve/Alex player, pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, husk, piglin, piglin brute, pillager, vindicator, iron golem, silverfish, endermite, spider (cave spider), villager, blaze, wither, hoglin, snow golem, wolf, cat, allay, wandering trader, ocelot, ghast, ghastling, happy ghast.
 - More content is WIP.
 
 
 ## Localization
-Mineprep provides an extensible multi-language translation, currently supporting Chinese/English/Traditional
+Mineprep provides an extensible multi-language translation, currently supporting Chinese/English/Traditional Chinese
 - The **installer** will select the language based on Blender's preference settings. Localization content is written in the form of a dictionary in the code, see [Mineprep_installer.blend](./Mineprep_installer.blend) or [Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
-- The **plugin panel** has a button to select the language, which will be selected based on UE's preference settings at startup. Localization content is saved in [语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv)
-- After enabling experimental features, you can click **Top Menu-MC-Development-Inject Localization Variable Names** to further translate the variables and functions in the detail panel. This is a new feature under development. Localization content is saved in [变量显示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)
+- The **plugin panel** has a button to select the language, which will be selected based on UE's preference settings at startup. Localization content is saved in [语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv) and [变量显示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)
 
 More content is WIP
 
@@ -67,28 +65,73 @@ See [Epic Games' EULA](https://www.unrealengine.com/eula) for details
 
 ## Version Updates
 
+#### 0.5-pre3
+![image](Readme素材/0.5-pre3封面图.jpg)
+<sup><i> This is a jpg cover with HDR Gain Map! View the high dynamic range effect on an HDR display or downloading to your phone. <br>
+Map from https://www.curseforge.com/minecraft/worlds/rtx-aio-map </i></sup>
+
+Mineprep 0.5-pre3 is the last version supporting UE5.6, bringing many revolutionary features:
+- First time to support MC's LabPBR material standard
+- First time to have a proper HDR workflow, also providing more image/video output formats
+- First time to use UE's native localization system, dynamically and efficiently injecting variable names
+- Brand-new NPC system and Unified Boid Particles
+- Full adaptation of Chaos Field System for global force fields, material masks, and animation offsets
+
+Note: This version is in the transition phase between UE5.6 and 5.7, so many new features haven't been tested in real production yet. We plan to use UE5.7 to create new animation videos. Here are the final update logs from the last two weeks:
+- Added `Global Force Field`, `Force Field Detector`, `Anim Offset Field`, `Material Mask Field`, `Angular Rotation Field`.
+  - All of the above use the Chaos Field System and only work at runtime, with no effect in the editor.
+  - Unreal Engine provides 12 types of force fields, including integer fields, scalar fields, and vector fields. Vector fields point to the center by default, and you can check "Reset Direction"
+  - Boundary ranges include sphere, box, one-side of plane, and full scene
+  - You can set force field strength, attenuation, and add noise to it
+  - You can separately enable "World Field" (affects particles, materials) or "Chaos Field" (affects physics simulation)
+- The legacy radial force field is still retained, as it's the only force field that works in the editor. We have optimized collection methods, improving performance and fixing garbage collection errors
+- Particles can now sample different vector fields across multiple frames. "Linear Force", "Linear Velocity", and "Angular Velocity" are used by default
+- Created animation switching functionality for unified boid particles
+  - Currently, only spiders have idle and crawling animations, which will be automatically switched based on velocity. You can also use the "Specify Animation Index" parameter to set it manually.
+  - "Animation Offset Field" can control the animation timing in an area. Using negative values can reduce all particles' random offsets to 0, resulting in synchronized actions
+- "Dynamic Volumetric Fog" can now sample material mask fields. It is not enabled by default and requires modifying material parameters
+- MC Director Station added `Batch Play Sequence` event, which can play level sequences or template sequences on any objects; basic mob models and NPC mobs also have their own `Play Sequence` events
+  - Added `Add Batch Playing Sequence Template` menu item after "Add MC Level Sequence", which is a level sequence with only one target object
+  - Batch Play Sequence by default plays a batch of animations every 0.05 seconds. It has special optimization for level sequences. It's recommended to use level sequences rather than template sequences for large crowds
+  - When creating animations in templates, it's recommended to use Additive tracks for keyframes
+  - Play Sequence does not support event keys
+- Created a `Hurt Effect (Turn Red)` template sequence for mobs, which can be added by right-clicking on the track or used for Play Sequence events.
+- Improved "Spectator Crowd Scatter", adding parameters for overriding animations and skins. By default, no rotation component is created. After setting the look-at target, you can click the refresh button to correctly face the target
+- Improved "Distant Landscape Generator", which now automatically generates mountains based on the Z-scale of the bounding box. Exposed "Blocks", "Generate on GPU", and "Enable Plant Sway" parameters. Note that UE5.6 cannot cast ray-traced shadows, practical use will be available in UE5.7
+- "Inject Localized Variable Names" is now used by default! Related buttons have been removed from the top menu bar and are no longer experimental features. They run automatically when switching languages. It's the first time that we use UE's built-in polyglot system for localization and the first time to translate enum values. It can inject 1000 texts within 25ms, which is super fast without compilation. Variable names are saved in [变量显示名_VariableDisplayNames.csv](./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)
+- [Experimental] Press Ctrl+Alt+? to view all current custom shortcuts
+- Improved shadow quality and volumetric quality for Megalights during rendering
+- Optimized performance of many blueprint programs using pure functions and batch array processing
+- Created the first Locomotor rig for spiders
+- Adjusted initial values of sun intensity, ambient occlusion, and color grading contrast
+- Clicking the "Refresh" button in "UI Editor" can automatically update the SDR/HDR display in the editor
+- Fixed the bug where "Compose HDR Gain Map jpg from Images" failed due to temporary files. Note that the first two filenames seem to require English names. "Render jpg with HDR Gain Map" needs to wait for UE5.7 to solve color management issues
+- Fixed the bug where VR+3D rendering incorrectly enabled nDisplay output
+- Fixed the issue where block destruction template materials disappeared
+
+
 #### 0.5-pre2
 ![image](Readme素材/0.5-pre2封面图.jpg)
 
-Mineprep 0.5-pre2 brings stage achievements in creature model overhaul, along with many new media playback and post-compositing assets. We used them to create the cat meme "Picking Up a Happy Little Soul Reaper."
-> Note that this version has new bugs due to upgrading to UE5.6 (such as corrupted MC pixel text and crashes when enabling physics interaction on third-person motion matching characters), which we currently avoid by disabling certain settings. Final fixes will require the release of Mineprep 0.5.
+Mineprep 0.5-pre2 carries out a phased overhaul of mobs and rigs, along with many new media playback and compositing assets. We have created a cat meme *Adopt a Happy Little Ghastling*.
+> Note: This release has some new bugs due to upgrading to UE5.6 (such as broken MC Pixel Text and crashes when enabling physics interaction on motion matching players). We currently avoid them by disabling certain settings. Please wait for Mineprep 0.5 for fixes.
 
-- Added models for `Villager`, `Blaze`, `Wither`, `Hoglin`, `Snow Golem`, `Wolf`, `Cat`, `Allay`, `Wandering Trader`, `Ocelot`, `Ghast`, `Ghasting`, `Happy Ghast`
+- Added models for `Villager`, `Blaze`, `Wither`, `Hoglin`, `Snow Golem`, `Wolf`, `Cat`, `Allay`, `Wandering Trader`, and `Ocelot`.
   - Among them, Villager and Wandering Trader include NPC versions.
   - Villagers have specialized materials that allow switching professions and biomes by changing texture maps.
 - All mobs are configured with bone-level retargeting settings. Humans and animals can share animation sequences, with better results than before. Many old animations have been cleaned up, and new ones have been created.
 - Spectator crowd scatter completes first-stage development, allowing random skin and action settings.
 - Added `Campfire`, `Campfire Smoke Particles`, `Loot Drop Particles`, `Breeding-Heart Particles`, and `Splash Potion Particles`.
 - Added `Monitor Camera`, which captures the scene and writes to a render target texture for display elsewhere. Currently supports three modes: "Default (Recursive)", "Post-Processing (with Depth of Field)", and "Transparent Background".
-- Modified material parameters, added `Vertex Color`, automatically recognized during prep scene, and reads plant colors from different biomes when set to 1, suitable for USD models exported from MiEx. "[Shading Model] 1 Default/2 Subsurface" has been deprecated, changed to the original `Illumination Intensity`, ≥0 uses subsurface, <0 takes absolute value and uses default lighting.
+- Modified material parameters, added `Vertex Color`, which can be automatically applied during prep scene. By setting it to 1, the material will read biome colors for plants, suitable for USD models exported from MiEx. "[Shading Model] 1 Default/2 Subsurface" has been deprecated, changed to the original `Illumination Intensity`, ≥0 uses subsurface, <0 takes absolute value and uses default lighting.
 > Unreal Engine's emissive is quite tricky (╯°口°)╯ Some models can glow with subsurface, some only support default lighting. Some models can only adjust illumination intensity in subsurface, but switching to default lighting doesn't work either. Anyway, try different combinations of emissive brightness and illumination intensity.
-- Added a button next to "Place Items" for `Select Transparent Image, Import as 3D Model`, which also remotely calls the MCprep plugin in Blender.
-- Added `Skip Smooth Motion for Initialization` option to "MC Camera", "Crane Camera", and "Rail Camera", which disables tweening at the start of editor view and rendering, immediately moving to the desired position. Added `Direct Cut` button for switching cameras on the timeline, this is the first transition feature.
+- Added a button `Select Transparent Image, Import as 3D Model` next to the "Item" spawner. It also needs remote function call to Blender MCprep.
+- Added `Skip Smooth Motion for Initialization` option to "MC Camera", "Crane Camera", and "Rail Camera", which disables tweening at the start of editor view and rendering, immediately moving to the desired position. Added `Direct Cut` button for switching cameras on the timeline - this is the first one of the transition features.
 - "Memory Preload" and "Inject Localized Variable Names" now load resources asynchronously in the background to improve smoothness.
 - Updated "Shake Bounce Vibration Track", which calculates the current moment based on the starting frame and adds more presets.
 - "Media Keying Player" maintains consistent height when switching between different assets, and allows custom scaling when "Stretch Image" is set to 0. Added `Is Pixel Texture` option and some animation presets.
 - `Recording Subpanel` added many parameters: Use Current Timeline, Create Copy, Record Animation Directly to Objects, Create Subsequences per Object, Recording Frame Rate, Countdown Before Recording, and Game Mode. After recording, animation clips are automatically processed, fixing the bug of recording particles when destroying blocks.
-- Added a rendering mode menu to the top MC menu bar:  
+- Added a new rendering mode to the "MC" menu on the top bar:  
 ① Save render settings and switch to empty level  
 ② Render animation from empty level (save VRAM)
 - Updated glow parameters in the Other Tools subpanel, with separate threshold and multiplier settings for normal and convolution modes.
@@ -96,7 +139,7 @@ Mineprep 0.5-pre2 brings stage achievements in creature model overhaul, along wi
 - Added a snap to -Z axis button to the director station, fixed collision detection bugs.
 - Lowered the default vignette intensity of Mineprep post-processing volume to speed up exposure adjustment.
 - Fixed UV mapping issues with skeleton skins.
-- Fixed the bug where the "Mask Layer" display box did not scale correctly.
+- Fixed the bug where the "Stencil Mask Layer" display box did not scale correctly.
 - Fixed the issue where "God Rays Light" beams did not diverge.
 - Fixed the issue where "VFX Nether Portal" appeared when viewed from an inclined angle.
 - Fixed bugs where materials and camera shakes were not loaded correctly.

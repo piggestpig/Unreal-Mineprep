@@ -63,7 +63,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 translated_content = translate_readme(content)
 
 # 将翻译结果写入新文件
-with open("README_ZH-Hant.md", "w", encoding="utf-8") as f:
+with open("README_繁體中文.md", "w", encoding="utf-8") as f:
     f.write(translated_content)
 
 print("README 文件已成功转换为繁体中文并保存。")
