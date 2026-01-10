@@ -19,8 +19,9 @@ class MineprepProperties(bpy.types.PropertyGroup):
     ffmpeg_path: bpy.props.StringProperty(subtype='FILE_PATH')
     page: bpy.props.IntProperty()
     exp_basic: bpy.props.BoolProperty(default=True)
-    exp_vr3d: bpy.props.BoolProperty(default=True)
-    exp_tutorial: bpy.props.BoolProperty()
+    exp_material: bpy.props.BoolProperty(default=True)
+    exp_vr3d: bpy.props.BoolProperty()
+    exp_template_seq: bpy.props.BoolProperty()
     ini_ffmpeg: bpy.props.BoolProperty()
     ini_memory: bpy.props.BoolProperty(default=True)
     install_mode: bpy.props.IntProperty()
@@ -37,9 +38,9 @@ startup_dir = join(file_dir, 'MC_Startup')
 startup_plugin = join(file_dir, 'MC_Startup', 'Plugins', 'Mineprep')
 mineprep_dir = join(file_dir, 'Mineprep')
 exp_dir = join(file_dir, '实验性功能(C++)', 'Mineprep')
+material_dir = join(file_dir, '实验性功能(C++)', 'InlineMaterialInstance')
 vr3d_dir = join(file_dir, '实验性功能(C++)', 'MoviePipelineMaskRenderPass')
-tutorial_dir = join(file_dir, '实验性功能(C++)', 'GuidedTutorials')
-#template_sequence_dir = join(file_dir, '实验性功能(C++)', 'TemplateSequence')
+template_sequence_dir = join(file_dir, '实验性功能(C++)', 'TemplateSequence')
 blender_path = bpy.app.binary_path
 resource_pack_path = join(file_dir, 'Blender扩展资源', 'mc_default')
 
@@ -54,9 +55,9 @@ def find_or_create(file_path):
 localization = {
     'zh_CN': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5-pre3 安装向导---",
+        2: "---Mineprep v0.5 安装向导---",
         3: "欢迎使用Mineprep！",
-        4: "· 此安装包适用于 Windows + UE5.6",
+        4: "· 此安装包适用于 Windows + UE5.7",
         5: "· 非实验性功能也许能兼容Mac和高版本UE",
         6: "· 重复安装会直接覆盖原文件",
         7: "· 安装前建议关闭虚幻引擎",
@@ -65,10 +66,10 @@ localization = {
         10: "安装至现有工程",
         11: "选择安装路径",
         12: "警告: 文件夹路径包含中文或非ASCII字符！可能会导致部分功能失效",
-        13: "实验性功能 (仅支持Windows+UE5.6):",
+        13: "实验性功能 (仅支持Windows+UE5.7):",
         14: "Mineprep C++ 拓展模块",
         15: "解锁双目立体全景渲染",
-        16: "修复UE4官方新手教程", #5.7 扩展模板序列以支持双精度浮点和向量属性乘数
+        16: "扩展模板序列以支持双精度浮点和向量属性乘数",
         17: "插件设置:",
         18: "手动指定FFmpeg路径 (如ffmpeg.exe)",
         19: "路径",
@@ -82,13 +83,14 @@ localization = {
         27: "另外，我们推荐您安装超分辨率插件",
         28: "它可以提升画质和帧率，甚至节约显存",
         29: "您需要手动下载安装，一个虚幻引擎版本只需要安装一次：",
-        30: "不建议移动或删除安装包，插件可能会引用其中资源"
+        30: "不建议移动或删除安装包，插件可能会引用其中资源",
+        31: "为材质参数面板添加关键帧按钮和本地化翻译"
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5-pre3 Installer---",
+        2: "---Mineprep v0.5 Installer---",
         3: "Welcome to Mineprep!",
-        4: "· This installer is designed for Windows + UE5.6",
+        4: "· This installer is designed for Windows + UE5.7",
         5: "· Non-experimental features may be compatible with Mac and higher engine version",
         6: "· Reinstalling will overwrite the original files",
         7: "· It is recommended to close Unreal Engine before installation",
@@ -97,10 +99,10 @@ localization = {
         10: "Install to an existing project",
         11: "Installation directory",
         12: "The path contains non-ASCII characters! Some functions may be broken",
-        13: "Experimental features (only for Windows+UE5.6):",
+        13: "Experimental features (only for Windows+UE5.7):",
         14: "Mineprep C++ extensions",
         15: "Unlock VR stereoscopic rendering",
-        16: "Fix UE4 official beginner tutorials", #5.7 Extend Template Sequence with float64 & vector property multiplier
+        16: "Extend Template Sequence with float64 & vector property multiplier",
         17: "Plugin settings:",
         18: "Manually specify FFmpeg path (such as ffmpeg.exe)",
         19: "Path",
@@ -114,13 +116,14 @@ localization = {
         27: "By the way, we recommend installing upscaling plugins",
         28: "It can improve image quality and frame rate, even saving VRAM",
         29: "You need to download it manually, only once for each UE version:",
-        30: "You may not move or delete the installer, resources may be referenced."
+        30: "You may not move or delete the installer, resources may be referenced.",
+        31: "Add keyframe buttons and localization for material parameter panel"
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5-pre3 安裝嚮導---",
+        2: "---Mineprep v0.5 安裝嚮導---",
         3: "歡迎使用Mineprep！",
-        4: "· 此安裝包適用於 Windows + UE5.6",
+        4: "· 此安裝包適用於 Windows + UE5.7",
         5: "· 非實驗性功能也許能兼容Mac和高版本UE",
         6: "· 重複安裝會直接覆蓋原文件",
         7: "· 安裝前建議關閉虛幻引擎",
@@ -129,10 +132,10 @@ localization = {
         10: "安裝至現有工程",
         11: "選擇安裝路徑",
         12: "警告: 文件夾路徑包含中文或非ASCII字符！可能會導致部分功能失效",
-        13: "實驗性功能 (僅支持Windows+UE5.6):",
+        13: "實驗性功能 (僅支持Windows+UE5.7):",
         14: "Mineprep C++ 擴展模組",
         15: "解鎖雙目立體全景渲染",
-        16: "修復UE4官方新手教程", #5.7 擴展模板序列以支援雙精度浮點與向量屬性乘數
+        16: "擴展模板序列以支援雙精度浮點與向量屬性乘數",
         17: "插件設置:",
         18: "手動指定FFmpeg路徑 (如ffmpeg.exe)",
         19: "路徑",
@@ -146,7 +149,8 @@ localization = {
         27: "另外，我們推薦您安裝超分辨率插件",
         28: "它可以提升畫質和幀率，甚至節約顯存",
         29: "您需要手動下載安裝，一個虛幻引擎版本只需要安裝一次：",
-        30: "不建議移動或刪除安裝包，插件可能會引用其中資源"
+        30: "不建議移動或刪除安裝包，插件可能會引用其中資源",
+        31: "為材質參數面板添加關鍵幀按鈕和本地化翻譯"
     },
 }
 
@@ -246,10 +250,12 @@ def install():
     #实验性功能
     if mc.exp_basic:
         shutil.copytree(exp_dir, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True)
+    if mc.exp_material:
+        shutil.copytree(material_dir, join(install_path, 'Plugins', 'InlineMaterialInstance'), dirs_exist_ok=True)
     if mc.exp_vr3d:
         shutil.copytree(vr3d_dir, join(install_path, 'Plugins', 'MoviePipelineMaskRenderPass'), dirs_exist_ok=True)
-    if mc.exp_tutorial:
-        shutil.copytree(tutorial_dir, join(install_path, 'Plugins', 'GuidedTutorials'), dirs_exist_ok=True)
+    if mc.exp_template_seq:
+        shutil.copytree(template_sequence_dir, join(install_path, 'Plugins', 'TemplateSequence'), dirs_exist_ok=True)
     
     #修改插件配置文件
     mineprep_ini = join(install_path, 'Content', 'Mineprep', 'Mineprep_config.txt')
@@ -301,6 +307,9 @@ def install():
     config.set(RENDER, 'rhi.Bindless.Samplers', 'Enabled')
     config.set(RENDER, 'rhi.Bindless', 'Enabled')
     config.set(RENDER, 'r.Translucency.HeterogeneousVolumes', 'True')
+    config.set(RENDER, 'r.Substrate', 'True')
+    config.set(RENDER, 'r.Substrate.ProjectGBufferFormat', '1')
+    config.set(RENDER, 'r.Substrate.OpaqueMaterialRoughRefraction', 'True')
 
     GC = '/Script/Engine.GarbageCollectionSettings'
     if not config.has_section(GC):
@@ -324,7 +333,20 @@ def install():
     with open(DefaultInput_ini, 'w', encoding='utf-8') as f:
         config.write(f)
 
-    # 为UE5.7启用无绑定渲染
+    # 修改编辑器配置文件
+    DefaultEditor_ini = find_or_create(join(install_path, 'Config', 'DefaultEditor.ini'))
+    config = configparser.ConfigParser(allow_no_value=True, strict=False)
+    config.read(DefaultEditor_ini, encoding='utf-8')
+
+    EDITOR = '/Script/UnrealEd.BlueprintEditorProjectSettings'
+    if not config.has_section(EDITOR):
+        config.add_section(EDITOR)
+    config.set(EDITOR, 'bAllowImpureToPureNodeConversion', 'True')
+
+    with open(DefaultEditor_ini, 'w', encoding='utf-8') as f:
+        config.write(f)
+
+    #为UE5.7启用无绑定渲染，目前All会导致DLSS闪退
     WindowsEngine_ini = find_or_create(join(install_path, 'Config', 'Windows', 'WindowsEngine.ini'))
     config = configparser.ConfigParser(allow_no_value=True, strict=False)
     config.read(WindowsEngine_ini, encoding='utf-8')
@@ -333,7 +355,7 @@ def install():
     if not config.has_section(BINDLESS):
         config.add_section(BINDLESS)
 
-    config.set(BINDLESS, 'BindlessConfiguration', 'All')
+    config.set(BINDLESS, 'BindlessConfiguration', 'Minimal')
     with open(WindowsEngine_ini, 'w', encoding='utf-8') as f:
         config.write(f)
 
@@ -412,8 +434,9 @@ class Installer1(bpy.types.Operator):
         layout.separator(type='LINE')
         layout.label(text=loc(13,"实验性功能:"))
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
+        layout.prop(mc, "exp_material", text=loc(31,"为材质参数面板添加关键帧按钮和本地化翻译"))
         layout.prop(mc, "exp_vr3d", text=loc(15,"解锁双目立体全景渲染"))
-        layout.prop(mc, "exp_tutorial", text=loc(16,"修复UE4官方新手教程"))
+        layout.prop(mc, "exp_template_seq", text=loc(16,"修复UE4官方新手教程"))
 
         layout.separator(type='LINE')
         layout.label(text=loc(17,"插件设置:"))
@@ -462,10 +485,11 @@ class Installer2(bpy.types.Operator):
                 box.label(text=loc(23,"警告: 未找到.uproject文件！请确认当前文件夹为UE工程根目录"), icon='ERROR')
         
         layout.separator(type='LINE')
-        layout.label(text=loc(13,"实验性功能(仅适用于Windows+UE5.6):"))
+        layout.label(text=loc(13,"实验性功能(仅适用于Windows+UE5.7):"))
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
+        layout.prop(mc, "exp_material", text=loc(31,"为材质参数面板添加关键帧按钮和本地化翻译"))
         layout.prop(mc, "exp_vr3d", text=loc(15,"解锁双目立体全景渲染"))
-        layout.prop(mc, "exp_tutorial", text=loc(16,"修复UE4官方新手教程"))
+        layout.prop(mc, "exp_template_seq", text=loc(16,"修复UE4官方新手教程"))
 
         layout.separator(type='LINE')
         layout.label(text=loc(17,"插件设置:"))
@@ -507,7 +531,7 @@ class Finish(bpy.types.Operator):
         button_dlss = row.operator(CustomButton.bl_idname, text="DLSS")
         button_dlss.press = "bpy.ops.wm.url_open(url='https://developer.nvidia.com/rtx/dlss/get-started')"
         button_fsr = row.operator(CustomButton.bl_idname, text="FSR")
-        button_fsr.press = "bpy.ops.wm.url_open(url='https://gpuopen.com/learn/ue-fsr3/')"
+        button_fsr.press = "bpy.ops.wm.url_open(url='https://gpuopen.com/learn/ue-fsr/')"
         button_xess = row.operator(CustomButton.bl_idname, text="XeSS")
         button_xess.press = "bpy.ops.wm.url_open(url='https://github.com/GameTechDev/XeSSUnrealPlugin/releases')"
 

@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1767278297.682065,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
+﻿Mineprep:0.5 | 时间戳1768027919.052838,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve 普通人模,Steve,Steve 普通人模,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,x,废弃,Deprecated,廢棄,,,,渲染图像,Render Image,渲染圖像,,,,,"低
 中
 高
@@ -162,7 +162,7 @@ Red-Cyan Anaglyph","兩組獨立輸出
 13,加载预设 :,Load Preset :,加載預設：,,,🟩🌊👤,溺尸 [NPC],Drowned [NPC],溺屍(沉屍) [NPC],,,,🔧,MC像素文字,MC Pixel Text,MC像素文字,,,✨𝓕,粒子/材质力场,Particle/Matertial Force Field,粒子/材質力場,,,,,,,,,,,,,,,,,,批量瘫痪,Batch Paralyze,批量癱瘓
 14,倍率,Mult,倍率,,,🟥,猪灵,Piglin,豬人(豬布林),,,,📸,同步玩家摄像机,Sync Player Camera,同步玩家攝像機,,,🔧,动态设计效应器,Motion Design Effector,動態設計效應器,,,,,,,,,,,,,,,,,,批量冲击,Batch Impulse,批量衝擊
 15,打开输出文件夹,Open Output Folder,打開輸出資料夾,,,🟥👤,猪灵 [NPC],Piglin [NPC],豬人(豬布林) [NPC],,,,💡,丁达尔体积光,God Rays Light,丁達爾體積光,,,🔧,简单倒角覆层材质,Simple Bevel Overlay Material,簡單倒角覆層材質,,,,,,,,,,,,,,,,,,批量起身并恢复动画,Batch Rise,批量起身並恢復動畫
-16,输出图片序列帧格式,Image sequence :,輸出圖片序列幀格式,,,🟥,猪灵蛮兵,Piglin Brute,殘暴豬人(豬布林蠻兵),,,,💡,动态体积雾,Dynamic Volumetric Fog,動態體積霧,,,🔧,简单跟随路径运动,Simple Follow Path Move,簡單跟隨路徑運動,,,,,,,,,,,,,,,,,,批量开始/停止跑步,Batch Start/End Run,批量開始/停止跑步
+16,输出图片序列帧格式,Image sequence :,輸出圖片序列幀格式,,,🟥,猪灵蛮兵,Piglin Brute,殘暴豬人(豬布林蠻兵),,,,💡,动态体积雾,Dynamic Volumetric Fog,動態體積霧,,,🔧,简单跟随路径运动控制器,Simple Follow Path Controller,簡單跟隨路徑運動控制器,,,,,,,,,,,,,,,,,,批量开始/停止跑步,Batch Start/End Run,批量開始/停止跑步
 17,分辨率,Resolution,分辨率,,,🟥👤,猪灵蛮兵 [NPC],Piglin Brute [NPC],殘暴豬人(豬布林蠻兵) [NPC],,,,📸,导轨摄像机,Rail Camera,導軌攝像機,,,🔧,摇晃振动弹跳轨道,Shake/Vibrate/Bounce Track,搖晃振動彈跳軌道,,,,,,,,,,,,,,,,,,批量开始跳跃,Batch Jump,批量開始跳躍
 18,采样数,Samples,採樣數,,,🟩,卫道士,Vindicator,衛道士,,,,✨,流体化自碰撞粒子,Fluid-style Collision Particles,流體化自碰撞粒子,,,🔧,空物体,Null Object,空物體,,,,,,,,,,,,,,,,,,批量小键盘物理事件,Batch Keypad Physical Event,批量小鍵盤物理事件
 19,空间x时间,Spatial x Temporal,空間x時間,,,🟩👤,卫道士 [NPC],Vindicator [NPC],衛道士 [NPC],,,,🧱,堆放方块,Pile Up Blocks,堆放方塊,,,,,,,,,,,,,,,,,,,,,,,,,,

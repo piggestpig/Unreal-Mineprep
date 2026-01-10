@@ -9,6 +9,7 @@
 #include "ToolMenus.h"
 #include "PropertyEditorModule.h"
 #include "IDetailTreeNode.h"
+#include "IDetailPropertyRow.h"
 #include "IPropertyRowGenerator.h"
 #include "PropertyHandle.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
@@ -230,103 +231,6 @@ static void OnAddKeyframeClicked(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TShare
             UE_LOG(LogTemp, Warning, TEXT("未找到选中的NiagaraComponent"));
         }
     }
-    else
-    {
-        // 处理材质参数
-        TSharedPtr<IPropertyHandle> ParentHandle = PropertyHandle->GetParentHandle();
-        if (!ParentHandle.IsValid())
-        {
-            return;
-        }
-
-        // 获取参数信息
-        TSharedPtr<IPropertyHandle> ParameterInfoHandle = ParentHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FScalarParameterValue, ParameterInfo));
-        if (!ParameterInfoHandle.IsValid())
-        {
-            return;
-        }
-
-        FMaterialParameterInfo ParamInfo;
-        void* ValuePtr = nullptr;
-        if (ParameterInfoHandle->GetValueData(ValuePtr) == FPropertyAccess::Success)
-        {
-            ParamInfo = *static_cast<FMaterialParameterInfo*>(ValuePtr);
-        }
-
-        // 获取材质实例
-        TArray<UObject*> OuterObjects;
-        PropertyHandle->GetOuterObjects(OuterObjects);
-        UMaterialInstance* MaterialInstance = nullptr;
-        for (UObject* OuterObj : OuterObjects)
-        {
-            MaterialInstance = Cast<UMaterialInstance>(OuterObj);
-            if (MaterialInstance)
-            {
-                break;
-            }
-        }
-
-        if (MaterialInstance)
-        {
-            // 遍历 MeshComponent
-            for (TObjectIterator<UMeshComponent> It; It; ++It)
-            {
-                UMeshComponent* MeshComp = *It;
-                bool bFound = false;
-                for (int32 i = 0; i < MeshComp->GetNumMaterials(); ++i)
-                {
-                    UMaterialInterface* Mat = MeshComp->GetMaterial(i);
-                    if (Mat == MaterialInstance)
-                    {
-                        // 创建MaterialInfo
-                        FComponentMaterialInfo MaterialInfo;
-                        MaterialInfo.MaterialSlotIndex = i;
-                        MaterialInfo.MaterialType = EComponentMaterialType::IndexedMaterial;
-                        MaterialInfo.MaterialSlotName = MeshComp->GetMaterialSlotNames().IsValidIndex(i) ? 
-                            MeshComp->GetMaterialSlotNames()[i] : NAME_None;
-
-                        // 调用事件
-                        FString BlueprintPath = TEXT("/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C");
-                        if (UClass* LoadedClass = LoadClass<UObject>(nullptr, *BlueprintPath))
-                        {
-                            if (UObject* CustomHotkeyWidget = NewObject<UObject>(GetTransientPackage(), LoadedClass))
-                            {
-                                if (UFunction* KeyVarFunc = CustomHotkeyWidget->FindFunction(FName(TEXT("KeyVariable"))))
-                                {
-                                    struct
-                                    {
-                                        USceneComponent* Component;
-                                        FComponentMaterialInfo MaterialInfo;
-                                        FMaterialParameterInfo ParamInfo;
-                                        FString ParamType;
-                                        FString ParamValue;
-                                        FString ParamName;
-                                        FNiagaraVariable NiagaraVar;
-                                    } Params;
-
-                                    Params.Component = MeshComp;
-                                    Params.MaterialInfo = MaterialInfo;
-                                    Params.ParamInfo = ParamInfo;
-                                    Params.ParamType = ParamType;
-                                    Params.ParamValue = ParamValueStr;
-                                    Params.ParamName = DisplayName;
-                                    Params.NiagaraVar = FNiagaraVariable(); // 空NiagaraVar
-
-                                    CustomHotkeyWidget->ProcessEvent(KeyVarFunc, &Params);
-                                }
-                            }
-                        }
-                        bFound = true;
-                        break;
-                    }
-                }
-                if (bFound)
-                {
-                    break;
-                }
-            }
-        }
-    }
 }
 
 static bool IsKeyframeButtonEnabled(TWeakPtr<IDetailTreeNode> OwnerTreeNode)
@@ -349,33 +253,20 @@ static bool IsPropertyKeyframable(const TSharedPtr<IPropertyHandle>& PropertyHan
     }
 
     static const FString NiagaraParamPath("/Engine/Transient.StructOnScope:");
-    static const FName ScalarParamName("ScalarParameterValues");
-    static const FName VectorParamName("VectorParameterValues");
-    static const FName TextureParamName("TextureParameterValues");
 
-    TSharedPtr<IPropertyHandle> ParentHandle = PropertyHandle->GetParentHandle();
     FString PropertyPath = PropertyHandle->GetProperty()->GetPathName();
-
+    
+    // 只检查 Niagara 参数
     if (PropertyPath.StartsWith(NiagaraParamPath) && PropertyHandle->GetProperty()->GetMetaData(FName("Category")).IsEmpty())
     {
         return true;
     }
 
-    if (ParentHandle.IsValid())
-    {
-        if (FProperty* ParentProperty = ParentHandle->GetProperty())
-        {
-            FName PropName = ParentProperty->GetFName();
-            if (PropName == ScalarParamName || PropName == VectorParamName || PropName == TextureParamName)
-            {
-                return true;
-            }
-        }
-    }
-
     return false;
 }
 
+// 注册 Niagara 参数的关键帧扩展按钮处理器
+// 注意：材质参数的关键帧按钮已迁移到 InlineMaterialInstance 插件
 static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtensionArgs& Args, TArray<FPropertyRowExtensionButton>& OutExtensionButtons)
 {
     TSharedPtr<IPropertyHandle> PropertyHandle = Args.PropertyHandle;
@@ -386,6 +277,7 @@ static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtension
 
     // 获取参数名
     FString ParamNameStr = PropertyHandle->GetPropertyDisplayName().ToString();
+    
     FText ParamTooltip;
     
     // 从Mineprep子系统获取自定义快捷键对象

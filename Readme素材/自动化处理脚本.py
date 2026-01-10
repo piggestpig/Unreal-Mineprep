@@ -16,17 +16,17 @@ plugin_dir = self_dir.parent
 uplugin_src = plugin_dir / "实验性功能(C++)" / "Mineprep" / "Mineprep.uplugin"
 uplugin_dst = plugin_dir / "MC_Startup" / "Plugins" / "Mineprep" / "Mineprep.uplugin"
 
-with open(uplugin_src, "r", encoding="utf-16") as f:
+with open(uplugin_src, "r", encoding="utf-8") as f:
     src_obj = json.load(f)
 
 plugins = src_obj.get("Plugins")
 if uplugin_dst.exists():
-    with open(uplugin_dst, "r", encoding="utf-16") as f:
+    with open(uplugin_dst, "r", encoding="utf-8") as f:
         dst_obj = json.load(f)
 
 if dst_obj["Plugins"] != plugins:
     dst_obj["Plugins"] = plugins
-    with open(uplugin_dst, "w", encoding="utf-16") as f:
+    with open(uplugin_dst, "w", encoding="utf-8") as f:
         json.dump(dst_obj, f, ensure_ascii=False, indent=4)
     print("已将 'Plugins' 从源复制到目标：", uplugin_dst)
 

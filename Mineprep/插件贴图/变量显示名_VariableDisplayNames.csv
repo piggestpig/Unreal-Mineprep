@@ -920,3 +920,284 @@ E_TraversalActionType.None,None,无,None,無
 E_TraversalActionType.Hurdle,Hurdle,跨栏,Hurdle,跨欄
 E_TraversalActionType.Vault,Vault,翻越,Vault,翻越
 E_TraversalActionType.Mantle,Mantle,攀上,Mantle,攀上
+,,,,
+生成区域大小,生成区域大小,1,1,1
+,,,,
+OpacityFromTexture,OpacityFromTexture,从纹理获取不透明度,OpacityFromTexture,從紋理獲取不透明度
+BlendWeight,BlendWeight,混合权重,BlendWeight,混合權重
+HDR,HDR,高动态范围,HDR,高動態範圍
+TintColorAndOpacity,TintColorAndOpacity,色调颜色和不透明度,TintColorAndOpacity,色調顏色和不透明度
+SlateUI,SlateUI,石板UI,SlateUI,石板UI
+glow,glow,发光,glow,發光
+Color,Color,颜色,Color,顏色
+对比度,对比度,对比度,Contrast,對比度
+乘方,乘方,乘方,Power,乘方
+加亮,加亮,加亮,Brighten,加亮
+纹理贴图,纹理贴图,纹理贴图,Texture Map,紋理貼圖
+透明度,透明度,透明度,Transparency,透明度
+半径,半径,半径,Radius,半徑
+边框大小,边框大小,边框大小,Border Size,邊框大小
+形状,形状,形状,Shape,形狀
+缩放分子,缩放分子,缩放分子,Scale Numerator,縮放分子
+缩放偏移,缩放偏移,缩放偏移,Scale Offset,縮放偏移
+亮度,亮度,亮度,Brightness,亮度
+边框颜色,边框颜色,边框颜色,Border Color,邊框顏色
+立方体贴图,立方体贴图,立方体贴图,Cube Map,立方體貼圖
+自身亮度,自身亮度,自身亮度,Glow,自身亮度
+照明强度,照明强度,照明强度,Illuminance,照明強度
+色相,色相,色相,Hue,色相
+阴影,阴影,阴影,Shadow,陰影
+动画纹理,动画纹理,动画纹理,Animated Texture,動畫紋理
+Stencil遮罩层,Stencil遮罩层,Stencil遮罩层,Stencil Mask Layer,Stencil遮罩層
+单面,单面,单面,Single Sided,單面
+发光亮度,发光亮度,发光亮度,Glow,發光亮度
+法线强度,法线强度,法线强度,Normal Strength,法線強度
+破碎程度,破碎程度,破碎程度,Destroy Stage,破碎程度
+摇摆幅度,摇摆幅度,摇摆幅度,Sway Amplitude,搖擺幅度
+摇摆速度,摇摆速度,摇摆速度,Sway Speed,搖擺速度
+交互强度,交互强度,交互强度,Interaction Strength,互動強度
+顶点颜色,顶点颜色,顶点颜色,Vertex Color,頂點顏色
+金属/高光/粗糙/各向异性,金属/高光/粗糙/各向异性,金属/高光/粗糙/各向异性,Metallic/Specular/Roughness/Anisotropy,金屬/高光/粗糙/各向異性
+次表面颜色RGB+不透明度A,次表面颜色RGB+不透明度A,次表面颜色RGB+不透明度A,Subsurface Color RGB + Opacity A,次表面顏色RGB+不透明度A
+纹理颜色,纹理颜色,纹理颜色,Texture Color,紋理顏色
+反转:纹理/金属/高光/粗糙,反转:纹理/金属/高光/粗糙,反转:纹理/金属/高光/粗糙,Invert: Texture/Metallic/Specular/Roughness,反轉:紋理/金屬/高光/粗糙
+动画速度/U缩放/V缩放,动画速度/U缩放/V缩放,动画速度/U缩放/V缩放,Animation Speed/U Scale/V Scale,動畫速度/U縮放/V縮放
+附魔颜色,附魔颜色,附魔颜色,Enchant Color,附魔顏色
+附魔缩放/速度/对比度/底色,附魔缩放/速度/对比度/底色,附魔缩放/速度/对比度/底色,Enchant Scale/Speed/Contrast/Base Color,附魔縮放/速度/對比度/底色
+金属贴图,金属贴图,金属贴图,Metallic Map,金屬貼圖
+高光贴图,高光贴图,高光贴图,Specular Map,高光貼圖
+粗糙贴图,粗糙贴图,粗糙贴图,Roughness Map,粗糙貼圖
+法线贴图,法线贴图,法线贴图,Normal Map,法線貼圖
+自发光蒙版,自发光蒙版,自发光蒙版,Emission Mask,自發光蒙版
+切线贴图,切线贴图,切线贴图,Tangent Map,切線貼圖
+不透明,不透明,不透明,Opaque,不透明
+Layout_CloudGlobalScale,Layout_CloudGlobalScale,云全局缩放,Layout_CloudGlobalScale,雲全域縮放
+Cloud_GlobalCoverage,Cloud_GlobalCoverage,云全局覆盖,Cloud_GlobalCoverage,雲全域覆蓋
+Cloud_GlobalDensity,Cloud_GlobalDensity,云全局密度,Cloud_GlobalDensity,雲全域密度
+StormClouds,StormClouds,风暴云,StormClouds,風暴雲
+Storm_LightningTexScale,Storm_LightningTexScale,风暴闪电纹理缩放,Storm_LightningTexScale,風暴閃電紋理縮放
+Cloud_AlbedoColor,Cloud_AlbedoColor,云反照率颜色,Cloud_AlbedoColor,雲反照率顏色
+Layout_WindControls,Layout_WindControls,风控制布局,Layout_WindControls,風控制佈局
+Noise2_Coordinates,Noise2_Coordinates,噪声2坐标,Noise2_Coordinates,噪聲2座標
+Noise3_Coordinates,Noise3_Coordinates,噪声3坐标,Noise3_Coordinates,噪聲3座標
+Noise1_Coordinates,Noise1_Coordinates,噪声1坐标,Noise1_Coordinates,噪聲1座標
+Layout_CloudType,Layout_CloudType,云类型布局,Layout_CloudType,雲類型佈局
+Storm_LightningColor,Storm_LightningColor,风暴闪电颜色,Storm_LightningColor,風暴閃電顏色
+Storm_AlbedoColor,Storm_AlbedoColor,风暴反照率颜色,Storm_AlbedoColor,風暴反照率顏色
+Layout_GlobalTexturePlacement,Layout_GlobalTexturePlacement,全局纹理放置布局,Layout_GlobalTexturePlacement,全域紋理放置佈局
+Layout_CloudPerTypeScale,Layout_CloudPerTypeScale,每类型云缩放布局,Layout_CloudPerTypeScale,每類型雲縮放佈局
+Layout_CloudTypeMask,Layout_CloudTypeMask,云类型蒙版布局,Layout_CloudTypeMask,雲類型蒙版佈局
+Multiscatter_Controls,Multiscatter_Controls,多散射控制,Multiscatter_Controls,多散射控制
+Phase_Controls,Phase_Controls,相位控制,Phase_Controls,相位控制
+Noise3_MultChannel,Noise3_MultChannel,噪声3多通道,Noise3_MultChannel,噪聲3多通道
+Noise_Bias,Noise_Bias,噪声偏差,Noise_Bias,噪聲偏差
+Noise_Strength,Noise_Strength,噪声强度,Noise_Strength,噪聲強度
+Storm_LightningAnim,Storm_LightningAnim,风暴闪电动画,Storm_LightningAnim,風暴閃電動畫
+Storm_LightningClouds,Storm_LightningClouds,风暴闪电云,Storm_LightningClouds,風暴閃電雲
+Storm_LightningMasks,Storm_LightningMasks,风暴闪电蒙版,Storm_LightningMasks,風暴閃電蒙版
+Layout_CloudGlobalPattern,Layout_CloudGlobalPattern,云全局图案布局,Layout_CloudGlobalPattern,雲全域圖案佈局
+Noise_Texture3D,Noise_Texture3D,噪声3D纹理,Noise_Texture3D,噪聲3D紋理
+Layout_CloudHeightProfile,Layout_CloudHeightProfile,云高度剖面布局,Layout_CloudHeightProfile,雲高度剖面佈局
+Layout_GlobalCloudMask,Layout_GlobalCloudMask,全局云蒙版布局,Layout_GlobalCloudMask,全域雲蒙版佈局
+颜色,颜色,颜色,Color,顏色
+Albedo Scale,Albedo Scale,反照率缩放,Albedo Scale,反照率縮放
+Density Scale,Density Scale,密度缩放,Density Scale,密度縮放
+Blackbody Temperature Scale,Blackbody Temperature Scale,黑体温度缩放,Blackbody Temperature Scale,黑體溫度縮放
+Density Clamp Min,Density Clamp Min,密度钳制最小值,Density Clamp Min,密度鉗制最小值
+Density Clamp Max,Density Clamp Max,密度钳制最大值,Density Clamp Max,密度鉗制最大值
+Temperature Clamp Min,Temperature Clamp Min,温度钳制最小值,Temperature Clamp Min,溫度鉗制最小值
+Temperature Clamp Max,Temperature Clamp Max,温度钳制最大值,Temperature Clamp Max,溫度鉗制最大值
+Blackbody Scale,Blackbody Scale,黑体缩放,Blackbody Scale,黑體縮放
+Temperature Scale,Temperature Scale,温度缩放,Temperature Scale,溫度縮放
+Albedo Color,Albedo Color,反照率颜色,Albedo Color,反照率顏色
+Blackbody Tint,Blackbody Tint,黑体色调,Blackbody Tint,黑體色調
+Temperature Color,Temperature Color,温度颜色,Temperature Color,溫度顏色
+Moon_Intensity,Moon_Intensity,月亮强度,Moon_Intensity,月亮強度
+Sun_Intensity,Sun_Intensity,太阳强度,Sun_Intensity,太陽強度
+Sun_Size,Sun_Size,太阳大小,Sun_Size,太陽大小
+Stars_Intensity,Stars_Intensity,星星强度,Stars_Intensity,星星強度
+Moon_TerminatorHardness,Moon_TerminatorHardness,月亮终结者硬度,Moon_TerminatorHardness,月亮終結者硬度
+Moon_Size,Moon_Size,月亮大小,Moon_Size,月亮大小
+Moon_TextureTile,Moon_TextureTile,月亮纹理平铺,Moon_TextureTile,月亮紋理平鋪
+方块日月,方块日月,方块日月,Block Sun Moon,方塊日月
+星空旋转闪烁速度,星空旋转闪烁速度,星空旋转闪烁速度,Starfield Rotation Flicker Speed,星空旋轉閃爍速度
+背景贴图亮度,背景贴图亮度,背景贴图亮度,Background Texture Brightness,背景貼圖亮度
+背景贴图对比度,背景贴图对比度,背景贴图对比度,Background Texture Contrast,背景貼圖對比度
+Moon_BounceLight,Moon_BounceLight,月亮反弹光,Moon_BounceLight,月亮反彈光
+Moon_Coordinates,Moon_Coordinates,月亮坐标,Moon_Coordinates,月亮座標
+Stars_Coordinates,Stars_Coordinates,星星坐标,Stars_Coordinates,星星座標
+Phase_Axis,Phase_Axis,相位轴,Phase_Axis,相位軸
+背景贴图旋转,背景贴图旋转,背景贴图旋转,Background Texture Rotation,背景貼圖旋轉
+Moon_Texture,Moon_Texture,月亮纹理,Moon_Texture,月亮紋理
+方块太阳材质,方块太阳材质,方块太阳材质,Block Sun Material,方塊太陽材質
+方块月亮材质,方块月亮材质,方块月亮材质,Block Moon Material,方塊月亮材質
+Background Texture,Background Texture,背景纹理,Background Texture,背景紋理
+Param,Param,参数,Param,參數
+视差凹凸强度,视差凹凸强度,视差凹凸强度,Parallax Bump Strength,視差凹凸強度
+视差精度,视差精度,视差精度,Parallax Precision,視差精度
+Max Expensive Steps Debug Color,Max Expensive Steps Debug Color,最大昂贵步骤调试颜色,Max Expensive Steps Debug Color,最大昂貴步驟調試顏色
+不透明R~G+B*A,不透明R~G+B*A,不透明R~G+B*A,Opaque R~G+B*A,不透明R~G+B*A
+金属/高光/粗糙/孔隙率,金属/高光/粗糙/孔隙率,金属/高光/粗糙/孔隙率,Metallic/Specular/Roughness/Porosity,金屬/高光/粗糙/孔隙率
+次表面颜色RGB+透射A,次表面颜色RGB+透射A,次表面颜色RGB+透射A,Subsurface Color RGB + Transmission A,次表面顏色RGB+透射A
+动画速度/步长/列数/渐变,动画速度/步长/列数/渐变,动画速度/步长/列数/渐变,Animation Speed/Step Size/Column Count/Gradient,動畫速度/步長/列數/漸變
+Metallic,Metallic,金属度,Metallic,金屬度
+Roughness,Roughness,粗糙度,Roughness,粗糙度
+Base Color,Base Color,基础颜色,Base Color,基礎顏色
+LumaMask,LumaMask,亮度蒙版,LumaMask,亮度蒙版
+Alpha Min,Alpha Min,Alpha最小值,Alpha Min,Alpha最小值
+Alpha Divisor,Alpha Divisor,Alpha除数,Alpha Divisor,Alpha除數
+Sky Intensity,Sky Intensity,天空强度,Sky Intensity,天空強度
+Despill Amount,Despill Amount,去溢出量,Despill Amount,去溢出量
+Despill Divisor,Despill Divisor,去溢出除数,Despill Divisor,去溢出除數
+Despill Min,Despill Min,去溢出最小值,Despill Min,去溢出最小值
+Crop Top,Crop Top,裁剪顶部,Crop Top,裁剪頂部
+Crop Bottom,Crop Bottom,裁剪底部,Crop Bottom,裁剪底部
+Crop Right,Crop Right,裁剪右侧,Crop Right,裁剪右側
+Crop Left,Crop Left,裁剪左侧,Crop Left,裁剪左側
+Contrast,Contrast,对比度,Contrast,對比度
+Saturation,Saturation,饱和度,Saturation,飽和度
+Hue Shift,Hue Shift,色相偏移,Hue Shift,色相偏移
+Brightness,Brightness,亮度,Brightness,亮度
+Color Correction Amount,Color Correction Amount,颜色校正量,Color Correction Amount,顏色校正量
+Alpha Preview,Alpha Preview,Alpha预览,Alpha Preview,Alpha預覽
+IntensityFloor,IntensityFloor,强度下限,IntensityFloor,強度下限
+缩放,缩放,缩放,Scale,縮放
+左右移动,左右移动,左右移动,Horizontal Move,左右移動
+上下移动,上下移动,上下移动,Vertical Move,上下移動
+水平缩放（翻转）,水平缩放（翻转）,水平缩放（翻转）,Horizontal Scale (Flip),水平縮放（翻轉）
+Key Color,Key Color,抠像颜色,Key Color,抠像顏色
+Sky,Sky,天空,Sky,天空
+Despill Color,Despill Color,去溢出颜色,Despill Color,去溢出顏色
+Gain,Gain,增益,Gain,增益
+Gamma,Gamma,伽马,Gamma,伽馬
+Lift,Lift,提升,Lift,提升
+GarbageMatteTexture,GarbageMatteTexture,垃圾遮罩纹理,GarbageMatteTexture,垃圾遮罩紋理
+描边厚度,描边厚度,描边厚度,Outline Thickness,描邊厚度
+阴影衰减,阴影衰减,阴影衰减,Shadow Attenuation,陰影衰減
+阴影大小,阴影大小,阴影大小,Shadow Size,陰影大小
+描边颜色,描边颜色,描边颜色,Outline Color,描邊顏色
+阴影颜色,阴影颜色,阴影颜色,Shadow Color,陰影顏色
+法线生成角度,法线生成角度,法线生成角度,Normal Generation Angle,法線生成角度
+法线生成步长,法线生成步长,法线生成步长,Normal Generation Step,法線生成步長
+法线迭代次数,法线迭代次数,法线迭代次数,Normal Iteration Count,法線迭代次數
+缓存帧数,缓存帧数,缓存帧数,Cached Frame Count,緩存幀數
+边缘高光RGB+衰减A,边缘高光RGB+衰减A,边缘高光RGB+衰减A,Edge Highlight RGB + Attenuation A,邊緣高光RGB+衰減A
+使用自定义眼睛贴图,使用自定义眼睛贴图,使用自定义眼睛贴图,Use Custom Eye Texture,使用自訂眼睛貼圖
+使用自定义嘴贴图,使用自定义嘴贴图,使用自定义嘴贴图,Use Custom Mouth Texture,使用自訂嘴貼圖
+-眨眼,-眨眼,-眨眼,-Blink,-眨眼
+左眼珠_左右移动,左眼珠_左右移动,左眼珠_左右移动,Left Pupil Horizontal Move,左眼珠_左右移動
+眼珠_上下移动,眼珠_上下移动,眼珠_上下移动,Pupil Vertical Move,眼珠_上下移動
+右眼珠_左右移动,右眼珠_左右移动,右眼珠_左右移动,Right Pupil Horizontal Move,右眼珠_左右移動
+-右眼: 移动_缩放,-右眼: 移动_缩放,-右眼: 移动_缩放,-Right Eye: Move_Scale,-右眼: 移動_縮放
+🔍双眼基础移动,🔍双眼基础移动,🔍双眼基础移动,🔍Both Eyes Base Move,🔍雙眼基礎移動
+眼白颜色,眼白颜色,眼白颜色,Sclera Color,眼白顏色
+-左眼: 移动_缩放,-左眼: 移动_缩放,-左眼: 移动_缩放,-Left Eye: Move_Scale,-左眼: 移動_縮放
+左眼眶_上下左右,左眼眶_上下左右,左眼眶_上下左右,Left Eye Socket Up Down Left Right,左眼眶_上下左右
+右眼眶_上下左右,右眼眶_上下左右,右眼眶_上下左右,Right Eye Socket Up Down Left Right,右眼眶_上下左右
+:嘴: 移动_缩放,:嘴: 移动_缩放,:嘴: 移动_缩放,:Mouth: Move_Scale,:嘴: 移動_縮放
+🔍嘴/眉毛基础移动,🔍嘴/眉毛基础移动,🔍嘴/眉毛基础移动,🔍Mouth/Eyebrow Base Move,🔍嘴/眉毛基礎移動
+双眼移动_缩放,双眼移动_缩放,双眼移动_缩放,Both Eyes Move_Scale,雙眼移動_縮放
+右眼贴图,右眼贴图,右眼贴图,Right Eye Texture,右眼貼圖
+左眼贴图,左眼贴图,左眼贴图,Left Eye Texture,左眼貼圖
+嘴贴图,嘴贴图,嘴贴图,Mouth Texture,嘴貼圖
+双面,双面,双面,Double Sided,雙面
+WaveStrength,WaveStrength,波浪强度,WaveStrength,波浪強度
+WaveSize,WaveSize,波浪大小,WaveSize,波浪大小
+WindGusts,WindGusts,风阵,WindGusts,風陣
+WindGustsSize,WindGustsSize,风阵大小,WindGustsSize,風陣大小
+Random Offset Variation,Random Offset Variation,随机偏移变化,Random Offset Variation,隨機偏移變化
+Texture Variation Dithering,Texture Variation Dithering,纹理变化抖动,Texture Variation Dithering,紋理變化抖動
+Texture Variation Height VS Mip,Texture Variation Height VS Mip,纹理变化高度 vs Mip,Texture Variation Height VS Mip,紋理變化高度 vs Mip
+Random Scale Variation,Random Scale Variation,随机缩放变化,Random Scale Variation,隨機縮放變化
+Random Stripe Offset,Random Stripe Offset,随机条纹偏移,Random Stripe Offset,隨機條紋偏移
+CausticIntensity,CausticIntensity,焦散强度,CausticIntensity,焦散強度
+CausticSize,CausticSize,焦散大小,CausticSize,焦散大小
+Turbidity,Turbidity,浊度,Turbidity,濁度
+FlowDirection,FlowDirection,流动方向,FlowDirection,流動方向
+FlowSpeed,FlowSpeed,流动速度,FlowSpeed,流動速度
+MaxDepth (cm),MaxDepth (cm),最大深度 (cm),MaxDepth (cm),最大深度 (cm)
+光追折射率,光追折射率,光追折射率,Raytraced Refractive Index,光追折射率
+额外透明,额外透明,额外透明,Extra Transparency,額外透明
+额外亮度,额外亮度,额外亮度,Extra Brightness,額外亮度
+WaterColor,WaterColor,水颜色,WaterColor,水顏色
+RandomVariationPattern,RandomVariationPattern,随机变化图案,RandomVariationPattern,隨機變化圖案
+Specular,Specular,高光,Specular,高光
+Opacity,Opacity,不透明度,Opacity,不透明度
+Voxel Size,Voxel Size,体素大小,Voxel Size,體素大小
+Debug Bounds,Debug Bounds,调试边界,Debug Bounds,調試邊界
+Tolerance,Tolerance,容差,Tolerance,容差
+NumSteps,NumSteps,步数,NumSteps,步數
+ComputeNormals,ComputeNormals,计算法线,ComputeNormals,計算法線
+Phase,Phase,相位,Phase,相位
+Whitewater,Whitewater,白水,Whitewater,白水
+折射F0,折射F0,折射F0,Refraction F0,折射F0
+折射F90,折射F90,折射F90,Refraction F90,折射F90
+WorldToLocal0,WorldToLocal0,世界到本地0,WorldToLocal0,世界到本地0
+WorldToLocal1,WorldToLocal1,世界到本地1,WorldToLocal1,世界到本地1
+WorldToLocal2,WorldToLocal2,世界到本地2,WorldToLocal2,世界到本地2
+WorldToLocal3,WorldToLocal3,世界到本地3,WorldToLocal3,世界到本地3
+LocalToWorld0,LocalToWorld0,本地到世界0,LocalToWorld0,本地到世界0
+LocalToWorld1,LocalToWorld1,本地到世界1,LocalToWorld1,本地到世界1
+LocalToWorld2,LocalToWorld2,本地到世界2,LocalToWorld2,本地到世界2
+LocalToWorld3,LocalToWorld3,本地到世界3,LocalToWorld3,本地到世界3
+WorldGridExtents,WorldGridExtents,世界网格范围,WorldGridExtents,世界網格範圍
+LocalPivot,LocalPivot,本地枢轴,LocalPivot,本地樞軸
+DebugSliceCenter,DebugSliceCenter,调试切片中心,DebugSliceCenter,調試切片中心
+DebugSliceAxis,DebugSliceAxis,调试切片轴,DebugSliceAxis,調試切片軸
+Scattering,Scattering,散射,Scattering,散射
+Absorption,Absorption,吸收,Absorption,吸收
+VolumeTex,VolumeTex,体积纹理,VolumeTex,體積紋理
+WaterFade,WaterFade,水淡化,WaterFade,水淡化
+Tile Width,Tile Width,平铺宽度,Tile Width,平鋪寬度
+Num Cells,Num Cells,单元格数,Num Cells,單元格數
+Num Direction Samples,Num Direction Samples,方向采样数,Num Direction Samples,方向採樣數
+Advection Mult,Advection Mult,对流倍数,Advection Mult,對流倍數
+Const Velocity Mult,Const Velocity Mult,恒定速度倍数,Const Velocity Mult,恆定速度倍數
+Time Loop,Time Loop,时间循环,Time Loop,時間循環
+ProfileBufferVelocity,ProfileBufferVelocity,剖面缓冲速度,ProfileBufferVelocity,剖面緩衝速度
+Tex,Tex,纹理,Tex,紋理
+ProfileBufferTex,ProfileBufferTex,剖面缓冲纹理,ProfileBufferTex,剖面緩衝紋理
+NormalTex,NormalTex,法线纹理,NormalTex,法線紋理
+序号,序号,序号,Index,序號
+饱和度pow,饱和度pow,饱和度pow,Saturation Pow,飽和度pow
+序号参数,序号参数,序号参数,Index Parameter,序號參數
+Radius,Radius,半径,Radius,半徑
+Hardness,Hardness,硬度,Hardness,硬度
+OpacityMult,OpacityMult,不透明度倍数,OpacityMult,不透明度倍數
+Opacity Falloff,Opacity Falloff,不透明度衰减,Opacity Falloff,不透明度衰減
+发光,发光,发光,Emission,發光
+速度,速度,速度,Speed,速度
+启用摇摆,启用摇摆,启用摇摆,Enable Sway,啟用搖擺
+浓度,浓度,浓度,Concentration,濃度
+松散度,松散度,松散度,Looseness,鬆散度
+全局增量,全局增量,全局增量,Global Increment,全域增量
+力场采样类型,力场采样类型,力场采样类型,Force Field Sampling Type,力場採樣類型
+方向,方向,方向,Direction,方向
+形状边缘裁剪,形状边缘裁剪,形状边缘裁剪,Shape Edge Clipping,形狀邊緣裁剪
+散景光斑形状,散景光斑形状,散景光斑形状,Bokeh Shape,散景光斑形狀
+发光强度,发光强度,发光强度,Emission Intensity,發光強度
+边缘,边缘,边缘,Edge,邊緣
+宽度,宽度,宽度,Width,寬度
+村民职业,村民职业,村民职业,Villager Profession,村民職業
+村民群系,村民群系,村民群系,Villager Biome,村民群系
+村民等级,村民等级,村民等级,Villager Level,村民等級
+偏移,偏移,偏移,Offset,偏移
+金属度,金属度,金属度,Metallicity,金屬度
+高光度,高光度,高光度,Specularity,高光度
+粗糙度,粗糙度,粗糙度,Roughness,粗糙度
+各向异性,各向异性,各向异性,Anisotropy,各向異性
+自发光,自发光,自发光,Emission,自發光
+lumen效果,lumen效果,lumen效果,Lumen Effect,lumen效果
+loop,loop,循环,loop,循環
+step,step,步长,step,步長
+scale,scale,缩放,scale,縮放
+Mask_Invert,Mask_Invert,蒙版反转,Mask_Invert,蒙版反轉
+Mask_BaseOpacity,Mask_BaseOpacity,蒙版基础不透明度,Mask_BaseOpacity,蒙版基礎不透明度
+Mask_Channel,Mask_Channel,蒙版通道,Mask_Channel,蒙版通道
+Mask_Padding,Mask_Padding,蒙版填充,Mask_Padding,蒙版填充
+Mask_Feather,Mask_Feather,蒙版羽化,Mask_Feather,蒙版羽化
+自发光颜色,自发光颜色,自发光颜色,Emission Color,自發光顏色
+Mask_Texture,Mask_Texture,蒙版纹理,Mask_Texture,蒙版紋理
+水平缩放,水平缩放,水平缩放,Horizontal Scale,水平縮放
+垂直缩放,垂直缩放,垂直缩放,Vertical Scale,垂直縮放
+默认皮肤,默认皮肤,默认皮肤,Default Skin,預設皮膚
