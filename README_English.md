@@ -30,7 +30,7 @@ You need to copy the Mineprep content folder + modify the project settings. Deta
 
 
 ## Compatibility
-Mineprep 0.5-pre1 is developed on Windows + UE5.5.
+Mineprep 0.5 is developed on Windows + UE5.7.
 
 The installer and non-experimental features of the plugin are expected to be cross-platform and support higher engine versions, but they haven't been tested yet.
 

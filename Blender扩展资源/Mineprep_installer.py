@@ -436,7 +436,7 @@ class Installer1(bpy.types.Operator):
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
         layout.prop(mc, "exp_material", text=loc(31,"为材质参数面板添加关键帧按钮和本地化翻译"))
         layout.prop(mc, "exp_vr3d", text=loc(15,"解锁双目立体全景渲染"))
-        layout.prop(mc, "exp_template_seq", text=loc(16,"修复UE4官方新手教程"))
+        layout.prop(mc, "exp_template_seq", text=loc(16,"扩展模板序列以支持双精度浮点和向量属性乘数"))
 
         layout.separator(type='LINE')
         layout.label(text=loc(17,"插件设置:"))
@@ -489,7 +489,7 @@ class Installer2(bpy.types.Operator):
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
         layout.prop(mc, "exp_material", text=loc(31,"为材质参数面板添加关键帧按钮和本地化翻译"))
         layout.prop(mc, "exp_vr3d", text=loc(15,"解锁双目立体全景渲染"))
-        layout.prop(mc, "exp_template_seq", text=loc(16,"修复UE4官方新手教程"))
+        layout.prop(mc, "exp_template_seq", text=loc(16,"扩展模板序列以支持双精度浮点和向量属性乘数"))
 
         layout.separator(type='LINE')
         layout.label(text=loc(17,"插件设置:"))

@@ -812,18 +812,17 @@ MC_SoftBody_C:Physics Movement Type,Physics Movement Type,物理运动类型,Phy
 MC_SoftBody_C:ConstraintProfile,ConstraintProfile,约束配置文件,Constraint Profile,約束配置文件
 MC_SoftBody_C:WorldSpaceControlData,WorldSpaceControlData,世界空间控制数据,World Space Control Data,世界空間控制資料
 ,,,,
-画质预设选项.0低,0  低,0  低,0 Low,0  低
-画质预设选项.1中,1  中,1  中,1 Medium,1  中
-画质预设选项.2-高（屏幕空间替代lumen）,2- 高（屏幕空间替代lumen）,2- 高（屏幕空间替代Lumen）,2- High (Screen Space Alternative to Lumen),2- 高（螢幕空間替代Lumen）
-画质预设选项.2高（快速lumen）⭐,2  高（快速lumen）⭐,2  高（快速Lumen）⭐,2 High (Fast Lumen) ⭐,2  高（快速Lumen）⭐
-画质预设选项.2+高,2+ 高,2+ 高,2+ High,2+ 高
-画质预设选项.3-极高（快速lumen）,3- 极高（快速lumen）,3- 极高（快速Lumen）,3- Epic (Fast Lumen),3- 極高（快速Lumen）
-画质预设选项.3极高,3  极高,3  极高,3 Epic,3  極高
-画质预设选项.3+极高（增强lumen）,3+ 极高（增强lumen）,3+ 极高（增强Lumen）,3+ Epic (Enhanced Lumen),3+ 極高（增強Lumen）
-画质预设选项.4-影视级（反射为极高）,4- 影视级（反射为极高）,4- 影视级（反射为极高）,4- Cinematic (Reflections Epic),4- 影視級（反射為極高）
-画质预设选项.4影视级,4  影视级,4  影视级,4 Cinematic,4  影視級
-画质预设选项.4*影视级（反射为极高+增强降噪）,4* 影视级（反射为极高+增强降噪）,4* 影视级（反射为极高+增强降噪）,4* Cinematic (Reflections Epic + Enhanced Denoise),4* 影視級（反射為極高+增強降噪）
-画质预设选项.4+影视级（增强lumen）,4+ 影视级（增强lumen）,4+ 影视级（增强Lumen）,4+ Cinematic (Enhanced Lumen),4+ 影視級（增強Lumen）
+画质预设选项.0,0,0  低,0 Low,0  低
+画质预设选项.1,1,1  中,1 Medium,1  中
+画质预设选项.2-,2-,2- 高（屏幕空间替代Lumen）,2- High (Screen Space Alternative to Lumen),2- 高（螢幕空間替代Lumen）
+画质预设选项.2,2,2  高（快速Lumen）⭐,2 High (Fast Lumen) ⭐,2  高（快速Lumen）⭐
+画质预设选项.2+,2+,2+ 高,2+ High,2+ 高
+画质预设选项.3-,3-,3- 极高（快速Lumen）,3- Epic (Fast Lumen),3- 極高（快速Lumen）
+画质预设选项.3,3,3  极高,3 Epic,3  極高
+画质预设选项.3+,3+,3+ 极高（特调画质）,3+ Epic (Specially Tuned),3+ 極高（特調畫質）
+画质预设选项.4-,4-,4- 影视级,4- Cinematic,4- 影視級
+画质预设选项.4,4,4  影视级（特调画质）,4 Cinematic (Specially Tuned),4  影視級（特調畫質）
+画质预设选项.4+,4+,4+ 影视级（增强lumen）,4+ Cinematic (Enhanced Lumen),4+ 影視級（增強Lumen）
 DLSS_FSR.·原生(DLAA),·原生(DLAA),·原生(DLAA),·Native (DLAA),·原生(DLAA)
 DLSS_FSR.·质量,·质量,·质量,·Quality,·質量
 DLSS_FSR.·平衡,·平衡,·平衡,·Balanced,·平衡
@@ -953,9 +952,9 @@ Stencil遮罩层,Stencil遮罩层,Stencil遮罩层,Stencil Mask Layer,Stencil遮
 发光亮度,发光亮度,发光亮度,Glow,發光亮度
 法线强度,法线强度,法线强度,Normal Strength,法線強度
 破碎程度,破碎程度,破碎程度,Destroy Stage,破碎程度
-摇摆幅度,摇摆幅度,摇摆幅度,Sway Amplitude,搖擺幅度
+摇摆幅度,摇摆幅度,摇摆幅度,Sway Strength,搖擺幅度
 摇摆速度,摇摆速度,摇摆速度,Sway Speed,搖擺速度
-交互强度,交互强度,交互强度,Interaction Strength,互動強度
+交互强度,交互强度,交互强度,Interaction,互動強度
 顶点颜色,顶点颜色,顶点颜色,Vertex Color,頂點顏色
 金属/高光/粗糙/各向异性,金属/高光/粗糙/各向异性,金属/高光/粗糙/各向异性,Metallic/Specular/Roughness/Anisotropy,金屬/高光/粗糙/各向異性
 次表面颜色RGB+不透明度A,次表面颜色RGB+不透明度A,次表面颜色RGB+不透明度A,Subsurface Color RGB + Opacity A,次表面顏色RGB+不透明度A
@@ -1033,14 +1032,14 @@ Moon_Texture,Moon_Texture,月亮纹理,Moon_Texture,月亮紋理
 方块月亮材质,方块月亮材质,方块月亮材质,Block Moon Material,方塊月亮材質
 Background Texture,Background Texture,背景纹理,Background Texture,背景紋理
 Param,Param,参数,Param,參數
-视差凹凸强度,视差凹凸强度,视差凹凸强度,Parallax Bump Strength,視差凹凸強度
+视差凹凸强度,视差凹凸强度,视差凹凸强度,Parallax Bump,視差凹凸強度
 视差精度,视差精度,视差精度,Parallax Precision,視差精度
 Max Expensive Steps Debug Color,Max Expensive Steps Debug Color,最大昂贵步骤调试颜色,Max Expensive Steps Debug Color,最大昂貴步驟調試顏色
 不透明R~G+B*A,不透明R~G+B*A,不透明R~G+B*A,Opaque R~G+B*A,不透明R~G+B*A
 金属/高光/粗糙/孔隙率,金属/高光/粗糙/孔隙率,金属/高光/粗糙/孔隙率,Metallic/Specular/Roughness/Porosity,金屬/高光/粗糙/孔隙率
 次表面颜色RGB+透射A,次表面颜色RGB+透射A,次表面颜色RGB+透射A,Subsurface Color RGB + Transmission A,次表面顏色RGB+透射A
 动画速度/步长/列数/渐变,动画速度/步长/列数/渐变,动画速度/步长/列数/渐变,Animation Speed/Step Size/Column Count/Gradient,動畫速度/步長/列數/漸變
-Metallic,Metallic,金属度,Metallic,金屬度
+金属度,Metallic,金属度,Metallic,金屬度
 Roughness,Roughness,粗糙度,Roughness,粗糙度
 Base Color,Base Color,基础颜色,Base Color,基礎顏色
 LumaMask,LumaMask,亮度蒙版,LumaMask,亮度蒙版
@@ -1084,14 +1083,14 @@ GarbageMatteTexture,GarbageMatteTexture,垃圾遮罩纹理,GarbageMatteTexture,�
 边缘高光RGB+衰减A,边缘高光RGB+衰减A,边缘高光RGB+衰减A,Edge Highlight RGB + Attenuation A,邊緣高光RGB+衰減A
 使用自定义眼睛贴图,使用自定义眼睛贴图,使用自定义眼睛贴图,Use Custom Eye Texture,使用自訂眼睛貼圖
 使用自定义嘴贴图,使用自定义嘴贴图,使用自定义嘴贴图,Use Custom Mouth Texture,使用自訂嘴貼圖
--眨眼,-眨眼,-眨眼,-Blink,-眨眼
+#NAME?,#NAME?,#NAME?,#NAME?,#NAME?
 左眼珠_左右移动,左眼珠_左右移动,左眼珠_左右移动,Left Pupil Horizontal Move,左眼珠_左右移動
 眼珠_上下移动,眼珠_上下移动,眼珠_上下移动,Pupil Vertical Move,眼珠_上下移動
 右眼珠_左右移动,右眼珠_左右移动,右眼珠_左右移动,Right Pupil Horizontal Move,右眼珠_左右移動
--右眼: 移动_缩放,-右眼: 移动_缩放,-右眼: 移动_缩放,-Right Eye: Move_Scale,-右眼: 移動_縮放
+#NAME?,#NAME?,#NAME?,#NAME?,#NAME?
 🔍双眼基础移动,🔍双眼基础移动,🔍双眼基础移动,🔍Both Eyes Base Move,🔍雙眼基礎移動
 眼白颜色,眼白颜色,眼白颜色,Sclera Color,眼白顏色
--左眼: 移动_缩放,-左眼: 移动_缩放,-左眼: 移动_缩放,-Left Eye: Move_Scale,-左眼: 移動_縮放
+#NAME?,#NAME?,#NAME?,#NAME?,#NAME?
 左眼眶_上下左右,左眼眶_上下左右,左眼眶_上下左右,Left Eye Socket Up Down Left Right,左眼眶_上下左右
 右眼眶_上下左右,右眼眶_上下左右,右眼眶_上下左右,Right Eye Socket Up Down Left Right,右眼眶_上下左右
 :嘴: 移动_缩放,:嘴: 移动_缩放,:嘴: 移动_缩放,:Mouth: Move_Scale,:嘴: 移動_縮放
@@ -1182,8 +1181,8 @@ Opacity Falloff,Opacity Falloff,不透明度衰减,Opacity Falloff,不透明度�
 村民群系,村民群系,村民群系,Villager Biome,村民群系
 村民等级,村民等级,村民等级,Villager Level,村民等級
 偏移,偏移,偏移,Offset,偏移
-金属度,金属度,金属度,Metallicity,金屬度
-高光度,高光度,高光度,Specularity,高光度
+金属度,金属度,金属度,Metallic,金屬度
+高光度,高光度,高光度,Specular,高光度
 粗糙度,粗糙度,粗糙度,Roughness,粗糙度
 各向异性,各向异性,各向异性,Anisotropy,各向異性
 自发光,自发光,自发光,Emission,自發光
@@ -1201,3 +1200,13 @@ Mask_Texture,Mask_Texture,蒙版纹理,Mask_Texture,蒙版紋理
 水平缩放,水平缩放,水平缩放,Horizontal Scale,水平縮放
 垂直缩放,垂直缩放,垂直缩放,Vertical Scale,垂直縮放
 默认皮肤,默认皮肤,默认皮肤,Default Skin,預設皮膚
+Stencil遮罩,Stencil遮罩,Stencil遮罩,Stencil Mask,Stencil遮罩
+次表面颜色+透射,次表面颜色+透射,次表面颜色+透射,SSS Color + Transmit,次表面顔色+透射
+不透明度,不透明度,不透明度,Opacity,不透明度
+动画速度,动画速度,动画速度,Anim Speed,動畫速度
+动画渐变,动画渐变,动画渐变,Gradient Anim,動畫漸變
+附魔缩放,附魔缩放,附魔缩放,Enchant Scale,附魔縮放
+附魔速度,附魔速度,附魔速度,Enchant Speed,附魔速度
+附魔对比度,附魔对比度,附魔对比度,Enchant Contrast,附魔對比度
+折射率,折射率,折射率,Refraction IOR,折射率
+模糊,模糊,模糊,Blur,模糊
