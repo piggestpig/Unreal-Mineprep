@@ -317,6 +317,11 @@ def install():
     config.set(GC, 'gc.AssetClustreringEnabled', 'True')
     config.set(GC, 'gc.ActorClusteringEnabled', 'True')
 
+    ENGINE = '/Script/Engine.Engine'
+    if not config.has_section(ENGINE):
+        config.add_section(ENGINE)
+    config.set(ENGINE, 'GenerateDefaultTimecodeFrameRate', '(Numerator=60,Denominator=1)')
+
     with open(DefaultEngine_ini, 'w', encoding='utf-8') as f:
         config.write(f)
 

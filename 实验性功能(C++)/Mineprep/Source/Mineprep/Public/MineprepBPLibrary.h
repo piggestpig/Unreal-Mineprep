@@ -37,6 +37,9 @@
 #include "PhysicsEngine/PhysicsSettings.h"
 #include "Physics/Experimental/PhysScene_Chaos.h"
 #include "EditorModeManager.h"
+#include "InteractiveToolManager.h"
+#include "Tools/UEdMode.h"
+#include "Internationalization/TextLocalizationResource.h"
 
 #include "MineprepBPLibrary.generated.h"
 
@@ -108,6 +111,10 @@ class Umineprep : public UBlueprintFunctionLibrary
 	//获取某个编辑器模式是否激活
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool IsEditorModeActive(FName ModeID = TEXT("EM_Default"));
+
+	// 激活 Scriptable Tool 编辑器模式并启动指定的工具
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static bool ActivateScriptableTool(UBlueprint* ToolBlueprint);
 
 };
 

@@ -41,6 +41,33 @@ FString Umineprep::GetWidgetTextUnderMouse()
     FString TooltipText;
     FString WidgetText;
 
+    // 辅助 Lambda：打印 FText 的本地化信息
+    auto PrintTextLocalizationInfo = [](const FText& Text, const FString& SourceDescription)
+    {
+        if (Text.IsEmpty()) return;
+        
+        // 获取本地化信息
+        TOptional<FString> Namespace = FTextInspector::GetNamespace(Text);
+        TOptional<FString> Key = FTextInspector::GetKey(Text);
+        const FString* SourceString = FTextInspector::GetSourceString(Text);
+        
+        FString DisplayText = Text.ToString();
+        FString NamespaceStr = Namespace.IsSet() ? Namespace.GetValue() : TEXT("");
+        FString KeyStr = Key.IsSet() ? Key.GetValue() : TEXT("");
+        FString SourceStr = SourceString ? *SourceString : TEXT("");
+        
+        // 检查是否是本地化文本
+        bool bIsLocalized = Namespace.IsSet() && Key.IsSet();
+        
+        UE_LOG(LogTemp, Display, TEXT("========== 本地化文本信息 [%s] =========="), *SourceDescription);
+        UE_LOG(LogTemp, Display, TEXT("  显示文本：%s"), *DisplayText);
+        UE_LOG(LogTemp, Display, TEXT("  是否本地化：%s"), bIsLocalized ? TEXT("是") : TEXT("否"));
+        UE_LOG(LogTemp, Display, TEXT("  Namespace：%s"), *NamespaceStr);
+        UE_LOG(LogTemp, Display, TEXT("  Key：%s"), *KeyStr);
+        UE_LOG(LogTemp, Display, TEXT("  SourceString：%s"), *SourceStr);
+        UE_LOG(LogTemp, Display, TEXT("==========================================="));
+    };
+
     if (FSlateApplication::IsInitialized())
     {
         TSharedPtr<SWindow> ActiveWindow = FSlateApplication::Get().GetActiveTopLevelWindow();
@@ -66,7 +93,10 @@ FString Umineprep::GetWidgetTextUnderMouse()
                     {
                         if (TSharedPtr<SToolTip> SlateToolTip = StaticCastSharedPtr<SToolTip>(ToolTip))
                         {
-                            TooltipText = SlateToolTip->GetTextTooltip().ToString();
+                            FText TooltipFText = SlateToolTip->GetTextTooltip();
+                            TooltipText = TooltipFText.ToString();
+                            // 打印 Tooltip 的本地化信息
+                            PrintTextLocalizationInfo(TooltipFText, TEXT("Tooltip"));
                             // 当tooltip为"None"时，当作空字符串
                             if (TooltipText.Equals(TEXT("None")))
                             {
@@ -90,7 +120,10 @@ FString Umineprep::GetWidgetTextUnderMouse()
                     {
                         if (TSharedPtr<STextBlock> TextBlock = StaticCastSharedRef<STextBlock>(Widget))
                         {
-                            WidgetText = TextBlock->GetText().ToString();
+                            FText TextFText = TextBlock->GetText();
+                            WidgetText = TextFText.ToString();
+                            // 打印 TextBlock 的本地化信息
+                            PrintTextLocalizationInfo(TextFText, TEXT("STextBlock"));
                             // 找到文本也不要立即返回,继续向上查找父控件的tooltip
                         }
                     }
@@ -114,10 +147,13 @@ FString Umineprep::GetWidgetTextUnderMouse()
                                             {
                                                 if (TSharedPtr<STextBlock> TextBlock = StaticCastSharedRef<STextBlock>(Child))
                                                 {
-                                                    FString TextBlockText = TextBlock->GetText().ToString();
+                                                    FText TextFText = TextBlock->GetText();
+                                                    FString TextBlockText = TextFText.ToString();
                                                     if (!TextBlockText.IsEmpty())
                                                     {
                                                         WidgetText = TextBlockText;
+                                                        // 打印按钮内部 TextBlock 的本地化信息
+                                                        PrintTextLocalizationInfo(TextFText, TEXT("Button内部STextBlock"));
                                                         break;  // 跳出内部循环,继续向上查找父控件的tooltip
                                                     }
                                                 }
@@ -130,7 +166,10 @@ FString Umineprep::GetWidgetTextUnderMouse()
                             {
                                 if (TSharedPtr<STextBlock> TextBlock = StaticCastSharedRef<STextBlock>(ButtonContent.ToSharedRef()))
                                 {
-                                    WidgetText = TextBlock->GetText().ToString();
+                                    FText TextFText = TextBlock->GetText();
+                                    WidgetText = TextFText.ToString();
+                                    // 打印按钮内部 TextBlock 的本地化信息
+                                    PrintTextLocalizationInfo(TextFText, TEXT("Button内部STextBlock"));
                                 }
                             }
                         }
@@ -869,7 +908,7 @@ bool Umineprep::SetPropertyTooltip(UObject* BlueprintObject, const TMap<FString,
 
 
 void Umineprep::BindNiagaraParam(UMovieSceneNiagaraParameterTrack* ParameterTrack, FNiagaraVariable Parameter, TArray<uint8> DefaultValueData)
-{   
+{
 
     if (ParameterTrack != nullptr)
     {
@@ -913,4 +952,68 @@ void Umineprep::SwitchEditorMode(FName ModeID)
 bool Umineprep::IsEditorModeActive(FName ModeID)
 {
     return GLevelEditorModeTools().IsModeActive(ModeID);
+}
+
+bool Umineprep::ActivateScriptableTool(UBlueprint* ToolBlueprint)
+{
+    // 0. 验证蓝图并获取 ToolIdentifier
+    if (!ToolBlueprint)
+    {
+        return false;
+    }
+
+    // 获取类的完整路径作为 ToolIdentifier
+    UClass* GeneratedClass = ToolBlueprint->GeneratedClass;
+    FString ToolIdentifier;
+    GeneratedClass->GetClassPathName().ToString(ToolIdentifier);
+    UE_LOG(LogTemp, Log, TEXT("ActivateScriptableTool: 蓝图 '%s' -> ToolIdentifier: %s"), *ToolBlueprint->GetName(), *ToolIdentifier);
+
+    // 1. 获取 Level Editor 的模式管理器
+    FEditorModeTools& ModeTools = GLevelEditorModeTools();
+    const FEditorModeID ScriptableToolsModeID = TEXT("EM_ScriptableToolsEditorMode");
+
+    // 2. 激活 Scriptable Tools 模式
+    if (!ModeTools.IsModeActive(ScriptableToolsModeID))
+    {
+        ModeTools.ActivateMode(ScriptableToolsModeID);
+    }
+
+    // 3. 获取 Scriptable 模式实例 (UEdMode*)
+    UEdMode* ScriptableMode = ModeTools.GetActiveScriptableMode(ScriptableToolsModeID);
+    if (!ScriptableMode)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ActivateScriptableTool: 无法获取 ScriptableToolsEditorMode 实例"));
+        return false;
+    }
+
+    // 4. 获取 ToolManager
+    UInteractiveToolManager* ToolManager = ScriptableMode->GetToolManager();
+    if (!ToolManager)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ActivateScriptableTool: 无法获取 ToolManager"));
+        return false;
+    }
+
+    // 5. 检查是否可以激活工具
+    if (!ToolManager->CanActivateTool(EToolSide::Mouse, ToolIdentifier))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ActivateScriptableTool: 无法激活工具 '%s'，请确保该蓝图继承自 EditorScriptableTool 并已在 Scriptable Tools 模式中注册"), *ToolIdentifier);
+        return false;
+    }
+
+    // 6. 选择并激活工具
+    if (!ToolManager->SelectActiveToolType(EToolSide::Mouse, ToolIdentifier))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ActivateScriptableTool: SelectActiveToolType 失败，ToolIdentifier: %s"), *ToolIdentifier);
+        return false;
+    }
+
+    bool bActivated = ToolManager->ActivateTool(EToolSide::Mouse);
+    if (!bActivated)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ActivateScriptableTool: ActivateTool 失败，ToolIdentifier: %s"), *ToolIdentifier);
+        return false;
+    }
+
+    return true;
 }

@@ -54,6 +54,7 @@ public class Mineprep : ModuleRules
 				"BlueprintGraph",
 				"EditorSubsystem",
 				"NiagaraEditor", // 添加 NiagaraEditor 模块依赖，用于 UNiagaraScriptVariable
+				"InteractiveToolsFramework", // 添加 InteractiveToolsFramework 模块依赖，用于 ToolManager
 				// Bevel渲染系统依赖
 				"RenderCore",
 				"RHI",

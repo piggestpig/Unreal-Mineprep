@@ -58,7 +58,8 @@
         "EncodeSettings_Epic": "-preset slow -qp 16 -global_quality 16",
         "VideoCodec": "libx265",
         "AudioCodec": "aac",
-        "bAutoActivateMotionDesignViewport": "false"
+        "bAutoActivateMotionDesignViewport": "false",
+        "GenerateDefaultTimecodeFrameRate": "(Numerator=60,Denominator=1)"
     },
     "key_map": {
         "W": "W",

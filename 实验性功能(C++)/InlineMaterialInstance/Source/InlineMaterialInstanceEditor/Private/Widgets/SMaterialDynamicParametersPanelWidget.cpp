@@ -25,6 +25,8 @@
 #include "EngineUtils.h"
 #include "NiagaraTypes.h"
 #include "Tracks/MovieSceneMaterialTrack.h"
+#include "HAL/PlatformApplicationMisc.h"
+#include "Framework/Application/SlateApplication.h"
 
 #define LOCTEXT_NAMESPACE "MaterialDynamicParametersPanelWidget"
 
@@ -202,12 +204,19 @@ public:
 	*/
 	void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView);
 
+public:
+	// 重写鼠标事件以支持快捷键和右键菜单
+	virtual FReply OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
+
 private:
 	const FSlateBrush* GetBorderImage() const;
 
 	FSlateColor GetOuterBackgroundColor(TSharedPtr<FPropertySortedParamData> InParamData) const;
 
 	TSharedRef<SWidget> GetRowExtensionButtons(TSharedPtr<IPropertyHandle> InPropertyHandle);
+
+	// 生成右键菜单
+	TSharedPtr<SWidget> OnGenerateContextMenu();
 private:
 
 	/** The node info to build the tree view row from. */
@@ -227,6 +236,141 @@ private:
 };
 
 
+
+FReply SMaterialDynamicParametersOverviewTreeItem::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	// 只对Property类型的行处理
+	if (StackParameterData.IsValid() && StackParameterData->StackDataType == EStackDataType::Property)
+	{
+		TSharedPtr<IPropertyHandle> Handle = StackParameterData->ParameterNode.IsValid() ? 
+			StackParameterData->ParameterNode->CreatePropertyHandle() : nullptr;
+
+		if (MouseEvent.GetModifierKeys().IsShiftDown() && Handle.IsValid())
+		{
+			// SHIFT + 右键 -> 复制
+			if (MouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+			{
+				FString Value;
+				if (Handle->GetValueAsFormattedString(Value, PPF_Copy) == FPropertyAccess::Success)
+				{
+					FPlatformApplicationMisc::ClipboardCopy(*Value);
+					return FReply::Handled();
+				}
+			}
+			// SHIFT + 左键 -> 粘贴
+			else if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+			{
+				FString ClipboardContent;
+				FPlatformApplicationMisc::ClipboardPaste(ClipboardContent);
+				if (!ClipboardContent.IsEmpty())
+				{
+					Handle->SetValueFromFormattedString(ClipboardContent);
+				}
+				return FReply::Handled();
+			}
+		}
+
+		// 普通右键点击 -> 弹出上下文菜单
+		if (MouseEvent.GetEffectingButton() == EKeys::RightMouseButton && !MouseEvent.GetModifierKeys().IsShiftDown())
+		{
+			TSharedPtr<SWidget> MenuWidget = OnGenerateContextMenu();
+			if (MenuWidget.IsValid())
+			{
+				FWidgetPath WidgetPath = MouseEvent.GetEventPath() != nullptr ? *MouseEvent.GetEventPath() : FWidgetPath();
+				FSlateApplication::Get().PushMenu(
+					SharedThis(this),
+					WidgetPath,
+					MenuWidget.ToSharedRef(),
+					MouseEvent.GetScreenSpacePosition(),
+					FPopupTransitionEffect::ContextMenu
+				);
+				return FReply::Handled();
+			}
+		}
+	}
+
+	return STableRow::OnMouseButtonUp(MyGeometry, MouseEvent);
+}
+
+TSharedPtr<SWidget> SMaterialDynamicParametersOverviewTreeItem::OnGenerateContextMenu()
+{
+	if (!StackParameterData.IsValid() || StackParameterData->StackDataType != EStackDataType::Property)
+	{
+		return nullptr;
+	}
+
+	TSharedPtr<IPropertyHandle> Handle = StackParameterData->ParameterNode.IsValid() ? 
+		StackParameterData->ParameterNode->CreatePropertyHandle() : nullptr;
+
+	FMenuBuilder MenuBuilder(true, nullptr);
+
+	// 获取显示名称
+	FString DisplayName = StackParameterData->ParameterInfo.Name.ToString();
+	FText LocalizedName;
+	if (FText::FindTextInLiveTable_Advanced(FTextKey(TEXT("UObjectDisplayNames")), FTextKey(*DisplayName), LocalizedName, &DisplayName))
+	{
+		DisplayName = LocalizedName.ToString();
+	}
+
+	// 获取内部名称
+	FString InternalName = StackParameterData->ParameterInfo.Name.ToString();
+
+	if (Handle.IsValid())
+	{
+		// 复制值
+		MenuBuilder.AddMenuEntry(
+			NSLOCTEXT("PropertyView", "CopyProperty", "Copy"),
+			NSLOCTEXT("PropertyView", "CopyProperty_ToolTip", "Copy this property value"),
+			FSlateIcon(FAppStyle::GetAppStyleSetName(), "GenericCommands.Copy"),
+			FUIAction(FExecuteAction::CreateLambda([Handle]() {
+				FString Value;
+				if (Handle->GetValueAsFormattedString(Value, PPF_Copy) == FPropertyAccess::Success)
+				{
+					FPlatformApplicationMisc::ClipboardCopy(*Value);
+				}
+			}))
+		);
+
+		// 粘贴值
+		MenuBuilder.AddMenuEntry(
+			NSLOCTEXT("PropertyView", "PasteProperty", "Paste"),
+			NSLOCTEXT("PropertyView", "PasteProperty_ToolTip", "Paste the copied value here"),
+			FSlateIcon(FAppStyle::GetAppStyleSetName(), "GenericCommands.Paste"),
+			FUIAction(FExecuteAction::CreateLambda([Handle]() {
+				FString ClipboardContent;
+				FPlatformApplicationMisc::ClipboardPaste(ClipboardContent);
+				if (!ClipboardContent.IsEmpty())
+				{
+					Handle->SetValueFromFormattedString(ClipboardContent);
+				}
+			}))
+		);
+
+		MenuBuilder.AddSeparator();
+	}
+
+	// 复制显示名称
+	MenuBuilder.AddMenuEntry(
+		NSLOCTEXT("PropertyView", "CopyPropertyDisplayName", "Copy Display Name"),
+		FText::Format(NSLOCTEXT("PropertyView_Single", "CopyPropertyDisplayName_ToolTip", "Copy the display name of this property to the system clipboard:\n{0}"), FText::FromString(DisplayName)),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "GenericCommands.Copy"),
+		FUIAction(FExecuteAction::CreateLambda([DisplayName]() {
+			FPlatformApplicationMisc::ClipboardCopy(*DisplayName);
+		}))
+	);
+
+	// 复制内部名称
+	MenuBuilder.AddMenuEntry(
+		NSLOCTEXT("PropertyView", "CopyPropertyInternalName", "Copy Internal Name"),
+		FText::Format(NSLOCTEXT("PropertyView_Single", "CopyPropertyInternalName_ToolTip", "Copy the internal name of this property to the system clipboard:\n{0}"), FText::FromString(InternalName)),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "GenericCommands.Copy"),
+		FUIAction(FExecuteAction::CreateLambda([InternalName]() {
+			FPlatformApplicationMisc::ClipboardCopy(*InternalName);
+		}))
+	);
+
+	return MenuBuilder.MakeWidget();
+}
 
 const FSlateBrush* SMaterialDynamicParametersOverviewTreeItem::GetBorderImage() const
 {
@@ -403,25 +547,32 @@ void SMaterialDynamicParametersOverviewTreeItem::Construct(const FArguments& InA
 			PropertyHandle->MarkResetToDefaultCustomized(true);
 		}
 
-		FDetailWidgetDecl* CustomNameWidget = Row.CustomNameWidget();
-		if (CustomNameWidget)
+		// 构建tooltip文本：显示名称 + 内部名称
+		FText TooltipText = FText::Format(
+			LOCTEXT("ParameterTooltipFormat", "{0}\n(Internal: {1})"),
+			NameOverride,
+			FText::FromName(StackParameterData->ParameterInfo.Name)
+		);
+
+		// 创建带tooltip的名称widget
+		LeftSideWidget = SNew(STextBlock)
+			.Text(NameOverride)
+			.ToolTipText(TooltipText)
+			.Font(FAppStyle::GetFontStyle(TEXT("PropertyWindow.NormalFont")));
+
+		// 只获取ValueWidget，不覆盖LeftSideWidget
+		const FNodeWidgets NodeWidgets = Node.CreateNodeWidgets();
+		if (NodeWidgets.ValueWidget.IsValid())
 		{
-			(*CustomNameWidget)
-			[
-				SNew(SHorizontalBox)
+			RightSideWidget = SNew(SHorizontalBox)
 				+SHorizontalBox::Slot()
-				.VAlign(VAlign_Center)
+				.FillWidth(1.f)
 				[
-					SNew(STextBlock)
-					.Text(NameOverride)
-					.Font(FAppStyle::GetFontStyle(TEXT("PropertyWindow.NormalFont")))
-				]
-			];
+					NodeWidgets.ValueWidget.ToSharedRef()
+				];
 		}
 
 		bIsPaddedProperty = true;
-
-		GenerateLeftAndRightWidgets(Node);
 	}
 // END PROPERTY
 

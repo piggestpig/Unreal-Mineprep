@@ -23,6 +23,7 @@ public class InlineMaterialInstanceEditor : ModuleRules
 				"UnrealEd",
 				"Niagara",
 				"MovieSceneTracks",
+				"ApplicationCore",
             }
 		);
 	}
