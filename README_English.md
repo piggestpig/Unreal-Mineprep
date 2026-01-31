@@ -50,7 +50,7 @@ In addition, the plugin comes with the Windows version of ffmpeg for video encod
 ## Localization
 Mineprep provides an extensible multi-language translation, currently supporting Chinese/English/Traditional Chinese
 - The **installer** will select the language based on Blender's preference settings. Localization content is written in the form of a dictionary in the code, see [Mineprep_installer.blend](./Mineprep_installer.blend) or [Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
-- The **plugin panel** has a button to select the language, which will be selected based on UE's preference settings at startup. Localization content is saved in [语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv) and [变量显示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)
+- The **plugin panel** has a button to select the language, which will be selected based on UE's preference settings at startup. Localization content is saved in [语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv) and [变量显示名_VariableDisplayNames.csv](./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)
 
 More content is WIP
 

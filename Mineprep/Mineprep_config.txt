@@ -27,7 +27,7 @@
         "render_map": "/Game/mc/播片测试地图.播片测试地图",
         "render_sequence": "/Game/Mineprep/Render/MC临时序列.MC临时序列",
         "render_preset": "/Game/Mineprep/Render/Mineprep自定义渲染配置.Mineprep自定义渲染配置",
-        "megalights_shadow_mode": "0",
+        "megalights_shadow_mode": "-1",
         "HDR_SceneColorMultiplier": "2.0",
         "HDR_UI_Luminance": "200.0",
         "open_file_after_render": "true",

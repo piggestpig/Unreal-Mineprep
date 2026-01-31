@@ -50,7 +50,7 @@ Mineprep 0.5 使用Windows+UE5.7開發。
 ## 語言本地化
 Mineprep提供了可拓展的多語言翻譯，目前支持中文/英文/繁體中文
 - **安裝包**會根據Blender的偏好設置選擇語言。本地化內容以字典的形式寫在代碼中，參見[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
-- **插件面板**上方有選擇語言的按鈕，在啓動時會根據UE的偏好設置選擇語言。本地化內容保存在[語言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv) 和 [變量顯示名_VariableDisplayNames.csv](./实验性功能(C++)/Mineprep/Content/变量显示名_VariableDisplayNames.csv)中。
+- **插件面板**上方有選擇語言的按鈕，在啓動時會根據UE的偏好設置選擇語言。本地化內容保存在[語言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv) 和 [變量顯示名_VariableDisplayNames.csv](./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)中。
 
 更多內容正在更新中
 

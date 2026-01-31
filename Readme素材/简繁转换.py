@@ -35,7 +35,7 @@ replace_back = {
     "更新彙總": "更新汇总",
     "Blender擴展資源/": "Blender扩展资源/",
     "插件貼圖/語言本地化": "插件贴图/语言本地化",
-    "/實驗性功能(C++)/Mineprep/Content/變量顯示名": "/实验性功能(C++)/Mineprep/Content/变量显示名",
+    "(./Mineprep/插件貼圖/變量顯示名_VariableDisplayNames.csv)": "(./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)",
 
 }
 

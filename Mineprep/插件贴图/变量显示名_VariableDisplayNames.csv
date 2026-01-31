@@ -1211,7 +1211,9 @@ UObjectDisplayNames,附魔对比度,附魔对比度,附魔对比度,Enchant Cont
 UObjectDisplayNames,折射率,折射率,折射率,Refraction IOR,折射率
 UObjectDisplayNames,模糊,模糊,模糊,Blur,模糊
 UObjectDisplayNames,自定义,自定义,自定义,Custom,自定義
-,,,,,
+UObjectDisplayNames,覆层颜色,覆层颜色,覆层颜色,Overlay Color,覆層顔色
+UObjectDisplayNames,Stencil覆层贴图遮罩,Stencil覆层贴图遮罩,覆层贴图遮罩,Overlay Mask,覆層貼圖遮罩
+UObjectDisplayNames,覆层遮罩,覆层遮罩,覆层遮罩,Overlay Mask,覆層遮罩
 ,,,,,
 ,,,,,
 NiagaraOverviewStack,SetVariablesPrefix,Set:,设置:,Set:,設置:
