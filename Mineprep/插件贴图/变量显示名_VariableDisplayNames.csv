@@ -1214,7 +1214,8 @@ UObjectDisplayNames,自定义,自定义,自定义,Custom,自定義
 UObjectDisplayNames,覆层颜色,覆层颜色,覆层颜色,Overlay Color,覆層顔色
 UObjectDisplayNames,Stencil覆层贴图遮罩,Stencil覆层贴图遮罩,覆层贴图遮罩,Overlay Mask,覆層貼圖遮罩
 UObjectDisplayNames,覆层遮罩,覆层遮罩,覆层遮罩,Overlay Mask,覆層遮罩
-,,,,,
+UObjectDisplayNames,创建当前材质的副本,创建当前材质的副本,创建当前材质的副本,Create a copy,創建當前材質的副本
 ,,,,,
 NiagaraOverviewStack,SetVariablesPrefix,Set:,设置:,Set:,設置:
 MoviePipelinePIEExecutor,UnsavedMapFailureDialog,"One or more jobs in the queue have an unsaved map as their target map. Maps must be saved at least once before rendering, and then the job must be manually updated to point to the newly saved map.",地图未保存，请保存后再渲染,"One or more jobs in the queue have an unsaved map as their target map. Maps must be saved at least once before rendering, and then the job must be manually updated to point to the newly saved map.",地圖尚未儲存，請先儲存後再進行渲染
+MovieSceneAudioSection,PitchText,Pitch,音高,Pitch,音高

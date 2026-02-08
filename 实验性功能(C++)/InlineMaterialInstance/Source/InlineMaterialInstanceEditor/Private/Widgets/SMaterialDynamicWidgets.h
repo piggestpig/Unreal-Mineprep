@@ -53,6 +53,9 @@ private:
 	/** Button handler for copy material parameters to original instance material */
 	FReply OnCopyToOriginalButtonClicked() const;
 
+	/** Button handler for duplicate current dynamic material */
+	FReply OnDuplicateDynamicMaterialButtonClicked() const;
+
 	/** Button handler for create dynamic material */
 	FReply OnCreateDynamicMaterialButtonClicked() const;
 

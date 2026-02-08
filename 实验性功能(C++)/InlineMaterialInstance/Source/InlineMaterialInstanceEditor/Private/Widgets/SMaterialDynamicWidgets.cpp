@@ -39,6 +39,7 @@ void SMaterialDynamicView::Construct(const FArguments& InArgs, const TSharedRef<
 				SNew(SBox)
 				[
 					SNew(SHorizontalBox)
+
 					+SHorizontalBox::Slot()
 					.AutoWidth()
 					[
@@ -48,6 +49,18 @@ void SMaterialDynamicView::Construct(const FArguments& InArgs, const TSharedRef<
 						.OnClicked(this, &SMaterialDynamicView::OnRevertButtonClicked)
 						[
 							SNew(STextBlock).Text(LOCTEXT("Revert_Button", "Revert"))
+						]
+					]
+
+					+SHorizontalBox::Slot()
+					.AutoWidth()
+					[
+						SNew(SButton)
+						.Visibility(GetButtonVisibilityAttribute<UMaterialInstanceDynamic>())
+						.ToolTipText(NSLOCTEXT("UObjectDisplayNames", "创建当前材质的副本", "创建当前材质的副本"))
+						.OnClicked(this, &SMaterialDynamicView::OnDuplicateDynamicMaterialButtonClicked)
+						[
+							SNew(STextBlock).Text(FText::FromString(TEXT("📄")))
 						]
 					]
 
@@ -210,6 +223,38 @@ FReply SMaterialDynamicView::OnCopyToOriginalButtonClicked() const
 		UMaterialEditingLibrary::RecompileMaterial(ParentMaterialInstance->GetMaterial());
 	}
 #endif
+
+	return FReply::Handled();
+}
+
+FReply SMaterialDynamicView::OnDuplicateDynamicMaterialButtonClicked() const
+{
+	const TSharedPtr<FMaterialItemView> MaterialItemView = MaterialItemViewWeakPtr.Pin();
+	if(!ensure(MaterialItemView.IsValid()))
+	{
+		return FReply::Handled();
+	}
+	
+	UMaterialInstanceDynamic* MaterialInstanceDynamic = Cast<UMaterialInstanceDynamic>(MaterialItemView->GetMaterialListItem().Material.Get());
+	UActorComponent* OwnerActorComponent = CurrentComponent.Get();
+
+	if (!OwnerActorComponent || !MaterialInstanceDynamic)
+	{
+		return FReply::Handled();
+	}
+
+	OwnerActorComponent->Modify();
+
+	FScopedTransaction Transaction(LOCTEXT("DuplicateDynamicMaterial", "Duplicate Dynamic Material"));
+
+	// Create a new Dynamic Material Instance as a duplicate
+	UMaterialInstanceDynamic* NewMaterialInstanceDynamic = NewObject<UMaterialInstanceDynamic>(OwnerActorComponent, NAME_None, RF_Public | RF_Transactional);
+	NewMaterialInstanceDynamic->Parent = MaterialInstanceDynamic->Parent;
+	NewMaterialInstanceDynamic->UpdateCachedData();
+
+	// Copy all parameters from the current dynamic material
+	NewMaterialInstanceDynamic->CopyParameterOverrides(MaterialInstanceDynamic);
+	MaterialItemView->ReplaceMaterial(NewMaterialInstanceDynamic);
 
 	return FReply::Handled();
 }
