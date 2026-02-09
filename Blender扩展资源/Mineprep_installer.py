@@ -534,7 +534,7 @@ class Finish(bpy.types.Operator):
         layout.label(text=loc(29,"您需要手动下载安装，一个虚幻引擎版本只需要安装一次："))
         row = box.row(align=True)
         button_dlss = row.operator(CustomButton.bl_idname, text="DLSS")
-        button_dlss.press = "bpy.ops.wm.url_open(url='https://developer.nvidia.com/rtx/dlss/get-started')"
+        button_dlss.press = "bpy.ops.wm.url_open(url='https://developer.nvidia.com/rtx/dlss#getstarted')"
         button_fsr = row.operator(CustomButton.bl_idname, text="FSR")
         button_fsr.press = "bpy.ops.wm.url_open(url='https://gpuopen.com/learn/ue-fsr/')"
         button_xess = row.operator(CustomButton.bl_idname, text="XeSS")

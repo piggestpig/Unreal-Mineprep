@@ -29,6 +29,72 @@
 ### ② 手动安装
 需要复制Mineprep内容文件夹+修改项目设置，稍后会更新详细步骤
 
+<details>
+<summary> 查看安装时修改的文件 </summary>
+
+```
+根目录
+  ├── Config
+  │     ├── Windows
+  │     │     └── WindowsEngine.ini
+  │     ├── DefaultEditor.ini
+  │     ├── DefaultEngine.ini
+  │     └── DefaultInput.ini
+  ├── Content
+  │     └── Mineprep
+  ├── Plugins
+  │     ├── Mineprep (*)
+  │     └── InlineMaterialInstance*
+  │     └── MoviePipelineMaskRenderPass*
+  │     └── TemplateSequence*
+
+*表示可选的实验性功能
+(*)表示有普通/实验性两个版本
+```
+
+</details>
+
+<details>
+<summary> [推荐] 安装DLSS </summary>
+
+非常建议N卡用户安装DLSS，能提升性能、提高画质、节约显存
+
+1、前往[https://developer.nvidia.com/rtx/dlss#getstarted](https://developer.nvidia.com/rtx/dlss#getstarted)，在“DLSS 4 Plugin for Unreal Engine”板块下载对应的插件版本
+
+2、解压后，复制Plugins文件夹里的子文件夹 到虚幻引擎插件目录的Marketplace文件夹中，如下所示:
+
+**从解压后的DLSS插件文件夹**
+```
+Plugins
+  ├── DLSS
+  ├── DLSSMoviePipelineSupport
+  └── ...
+```
+**到虚幻引擎插件文件夹**
+
+```
+Engine
+  ├── Plugins
+  │     ├── Marketplace
+  │     │     ├── DLSS ⬅
+  │     │     ├── DLSSMoviePipelineSupport ⬅
+  │     │     └── ...
+  │     └── ...
+  └── ...
+```
+没有Marketplace文件夹的话自己新建一个
+
+3、打开工程文件，在左上角-编辑-插件 里搜索DLSS，启用`NVIDIA
+DLSS
+Super Resolution/Ray Reconstruction/DLAA`和`Movie Render Queue DLSS/DLAA Support`，重启引擎
+> 渲染动画时只能使用DLSS和光线重构，用不了帧生成，所以启用上面两个插件就够了
+
+安装成功后，你可以在MC导播台中调整DLSS挡位。
+
+</details>
+
+
+
 
 ## 兼容性
 Mineprep 0.5 使用Windows+UE5.7开发。
@@ -63,6 +129,28 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
 
 
 ## 版本更新
+
+#### 26w06a
+- 本周大幅改进了远景地形生成器，添加了水面，公开了许多参数，能够使用自定义`地形纹理`来控制地形的高度、植被密度和水域了
+  - 平原、山脉和水面的高度会根据边界框自动缩放，通过`平原/山脉/水面高度偏移`这个参数调整相对值，勾选`低洼处填充水面`或者使用地形纹理来生成水
+  - 地形纹理的RGB通道分别对应高度/植被密度/水域，通常在0~1之间，也支持小于0或大于1的值  
+  · R>0升高地面，R<0降低地面  
+  · G>0增加植被，G<0减少植被  
+  · B=1时直接转换为水域，0<B<1时对地形高度进行插值，如果最后的地表高度低于河面，才会生成水
+  - 提供了4组参数用于调整地形纹理：`高度/植被/河流偏移` `高度/植被/河流缩放` `高度/植被/河流乘方` `高度/植被/河流模糊`，每一个都是4D向量，分别对应RGBA通道
+  - 默认在GPU上生成地形，速度非常快，便于调整参数。但是GPU地形经常会从编辑器中消失，渲染开始时需要花几帧时间重新生成地形。取消勾选“在GPU上生成”，则会传回稳定的CPU模型，不过生成速度很慢。
+> 如果用普通的图片作为地形纹理，说不定有意想不到的惊喜！试试虚幻引擎自带的各种贴图吧，比如 3DMotionGraphicsThumbnail 这张图片生成的效果还挺好看的
+
+> 我目前没找到什么比较好的画图工具，虚幻引擎虽然有一个网格体绘制模式，里面能画纹理贴图，但它真的好难用 ╯︿╰
+- 新增`苦力怕`及其NPC生物
+- 修复了一些动画序列造成头部异常旋转的bug
+- 将MC摄像机的根组件替换为骨骼网格体，也就是说可以像生物一样制作骨骼动画了
+- UE 5.7 的关卡序列似乎有bug，对内部组件打关键帧会因中文名而闪退，目前把生物的头部重命名为Head
+- 媒体抠像播放器已更新Substrate材质
+- 清理了一些旧资产
+- 【实验性功能】材质参数面板新增📄按钮，点击复制一份新的材质
+- 【实验性功能】按Ctrl+Alt+9 交换选中项的位置
+
 
 #### 26w05a
 - 本周我们将MCprep的Mesh Swap功能带入虚幻引擎，这是盼望已久的最后一个核心功能！
