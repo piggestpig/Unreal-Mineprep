@@ -167,10 +167,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "MovieSceneAnimMixer",
-			"Enabled": true
-		},
-		{
 			"Name": "AnimatorKit",
 			"Enabled": true
 		},
