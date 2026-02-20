@@ -785,8 +785,8 @@ UObjectDisplayNames,基础生物模型_C:材质参数名称,材质参数名称,�
 UObjectDisplayNames,基础生物模型_C:材质参数浮点,材质参数浮点,材质参数浮点,Material Param Float,材質參數浮點
 UObjectDisplayNames,基础生物模型_C:材质参数颜色,材质参数颜色,材质参数颜色,Material Param Color,材質參數顏色
 UObjectDisplayNames,基础生物模型_C:禁用物理交互,禁用物理交互,禁用物理交互,Disable Physics Interaction,禁用物理交互
-UObjectDisplayNames,基础生物模型_C:物理Ⅰ,物理Ⅰ,物理Ⅰ,Physics I,物理Ⅰ
-UObjectDisplayNames,基础生物模型_C:物理Ⅱ,物理Ⅱ,物理Ⅱ,Physics II,物理Ⅱ
+UObjectDisplayNames,基础生物模型_C:物理Ⅰ,物理Ⅰ,物理Ⅰ,PhysicsⅠ,物理Ⅰ
+UObjectDisplayNames,基础生物模型_C:物理Ⅱ,物理Ⅱ,物理Ⅱ,PhysicsⅡ,物理Ⅱ
 UObjectDisplayNames,基础生物模型_C:FK绑定,FK绑定,FK绑定,FK Rig,FK綁定
 UObjectDisplayNames,基础生物模型_C:IK绑定,IK绑定,IK绑定,IK Rig,IK綁定
 UObjectDisplayNames,基础生物模型_C:运动绑定,运动绑定,运动绑定,Locomotor,運動綁定
@@ -796,7 +796,7 @@ UObjectDisplayNames,基础生物模型_C:◆冲击,◆冲击,◆冲击,◆Impuls
 UObjectDisplayNames,基础生物模型_C:◆小键盘物理事件,◆小键盘物理事件,◆小键盘物理事件,◆Numpad Physics Event,◆小鍵盤物理事件
 UObjectDisplayNames,基础生物模型_C:◆切换动作,◆切换动作,◆切换动作,◆Switch Action,◆切換動作
 UObjectDisplayNames,基础生物模型_C:◆起身并恢复动画,◆起身并恢复动画,◆起身并恢复动画,◆Get Up and Resume Anim,◆起身並恢復動畫
-UObjectDisplayNames,基础生物模型_C:物理Ⅲ,物理Ⅲ,物理Ⅲ,Physics III,物理Ⅲ
+UObjectDisplayNames,基础生物模型_C:物理Ⅲ,物理Ⅲ,物理Ⅲ,Physics Ⅲ,物理Ⅲ
 UObjectDisplayNames,基础生物模型_C:物理绑定,物理绑定,物理绑定,Physics Rig,物理綁定
 UObjectDisplayNames,基础生物模型_C:烘焙关键帧,烘焙关键帧,烘焙关键帧,Bake Keyframes,烘焙關鍵幀
 UObjectDisplayNames,基础生物模型_C:物理Ⅴ,物理Ⅴ,物理Ⅴ,Physics V,物理Ⅴ
@@ -1219,3 +1219,4 @@ UObjectDisplayNames,创建当前材质的副本,创建当前材质的副本,创�
 NiagaraOverviewStack,SetVariablesPrefix,Set:,设置:,Set:,設置:
 MoviePipelinePIEExecutor,UnsavedMapFailureDialog,"One or more jobs in the queue have an unsaved map as their target map. Maps must be saved at least once before rendering, and then the job must be manually updated to point to the newly saved map.",地图未保存，请保存后再渲染,"One or more jobs in the queue have an unsaved map as their target map. Maps must be saved at least once before rendering, and then the job must be manually updated to point to the newly saved map.",地圖尚未儲存，請先儲存後再進行渲染
 MovieSceneAudioSection,PitchText,Pitch,音高,Pitch,音高
+,,,,,
