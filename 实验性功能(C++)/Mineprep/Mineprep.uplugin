@@ -19,10 +19,7 @@
 		{
 			"Name": "Mineprep",
 			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"PlatformAllowList": [
-				"Win64"
-			]
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
@@ -221,21 +218,6 @@
 		{
 			"Name": "UAFWarping",
 			"Enabled": true
-		},
-		{
-			"Name": "DLSS",
-			"Enabled": true,
-			"Optional": true
-		},
-		{
-			"Name": "DLSSMoviePipelineSupport",
-			"Enabled": true,
-			"Optional": true
-		},
-		{
-			"Name": "RestartEditor",
-			"Enabled": true,
-			"Optional": true
 		}
 	]
 }

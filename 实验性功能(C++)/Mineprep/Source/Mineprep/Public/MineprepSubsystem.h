@@ -70,4 +70,13 @@ public:
     
     // 初始化动态命令
     void InitializeDynamicCommands();
+
+    /**
+     * 检测给定快捷键是否与已注册命令冲突
+     * @param Chord                  待检测的快捷键
+     * @param OutConflictName        冲突命令的内部名称（输出）
+     * @param OutConflictDisplayName 冲突命令的显示名称（输出）
+     * @return 有冲突时返回 true
+     */
+    bool CheckHotkeyConflict(const FInputChord& Chord, FString& OutConflictName, FString& OutConflictDisplayName);
 };

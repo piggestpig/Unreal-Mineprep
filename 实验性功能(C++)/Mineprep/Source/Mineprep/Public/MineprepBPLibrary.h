@@ -32,6 +32,7 @@
 #include "K2Node_FunctionEntry.h"
 #include "UObject/Class.h"
 #include "NiagaraTypes.h"
+#include "NiagaraSystem.h"
 #include "MovieScene/Parameters/MovieSceneNiagaraVectorParameterTrack.h"
 #include "PhysicsInterfaceDeclaresCore.h"
 #include "PhysicsEngine/PhysicsSettings.h"
@@ -40,8 +41,21 @@
 #include "InteractiveToolManager.h"
 #include "Tools/UEdMode.h"
 #include "Internationalization/TextLocalizationResource.h"
+#include "Materials/MaterialInterface.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
 
 #include "MineprepBPLibrary.generated.h"
+
+/** 编辑器右下角通知弹窗的状态图标 */
+UENUM(BlueprintType)
+enum class EEditorNotificationState : uint8
+{
+	None    UMETA(DisplayName = "无"),
+	Pending UMETA(DisplayName = "进行中（旋转图标）"),
+	Success UMETA(DisplayName = "成功（勾号）"),
+	Fail    UMETA(DisplayName = "失败（叉号）"),
+};
 
 UCLASS()
 class Umineprep : public UBlueprintFunctionLibrary
@@ -52,9 +66,13 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static float SetEditorUIScale(float Scale);
 
-	//获取鼠标指针下的文本
+	//获取鼠标指针下的文本和Tooltip
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
-	static FString GetWidgetTextUnderMouse();
+	static void GetWidgetTextUnderMouse(FString& OutWidgetText, FString& OutTooltipText);
+
+	//翻译鼠标指针下的文本：NewText为空时查找本地化表并设置，不为空时直接设置
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static int32 LocWidgetTextUnderMouse(const FString& NewText = TEXT(""));
 
 	//启用Tick多线程
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
@@ -84,9 +102,9 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool ExposeStructVariables(UUserDefinedStruct* Structure); 
 
-	//打印公开的蓝图变量和函数名
+	//收集公开的蓝图变量和函数名，返回三个数组：类型、Key、SourceString
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
-	static void GatherPropertyNames(UObject* BlueprintObject);
+	static void GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& OutTypes, TArray<FString>& OutKeys, TArray<FString>& OutSourceStrings);
 
 	//为蓝图变量或函数注入DisplayName元数据，已弃用
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)", meta=(DeprecatedFunction))
@@ -102,7 +120,7 @@ class Umineprep : public UBlueprintFunctionLibrary
 
 	//修改全局重力方向
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
-	static void SetGlobalGravity(FVector Gravity, float DeltaSeconds);
+	static void SetGlobalGravity(FVector Gravity);
 
 	// 切换编辑器模式
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
@@ -115,6 +133,22 @@ class Umineprep : public UBlueprintFunctionLibrary
 	// 激活 Scriptable Tool 编辑器模式并启动指定的工具
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool ActivateScriptableTool(UBlueprint* ToolBlueprint);
+
+	/**
+	 * 在编辑器右下角显示通知弹窗（类似烘焙进度弹窗）
+	 * @param Message       主提示文本
+	 * @param SubText       次级说明文本（可为空）
+	 * @param State         图标状态：None / Pending（旋转）/ Success（勾号）/ Fail（叉号）
+	 * @param Duration      弹窗自动消失时间（秒），<=0 表示不自动消失
+	 * @param bUseThrobber  是否显示旋转加载动画（Pending 状态时生效）
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static void ShowEditorNotification(
+		const FString& Message,
+		const FString& SubText,
+		EEditorNotificationState State = EEditorNotificationState::None,
+		float Duration = 3.0f,
+		bool bUseThrobber = false);
 
 };
 

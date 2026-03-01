@@ -1,8 +1,10 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "MineprepSubsystem.h"
+#include "MineprepBPLibrary.h"
 #include "Framework/Commands/Commands.h"
 #include "Framework/Commands/UICommandList.h"
+#include "Framework/Commands/InputBindingManager.h"
 #include "LevelEditor.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Styling/AppStyle.h"
@@ -98,6 +100,65 @@ void UMineprepSubsystem::InitializeDynamicCommands()
     }
 }
 
+bool UMineprepSubsystem::CheckHotkeyConflict(const FInputChord& Chord, FString& OutConflictName, FString& OutConflictDisplayName)
+{
+    if (!Chord.IsValidChord()) return false;
+
+    // 1. 检查我们自己已注册的自定义快捷键
+    if (DynamicCommands.IsValid())
+    {
+        for (const auto& Pair : CommandToEventMap)
+        {
+            TSharedPtr<FUICommandInfo> Cmd = DynamicCommands->GetCommand(Pair.Key);
+            if (!Cmd.IsValid()) continue;
+            for (int32 i = 0; i < static_cast<int32>(EMultipleKeyBindingIndex::NumChords); ++i)
+            {
+                const FInputChord& Existing = *Cmd->GetActiveChord(static_cast<EMultipleKeyBindingIndex>(i));
+                if (Existing.IsValidChord() && Existing == Chord)
+                {
+                    OutConflictName        = Pair.Key;
+                    OutConflictDisplayName = Cmd->GetLabel().ToString();
+                    return true;
+                }
+            }
+        }
+    }
+
+    // 2. 检查常用编辑器上下文
+    static const TArray<FName> ContextsToCheck =
+    {
+        TEXT("LevelEditor"),
+        TEXT("MainFrame"),
+        TEXT("GenericCommands"),
+        TEXT("ContentBrowser"),
+        TEXT("BlueprintEditor"),
+    };
+    for (const FName& ContextName : ContextsToCheck)
+    {
+        TSharedPtr<FBindingContext> Context = FInputBindingManager::Get().GetContextByName(ContextName);
+        if (!Context.IsValid()) continue;
+
+        TArray<TSharedPtr<FUICommandInfo>> Commands;
+        FInputBindingManager::Get().GetCommandInfosFromContext(ContextName, Commands);
+        for (const auto& Cmd : Commands)
+        {
+            if (!Cmd.IsValid()) continue;
+            for (int32 i = 0; i < static_cast<int32>(EMultipleKeyBindingIndex::NumChords); ++i)
+            {
+                const FInputChord& Existing = *Cmd->GetActiveChord(static_cast<EMultipleKeyBindingIndex>(i));
+                if (Existing.IsValidChord() && Existing == Chord)
+                {
+                    OutConflictName        = Cmd->GetCommandName().ToString();
+                    OutConflictDisplayName = Cmd->GetLabel().ToString();
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FString& DisplayName, const FString& Description,
                                       const FInputChord& Chord, const FString& BlueprintEventName)
 {
@@ -129,6 +190,35 @@ bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FStrin
     {
         UE_LOG(LogTemp, Error, TEXT("注册快捷键失败：无效的按键"));
         return false;
+    }
+
+    // 检测快捷键冲突
+    {
+        FString ConflictName, ConflictDisplayName;
+        if (CheckHotkeyConflict(Chord, ConflictName, ConflictDisplayName))
+        {
+            const FString ModStr = Chord.NeedsControl() ? TEXT("Ctrl+") : TEXT("");
+            const FString ChordStr = ModStr +
+                (Chord.NeedsShift()   ? TEXT("Shift+")  : TEXT("")) +
+                (Chord.NeedsAlt()     ? TEXT("Alt+")    : TEXT("")) +
+                (Chord.NeedsCommand() ? TEXT("Cmd+")    : TEXT("")) +
+                Chord.Key.ToString();
+
+            const FString Msg = FString::Printf(
+                TEXT("快捷键冲突：[%s] 已被 \"%s\" 占用，注册失败"),
+                *ChordStr, *ConflictDisplayName);
+
+            UE_LOG(LogTemp, Warning, TEXT("%s（命令：%s）"), *Msg, *ConflictName);
+
+            Umineprep::ShowEditorNotification(
+                Msg,
+                FString::Printf(TEXT("冲突命令：%s"), *ConflictName),
+                EEditorNotificationState::Fail,
+                5.0f,
+                false);
+
+            return false;
+        }
     }
 
     // 添加命令到动态命令集

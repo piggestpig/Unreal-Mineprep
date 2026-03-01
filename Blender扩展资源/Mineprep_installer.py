@@ -12,6 +12,7 @@ import zipfile
 import configparser
 import json
 import subprocess
+from sys import platform
 from pathlib import Path
 
 class MineprepProperties(bpy.types.PropertyGroup):
@@ -25,15 +26,23 @@ class MineprepProperties(bpy.types.PropertyGroup):
     ini_ffmpeg: bpy.props.BoolProperty()
     ini_memory: bpy.props.BoolProperty(default=True)
     install_mode: bpy.props.IntProperty()
+    lite_version: bpy.props.BoolProperty()
+    skip_other_platform: bpy.props.BoolProperty(default=True)
 
 bpy.utils.register_class(MineprepProperties)
 bpy.types.Scene.mineprep = bpy.props.PointerProperty(type=MineprepProperties)
 
 mc = bpy.context.scene.mineprep
 lang = bpy.context.preferences.view.language
+system = {'win32': 'Win64', 'win64': 'Win64', 'darwin': 'Mac', 'linux': 'Linux'}.get(platform)
+lite_only = "Lite" in bpy.path.basename(bpy.data.filepath)
+
 file_dir = os.path.dirname(bpy.data.filepath)
 outer_dir = os.path.dirname(file_dir)
 ffmpeg_zipfile = join(file_dir, 'Mineprep', 'Render', 'ffmpeg.zip')
+ffmpeg_default = {'Win64': join(file_dir, 'Mineprep', 'Render', 'ffmpeg', 'Win64', 'ffmpeg.exe'),
+                  'Mac': join(file_dir, 'Mineprep', 'Render', 'ffmpeg', 'Mac', 'ffmpeg'),
+                  'Linux': join(file_dir, 'Mineprep', 'Render', 'ffmpeg', 'Linux', 'ffmpeg')}.get(system)
 startup_dir = join(file_dir, 'MC_Startup')
 startup_plugin = join(file_dir, 'MC_Startup', 'Plugins', 'Mineprep')
 mineprep_dir = join(file_dir, 'Mineprep')
@@ -44,20 +53,12 @@ template_sequence_dir = join(file_dir, '实验性功能(C++)', 'TemplateSequence
 blender_path = bpy.app.binary_path
 resource_pack_path = join(file_dir, 'Blender扩展资源', 'mc_default')
 
-#查找或创建文件
-def find_or_create(file_path):
-    path = Path(file_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        path.touch()
-    return path
-
 localization = {
     'zh_CN': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5 安装向导---",
+        2: "---Mineprep v0.5 安装向导---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "欢迎使用Mineprep！",
-        4: "· 此安装包适用于 Windows + UE5.7",
+        4: "· 实验性功能适用于 Windows + UE5.7",
         5: "· 非实验性功能也许能兼容Mac和高版本UE",
         6: "· 重复安装会直接覆盖原文件",
         7: "· 安装前建议关闭虚幻引擎",
@@ -84,13 +85,16 @@ localization = {
         28: "它可以提升画质和帧率，甚至节约显存",
         29: "您需要手动下载安装，一个虚幻引擎版本只需要安装一次：",
         30: "不建议移动或删除安装包，插件可能会引用其中资源",
-        31: "为材质参数面板添加关键帧按钮和本地化翻译"
+        31: "为材质参数面板添加关键帧按钮和本地化翻译",
+        32: "安装精简版 (无源代码/运动匹配/音效/不常用功能)",
+        33: "当前所需空间：",
+        34: "跳过为其他平台编译的文件"
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5 Installer---",
+        2: "---Mineprep v0.5 Installer---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "Welcome to Mineprep!",
-        4: "· This installer is designed for Windows + UE5.7",
+        4: "· The experimental features are designed for Windows + UE5.7",
         5: "· Non-experimental features may be compatible with Mac and higher engine version",
         6: "· Reinstalling will overwrite the original files",
         7: "· It is recommended to close Unreal Engine before installation",
@@ -117,13 +121,16 @@ localization = {
         28: "It can improve image quality and frame rate, even saving VRAM",
         29: "You need to download it manually, only once for each UE version:",
         30: "You may not move or delete the installer, resources may be referenced.",
-        31: "Add keyframe buttons and localization for material parameter panel"
+        31: "Add keyframe buttons and localization for material parameter panel",
+        32: "Lite version (No source code / motion matching / sound / rare assets)",
+        33: "Estimated size: ",
+        34: "Skip files compiled for other platforms"
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5 安裝嚮導---",
+        2: "---Mineprep v0.5 安裝嚮導---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "歡迎使用Mineprep！",
-        4: "· 此安裝包適用於 Windows + UE5.7",
+        4: "· 實驗性功能適用於 Windows + UE5.7",
         5: "· 非實驗性功能也許能兼容Mac和高版本UE",
         6: "· 重複安裝會直接覆蓋原文件",
         7: "· 安裝前建議關閉虛幻引擎",
@@ -150,7 +157,10 @@ localization = {
         28: "它可以提升畫質和幀率，甚至節約顯存",
         29: "您需要手動下載安裝，一個虛幻引擎版本只需要安裝一次：",
         30: "不建議移動或刪除安裝包，插件可能會引用其中資源",
-        31: "為材質參數面板添加關鍵幀按鈕和本地化翻譯"
+        31: "為材質參數面板添加關鍵幀按鈕和本地化翻譯",
+        32: "安裝精簡版 (無源代碼/運動匹配/音效/不常用功能)",
+        33: "當前所需空間：",
+        34: "跳過為其他平台編譯的文件"
     },
 }
 
@@ -196,6 +206,16 @@ def gather_loctext():
 
 print(f"\n{lang}\n{gather_loctext()}\n")
 
+#############################################################################
+
+#查找或创建文件
+def find_or_create(file_path):
+    path = Path(file_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.touch()
+    return path
+
 def get_abs_path(path):
     #转换为绝对路径，同时处理Windows路径分隔符
     if path.startswith("//"):
@@ -208,30 +228,80 @@ def extract_zip(zip_path, extract_to):
     # 检查是否已解压（去掉.zip后缀的路径）
     if os.path.exists(zip_path.replace('.zip', '')):
         return
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_to)
 
-    # 分卷解压
-    part1 = zip_path + '.001'
-    if os.path.exists(part1):
-        temp_zip = zip_path + '.temp'
-        with open(temp_zip, 'wb') as output:
-            i = 1
-            while os.path.exists(f"{zip_path}.{i:03d}"):
-                with open(f"{zip_path}.{i:03d}", 'rb') as part:
-                    output.write(part.read())
-                i += 1
-        with zipfile.ZipFile(temp_zip, 'r') as zip_ref:
-            zip_ref.extractall(extract_to)
-        os.remove(temp_zip)
+def get_lite_skip():
+    skip = {"ffmpeg.zip.001", "ffmpeg.zip.002"}
+    if mc.skip_other_platform:
+        all_platforms = {'Win64', 'Mac', 'Linux'}
+        if system:
+            skip.update(all_platforms - {system})
+    if mc.lite_version:
+        skip.update({"第三人称运动匹配", "音效", "ffmpeg.zip", "whisper", "Source"})
+    return skip
+
+def get_dir_size(path, skip):
+    total = 0
+    try:
+        for entry in os.scandir(path):
+            if entry.name in skip:
+                print(f"[lite] 跳过: {entry.path}")
+                continue
+            if entry.is_dir(follow_symlinks=False):
+                total += get_dir_size(entry.path, skip)
+            else:
+                total += entry.stat(follow_symlinks=False).st_size
+    except (PermissionError, FileNotFoundError):
+        pass
+    return total
+
+_size_cache = {}
+
+def est_size():
+    cache_key = (mc.lite_version, mc.skip_other_platform, mc.install_mode, mc.exp_basic, mc.exp_material, mc.exp_vr3d, mc.exp_template_seq)
+    if cache_key in _size_cache:
+        return _size_cache[cache_key]
+
+    skip = get_lite_skip()
+    total = 0
+    if mc.install_mode == 1:
+        total += get_dir_size(startup_dir, skip)
     else:
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_to)
+        total += get_dir_size(startup_plugin, skip)
+    total += get_dir_size(mineprep_dir, skip)
+    if mc.exp_basic:
+        total += get_dir_size(exp_dir, skip)
+    if mc.exp_material:
+        total += get_dir_size(material_dir, skip)
+    if mc.exp_vr3d:
+        total += get_dir_size(vr3d_dir, skip)
+    if mc.exp_template_seq:
+        total += get_dir_size(template_sequence_dir, skip)
+
+    if total >= 1024 ** 3:
+        result = f"{total / 1024 ** 3:.2f} GB"
+    elif total >= 1024 ** 2:
+        result = f"{total / 1024 ** 2:.0f} MB"
+    else:
+        result = f"{total / 1024:.0f} KB"
+
+    _size_cache[cache_key] = result
+    return result
+
+def lite_ignore(dir, contents):
+    skip = get_lite_skip()
+    ignored = {item for item in contents if item in skip}
+    for item in ignored:
+        print(f"[lite] 跳过: {os.path.join(dir, item)}")
+    return ignored
+
+###############################################################################
 
 def install():
     install_path = get_abs_path(mc.install_path)
     if mc.install_path == "":
         raise FileNotFoundError(loc(1, "⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠"))
-    if not mc.ffmpeg_path:
-        extract_zip(ffmpeg_zipfile, join(file_dir, 'Mineprep', 'Render'))
     if not os.path.exists(install_path):
         os.makedirs(install_path)
     
@@ -240,22 +310,22 @@ def install():
         for item in os.listdir(startup_dir):
             files = join(startup_dir, item)
             if os.path.isdir(files):
-                shutil.copytree(files, join(install_path, item), dirs_exist_ok=True)
+                shutil.copytree(files, join(install_path, item), dirs_exist_ok=True, ignore=lite_ignore)
             elif os.path.isfile(files):
                 shutil.copy(files, join(install_path, item))
     elif mc.install_mode == 2:
-        shutil.copytree(startup_plugin, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True)
+        shutil.copytree(startup_plugin, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=lite_ignore)
 
-    shutil.copytree(mineprep_dir, join(install_path, 'Content', 'Mineprep'), dirs_exist_ok=True)
+    shutil.copytree(mineprep_dir, join(install_path, 'Content', 'Mineprep'), dirs_exist_ok=True, ignore=lite_ignore)
     #实验性功能
     if mc.exp_basic:
-        shutil.copytree(exp_dir, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True)
+        shutil.copytree(exp_dir, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=lite_ignore)
     if mc.exp_material:
-        shutil.copytree(material_dir, join(install_path, 'Plugins', 'InlineMaterialInstance'), dirs_exist_ok=True)
+        shutil.copytree(material_dir, join(install_path, 'Plugins', 'InlineMaterialInstance'), dirs_exist_ok=True, ignore=lite_ignore)
     if mc.exp_vr3d:
-        shutil.copytree(vr3d_dir, join(install_path, 'Plugins', 'MoviePipelineMaskRenderPass'), dirs_exist_ok=True)
+        shutil.copytree(vr3d_dir, join(install_path, 'Plugins', 'MoviePipelineMaskRenderPass'), dirs_exist_ok=True, ignore=lite_ignore)
     if mc.exp_template_seq:
-        shutil.copytree(template_sequence_dir, join(install_path, 'Plugins', 'TemplateSequence'), dirs_exist_ok=True)
+        shutil.copytree(template_sequence_dir, join(install_path, 'Plugins', 'TemplateSequence'), dirs_exist_ok=True, ignore=lite_ignore)
     
     #修改插件配置文件
     mineprep_ini = join(install_path, 'Content', 'Mineprep', 'Mineprep_config.txt')
@@ -281,15 +351,12 @@ def install():
     CLI = '/Script/MovieRenderPipelineCore.MoviePipelineCommandLineEncoderSettings'
     if not config.has_section(CLI):
         config.add_section(CLI)
-    config.set(CLI, 'ExecutablePath', mc.ffmpeg_path.replace("\\\\", "\\").replace("/", "\\") if mc.ini_ffmpeg else join(install_path, 'Content', 'Mineprep', 'Render', 'ffmpeg', 'bin', 'ffmpeg.exe'))
+    ExecutablePath = mc.ffmpeg_path.replace("\\\\", "\\").replace("/", "\\") if mc.ini_ffmpeg else ffmpeg_default
+    config.set(CLI, 'ExecutablePath', ExecutablePath)
     config.set(CLI, 'VideoCodec', 'libx265')
     config.set(CLI, 'AudioCodec', 'aac')
     config.set(CLI, 'OutputFileExtension', 'mp4')
     config.set(CLI, 'CommandLineFormat', r'"-hide_banner -y -loglevel error {AdditionalLocalArgs}"')
-    config.set(CLI, 'EncodeSettings_Low', '-preset fast -qp 28 -global_quality 28')
-    config.set(CLI, 'EncodeSettings_Med', '-preset medium -qp 23 -global_quality 23')
-    config.set(CLI, 'EncodeSettings_High', '-preset medium -qp 19 -global_quality 16')
-    config.set(CLI, 'EncodeSettings_Epic', '-preset slow -qp 16 -global_quality 16')
 
     RENDER = '/Script/Engine.RendererSettings'
     if not config.has_section(RENDER):
@@ -383,7 +450,7 @@ class Welcome(bpy.types.Operator):
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_popup(self, width=440)
+        return context.window_manager.invoke_popup(self, width=444)
 
     def draw(self, context):
         box = self.layout.box()
@@ -405,7 +472,7 @@ class Welcome(bpy.types.Operator):
         # 修改按钮动作以打开新对话框
         button = row.operator(CustomButton.bl_idname, text=loc(9,"新建UE工程文件"))
         button.press = "mc.install_mode = 1; bpy.ops.dialog.installer1('INVOKE_DEFAULT')"
-        
+
         button = row.operator(CustomButton.bl_idname, text=loc(10,"安装至现有工程"))
         button.press = "mc.install_mode = 2; bpy.ops.dialog.installer2('INVOKE_DEFAULT')"
 
@@ -422,7 +489,8 @@ class Installer1(bpy.types.Operator):
     
     def invoke(self, context, event):
         mc.install_path = join(outer_dir, "MC_Startup")
-        return context.window_manager.invoke_props_dialog(self, width=400)
+        extract_zip(ffmpeg_zipfile, join(file_dir, 'Mineprep', 'Render'))
+        return context.window_manager.invoke_props_dialog(self, width=420)
     
     def draw(self, context):
         layout = self.layout.column(align=True)
@@ -436,6 +504,13 @@ class Installer1(bpy.types.Operator):
             box.alert = True
             box.label(text=loc(12,"警告: 文件夹路径包含中文或非ASCII字符！可能会导致部分功能失效"), icon='ERROR')
 
+        layout.separator(type='LINE')
+        layout.label(text=loc(33,"当前所需空间") + est_size())
+        if lite_only:
+            layout.label(text=loc(32,"安装精简版"))
+        else:
+            layout.prop(mc, "lite_version", text=loc(32,"安装精简版"))
+        layout.prop(mc, "skip_other_platform", text=loc(34,"跳过为其他平台编译的文件"))
         layout.separator(type='LINE')
         layout.label(text=loc(13,"实验性功能:"))
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
@@ -466,7 +541,8 @@ class Installer2(bpy.types.Operator):
     
     def invoke(self, context, event):
         mc.install_path = ""
-        return context.window_manager.invoke_props_dialog(self, width=400)
+        extract_zip(ffmpeg_zipfile, join(file_dir, 'Mineprep', 'Render'))
+        return context.window_manager.invoke_props_dialog(self, width=420)
     
     def draw(self, context):
         layout = self.layout.column(align=True)
@@ -484,11 +560,18 @@ class Installer2(bpy.types.Operator):
                 box = layout.box()
                 box.alert = True
                 box.label(text=loc(12,"警告: 文件夹路径包含中文或非ASCII字符！可能会导致部分功能失效"), icon='ERROR')
-            if not any(file.endswith('.uproject') for file in os.listdir(abs_path)):
+            if not os.path.exists(abs_path) or not any(file.endswith('.uproject') for file in os.listdir(abs_path)):
                 box = layout.box()
                 box.alert = True
                 box.label(text=loc(23,"警告: 未找到.uproject文件！请确认当前文件夹为UE工程根目录"), icon='ERROR')
-        
+
+        layout.separator(type='LINE')
+        layout.label(text=loc(33,"当前所需空间") + est_size())
+        if lite_only:
+            layout.label(text=loc(32,"安装精简版"))
+        else:
+            layout.prop(mc, "lite_version", text=loc(32,"安装精简版"))
+        layout.prop(mc, "skip_other_platform", text=loc(34,"跳过为其他平台编译的文件"))
         layout.separator(type='LINE')
         layout.label(text=loc(13,"实验性功能(仅适用于Windows+UE5.7):"))
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
@@ -513,7 +596,7 @@ class Finish(bpy.types.Operator):
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width=400)
+        return context.window_manager.invoke_props_dialog(self, width=420)
 
     def draw(self, context):
 
@@ -541,6 +624,20 @@ class Finish(bpy.types.Operator):
         button_xess.press = "bpy.ops.wm.url_open(url='https://github.com/GameTechDev/XeSSUnrealPlugin/releases')"
 
 
+# 启动时将分卷压缩合并为完整 ffmpeg.zip
+def merge_ffmpeg_zip():
+    part1 = ffmpeg_zipfile + '.001'
+    if not os.path.exists(part1) or os.path.exists(ffmpeg_zipfile):
+        return
+    print("正在合并 ffmpeg 分卷压缩文件...")
+    with open(ffmpeg_zipfile, 'wb') as output:
+        i = 1
+        while os.path.exists(f"{ffmpeg_zipfile}.{i:03d}"):
+            with open(f"{ffmpeg_zipfile}.{i:03d}", 'rb') as part:
+                output.write(part.read())
+            i += 1
+    print("合并完成：", ffmpeg_zipfile)
+
 def register():
     bpy.utils.register_class(CustomButton)
     bpy.utils.register_class(Welcome)
@@ -558,7 +655,10 @@ def unregister():
 
 if __name__ == "__main__":
     register()
+    merge_ffmpeg_zip()
     if hasattr(bpy.context.scene, "mineprep"):
         mc.page = 0
+    if lite_only:
+        mc.lite_version = True
     bpy.ops.dialog.welcome('INVOKE_DEFAULT')
 

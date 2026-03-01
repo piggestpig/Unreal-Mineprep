@@ -22,6 +22,7 @@
 #include "MovieScene/Parameters/MovieSceneNiagaraParameterTrack.h"
 #include "MineprepSubsystem.h"
 #include "Interfaces/IPluginManager.h"
+#include "Containers/Ticker.h"
 
 // 添加控制台变量
 static float GMineprepTickInterval = 9999999.0f;
@@ -85,6 +86,36 @@ private:
 };
 
 static TSharedPtr<FMineprepEditorTicker> MineprepEditorTicker;
+
+// 待应用的 Niagara 参数本地化：原始参数名 -> 本地化 FText
+static TMap<FString, FText> GPendingParamLocalizations;
+static bool GLocTickerScheduled = false;
+
+// 递归遍历控件树，将文本匹配 OldText 的 STextBlock 替换为 NewText，返回替换数量
+static int32 LocalizeTextBlocksInWidget(const TSharedRef<SWidget>& Widget, const TMap<FString, FText>& LocalizationMap)
+{
+    int32 Count = 0;
+    if (Widget->GetType() == FName("STextBlock"))
+    {
+        TSharedPtr<STextBlock> TB = StaticCastSharedRef<STextBlock>(Widget);
+        FString CurrentText = TB->GetText().ToString();
+        if (const FText* NewText = LocalizationMap.Find(CurrentText))
+        {
+            TB->SetText(*NewText);
+            ++Count;
+        }
+        return Count;
+    }
+    FChildren* Children = Widget->GetAllChildren();
+    if (Children)
+    {
+        for (int32 i = 0; i < Children->Num(); ++i)
+        {
+            Count += LocalizeTextBlocksInWidget(Children->GetChildAt(i), LocalizationMap);
+        }
+    }
+    return Count;
+}
 
 static FSlateIcon GetKeyframeIcon(TWeakPtr<IDetailTreeNode> OwnerTreeNode, TSharedPtr<IPropertyHandle> PropertyHandle)
 {
@@ -277,7 +308,50 @@ static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtension
 
     // 获取参数名
     FString ParamNameStr = PropertyHandle->GetPropertyDisplayName().ToString();
-    
+
+    // 尝试本地化参数显示名称
+    {
+        FText LocalizedParamName;
+        FString SourceStr = ParamNameStr;
+        bool bLocFound = FText::FindTextInLiveTable_Advanced(
+            FTextKey(TEXT("UObjectDisplayNames")),
+            FTextKey(*ParamNameStr),
+            LocalizedParamName,
+            &SourceStr);
+
+        if (bLocFound)
+        {
+            // 记录待本地化映射
+            GPendingParamLocalizations.Add(ParamNameStr, LocalizedParamName);
+
+            // 首次记录时注册一个一次性延迟帧，参数面板构建完毕后统一 SetText
+            if (!GLocTickerScheduled)
+            {
+                GLocTickerScheduled = true;
+                FTSTicker::GetCoreTicker().AddTicker(
+                    FTickerDelegate::CreateLambda([](float) -> bool
+                    {
+                        if (FSlateApplication::IsInitialized() && GPendingParamLocalizations.Num() > 0)
+                        {
+                            const TArray<TSharedRef<SWindow>>& TopWindows =
+                                FSlateApplication::Get().GetInteractiveTopLevelWindows();
+                            int32 TotalSet = 0;
+                            for (const TSharedRef<SWindow>& Window : TopWindows)
+                            {
+                                TotalSet += LocalizeTextBlocksInWidget(Window, GPendingParamLocalizations);
+                            }
+                            UE_LOG(LogTemp, Verbose, TEXT("Niagara参数本地化：共设置 %d 个标签"), TotalSet);
+                            GPendingParamLocalizations.Empty();
+                        }
+                        GLocTickerScheduled = false;
+                        return false; // 只执行一次，自动销毁
+                    }),
+                    0.0f // 下一帧执行
+                );
+            }
+        }
+    }
+
     FText ParamTooltip;
     
     // 从Mineprep子系统获取自定义快捷键对象

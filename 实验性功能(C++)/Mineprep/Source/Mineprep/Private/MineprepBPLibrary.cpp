@@ -35,9 +35,11 @@ void Umineprep::SetTickRunOnAnyThread(UObject* Object, bool bRunOnAnyThread)
     return;
 }
 
-FString Umineprep::GetWidgetTextUnderMouse()
+void Umineprep::GetWidgetTextUnderMouse(FString& OutWidgetText, FString& OutTooltipText)
 {
-    FString ResultText;
+    OutWidgetText.Empty();
+    OutTooltipText.Empty();
+
     FString TooltipText;
     FString WidgetText;
 
@@ -178,40 +180,117 @@ FString Umineprep::GetWidgetTextUnderMouse()
                     // 如果已经找到了text和tooltip，就可以提前返回了
                     if (!WidgetText.IsEmpty() && !TooltipText.IsEmpty())
                     {
-                        // 如果text和tooltip相同,只返回text
-                        if (WidgetText.Equals(TooltipText))
-                        {
-                            return WidgetText;
-                        }
-                        ResultText = WidgetText + TEXT(" , ") + TooltipText;
-                        return ResultText;
+                        OutWidgetText = WidgetText;
+                        OutTooltipText = TooltipText;
+                        return;
                     }
                 }
 
-                // 遍历完整个路径后,再组合结果
-                if (!WidgetText.IsEmpty() || !TooltipText.IsEmpty())
+                // 遍历完整个路径后，输出结果
+                OutWidgetText = WidgetText;
+                OutTooltipText = TooltipText;
+            }
+        }
+    }
+}
+
+// 辅助 Lambda：尝试对一个 STextBlock 执行本地化设置，返回是否成功设置
+static int32 LocTextBlock(TSharedPtr<STextBlock> TextBlock, const FString& NewText)
+{
+    if (!TextBlock.IsValid()) return 0;
+
+    if (!NewText.IsEmpty())
+    {
+        // 直接设置指定文本
+        UE_LOG(LogTemp, Display, TEXT("LocWidgetTextUnderMouse: 直接设置 '%s' -> '%s'"), *TextBlock->GetText().ToString(), *NewText);
+        TextBlock->SetText(FText::FromString(NewText));
+        return 1;
+    }
+
+    // NewText 为空：获取当前显示文本，在本地化表中查找
+    FString DisplayName = TextBlock->GetText().ToString();
+    if (DisplayName.IsEmpty()) return 0;
+
+    FText LocalizedName;
+    bool bFound = FText::FindTextInLiveTable_Advanced(
+        FTextKey(TEXT("UObjectDisplayNames")),
+        FTextKey(*DisplayName),
+        LocalizedName,
+        &DisplayName);
+
+    if (bFound)
+    {
+        UE_LOG(LogTemp, Display, TEXT("LocWidgetTextUnderMouse: 本地化成功 '%s' -> '%s'"), *DisplayName, *LocalizedName.ToString());
+        TextBlock->SetText(LocalizedName);
+        return 1;
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("LocWidgetTextUnderMouse: 未在本地化表中找到 Key='%s'"), *DisplayName);
+        return 0;
+    }
+}
+
+int32 Umineprep::LocWidgetTextUnderMouse(const FString& NewText)
+{
+    int32 SetCount = 0;
+    if (!FSlateApplication::IsInitialized()) return SetCount;
+
+    FVector2D MousePos = FSlateApplication::Get().GetCursorPos();
+    FWidgetPath WidgetPath = FSlateApplication::Get().LocateWindowUnderMouse(
+        MousePos,
+        FSlateApplication::Get().GetInteractiveTopLevelWindows(),
+        /*bIgnoreEnabledStatus=*/true);
+
+    if (!WidgetPath.IsValid()) return SetCount;
+
+    for (int32 i = WidgetPath.Widgets.Num() - 1; i >= 0; --i)
+    {
+        TSharedRef<SWidget> Widget = WidgetPath.Widgets[i].Widget;
+        FString WidgetType = Widget->GetType().ToString();
+
+        if (WidgetType.Contains(TEXT("STextBlock")))
+        {
+            SetCount += LocTextBlock(StaticCastSharedRef<STextBlock>(Widget), NewText);
+            break;
+        }
+        else if (WidgetType.Contains(TEXT("SButton")))
+        {
+            TSharedPtr<SButton> Button = StaticCastSharedRef<SButton>(Widget);
+            if (TSharedPtr<SWidget> Content = Button->GetContent())
+            {
+                FString ContentType = Content->GetType().ToString();
+                if (ContentType.Contains(TEXT("STextBlock")))
                 {
-                    if (!WidgetText.IsEmpty() && !TooltipText.IsEmpty())
+                    SetCount += LocTextBlock(StaticCastSharedRef<STextBlock>(Content.ToSharedRef()), NewText);
+                    break;
+                }
+                else if (ContentType.Contains(TEXT("SHorizontalBox")))
+                {
+                    TSharedPtr<SHorizontalBox> HBox = StaticCastSharedRef<SHorizontalBox>(Content.ToSharedRef());
+                    if (FChildren* Children = HBox->GetChildren())
                     {
-                        // 如果text和tooltip相同,只返回text
-                        if (WidgetText.Equals(TooltipText))
+                        for (int32 j = 0; j < Children->Num(); ++j)
                         {
-                            ResultText = WidgetText;
-                        }
-                        else
-                        {
-                            ResultText = WidgetText + TEXT(" , ") + TooltipText;
+                            TSharedRef<SWidget> Child = Children->GetChildAt(j);
+                            if (Child->GetType().ToString().Contains(TEXT("STextBlock")))
+                            {
+                                SetCount += LocTextBlock(StaticCastSharedRef<STextBlock>(Child), NewText);
+                                break;
+                            }
                         }
                     }
-                    else
-                    {
-                        ResultText = WidgetText.IsEmpty() ? TooltipText : WidgetText;
-                    }
+                    if (SetCount > 0) break;
                 }
             }
         }
     }
-    return ResultText;
+
+    if (SetCount == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("LocWidgetTextUnderMouse: 鼠标下未找到可设置的文本控件"));
+    }
+    return SetCount;
 }
 
 FComponentMaterialInfo Umineprep::GetMaterialInfo(UMovieSceneComponentMaterialTrack* Track)
@@ -456,13 +535,16 @@ bool Umineprep::ExposeStructVariables(UUserDefinedStruct* Structure)
     if (bModified)
     {
         Structure->MarkPackageDirty();
-        Structure->PostEditChange();
     }
     return bModified;
 }
 
-void Umineprep::GatherPropertyNames(UObject* BlueprintObject)
+void Umineprep::GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& OutTypes, TArray<FString>& OutKeys, TArray<FString>& OutSourceStrings)
 {
+    OutTypes.Empty();
+    OutKeys.Empty();
+    OutSourceStrings.Empty();
+
     if (!BlueprintObject) return;
 
     UUserDefinedStruct* UserStruct = Cast<UUserDefinedStruct>(BlueprintObject);
@@ -488,10 +570,12 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject)
                         PropertyName = PropertyName.Left(UnderscoreIndex);
                     }
                 }
-                
+
                 // 获取用于Polyglot本地化的Key（Namespace固定为"UObjectDisplayNames"）
                 FString LocalizationKey = Property->GetFullGroupName(false);
-                UE_LOG(LogTemp, Display, TEXT("【结构体变量】%s······%s"), *LocalizationKey, *PropertyName);
+                OutTypes.Add(TEXT("结构体变量"));
+                OutKeys.Add(LocalizationKey);
+                OutSourceStrings.Add(PropertyName);
             }
         }
     }
@@ -503,14 +587,66 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject)
         // 遍历所有枚举值
         for (int32 i = 0; i < UserEnum->NumEnums() - 1; ++i)  // NumEnums() - 1 排除隐藏的 _MAX 值
         {
-            FString EnumValueName = UserEnum->GetNameStringByIndex(i);
             FString DisplayName = UserEnum->GetDisplayNameTextByIndex(i).ToString();
-            //去除空格
+            // 去除空格
             FString KeyName = DisplayName.Replace(TEXT(" "), TEXT(""));
-            
+
             // 获取枚举值的本地化Key：枚举资产名称.枚举值名称
             FString LocalizationKey = FString::Printf(TEXT("%s.%s"), *EnumName, *KeyName);
-            UE_LOG(LogTemp, Display, TEXT("【枚举值】\"%s\",\"%s\""), *LocalizationKey, *DisplayName);
+            OutTypes.Add(TEXT("枚举值"));
+            OutKeys.Add(LocalizationKey);
+            OutSourceStrings.Add(DisplayName);
+        }
+    }
+    // 处理材质实例/材质接口
+    else if (UMaterialInterface* MatInterface = Cast<UMaterialInterface>(BlueprintObject))
+    {
+        TArray<FMaterialParameterInfo> ParamInfos;
+        TArray<FGuid> ParamGuids;
+
+        // 标量参数
+        MatInterface->GetAllScalarParameterInfo(ParamInfos, ParamGuids);
+        for (const FMaterialParameterInfo& Info : ParamInfos)
+        {
+            FString ParamName = Info.Name.ToString();
+            OutTypes.Add(TEXT("标量参数"));
+            OutKeys.Add(ParamName);
+            OutSourceStrings.Add(ParamName);
+        }
+
+        // 向量参数
+        ParamInfos.Empty(); ParamGuids.Empty();
+        MatInterface->GetAllVectorParameterInfo(ParamInfos, ParamGuids);
+        for (const FMaterialParameterInfo& Info : ParamInfos)
+        {
+            FString ParamName = Info.Name.ToString();
+            OutTypes.Add(TEXT("向量参数"));
+            OutKeys.Add(ParamName);
+            OutSourceStrings.Add(ParamName);
+        }
+
+        // 纹理参数
+        ParamInfos.Empty(); ParamGuids.Empty();
+        MatInterface->GetAllTextureParameterInfo(ParamInfos, ParamGuids);
+        for (const FMaterialParameterInfo& Info : ParamInfos)
+        {
+            FString ParamName = Info.Name.ToString();
+            OutTypes.Add(TEXT("纹理参数"));
+            OutKeys.Add(ParamName);
+            OutSourceStrings.Add(ParamName);
+        }
+    }
+    // 处理粒子系统
+    else if (UNiagaraSystem* NiagaraSystem = Cast<UNiagaraSystem>(BlueprintObject))
+    {
+        TArray<FNiagaraVariable> UserParams;
+        NiagaraSystem->GetExposedParameters().GetUserParameters(UserParams);
+        for (const FNiagaraVariable& Param : UserParams)
+        {
+            FString ParamName = Param.GetName().ToString();
+            OutTypes.Add(TEXT("粒子参数"));
+            OutKeys.Add(ParamName);
+            OutSourceStrings.Add(ParamName);
         }
     }
     // 处理蓝图资产
@@ -518,11 +654,11 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject)
     {
         // 获取生成的类，用于获取实际的FProperty
         UBlueprintGeneratedClass* GeneratedClass = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass);
-        
+
         for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
         {
             if (VarDesc.PropertyFlags & CPF_DisableEditOnInstance) continue; // 检查变量是否公开
-            
+
             FString LocalizationKey;
             // 尝试从生成的类中获取对应的FProperty以获取准确的Key
             if (GeneratedClass)
@@ -533,14 +669,16 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject)
                     LocalizationKey = Property->GetFullGroupName(false);
                 }
             }
-            
+
             if (LocalizationKey.IsEmpty())
             {
                 // 如果无法获取，使用蓝图路径作为备用Key
                 LocalizationKey = FString::Printf(TEXT("%s_C.%s"), *Blueprint->GetPathName(), *VarDesc.VarName.ToString());
             }
-            
-            UE_LOG(LogTemp, Display, TEXT("【蓝图变量】%s······%s"), *LocalizationKey, *VarDesc.VarName.ToString());
+
+            OutTypes.Add(TEXT("蓝图变量"));
+            OutKeys.Add(LocalizationKey);
+            OutSourceStrings.Add(VarDesc.VarName.ToString());
         }
 
         for (UEdGraph* FunctionGraph : Blueprint->FunctionGraphs)
@@ -571,13 +709,15 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject)
                     LocalizationKey = Function->GetFullGroupName(false);
                 }
             }
-            
+
             if (LocalizationKey.IsEmpty())
             {
                 LocalizationKey = FString::Printf(TEXT("%s_C.%s"), *Blueprint->GetPathName(), *FunctionName);
             }
-            
-            UE_LOG(LogTemp, Display, TEXT("【蓝图函数】%s······%s"), *LocalizationKey, *FunctionName);
+
+            OutTypes.Add(TEXT("蓝图函数"));
+            OutKeys.Add(LocalizationKey);
+            OutSourceStrings.Add(FunctionName);
         }
     }
 }
@@ -928,13 +1068,13 @@ void Umineprep::BindNiagaraParam(UMovieSceneNiagaraParameterTrack* ParameterTrac
 }
 
 
-void Umineprep::SetGlobalGravity(FVector Gravity, float DeltaSeconds)
+void Umineprep::SetGlobalGravity(FVector Gravity)
 {
     UWorld* World = GWorld;
     FPhysScene* PhysScene = World->GetPhysicsScene();
     PhysScene->SetUpForFrame(
         &Gravity,
-        DeltaSeconds,
+        FApp::GetDeltaTime(),
         UPhysicsSettings::Get()->MinPhysicsDeltaTime,
         UPhysicsSettings::Get()->MaxPhysicsDeltaTime,
         UPhysicsSettings::Get()->MaxSubstepDeltaTime,
@@ -1016,4 +1156,58 @@ bool Umineprep::ActivateScriptableTool(UBlueprint* ToolBlueprint)
     }
 
     return true;
+}
+
+void Umineprep::ShowEditorNotification(
+    const FString& Message,
+    const FString& SubText,
+    EEditorNotificationState State,
+    float Duration,
+    bool bUseThrobber)
+{
+    FNotificationInfo Info(FText::FromString(Message));
+
+    // 次级说明文字
+    if (!SubText.IsEmpty())
+    {
+        Info.SubText = FText::FromString(SubText);
+    }
+
+    // 自动消失时间（<=0 则保持直到手动关闭）
+    Info.ExpireDuration = Duration > 0.0f ? Duration : 0.0f;
+    Info.bFireAndForget = Duration > 0.0f;
+
+    // 是否显示旋转加载动画（仅 Pending 时有意义）
+    Info.bUseThrobber = bUseThrobber;
+
+    // 淡出动画时长
+    Info.FadeOutDuration = 0.5f;
+    Info.FadeInDuration  = 0.2f;
+
+    // 允许点击关闭
+    Info.bUseSuccessFailIcons = (State == EEditorNotificationState::Success || State == EEditorNotificationState::Fail);
+
+    TSharedPtr<SNotificationItem> NotificationItem =
+        FSlateNotificationManager::Get().AddNotification(Info);
+
+    if (NotificationItem.IsValid())
+    {
+        SNotificationItem::ECompletionState CompletionState;
+        switch (State)
+        {
+            case EEditorNotificationState::Pending:
+                CompletionState = SNotificationItem::CS_Pending;
+                break;
+            case EEditorNotificationState::Success:
+                CompletionState = SNotificationItem::CS_Success;
+                break;
+            case EEditorNotificationState::Fail:
+                CompletionState = SNotificationItem::CS_Fail;
+                break;
+            default:
+                CompletionState = SNotificationItem::CS_None;
+                break;
+        }
+        NotificationItem->SetCompletionState(CompletionState);
+    }
 }

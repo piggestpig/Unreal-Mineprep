@@ -212,21 +212,6 @@
         {
             "Name": "UAFWarping",
             "Enabled": true
-        },
-        {
-            "Name": "DLSS",
-            "Enabled": true,
-            "Optional": true
-        },
-        {
-            "Name": "DLSSMoviePipelineSupport",
-            "Enabled": true,
-            "Optional": true
-        },
-        {
-            "Name": "RestartEditor",
-            "Enabled": true,
-            "Optional": true
         }
     ]
 }
