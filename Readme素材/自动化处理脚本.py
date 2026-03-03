@@ -59,10 +59,6 @@ for sym_path in plugin_dir.rglob("*.sym"):
     sym_path.unlink()
     print("已删除 .sym 文件：", sym_path)
 
-for modules_path in plugin_dir.rglob("*.modules"):
-    modules_path.unlink()
-    print("已删除 .modules 文件：", modules_path)
-
 #删除所有.patch_*.exe .patch_*.exp .patch_*.lib，*为数字
 for patch_path in plugin_dir.rglob("*.patch_*.exe"):
     patch_path.unlink()

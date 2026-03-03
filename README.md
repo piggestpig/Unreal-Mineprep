@@ -8,9 +8,11 @@
 
 ![image](Readme素材/插件展示.jpg)
 
-*本插件与Minecraft、MCprep官方没有直接联系，在其建议下插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆（0.3及之前的版本已经归档，就不做修改了）。
+>*本插件与Minecraft、MCprep官方没有直接联系，在其建议下插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆（0.3及之前的版本已经归档，就不做修改了）。
 
-在v1.0正式发布前，插件主要供内部使用，可能存在兼容性问题和潜在的 ~~bug~~ 特性。之后会逐步修复并写一些使用教程（但这应该是很久以后的事了）
+在v1.0正式发布前，插件主要供内部使用，可能存在兼容性问题和潜在的 ~~bug~~ 特性。之后会逐步修复并写一些[ 使用教程（点击查看）](https://github.com/piggestpig/Unreal-Mineprep/wiki)
+
+[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite)是此插件的精简版。它的体积更小，下载更快，以GPLv3协议开源，保留了95%的核心功能，压缩包仅250MB左右
 
 ## 安装方法
 
@@ -25,6 +27,7 @@
 
 **3、点击▶️运行脚本，会弹出菜单和安装引导**
 - 目前提供了`创建新的工程文件`和`安装至现有工程`两个选项，还可以选择实验性功能、插件设置等内容。然后就能一键安装了。
+- 根据你所启用的功能，安装所需空间在500MB~2GB之间
 
 ### ② 手动安装
 需要复制Mineprep内容文件夹+修改项目设置，稍后会更新详细步骤
@@ -98,14 +101,37 @@ Super Resolution/Ray Reconstruction/DLAA`和`Movie Render Queue DLSS/DLAA Suppor
 
 
 ## 兼容性
-Mineprep 0.5 使用Windows+UE5.7开发。
+Mineprep 0.5 使用 Windows + UE5.7 开发，建议在此环境下使用。
 
-安装包和插件的非实验性功能理论上是跨平台的，并且支持更高的引擎版本，但是尚未经过测试。
+以下表格收录了更多信息：
+
+
+|    | 安装包(Blender) | <u>***UE5.7***</u> | 高版本引擎(5.8+) | 低版本引擎(5.6-) |
+| :---: | :---: | :---: | :---: | :---: |
+| <u>***Windows***</u> | ✅ | ✅ | ⚠️ | ❌ |
+|   Mac   | ℹ️ | ⚠️ | ⚠️ | ❌ |
+|  Linux  | ✅ | ℹ️ | ⚠️ | ❌ |
+
+
+✅：兼容，已经过测试，能够正常使用  
+ℹ️：未经测试，理论上应该可用  
+⚠️：未经测试，且**实验性功能不可用**，非实验性功能应该可用  
+❌：不兼容，无法使用
 
 > [!WARNING]  
-> 实验性功能完全不支持其他平台和引擎版本，必须重新编译才能使用。请勿在mac上勾选，否则工程文件打都打不开，一上来就报错！！
+> 请勿在不兼容的环境（比如MacOS）勾选实验性功能，否则工程文件打都打不开，一上来就报错！！
 
-另外，插件附带了windows版的ffmpeg用于视频编码。mac用户目前需要手动下载并在安装时指定路径。当前所需版本为ffmpeg 8.0
+<details>
+<summary> 展开细节 </summary>
+
+- 安装包是写在Blender里的python脚本，理论上是跨平台的，但是有一些细节比如os.startfile()只在Windows上可用，我们尝试解决这些问题
+- 插件的非实验性功能是UE5蓝图资产，高版本引擎可以向下兼容旧资产，但低版本引擎无法打开新资产。如果你不得不使用低版本引擎，请下载Mineprep的早期版本
+- 实验性功能是C++代码，必须针对特定平台和特定引擎版本编译。目前，我们为Windows和Linux编译了实验性功能，但Linux尚未经过实际测试
+- 另外，插件附带了ffmpeg用于视频编码。Linux和Mac用户建议先试试能不能用，如果不行，需要手动下载ffmpeg并在安装时指定路径。当前使用的版本是ffmpeg 8.0，根据官方文档，您应该始终下载最新版
+
+</details>
+
+
 
 
 ## 生物
@@ -118,18 +144,31 @@ Mineprep 0.5 使用Windows+UE5.7开发。
 Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体中文
 - **安装包**会根据Blender的偏好设置选择语言。本地化内容以字典的形式写在代码中，参见[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
 - **插件面板**上方有选择语言的按钮，在启动时会根据UE的偏好设置选择语言。本地化内容保存在[语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv) 和 [变量显示名_VariableDisplayNames.csv](./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)中。
+- 只有安装了第一个实验性功能 `(Mineprep C++ 拓展模块)` 才能翻译粒子参数  
+- 只有安装了第二个实验性功能 `(为材质参数面板添加关键帧按钮和本地化翻译)` 才能翻译材质参数
+- 第一个实验性功能还提供了自定义快捷键，可以按insert尝试翻译鼠标下的文本。如果在[变量显示名_VariableDisplayNames.csv](./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)找到匹配条目，就替换文本
 
 更多内容正在更新中
 
 ## 开源协议
-- 在制作插件时，我原来用的是GPL-3.0协议，但是现在包含了虚幻引擎的官方示例+源代码，它们好像和开源许可证不兼容 (*´･д･)? 所以这里就先不放License文件了。
+- 由于完整版Mineprep包含了虚幻引擎官方示例和源代码，它们和开源许可证不兼容，这里就先不放License文件了。[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite) 是此插件的精简版，它以GPLv3协议开源
 - 在大部分情况下，你可以免费使用本插件。(UE5.3及更早的版本不向影视创作者收费，UE5.4开始对年收入超过100万美元的用户按席位收费，显然我们不会达到收费门槛hhh)  
 具体参见[Epic Games的用户协议](https://www.unrealengine.com/zh-CN/eula)
-- 以后考虑做一个Mineprep Lite，只留下准备场景、更换材质等核心功能，没有官方素材和引擎源码。这样安装会简单很多，也能放GPL-3.0协议了
 - 同时，Mineprep引用了许多第三方插件和资源，在此向他们表示感谢。我们在[ResourceLicenses](./Readme素材/ResourceLicenses)文件夹中收录了一些许可证和作者留言。如有遗漏可以拉一个Pull Request进行补充
 
 
 ## 版本更新
+
+#### 0.5-RC1
+- Mineprep 0.5进入最后的收尾阶段，预计在两周内发布
+- 改进了安装包，现在会显示安装所需的空间，能够安装精简版，以及跳过为其他平台编译的文件。
+- 新建了一个仓库 [Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite)，专门存放精简版插件。目前移除了源码、音效、whisper、运动匹配相关资源，体积缩小1个G以上，同时保留了95%的核心功能，以GPLv3协议开源
+- 调整了多个程序，修复一些在Mac/Linux上可能出现的bug
+- 为Linux编译了实验性功能。由于wsl2缺少Vulkan，暂时不能启动虚幻引擎进行测试
+- 开始编写 [Minecraft Wiki](https://github.com/piggestpig/Unreal-Mineprep/wiki)，制作新手入门教程
+- 【实验性功能】增强了本地化系统，可以翻译粒子参数了！至此，我们终于有能力翻译所有的常见信息
+- 【实验性功能】新增快捷键，按insert尝试翻译鼠标下的文本。如果在[变量显示名_VariableDisplayNames.csv](./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)找到匹配条目，就替换文本
+- 【实验性功能】添加自定义快捷键时，能检测按键冲突，并在右下角弹窗提示
 
 #### 26w08a
 - 新的动画作品《捡到一只快乐小恶魂2》现已发布！第三集正在制作中，小恶魂的故事就要完结啦
