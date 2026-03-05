@@ -289,8 +289,11 @@ def est_size():
     _size_cache[cache_key] = result
     return result
 
-def lite_ignore(dir, contents):
+def ignored_files(dir, contents):
     skip = get_lite_skip()
+    # 暂时在非Windows平台跳过物理交互绑定
+    #if system and system != 'Win64':
+    #    skip.add("MC_物理交互绑定.uasset")
     ignored = {item for item in contents if item in skip}
     for item in ignored:
         print(f"[lite] 跳过: {os.path.join(dir, item)}")
@@ -310,22 +313,22 @@ def install():
         for item in os.listdir(startup_dir):
             files = join(startup_dir, item)
             if os.path.isdir(files):
-                shutil.copytree(files, join(install_path, item), dirs_exist_ok=True, ignore=lite_ignore)
+                shutil.copytree(files, join(install_path, item), dirs_exist_ok=True, ignore=ignored_files)
             elif os.path.isfile(files):
                 shutil.copy(files, join(install_path, item))
     elif mc.install_mode == 2:
-        shutil.copytree(startup_plugin, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=lite_ignore)
+        shutil.copytree(startup_plugin, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
 
-    shutil.copytree(mineprep_dir, join(install_path, 'Content', 'Mineprep'), dirs_exist_ok=True, ignore=lite_ignore)
+    shutil.copytree(mineprep_dir, join(install_path, 'Content', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
     #实验性功能
     if mc.exp_basic:
-        shutil.copytree(exp_dir, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=lite_ignore)
+        shutil.copytree(exp_dir, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
     if mc.exp_material:
-        shutil.copytree(material_dir, join(install_path, 'Plugins', 'InlineMaterialInstance'), dirs_exist_ok=True, ignore=lite_ignore)
+        shutil.copytree(material_dir, join(install_path, 'Plugins', 'InlineMaterialInstance'), dirs_exist_ok=True, ignore=ignored_files)
     if mc.exp_vr3d:
-        shutil.copytree(vr3d_dir, join(install_path, 'Plugins', 'MoviePipelineMaskRenderPass'), dirs_exist_ok=True, ignore=lite_ignore)
+        shutil.copytree(vr3d_dir, join(install_path, 'Plugins', 'MoviePipelineMaskRenderPass'), dirs_exist_ok=True, ignore=ignored_files)
     if mc.exp_template_seq:
-        shutil.copytree(template_sequence_dir, join(install_path, 'Plugins', 'TemplateSequence'), dirs_exist_ok=True, ignore=lite_ignore)
+        shutil.copytree(template_sequence_dir, join(install_path, 'Plugins', 'TemplateSequence'), dirs_exist_ok=True, ignore=ignored_files)
     
     #修改插件配置文件
     mineprep_ini = join(install_path, 'Content', 'Mineprep', 'Mineprep_config.txt')

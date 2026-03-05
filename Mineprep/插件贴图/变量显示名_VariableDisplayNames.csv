@@ -370,13 +370,13 @@ UObjectDisplayNames,观众人群散布器_C:打乱,打乱,打乱,Shuffle,打亂
 UObjectDisplayNames,距离场碰撞箱包裹器_C:分辨率,分辨率,分辨率,Resolution,解析度
 UObjectDisplayNames,距离场碰撞箱包裹器_C:相对偏移,相对偏移,相对偏移,Relative Offset,相對偏移
 UObjectDisplayNames,距离场碰撞箱包裹器_C:显示碰撞箱,显示碰撞箱,显示碰撞箱,Show Collision Box,顯示碰撞箱
-UObjectDisplayNames,远景地形生成器_C:方块,方块,方块,Block,方塊
-UObjectDisplayNames,远景地形生成器_C:方块大小,方块大小,方块大小,Block Size,方塊大小
-UObjectDisplayNames,远景地形生成器_C:在GPU上生成,在GPU上生成,在GPU上生成,Generate on GPU,在GPU上生成
-UObjectDisplayNames,远景地形生成器_C:启用植物摇摆,启用植物摇摆,启用植物摇摆,Enable Plant Sway,啟用植物搖擺
-UObjectDisplayNames,远景地形生成器_C:整体位置偏移,整体位置偏移,整体位置偏移,Overall Position Offset,整體位置偏移
-UObjectDisplayNames,远景地形生成器_C:平原/山脉/水面高度偏移,平原/山脉/水面高度偏移,平原/山脉/水面高度偏移,Plain/Mountain/Water Height Offset,平原/山脈/水面高度偏移
-UObjectDisplayNames,远景地形生成器_C:低洼处填充水面,低洼处填充水面,低洼处填充水面,Fill Water in Depressions,低窪處填充水面
+UObjectDisplayNames,远景地形生成器_C:Blocks,Blocks,方块,Blocks,方塊
+UObjectDisplayNames,远景地形生成器_C:Block Size,Block Size,方块大小,Block Size,方塊大小
+UObjectDisplayNames,远景地形生成器_C:Generate On GPU,Generate on GPU,在GPU上生成,Generate on GP,在GPU上生成
+UObjectDisplayNames,远景地形生成器_C:Enable Plants Sway,Enable Plants Sway,启用植物摇摆,Enable Plants Sway,啟用植物搖擺
+UObjectDisplayNames,远景地形生成器_C:Overall Position Offset,Overall Position Offset,整体位置偏移,Overall Position Offset,整體位置偏移
+UObjectDisplayNames,远景地形生成器_C:Plain/Mountain/Water Height Offset,Plain/ Mountain/ Water Height Offset,平原/山脉/水面高度偏移,Plain/Mountain/Water Height Offset,平原/山脈/水面高度偏移
+UObjectDisplayNames,远景地形生成器_C:Fill Water in Depressions,Fill Water In Depressions,低洼处填充水面,Fill Water in Depressions,低窪處填充水面
 UObjectDisplayNames,远景地形生成器_C:地形纹理,地形纹理,地形纹理,Terrain Texture,地形紋理
 UObjectDisplayNames,远景地形生成器_C:纹理分辨率,纹理分辨率,纹理分辨率,Texture Resolution,紋理解析度
 UObjectDisplayNames,远景地形生成器_C:高度/植被/河流偏移,高度/植被/河流偏移,高度/植被/河流偏移,Height/Vegetation/River Offset,高度/植被/河流偏移
@@ -1197,7 +1197,7 @@ UObjectDisplayNames,Mineprep_C:导入纹理,导入纹理,导入纹理,Import Tex
 UObjectDisplayNames,Mineprep_C:更换与优化材质,更换与优化材质,更换与优化材质,Replace and Optimize Material,更換與優化材質
 UObjectDisplayNames,Mineprep_C:导入模型,导入模型,导入模型,Import Model,匯入模型
 UObjectDisplayNames,Mineprep_C:放置模型并选中,放置模型并选中,放置模型并选中,Place Model and Select,放置模型並選中
-UObjectDisplayNames,Mineprep_C:“折叠面板修改名称”,“折叠面板修改名称”,“折叠面板修改名称”,"Fold Panel Modify Name","摺疊面板修改名稱"
+UObjectDisplayNames,Mineprep_C:“折叠面板修改名称”,“折叠面板修改名称”,“折叠面板修改名称”,Fold Panel Modify Name,摺疊面板修改名稱
 UObjectDisplayNames,Mineprep_C:设置声音物理材质,设置声音物理材质,设置声音物理材质,Set Sound Physics Material,設定聲音物理材質
 UObjectDisplayNames,Mineprep_C:准备/更换材质,准备/更换材质,准备/更换材质,Prepare/Replace Material,準備/更換材質
 UObjectDisplayNames,Mineprep_C:优化纹理贴图,优化纹理贴图,优化纹理贴图,Optimize Texture,優化紋理貼圖
