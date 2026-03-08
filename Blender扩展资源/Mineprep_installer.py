@@ -22,7 +22,6 @@ class MineprepProperties(bpy.types.PropertyGroup):
     exp_basic: bpy.props.BoolProperty(default=True)
     exp_material: bpy.props.BoolProperty(default=True)
     exp_vr3d: bpy.props.BoolProperty()
-    exp_template_seq: bpy.props.BoolProperty()
     ini_ffmpeg: bpy.props.BoolProperty()
     ini_memory: bpy.props.BoolProperty(default=True)
     install_mode: bpy.props.IntProperty()
@@ -49,7 +48,6 @@ mineprep_dir = join(file_dir, 'Mineprep')
 exp_dir = join(file_dir, '实验性功能(C++)', 'Mineprep')
 material_dir = join(file_dir, '实验性功能(C++)', 'InlineMaterialInstance')
 vr3d_dir = join(file_dir, '实验性功能(C++)', 'MoviePipelineMaskRenderPass')
-template_sequence_dir = join(file_dir, '实验性功能(C++)', 'TemplateSequence')
 blender_path = bpy.app.binary_path
 resource_pack_path = join(file_dir, 'Blender扩展资源', 'mc_default')
 
@@ -58,8 +56,8 @@ localization = {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
         2: "---Mineprep v0.5 安装向导---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "欢迎使用Mineprep！",
-        4: "· 实验性功能适用于 Windows/Linux + UE5.7",
-        5: "· 非实验性功能也许能兼容Mac和高版本UE",
+        4: "· 当前版本适用于 UE5.7 (Windows/Mac/Linux)",
+        5: "· 非实验性功能也许能兼容高版本UE",
         6: "· 重复安装会直接覆盖原文件",
         7: "· 安装前需要关闭虚幻引擎",
         8: "请点击下方按钮选择安装模式，并根据提示执行操作",
@@ -67,7 +65,7 @@ localization = {
         10: "安装至现有工程",
         11: "选择安装路径",
         12: "警告: 文件夹路径包含中文或非ASCII字符！可能会导致部分功能失效",
-        13: "实验性功能 (支持Windows/Linux + UE5.7, Linux仅通过编译未测试):",
+        13: "实验性功能 (支持Windows/Mac/Linux + UE5.7):",
         14: "Mineprep C++ 拓展模块",
         15: "解锁双目立体全景渲染",
         16: "扩展模板序列以支持双精度浮点和向量属性乘数",
@@ -94,7 +92,7 @@ localization = {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
         2: "---Mineprep v0.5 Installer---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "Welcome to Mineprep!",
-        4: "· The experimental features are exclusive to Windows/Linux + UE5.7",
+        4: "· The experimental features are exclusive to UE5.7 (Windows/Mac/Linux)",
         5: "· Non-experimental features may be compatible with Mac and higher engine version",
         6: "· Reinstalling will overwrite the original files",
         7: "· Please close Unreal Engine before installation",
@@ -103,7 +101,7 @@ localization = {
         10: "Install to an existing project",
         11: "Installation directory",
         12: "The path contains non-ASCII characters! Some functions may be broken",
-        13: "Experimental features (for Windows/Linux + UE5.7, Linux untested yet):",
+        13: "Experimental features (for Windows/Mac/Linux + UE5.7):",
         14: "Mineprep C++ extensions",
         15: "Unlock VR stereoscopic rendering",
         16: "Extend Template Sequence with float64 & vector property multiplier",
@@ -130,8 +128,8 @@ localization = {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
         2: "---Mineprep v0.5 安裝嚮導---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "歡迎使用Mineprep！",
-        4: "· 實驗性功能適用於 Windows/Linux + UE5.7",
-        5: "· 非實驗性功能也許能兼容Mac和高版本UE",
+        4: "· 實驗性功能適用於 UE5.7 (Windows/Mac/Linux)",
+        5: "· 非實驗性功能也許能兼容高版本UE",
         6: "· 重複安裝會直接覆蓋原文件",
         7: "· 安裝前需要關閉虛幻引擎",
         8: "請點擊下方按鈕選擇安裝模式，並根據提示執行操作",
@@ -139,7 +137,7 @@ localization = {
         10: "安裝至現有工程",
         11: "選擇安裝路徑",
         12: "警告: 文件夾路徑包含中文或非ASCII字符！可能會導致部分功能失效",
-        13: "實驗性功能 (支持Windows/Linux + UE5.7，Linux僅通過編譯未測試):",
+        13: "實驗性功能 (支持Windows/Mac/Linux + UE5.7):",
         14: "Mineprep C++ 擴展模組",
         15: "解鎖雙目立體全景渲染",
         16: "擴展模板序列以支援雙精度浮點與向量屬性乘數",
@@ -259,7 +257,7 @@ def get_dir_size(path, skip):
 _size_cache = {}
 
 def est_size():
-    cache_key = (mc.lite_version, mc.skip_other_platform, mc.install_mode, mc.exp_basic, mc.exp_material, mc.exp_vr3d, mc.exp_template_seq)
+    cache_key = (mc.lite_version, mc.skip_other_platform, mc.install_mode, mc.exp_basic, mc.exp_material, mc.exp_vr3d)
     if cache_key in _size_cache:
         return _size_cache[cache_key]
 
@@ -276,8 +274,7 @@ def est_size():
         total += get_dir_size(material_dir, skip)
     if mc.exp_vr3d:
         total += get_dir_size(vr3d_dir, skip)
-    if mc.exp_template_seq:
-        total += get_dir_size(template_sequence_dir, skip)
+
 
     if total >= 1024 ** 3:
         result = f"{total / 1024 ** 3:.2f} GB"
@@ -327,9 +324,7 @@ def install():
         shutil.copytree(material_dir, join(install_path, 'Plugins', 'InlineMaterialInstance'), dirs_exist_ok=True, ignore=ignored_files)
     if mc.exp_vr3d:
         shutil.copytree(vr3d_dir, join(install_path, 'Plugins', 'MoviePipelineMaskRenderPass'), dirs_exist_ok=True, ignore=ignored_files)
-    if mc.exp_template_seq:
-        shutil.copytree(template_sequence_dir, join(install_path, 'Plugins', 'TemplateSequence'), dirs_exist_ok=True, ignore=ignored_files)
-    
+
     #修改插件配置文件
     mineprep_ini = join(install_path, 'Content', 'Mineprep', 'Mineprep_config.txt')
     with open(mineprep_ini, 'r', encoding='utf-8') as file:
@@ -519,7 +514,7 @@ class Installer1(bpy.types.Operator):
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
         layout.prop(mc, "exp_material", text=loc(31,"为材质参数面板添加关键帧按钮和本地化翻译"))
         layout.prop(mc, "exp_vr3d", text=loc(15,"解锁双目立体全景渲染"))
-        layout.prop(mc, "exp_template_seq", text=loc(16,"扩展模板序列以支持双精度浮点和向量属性乘数"))
+
 
         layout.separator(type='LINE')
         layout.label(text=loc(17,"插件设置:"))
@@ -580,7 +575,7 @@ class Installer2(bpy.types.Operator):
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
         layout.prop(mc, "exp_material", text=loc(31,"为材质参数面板添加关键帧按钮和本地化翻译"))
         layout.prop(mc, "exp_vr3d", text=loc(15,"解锁双目立体全景渲染"))
-        layout.prop(mc, "exp_template_seq", text=loc(16,"扩展模板序列以支持双精度浮点和向量属性乘数"))
+
 
         layout.separator(type='LINE')
         layout.label(text=loc(17,"插件设置:"))

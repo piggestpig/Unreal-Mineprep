@@ -1,8 +1,0 @@
-{
-	"BuildId": "47537391",
-	"Modules": 
-	{
-		"TemplateSequence": "UnrealEditor-TemplateSequence.dylib",
-		"TemplateSequenceEditor": "UnrealEditor-TemplateSequenceEditor.dylib"
-	}
-}

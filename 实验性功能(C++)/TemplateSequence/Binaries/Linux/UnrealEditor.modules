@@ -1,8 +1,0 @@
-{
-	"BuildId": "47537391",
-	"Modules": 
-	{
-		"TemplateSequence": "libUnrealEditor-TemplateSequence.so",
-		"TemplateSequenceEditor": "libUnrealEditor-TemplateSequenceEditor.so"
-	}
-}
