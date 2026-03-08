@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1771417719.7149022,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
+﻿Mineprep:0.5 | 时间戳1772956685.7292566,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve 普通人模,Steve,Steve 普通人模,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,🔧,拴绳,Lead,牽繩(拴繩),,,,渲染图像,Render Image,渲染圖像,,,,,"低
 中
 高
@@ -15,19 +15,25 @@ Epic","低
 10bit 4:2:0#10bit420
 10bit 4:2:2#10bit422
 10bit 4:4:4#10bit444
-8bit 4:2:0+Alpha#8bit420a","8bit 4:2:0#8bit420
+12bit 4:2:0#12bit420
+12bit 4:2:2#12bit422
+12bit 4:4:4#12bit444","8bit 4:2:0#8bit420
 8bit 4:2:2#8bit422
 8bit 4:4:4#8bit444
 10bit 4:2:0#10bit420
 10bit 4:2:2#10bit422
 10bit 4:4:4#10bit444
-8bit 4:2:0+Alpha#8bit420a","8bit 4:2:0#8bit420
+12bit 4:2:0#12bit420
+12bit 4:2:2#12bit422
+12bit 4:4:4#12bit444","8bit 4:2:0#8bit420
 8bit 4:2:2#8bit422
 8bit 4:4:4#8bit444
 10bit 4:2:0#10bit420
 10bit 4:2:2#10bit422
 10bit 4:4:4#10bit444
-8bit 4:2:0+Alpha#8bit420a",,,,,切换表情,Switch Facial Expression,切換表情
+12bit 4:2:0#12bit420
+12bit 4:2:2#12bit422
+12bit 4:4:4#12bit444",,,,,切换表情,Switch Facial Expression,切換表情
 2,批量处理对象 :,Target :,批量處理對象：,,,👤,Steve+表情,Steve_face,Steve+表情,,,,🌊,可交互3D水池,Interactive 3D Water Pool,可交互3D水池,,,✨,爆炸粒子,Explosion Particles,爆炸粒子,,,,打开输出文件夹,Open Output Folder,打開輸出文件夾,,,,,"2K_120.mp4
 2K_120_HDR.mp4
 2K_透明_Prores.mov
@@ -100,7 +106,7 @@ DCI_4K (1.89:1)#4096x2160
 寬屏 2.39:1#3440x1440
 方形 512x512#512x512
 竪屏 9:16#1080x1920",,,,,瘫痪,Paralyze,癱瘓
-5,Blender路径,Blender path,Blender路徑,,,👤,Steve 直角弯折,Steve_angular bent,Steve_直角彎折,,,,#,滚动方块,Rolling Block,滾動方塊,,,📸,同步摄像机,Sync Camera,同步攝像機,,,,调试,Debug,調試,,,,,"无
+5,Blender路径,Blender path,Blender路徑,,,👤,Steve 直角弯折,Steve_angular bent,Steve_直角彎折,,,,#,滚动方块,Rolling Block,滾動方塊,,,📸,同步摄像机,Sync Camera,同步攝像機,,,,调试与开发,Debug & Dev,調試與開發,,,,,"无
 模拟运行
 第一人称
 第三人称
@@ -168,7 +174,7 @@ Red-Cyan Anaglyph","兩組獨立輸出
 右键/中键会先应用参数值，再添加关键帧","Keyframe button: Left‑click to add keyframes to all selected actors; skip if the param name does not exist.
 Right‑click / Middle‑click will apply the param value first, then add keyframes.","關鍵幀按鈕，左鍵為所有選中項添加關鍵幀，若參數名稱不存在則跳過
 右鍵/中鍵會先套用參數值，再添加關鍵幀",,,🟩👤,僵尸 [NPC],Zombie [NPC],喪屍(殭屍) [NPC],,,,✨🌊,下雨粒子,Rain Particles,下雨粒子,,,📸,nDisplay 3D摄像机组,nDisplay 3D Camera Rig,nDisplay 3D攝像機組,,,,添加批量播片模板,Add Batch Playing Sequence Template,添加批量播片模板,,,,,,,,,,,,小键盘物理事件,Keypad Physical Event,小鍵盤物理事件
-10,植物摇摆,Sway,植物搖擺,,,🟩,尸壳,Husk,屍殼,,,,✨🌊,下雪粒子,Snow Particles,下雪粒子,,,💡,局部调色遮罩(2D),Color Correction Window(2D),局部調色遮罩(2D),,,,,,,,,,,,,,,,,,批量切换表情,Batch Switch Facial Expression,批量切換表情
+10,植物摇摆,Sway,植物搖擺,,,🟩,尸壳,Husk,屍殼,,,,✨🌊,下雪粒子,Snow Particles,下雪粒子,,,💡,局部调色遮罩(2D),Color Correction Window(2D),局部調色遮罩(2D),,,,🎬 渲染带HDR增益图的jpg,🎬 Render jpg with HDR Gainmap,🎬 渲染帶HDR增益圖的jpg,,,,,,,,,,,,批量切换表情,Batch Switch Facial Expression,批量切換表情
 11,应用所选参数,Apply Selected Params,套用所選參數,,,🟩👤,尸壳 [NPC],Husk [NPC],屍殼 [NPC],,,,✨,爆炸粒子,Explosion Particles,爆炸粒子,,,💡,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,,,批量切换动作,Batch Switch Action,批量切換動作
 12,按动态材质等级过滤参数,Filter params based on dynamic level,按動態材質等級過濾參數,,,🟩🌊,溺尸,Drowned,溺屍(沉屍),,,,👤,软体史蒂夫,Soft Body Steve,軟體史蒂夫,,,🔧,绑定父级至最后选中项,Set Parent to the last selected one,綁定父級至最後選中項,,,,,,,,,,,,,,,,,,批量断肢,Batch Dismember,批量斷肢
 13,加载预设 :,Load Preset :,加載預設：,,,🟩🌊👤,溺尸 [NPC],Drowned [NPC],溺屍(沉屍) [NPC],,,,🔧,MC像素文字,MC Pixel Text,MC像素文字,,,✨𝓕,粒子/材质力场,Particle/Matertial Force Field,粒子/材質力場,,,,,,,,,,,,,,,,,,批量瘫痪,Batch Paralyze,批量癱瘓
@@ -267,7 +273,7 @@ Right‑click / Middle‑click will apply the param value first, then add keyfra
 106,环境光遮蔽,Ambient Occlusion,環境光遮蔽,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 107,距离,Distance,距離,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 108,平滑滚动面板,Smooth Rolling,平滑滾動面板,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-109,渲染音频,Render Audio,渲染音頻,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+109,输出音频,Audio,輸出音頻,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 110,鼠标悬停时打开此面板,Show Panels When Hovering,鼠標懸停時打開此面板,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 111,静态材质,Static,靜態材質,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 112,动态材质,Dynamic,動態材質,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -328,3 +334,4 @@ Double‑click to apply the param then save the changes.","點擊後將此參數
 147,生成辅助灯光,Spawn Assistant Lights,生成輔助燈光,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 148,自发光光源,Self-Emissive Source,自發光光源,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 149,分割为独立的Actors,Split to Individual Actors,分割為獨立的Actors,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+150,分层渲染,Render Layers,分層渲染,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

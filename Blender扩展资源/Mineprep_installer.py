@@ -34,7 +34,7 @@ bpy.types.Scene.mineprep = bpy.props.PointerProperty(type=MineprepProperties)
 
 mc = bpy.context.scene.mineprep
 lang = bpy.context.preferences.view.language
-system = {'win32': 'Win64', 'win64': 'Win64', 'darwin': 'Mac', 'linux': 'Linux'}.get(platform)
+system = {'win32': 'Win64', 'darwin': 'Mac', 'linux': 'Linux'}.get(platform)
 lite_only = "Lite" in bpy.path.basename(bpy.data.filepath)
 
 file_dir = os.path.dirname(bpy.data.filepath)
@@ -292,8 +292,8 @@ def est_size():
 def ignored_files(dir, contents):
     skip = get_lite_skip()
     # 暂时在非Windows平台跳过物理交互绑定
-    #if system and system != 'Win64':
-    #    skip.add("MC_物理交互绑定.uasset")
+    if system and system != 'Win64':
+        skip.add("MC_物理交互绑定.uasset")
     ignored = {item for item in contents if item in skip}
     for item in ignored:
         print(f"[lite] 跳过: {os.path.join(dir, item)}")
@@ -336,12 +336,12 @@ def install():
         config = json.load(file)
     
     config['Settings']['memory_preload'] = mc.ini_memory
-    config['Settings']['installer_dir'] = file_dir.replace("\\\\", "\\").replace("/", "\\")
-    config['Settings']['blender_path'] = blender_path.replace("\\\\", "\\").replace("/", "\\")
-    config['Settings']['texture_pack_path'] = resource_pack_path.replace("\\\\", "\\").replace("/", "\\")
+    config['Settings']['installer_dir'] = os.path.normpath(file_dir)
+    config['Settings']['blender_path'] = os.path.normpath(blender_path)
+    config['Settings']['texture_pack_path'] = os.path.normpath(resource_pack_path)
     config['Settings']['init'] = "true"
     if mc.ini_ffmpeg:
-        config['Settings']['ffmpeg_path'] = mc.ffmpeg_path.replace("\\\\", "\\").replace("/", "\\")
+        config['Settings']['ffmpeg_path'] = os.path.normpath(mc.ffmpeg_path)
 
     with open(mineprep_ini, 'w', encoding='utf-8') as file:
         json.dump(config, file, ensure_ascii=False, indent=4)
@@ -354,7 +354,7 @@ def install():
     CLI = '/Script/MovieRenderPipelineCore.MoviePipelineCommandLineEncoderSettings'
     if not config.has_section(CLI):
         config.add_section(CLI)
-    ExecutablePath = mc.ffmpeg_path.replace("\\\\", "\\").replace("/", "\\") if mc.ini_ffmpeg else ffmpeg_default
+    ExecutablePath = f'"{os.path.normpath(mc.ffmpeg_path)}"' if mc.ini_ffmpeg else f'"{ffmpeg_default}"'
     config.set(CLI, 'ExecutablePath', ExecutablePath)
     config.set(CLI, 'VideoCodec', 'libx265')
     config.set(CLI, 'AudioCodec', 'aac')
