@@ -13,7 +13,7 @@
         "roughness": "0.7",
         "b_collision": "true",
         "b_gradient_animated_texture": "false",
-        "texture_pack_path": "E:/blender/mc/材质/AVPBR Retextured R5",
+        "texture_pack_path": "E:/github/Unreal-Mineprep/Blender扩展资源/mc_default",
         "lang_index": "1",
         "blender_path": "E:\\blender\\blender-5.0.0-windows-x64\\blender.exe",
         "GPU": "1",

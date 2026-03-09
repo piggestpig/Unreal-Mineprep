@@ -317,6 +317,13 @@ def install():
         shutil.copytree(startup_plugin, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
 
     shutil.copytree(mineprep_dir, join(install_path, 'Content', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
+    exe_files_dir = join(install_path, 'Content', 'Mineprep', 'Render', 'ffmpeg')
+    # 为 Mac 和 Linux 系统下的可执行文件赋予执行权限
+    if system in ['Mac', 'Linux'] and os.path.exists(exe_files_dir):
+        for root, dirs, files in os.walk(exe_files_dir):
+            for f in files:
+                os.chmod(join(root, f), 0o777)
+
     #实验性功能
     if mc.exp_basic:
         shutil.copytree(exp_dir, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
