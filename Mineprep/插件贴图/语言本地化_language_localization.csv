@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1772956685.7292566,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
+﻿Mineprep:0.5 | 时间戳1774186867.7334774,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve 普通人模,Steve,Steve 普通人模,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,🔧,拴绳,Lead,牽繩(拴繩),,,,渲染图像,Render Image,渲染圖像,,,,,"低
 中
 高
@@ -178,11 +178,11 @@ Right‑click / Middle‑click will apply the param value first, then add keyfra
 11,应用所选参数,Apply Selected Params,套用所選參數,,,🟩👤,尸壳 [NPC],Husk [NPC],屍殼 [NPC],,,,✨,爆炸粒子,Explosion Particles,爆炸粒子,,,💡,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,,,批量切换动作,Batch Switch Action,批量切換動作
 12,按动态材质等级过滤参数,Filter params based on dynamic level,按動態材質等級過濾參數,,,🟩🌊,溺尸,Drowned,溺屍(沉屍),,,,👤,软体史蒂夫,Soft Body Steve,軟體史蒂夫,,,🔧,绑定父级至最后选中项,Set Parent to the last selected one,綁定父級至最後選中項,,,,,,,,,,,,,,,,,,批量断肢,Batch Dismember,批量斷肢
 13,加载预设 :,Load Preset :,加載預設：,,,🟩🌊👤,溺尸 [NPC],Drowned [NPC],溺屍(沉屍) [NPC],,,,🔧,MC像素文字,MC Pixel Text,MC像素文字,,,✨𝓕,粒子/材质力场,Particle/Matertial Force Field,粒子/材質力場,,,,,,,,,,,,,,,,,,批量瘫痪,Batch Paralyze,批量癱瘓
-14,倍率,Mult,倍率,,,🟥,猪灵,Piglin,豬人(豬布林),,,,📸,同步玩家摄像机,Sync Player Camera,同步玩家攝像機,,,🔧,动态设计效应器,Motion Design Effector,動態設計效應器,,,,,,,,,,,,,,,,,,批量冲击,Batch Impulse,批量衝擊
+14,倍率,Mult,倍率,,,🟥,猪灵,Piglin,豬人(豬布林),,,,📸,同步玩家摄像机,Sync Player Camera,同步玩家攝像機,,,🔧✨,动态设计效应器,Motion Design Effector,動態設計效應器,,,,,,,,,,,,,,,,,,批量冲击,Batch Impulse,批量衝擊
 15,打开输出文件夹,Open Output Folder,打開輸出資料夾,,,🟥👤,猪灵 [NPC],Piglin [NPC],豬人(豬布林) [NPC],,,,💡,丁达尔体积光,God Rays Light,丁達爾體積光,,,🔧,简单倒角覆层材质,Simple Bevel Overlay Material,簡單倒角覆層材質,,,,,,,,,,,,,,,,,,批量起身并恢复动画,Batch Rise,批量起身並恢復動畫
 16,输出图片序列帧格式,Image sequence :,輸出圖片序列幀格式,,,🟥,猪灵蛮兵,Piglin Brute,殘暴豬人(豬布林蠻兵),,,,💡,动态体积雾,Dynamic Volumetric Fog,動態體積霧,,,🔧,简单跟随路径运动控制器,Simple Follow Path Controller,簡單跟隨路徑運動控制器,,,,,,,,,,,,,,,,,,批量开始/停止跑步,Batch Start/End Run,批量開始/停止跑步
 17,分辨率,Resolution,分辨率,,,🟥👤,猪灵蛮兵 [NPC],Piglin Brute [NPC],殘暴豬人(豬布林蠻兵) [NPC],,,,📸,导轨摄像机,Rail Camera,導軌攝像機,,,🔧,摇晃振动弹跳轨道,Shake/Vibrate/Bounce Track,搖晃振動彈跳軌道,,,,,,,,,,,,,,,,,,批量开始跳跃,Batch Jump,批量開始跳躍
-18,采样数,Samples,採樣數,,,🟩,卫道士,Vindicator,衛道士,,,,✨,流体化自碰撞粒子,Fluid-style Collision Particles,流體化自碰撞粒子,,,🔧,空物体,Null Object,空物體,,,,,,,,,,,,,,,,,,批量小键盘物理事件,Batch Keypad Physical Event,批量小鍵盤物理事件
+18,采样数,Samples,採樣數,,,🟩,卫道士,Vindicator,衛道士,,,,✨𝓕,粒子交互场,Particle Interaction Field,粒子交互場,,,🔧,空物体,Null Object,空物體,,,,,,,,,,,,,,,,,,批量小键盘物理事件,Batch Keypad Physical Event,批量小鍵盤物理事件
 19,空间x时间,Spatial x Temporal,空間x時間,,,🟩👤,卫道士 [NPC],Vindicator [NPC],衛道士 [NPC],,,,🧱,堆放方块,Pile Up Blocks,堆放方塊,,,,,,,,,,,,,,,,,,,,,,,,,,
 20,色彩管理,Color space,色彩管理,,,🟩,掠夺者,Pillager,掠奪者,,,,🧱👪🟩,背景生物散布器,Background Animal Scatter,背景生物散佈器,,,,,,,,,,,,,,,,,,,,,,,,,,
 21,全景渲染,VR panorama render,全景渲染,,,🟩👤,掠夺者 [NPC],Pillager [NPC],掠奪者 [NPC],,,,📸,MC摄像机,MC Camera,MC攝像機,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -217,8 +217,8 @@ Right‑click / Middle‑click will apply the param value first, then add keyfra
 50,放置方块,Block,放置方塊,,,🟩👤,村民 [NPC],Villager [NPC],村民 [NPC],,,,𝓕,力场探测器,Force Field Detector,力場探測器,,,,,,,,,,,,,,,,,,,,,,,,,,
 51,放置物品,Item,放置物品,,,🟥✨,烈焰人,Blaze,烈焰使者,,,,𝓕,动画偏移场,Anim Offset Field,動畫偏移場,,,,,,,,,,,,,,,,,,,,,,,,,,
 52,过滤名称,Filter,過濾名稱,,,🟥,凋灵,Wither,凋零,,,,𝓕,角速度旋转场,Angular Rotation Field,角速度旋轉場,,,,,,,,,,,,,,,,,,,,,,,,,,
-53,辉光,Bloom,輝光,,,🟥,疣猪兽,Hoglin,野豬獸(豬布獸),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-54,强度,Intensity,強度,,,🟩,雪傀儡,Snow Golem,雪人,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+53,辉光,Bloom,輝光,,,🟥,疣猪兽,Hoglin,野豬獸(豬布獸),,,,✨🧱,动态地形粒子,Dynamic Landscape Particles,動態地形粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
+54,强度,Intensity,強度,,,🟩,雪傀儡,Snow Golem,雪人,,,,✨🔧,全局粒子生成区域,Global Particle Spawn Area,全局粒子生成區域,,,,,,,,,,,,,,,,,,,,,,,,,,
 55,阈值,Threshold,閾值,,,🟩,狼,Wolf,狼,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 56,动态模糊,Motion Blur,動態模糊,,,🟩,猫,Cat,貓,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 57,最大值,Max blur,最大值,,,🟩,悦灵,Allay,悅灵,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -335,3 +335,14 @@ Double‑click to apply the param then save the changes.","點擊後將此參數
 148,自发光光源,Self-Emissive Source,自發光光源,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 149,分割为独立的Actors,Split to Individual Actors,分割為獨立的Actors,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 150,分层渲染,Render Layers,分層渲染,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+151,"在渲染开始前提前运行几帧
+CPU暖场：只运行程序，不渲染画面，例如NPC移动和物理模拟
+GPU暖场：渲染画面（将额外占用一些显存），例如调整曝光、积累光线追踪缓存
+通常需要一些GPU暖场使画面变得稳定，否则前一秒的画面可能会较暗","Run a few frames before rendering starts
+CPU Warmup: Running logic without rendering images, such as NPC movement and physics simulation.
+GPU Warmup: Rendering images (which needs additional VRAM), such as adjusting exposure and accumulating ray-tracing caches.
+Usually, some GPU warmup frames is needed to stabilize the image; otherwise, the first second may appear darker.","在渲染開始前提前運行幾幀
+CPU暖場：只運行程式，不渲染畫面，例如NPC移動和物理模擬
+GPU暖場：渲染畫面（將額外占用一些顯存），例如調整曝光、積累光線追蹤緩存
+通常需要一些GPU暖場使畫面變得穩定，否則前一秒的畫面可能會較暗",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+152,右键选中导播台,Right-click to select the Director Station,右鍵選中導播臺,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

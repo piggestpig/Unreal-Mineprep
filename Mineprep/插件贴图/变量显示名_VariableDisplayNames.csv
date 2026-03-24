@@ -93,7 +93,7 @@ UObjectDisplayNames,全局重力,全局重力,全局重力,Global Gravity,全域
 UObjectDisplayNames,启用,启用,启用,Enable,啟用
 UObjectDisplayNames,强度/半径/衰减/_,强度/半径/衰减/_,强度/半径/衰减/_,Strength/Radius/Attenuation/_,強度/半徑/衰減/_
 UObjectDisplayNames,材质交互半径,材质交互半径,材质交互半径,Material Interaction Radius,材質互動半徑
-UObjectDisplayNames,生成区域大小,生成区域大小,1,1,1
+UObjectDisplayNames,生成区域大小,生成区域大小,生成区域大小,Spawn Area Size,生成區域大小
 UObjectDisplayNames,初速度,初速度,初速度,Initial Velocity,初速度
 UObjectDisplayNames,每个单元格检测粒子数,每个单元格检测粒子数,每个单元格检测粒子数,Particles Per Cell Detection,每個單元格檢測粒子數
 UObjectDisplayNames,生成位置,生成位置,生成位置,Spawn Location,生成位置
@@ -1622,6 +1622,33 @@ UObjectCategory,Default|GPU材质场,Default|GPU材质场,GPU材质场,GPU Mater
 ,,,,,
 ,,,,,
 ,,,,,
+NiagaraOpInfo,Abs Name,Abs,绝对值 abs,Abs,絕對值 abs
+NiagaraOpInfo,Negate Name,Negate,取反 -,Negate,取反 -
+NiagaraOpInfo,Exp Name,Exp,exp (e^x),Exp,exp (e^x)
+NiagaraOpInfo,Exp2 Name,Exp2,exp2 (2^x),Exp2,exp2 (2^x)
+NiagaraOpInfo,Log Name,Log,log,Log,log
+NiagaraOpInfo,Log2 Name,Log2,log2,Log2,log2
+NiagaraOpInfo,Ceil Name,Ceil,向上取整 ceil,Ceil,向上取整 ceil
+NiagaraOpInfo,Floor Name,Floor,向下取整 floor,Floor,向下取整 floor
+NiagaraOpInfo,Frac Name,Frac,小数部分 frac,Frac,小數部分 frac
+NiagaraOpInfo,Trunc Name,Trunc,截断 trunc,Trunc,截斷 trunc
+NiagaraOpInfo,Sign Name,Sign,符号 sign,Sign,符號 sign
+NiagaraOpInfo,Pow Name,Pow,pow (幂数^) ,Pow,pow (冪數^)
+NiagaraOpInfo,Step Name,Step,阶跃函数 step,Step,階躍函數 step
+NiagaraOpInfo,Normalize Name,Normalize,归一化(单位向量) Normalize,Normalize,歸一化(單位向量) Normalize
+NiagaraOpInfo,Vector Cross Name,Cross,叉积 (cross ×),Cross,叉積 (cross ×)
+NiagaraOpInfo,Pi Name,PI,π（pi）,PI,π（pi）
+NiagaraOpInfo,Two Pi Name,TWO_PI,2π,TWO_PI,2π
+NiagaraOpInfo,One Minus Name,One Minus,1-,One Minus,1-
+NiagaraOpInfo,Dot Name,Dot,点积 (dot·),Dot,點積 (dot·)
+NiagaraOpInfo,Reciprocal Name,Reciprocal,倒数 1/x,Reciprocal,倒数 1/x
+NiagaraOpInfo,Length Name,Length,长度 length,Length,長度 length
+NiagaraOpInfo,Max Name,Max,最大值 max,Max,最大值 max
+NiagaraOpInfo,Min Name,Min,最小值 min,Min,最小值 min
+NiagaraOpInfo,Distance Name,Distance,距离 distance,Distance,距離 distance
+NiagaraSchema,NiagaraStaticSwitchMenuDesc,Static Switch,静态开关switch,Static Switch,靜態開關switch
+,,,,,
 NiagaraOverviewStack,SetVariablesPrefix,Set:,设置:,Set:,設置:
 MoviePipelinePIEExecutor,UnsavedMapFailureDialog,"One or more jobs in the queue have an unsaved map as their target map. Maps must be saved at least once before rendering, and then the job must be manually updated to point to the newly saved map.",地图未保存，请保存后再渲染,"One or more jobs in the queue have an unsaved map as their target map. Maps must be saved at least once before rendering, and then the job must be manually updated to point to the newly saved map.",地圖尚未儲存，請先儲存後再進行渲染
 MovieSceneAudioSection,PitchText,Pitch,音高,Pitch,音高
+PCGCustomHLSLElement,NodeTitle,Custom HLSL,Custom HLSL,Custom HLSL,Custom HLSL
