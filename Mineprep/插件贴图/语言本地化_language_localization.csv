@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1774186867.7334774,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
+﻿Mineprep:0.5 | 时间戳1774632761.847412,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:菜单栏/提示框>,<5:Menu/Tooltip>,<5:菜單欄/提示框>,,,,⑥,<6:枚举选项>,<6:Enum Options>,<6:枚舉選項>,,,,⑦,<7:事件>,<7:Events>,<7:事件>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve 普通人模,Steve,Steve 普通人模,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,🔧,拴绳,Lead,牽繩(拴繩),,,,渲染图像,Render Image,渲染圖像,,,,,"低
 中
 高
@@ -106,7 +106,7 @@ DCI_4K (1.89:1)#4096x2160
 寬屏 2.39:1#3440x1440
 方形 512x512#512x512
 竪屏 9:16#1080x1920",,,,,瘫痪,Paralyze,癱瘓
-5,Blender路径,Blender path,Blender路徑,,,👤,Steve 直角弯折,Steve_angular bent,Steve_直角彎折,,,,#,滚动方块,Rolling Block,滾動方塊,,,📸,同步摄像机,Sync Camera,同步攝像機,,,,调试与开发,Debug & Dev,調試與開發,,,,,"无
+5,Blender路径,Blender path,Blender路徑,,,👤,Steve 直角弯折,Steve_angular bent,Steve_直角彎折,,,,🟩,滚动方块,Rolling Block,滾動方塊,,,📸,同步摄像机,Sync Camera,同步攝像機,,,,调试与开发,Debug & Dev,調試與開發,,,,,"无
 模拟运行
 第一人称
 第三人称
@@ -186,7 +186,7 @@ Right‑click / Middle‑click will apply the param value first, then add keyfra
 19,空间x时间,Spatial x Temporal,空間x時間,,,🟩👤,卫道士 [NPC],Vindicator [NPC],衛道士 [NPC],,,,🧱,堆放方块,Pile Up Blocks,堆放方塊,,,,,,,,,,,,,,,,,,,,,,,,,,
 20,色彩管理,Color space,色彩管理,,,🟩,掠夺者,Pillager,掠奪者,,,,🧱👪🟩,背景生物散布器,Background Animal Scatter,背景生物散佈器,,,,,,,,,,,,,,,,,,,,,,,,,,
 21,全景渲染,VR panorama render,全景渲染,,,🟩👤,掠夺者 [NPC],Pillager [NPC],掠奪者 [NPC],,,,📸,MC摄像机,MC Camera,MC攝像機,,,,,,,,,,,,,,,,,,,,,,,,,,
-22,输出视频,Output a video,輸出視頻,,,🟩,骷髅,Skeleton,骷髏,,,,🔧,路标(触发器),Target Point (Trigger),路標(觸發器),,,,,,,,,,,,,,,,,,,,,,,,,,
+22,输出视频,Output a video,輸出視頻,,,🟩,骷髅,Skeleton,骷髏,,,,✨,礼花粒子,Confetti Particles,禮花粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
 23,视频编码,Encoder,視頻編碼,,,🟩👤,骷髅 [NPC],Skeleton [NPC],骷髏 [NPC],,,,💡,局部调色遮罩(2D),Color Correction Window(2D),局部調色遮罩(2D),,,,,,,,,,,,,,,,,,,,,,,,,,
 24,硬件加速,Hardware,硬件加速,,,🟥,凋灵骷髅,Wither Skeleton,凋零骷髏,,,,💡,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,,,,,,,,,,,
 25,色度抽样,Color codec,色度抽樣,,,🟥👤,凋灵骷髅 [NPC],Wither Skeleton [NPC],凋零骷髏 [NPC],,,,✨👪🟩,蜘蛛群粒子,Spider Swarm Particles,蜘蛛群粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -216,7 +216,7 @@ Right‑click / Middle‑click will apply the param value first, then add keyfra
 49,材质包路径,Texture pack path,材質包路徑,,,🟩,村民,Villager,村民,,,,𝓕,材质遮罩场,Material Mask Field,材質遮罩場,,,,,,,,,,,,,,,,,,,,,,,,,,
 50,放置方块,Block,放置方塊,,,🟩👤,村民 [NPC],Villager [NPC],村民 [NPC],,,,𝓕,力场探测器,Force Field Detector,力場探測器,,,,,,,,,,,,,,,,,,,,,,,,,,
 51,放置物品,Item,放置物品,,,🟥✨,烈焰人,Blaze,烈焰使者,,,,𝓕,动画偏移场,Anim Offset Field,動畫偏移場,,,,,,,,,,,,,,,,,,,,,,,,,,
-52,过滤名称,Filter,過濾名稱,,,🟥,凋灵,Wither,凋零,,,,𝓕,角速度旋转场,Angular Rotation Field,角速度旋轉場,,,,,,,,,,,,,,,,,,,,,,,,,,
+52,搜索名称,Search,搜索名稱,,,🟥,凋灵,Wither,凋零,,,,𝓕,角速度旋转场,Angular Rotation Field,角速度旋轉場,,,,,,,,,,,,,,,,,,,,,,,,,,
 53,辉光,Bloom,輝光,,,🟥,疣猪兽,Hoglin,野豬獸(豬布獸),,,,✨🧱,动态地形粒子,Dynamic Landscape Particles,動態地形粒子,,,,,,,,,,,,,,,,,,,,,,,,,,
 54,强度,Intensity,強度,,,🟩,雪傀儡,Snow Golem,雪人,,,,✨🔧,全局粒子生成区域,Global Particle Spawn Area,全局粒子生成區域,,,,,,,,,,,,,,,,,,,,,,,,,,
 55,阈值,Threshold,閾值,,,🟩,狼,Wolf,狼,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
