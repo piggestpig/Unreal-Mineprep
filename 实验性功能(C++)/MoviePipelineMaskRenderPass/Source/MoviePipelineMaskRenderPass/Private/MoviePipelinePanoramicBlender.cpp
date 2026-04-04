@@ -148,14 +148,11 @@ void FMoviePipelinePanoramicBlender::OnCompleteRenderPassDataAvailable_AnyThread
 		if (ensure(OutputMerger.IsValid()))
 		{
 			int32 OutputSizeX = OutputResolution.X;
-			int32 OutputSizeY = bIsStereo ? OutputResolution.Y * 2 : OutputResolution.Y;
-			TUniquePtr<TImagePixelData<FLinearColor>> FinalPixelData = MakeUnique<TImagePixelData<FLinearColor>>(FIntPoint(OutputSizeX, OutputSizeY), DataPayload->Copy());
-			TArray64<FLinearColor>& OutPixels = FinalPixelData->Pixels;
-			OutPixels.SetNumZeroed(OutputSizeX * OutputSizeY);
-
+			int32 OutputSizeY = OutputResolution.Y;
+			
 			if (bIsStereo && OtherEyeBlender)
 			{
-				// 左右眼分别写入上下两半
+				// Output each eye as a separate image with nDisplayLit_L / nDisplayLit_R naming
 				TArray64<FLinearColor> LeftPixels, RightPixels;
 				if (TargetBlender->EyeIndex == 0)
 				{
@@ -167,22 +164,31 @@ void FMoviePipelinePanoramicBlender::OnCompleteRenderPassDataAvailable_AnyThread
 					TargetBlender->Blender.FetchFinalPixelDataLinearColor(RightPixels);
 					OtherEyeBlender->Blender.FetchFinalPixelDataLinearColor(LeftPixels);
 				}
-				int32 SingleEyeNum = OutputResolution.X * OutputResolution.Y;
-				if (LeftPixels.Num() == SingleEyeNum && RightPixels.Num() == SingleEyeNum)
+				
+				// Output left eye
 				{
-					for (int32 i = 0; i < SingleEyeNum; ++i)
-					{
-						OutPixels[i] = LeftPixels[i];
-						OutPixels[SingleEyeNum + i] = RightPixels[i];
-					}
+					TSharedRef<FPanoramicImagePixelDataPayload> LeftPayload = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayload->Copy());
+					LeftPayload->PassIdentifier = FMoviePipelinePassIdentifier(TEXT("nDisplayLit_L"));
+					TUniquePtr<TImagePixelData<FLinearColor>> LeftPixelData = MakeUnique<TImagePixelData<FLinearColor>>(FIntPoint(OutputSizeX, OutputSizeY), MoveTemp(LeftPixels), LeftPayload);
+					OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(LeftPixelData));
+				}
+				
+				// Output right eye
+				{
+					TSharedRef<FPanoramicImagePixelDataPayload> RightPayload = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayload->Copy());
+					RightPayload->PassIdentifier = FMoviePipelinePassIdentifier(TEXT("nDisplayLit_R"));
+					TUniquePtr<TImagePixelData<FLinearColor>> RightPixelData = MakeUnique<TImagePixelData<FLinearColor>>(FIntPoint(OutputSizeX, OutputSizeY), MoveTemp(RightPixels), RightPayload);
+					OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(RightPixelData));
 				}
 			}
 			else
 			{
+				// Non-stereo: output single image
+				TArray64<FLinearColor> OutPixels;
 				TargetBlender->Blender.FetchFinalPixelDataLinearColor(OutPixels);
+				TUniquePtr<TImagePixelData<FLinearColor>> FinalPixelData = MakeUnique<TImagePixelData<FLinearColor>>(FIntPoint(OutputSizeX, OutputSizeY), MoveTemp(OutPixels), DataPayload->Copy());
+				OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(FinalPixelData));
 			}
-
-			OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(FinalPixelData));
 		}
 
 		// 释放两个Blender

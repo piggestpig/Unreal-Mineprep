@@ -136,6 +136,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Panoramic Settings")
 	bool bStereo;
 
+	/** If true, only render stereo left/right eye views without panoramic stitching. Requires bStereo to be enabled. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Panoramic Settings", meta = (EditCondition = "bStereo"))
+	bool bDisablePanoramic;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category = "Panoramic Settings")
 	float EyeSeparation;
 	

@@ -28,6 +28,7 @@ UMoviePipelinePanoramicPass::UMoviePipelinePanoramicPass()
 	, NumVerticalSteps(3)
 	, bFollowCameraOrientation(true)
 	, bStereo(false)
+	, bDisablePanoramic(false)
 	, EyeSeparation(3.0f)
 	, EyeConvergenceDistance(1000000000.f)
 	, bAllocateHistoryPerPane(true)
@@ -56,8 +57,32 @@ TArray<float> DistributeValuesInInterval(float InMin, float InMax, int32 InNumDi
 };
 
 //////////////////////////////mineprep
-static void GetCameraOrientationForStereo(FVector& OutLocation, FRotator& OutRotation, FRotator& OutLocalRotation, const UE::MoviePipeline::FPanoramicPane& InPane, const int32 InStereoIndex, const bool bInPrevPosition, const bool bStereo)
+static void GetCameraOrientationForStereo(FVector& OutLocation, FRotator& OutRotation, FRotator& OutLocalRotation, const UE::MoviePipeline::FPanoramicPane& InPane, const int32 InStereoIndex, const bool bInPrevPosition, const bool bStereo, const bool bDisablePanoramic = false)
 {
+	// When disabling panoramic, don't apply any rotation offset - just use original camera rotation with stereo offset
+	if (bDisablePanoramic)
+	{
+		const FRotator SourceRot = bInPrevPosition ? InPane.PrevOriginalCameraRotation : InPane.OriginalCameraRotation;
+		OutRotation = SourceRot;
+		OutLocalRotation = FRotator::ZeroRotator;
+		
+		if (InStereoIndex < 0)
+		{
+			OutLocation = bInPrevPosition ? InPane.PrevOriginalCameraLocation : InPane.OriginalCameraLocation;
+		}
+		else
+		{
+			check(InStereoIndex == 0 || InStereoIndex == 1);
+			
+			float EyeOffset = InStereoIndex == 0 ? (-InPane.EyeSeparation / 2.f) : (InPane.EyeSeparation / 2.f);
+			OutLocation = bInPrevPosition ? InPane.PrevOriginalCameraLocation : InPane.OriginalCameraLocation;
+			
+			// Translate the eye either left or right of the camera rotation.
+			OutLocation += FQuat(SourceRot).RotateVector(FVector(0.f, EyeOffset, 0.f));
+		}
+		return;
+	}
+	
 	// ToDo: This 110 (-55, 55) comes from TwinMotion who uses a hard-coded number of v-steps, may need adjusting.
 	const TArray<float> PitchValues = DistributeValuesInInterval(-55, 55, InPane.NumVerticalSteps, /*Inclusive Max*/true);
 	const TArray<float> YawValues = DistributeValuesInInterval(0, 360, InPane.NumHorizontalSteps, /*Inclusive Max*/bStereo);
@@ -97,7 +122,13 @@ void UMoviePipelinePanoramicPass::MoviePipelineRenderShowFlagOverride(FEngineSho
 	OutShowFlag.SetVignette(false);
 	OutShowFlag.SetSceneColorFringe(false);
 	OutShowFlag.SetPhysicalMaterialMasks(false);
-	OutShowFlag.SetDepthOfField(false);
+	
+	// Depth of Field is disabled for panoramic mode (causes stitching artifacts),
+	// but enabled for stereo-only mode (bDisablePanoramic)
+	if (!(bStereo && bDisablePanoramic))
+	{
+		OutShowFlag.SetDepthOfField(false);
+	}
 	/*if(bPathTracer)
 	{
 		OutShowFlag.SetPathTracing(true);
@@ -117,8 +148,12 @@ void UMoviePipelinePanoramicPass::SetupImpl(const MoviePipeline::FMoviePipelineR
 	GetOrCreateViewRenderTarget(PaneResolution);
 	GetOrCreateSurfaceQueue(PaneResolution);
 
+	// When bDisablePanoramic is true, we only render stereo without panoramic stitching (1x1 grid)
+	const int32 EffectiveHorizontalSteps = (bStereo && bDisablePanoramic) ? 1 : NumHorizontalSteps;
+	const int32 EffectiveVerticalSteps = (bStereo && bDisablePanoramic) ? 1 : NumVerticalSteps;
+	
 	int32 StereoMultiplier = bStereo ? 2 : 1;
-	int32 NumPanes = NumHorizontalSteps * NumVerticalSteps;
+	int32 NumPanes = EffectiveHorizontalSteps * EffectiveVerticalSteps;
 	int32 NumPanoramicPanes = NumPanes * StereoMultiplier;
 	if (bAllocateHistoryPerPane)
 	{
@@ -171,7 +206,16 @@ void UMoviePipelinePanoramicPass::SetupImpl(const MoviePipeline::FMoviePipelineR
 	// Create a class to blend the Panoramic Panes into equirectangular maps. When all of the samples for a given
 	// Panorama are provided to the Blender and it is blended, it will pass the data onto the normal OutputBuilder
 	// who is none the wiser that we're handing it complex blended images instead of normal stills.
-	PanoramicOutputBlender = MakeShared<UE::MoviePipeline::FMoviePipelinePanoramicBlender>(GetPipeline()->OutputBuilder, InPassInitSettings.BackbufferResolution);
+	// When bDisablePanoramic is true, we skip the panoramic blender and send output directly to OutputBuilder.
+	if (bStereo && bDisablePanoramic)
+	{
+		// No panoramic blending - use OutputBuilder directly
+		PanoramicOutputBlender.Reset();
+	}
+	else
+	{
+		PanoramicOutputBlender = MakeShared<UE::MoviePipeline::FMoviePipelinePanoramicBlender>(GetPipeline()->OutputBuilder, InPassInitSettings.BackbufferResolution);
+	}
 
 	// Allocate an OCIO extension to do color grading if needed.
 	OCIOSceneViewExtension = FSceneViewExtensions::NewExtension<FOpenColorIODisplayExtension>();
@@ -271,8 +315,17 @@ FSceneViewStateInterface* UMoviePipelinePanoramicPass::GetExposureSceneViewState
 
 void UMoviePipelinePanoramicPass::GatherOutputPassesImpl(TArray<FMoviePipelinePassIdentifier>& ExpectedRenderPasses)
 {
-	// Despite rendering many views, we only output one image total, which is covered by the base.
-	Super::GatherOutputPassesImpl(ExpectedRenderPasses);
+	// When bStereo is enabled, we always output separate images for each eye (both panoramic and non-panoramic modes)
+	if (bStereo)
+	{
+		ExpectedRenderPasses.Add(FMoviePipelinePassIdentifier(TEXT("nDisplayLit_L")));
+		ExpectedRenderPasses.Add(FMoviePipelinePassIdentifier(TEXT("nDisplayLit_R")));
+	}
+	else
+	{
+		// Non-stereo: output one image total
+		Super::GatherOutputPassesImpl(ExpectedRenderPasses);
+	}
 }
 
 void UMoviePipelinePanoramicPass::AddViewExtensions(FSceneViewFamilyContext& InContext, FMoviePipelineRenderPassMetrics& InOutSampleState)
@@ -295,6 +348,12 @@ void UMoviePipelinePanoramicPass::AddViewExtensions(FSceneViewFamilyContext& InC
 
 FIntPoint UMoviePipelinePanoramicPass::GetPaneResolution(const FIntPoint& InSize) const
 {
+	// When bDisablePanoramic is enabled, use the original resolution directly (stereo only, no panoramic stitching)
+	if (bStereo && bDisablePanoramic)
+	{
+		return InSize;
+	}
+	
 	// We calculate a different resolution than the final output resolution.
 	float HorizontalFoV;
 	float VerticalFoV;
@@ -586,11 +645,15 @@ void UMoviePipelinePanoramicPass::RenderSample_GameThreadImpl(const FMoviePipeli
 	// The accumulation stage will sort out waiting for all the high-res tiles to come in, and once those
 	// are all put together into one-image-per-pane, then we can blend them together.
 	
+	// When bDisablePanoramic is true, we only render stereo without panoramic stitching (1x1 grid)
+	const int32 EffectiveHorizontalSteps = (bStereo && bDisablePanoramic) ? 1 : NumHorizontalSteps;
+	const int32 EffectiveVerticalSteps = (bStereo && bDisablePanoramic) ? 1 : NumVerticalSteps;
+	
 	// For each vertical segment
-	for(int32 VerticalStepIndex = 0; VerticalStepIndex < NumVerticalSteps; VerticalStepIndex++)
+	for(int32 VerticalStepIndex = 0; VerticalStepIndex < EffectiveVerticalSteps; VerticalStepIndex++)
 	{
 		// For each horizontal segment
-		for(int32 HorizontalStepIndex = 0; HorizontalStepIndex < NumHorizontalSteps; HorizontalStepIndex++)
+		for(int32 HorizontalStepIndex = 0; HorizontalStepIndex < EffectiveHorizontalSteps; HorizontalStepIndex++)
 		{
 			// For each eye
 			int32 NumEyeRenders = bStereo ? 2 : 1;
@@ -610,8 +673,8 @@ void UMoviePipelinePanoramicPass::RenderSample_GameThreadImpl(const FMoviePipeli
 				Pane.Data.EyeIndex = StereoIndex;
 				Pane.Data.VerticalStepIndex = VerticalStepIndex;
 				Pane.Data.HorizontalStepIndex = HorizontalStepIndex;
-				Pane.Data.NumHorizontalSteps = NumHorizontalSteps;
-				Pane.Data.NumVerticalSteps = NumVerticalSteps;
+				Pane.Data.NumHorizontalSteps = EffectiveHorizontalSteps;
+				Pane.Data.NumVerticalSteps = EffectiveVerticalSteps;
 				Pane.Data.EyeSeparation = EyeSeparation;
 				Pane.Data.EyeConvergenceDistance = EyeConvergenceDistance;
 				Pane.Data.bUseLocalRotation = bFollowCameraOrientation;
@@ -619,11 +682,31 @@ void UMoviePipelinePanoramicPass::RenderSample_GameThreadImpl(const FMoviePipeli
 
 				// Get the actual camera location/rotation for this particular pane, the above values are from the global camera.
 				//////////////////////////////////////mineprep
-				GetCameraOrientationForStereo(/*Out*/ Pane.Data.CameraLocation, /*Out*/ Pane.Data.CameraRotation, /*Out*/ Pane.Data.CameraLocalRotation, Pane.Data, StereoIndex, /*bInPrevPos*/ false, bStereo);
+				GetCameraOrientationForStereo(/*Out*/ Pane.Data.CameraLocation, /*Out*/ Pane.Data.CameraRotation, /*Out*/ Pane.Data.CameraLocalRotation, Pane.Data, StereoIndex, /*bInPrevPos*/ false, bStereo, bDisablePanoramic);
 				FRotator DummyPrevLocalRot;
-				GetCameraOrientationForStereo(/*Out*/ Pane.Data.PrevCameraLocation, /*Out*/ Pane.Data.PrevCameraRotation, /*Out*/ DummyPrevLocalRot, Pane.Data, StereoIndex, /*bInPrevPos*/ true, bStereo);
+				GetCameraOrientationForStereo(/*Out*/ Pane.Data.PrevCameraLocation, /*Out*/ Pane.Data.PrevCameraRotation, /*Out*/ DummyPrevLocalRot, Pane.Data, StereoIndex, /*bInPrevPos*/ true, bStereo, bDisablePanoramic);
 
-				GetFieldOfView(Pane.Data.HorizontalFieldOfView, Pane.Data.VerticalFieldOfView, bStereo);
+				// When bDisablePanoramic is enabled, use camera's actual FOV instead of fixed panoramic FOV
+				if (bStereo && bDisablePanoramic)
+				{
+					APlayerController* PC = GetPipeline()->GetWorld()->GetFirstPlayerController();
+					if (PC && PC->PlayerCameraManager)
+					{
+						float CameraFOV = PC->PlayerCameraManager->GetFOVAngle();
+						Pane.Data.HorizontalFieldOfView = CameraFOV;
+						// Calculate vertical FOV based on aspect ratio
+						float AspectRatio = (float)PaneResolution.X / (float)PaneResolution.Y;
+						Pane.Data.VerticalFieldOfView = FMath::RadiansToDegrees(2.0f * FMath::Atan(FMath::Tan(FMath::DegreesToRadians(CameraFOV) * 0.5f) / AspectRatio));
+					}
+					else
+					{
+						GetFieldOfView(Pane.Data.HorizontalFieldOfView, Pane.Data.VerticalFieldOfView, bStereo);
+					}
+				}
+				else
+				{
+					GetFieldOfView(Pane.Data.HorizontalFieldOfView, Pane.Data.VerticalFieldOfView, bStereo);
+				}
 
 				// Copy the backbufffer size we actually allocated the texture at into the Pane, instead of using
 				// the global output resolution, which is the final image size.
@@ -707,12 +790,29 @@ void UMoviePipelinePanoramicPass::ScheduleReadbackAndAccumulation(const FMoviePi
 		
 		// Generate a unique PassIdentifier for this Panoramic Pane. High Res tile isn't taken into account because
 		// the same accumulator is used for all tiles.
-		FMoviePipelinePassIdentifier PanePassIdentifier = FMoviePipelinePassIdentifier(FString::Printf(TEXT("%s_x%d_y%d"), *PassIdentifier.Name, InPane.Data.VerticalStepIndex, InPane.Data.HorizontalStepIndex));
+		// When bDisablePanoramic, use eye index in the identifier to differentiate left/right eye
+		FMoviePipelinePassIdentifier PanePassIdentifier;
+		if (bStereo && bDisablePanoramic)
+		{
+			PanePassIdentifier = FMoviePipelinePassIdentifier(InPane.Data.EyeIndex == 0 ? TEXT("nDisplayLit_L") : TEXT("nDisplayLit_R"));
+		}
+		else
+		{
+			PanePassIdentifier = FMoviePipelinePassIdentifier(FString::Printf(TEXT("%s_x%d_y%d"), *PassIdentifier.Name, InPane.Data.VerticalStepIndex, InPane.Data.HorizontalStepIndex));
+		}
 		SampleAccumulator = AccumulatorPool->BlockAndGetAccumulator_GameThread(InSampleState.OutputState.OutputFrameNumber, PanePassIdentifier);
 	}
 
 	TSharedRef<FPanoramicImagePixelDataPayload, ESPMode::ThreadSafe> FramePayload = MakeShared<FPanoramicImagePixelDataPayload, ESPMode::ThreadSafe>();
-	FramePayload->PassIdentifier = PassIdentifier;
+	// When bDisablePanoramic is true, use eye-specific pass identifier for separate output files
+	if (bStereo && bDisablePanoramic)
+	{
+		FramePayload->PassIdentifier = FMoviePipelinePassIdentifier(InPane.Data.EyeIndex == 0 ? TEXT("nDisplayLit_L") : TEXT("nDisplayLit_R"));
+	}
+	else
+	{
+		FramePayload->PassIdentifier = PassIdentifier;
+	}
 	FramePayload->SampleState = InSampleState;
 	FramePayload->SortingOrder = GetOutputFileSortingOrder();
 	FramePayload->Pane = InPane;
@@ -734,9 +834,12 @@ void UMoviePipelinePanoramicPass::ScheduleReadbackAndAccumulation(const FMoviePi
 	
 	TSharedPtr<FMoviePipelineSurfaceQueue, ESPMode::ThreadSafe> LocalSurfaceQueue = GetOrCreateSurfaceQueue(InSampleState.BackbufferSize, (IViewCalcPayload*)(&FramePayload->Pane));
 
+	// When bDisablePanoramic is true, bypass the panoramic blender and send directly to OutputBuilder
+	TSharedPtr<MoviePipeline::IMoviePipelineOutputMerger> OutputMerger = (bStereo && bDisablePanoramic) ? GetPipeline()->OutputBuilder : PanoramicOutputBlender;
+	
 	MoviePipeline::FImageSampleAccumulationArgs AccumulationArgs;
 	{
-		AccumulationArgs.OutputMerger = PanoramicOutputBlender;
+		AccumulationArgs.OutputMerger = OutputMerger;
 		AccumulationArgs.ImageAccumulator = StaticCastSharedPtr<FImageOverlappedAccumulator>(SampleAccumulator->Accumulator);
 		AccumulationArgs.bAccumulateAlpha = bAccumulatorIncludesAlpha;
 	}

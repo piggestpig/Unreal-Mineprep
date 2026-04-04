@@ -2,6 +2,7 @@
 
 #include "MineprepBPLibrary.h"
 #include "Mineprep.h"
+#include "MineprepSubsystem.h"
 
 Umineprep::Umineprep(const FObjectInitializer& ObjectInitializer)
 : Super(ObjectInitializer)
@@ -678,7 +679,9 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& O
 
             OutTypes.Add(TEXT("蓝图变量"));
             OutKeys.Add(LocalizationKey);
-            OutSourceStrings.Add(VarDesc.VarName.ToString());
+            // 使用引擎API将变量名转换为显示名称（分割单词、首字母大写）
+            FString DisplayString = FName::NameToDisplayString(VarDesc.VarName.ToString(), false);
+            OutSourceStrings.Add(DisplayString);
         }
 
         for (UEdGraph* FunctionGraph : Blueprint->FunctionGraphs)
@@ -717,7 +720,9 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& O
 
             OutTypes.Add(TEXT("蓝图函数"));
             OutKeys.Add(LocalizationKey);
-            OutSourceStrings.Add(FunctionName);
+            // 使用引擎API将函数名转换为显示名称（分割单词、首字母大写）
+            FString DisplayString = FName::NameToDisplayString(FunctionName, false);
+            OutSourceStrings.Add(DisplayString);
         }
     }
 }
@@ -1210,4 +1215,471 @@ void Umineprep::ShowEditorNotification(
         }
         NotificationItem->SetCompletionState(CompletionState);
     }
+}
+
+// 辅助函数：将字符串解析为指定类型的属性值
+static bool ParseStringToProperty(const FString& Str, FProperty* Prop, void* ValuePtr)
+{
+    if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Prop))
+    {
+        bool bValue = Str.ToBool() || Str == "1" || Str.Equals("true", ESearchCase::IgnoreCase);
+        BoolProp->SetPropertyValue(ValuePtr, bValue);
+        return true;
+    }
+    else if (FIntProperty* IntProp = CastField<FIntProperty>(Prop))
+    {
+        IntProp->SetPropertyValue(ValuePtr, FCString::Atoi(*Str));
+        return true;
+    }
+    else if (FInt64Property* Int64Prop = CastField<FInt64Property>(Prop))
+    {
+        Int64Prop->SetPropertyValue(ValuePtr, FCString::Atoi64(*Str));
+        return true;
+    }
+    else if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Prop))
+    {
+        FloatProp->SetPropertyValue(ValuePtr, FCString::Atof(*Str));
+        return true;
+    }
+    else if (FDoubleProperty* DoubleProp = CastField<FDoubleProperty>(Prop))
+    {
+        DoubleProp->SetPropertyValue(ValuePtr, FCString::Atod(*Str));
+        return true;
+    }
+    else if (FStrProperty* StrProp = CastField<FStrProperty>(Prop))
+    {
+        StrProp->SetPropertyValue(ValuePtr, Str);
+        return true;
+    }
+    else if (FNameProperty* NameProp = CastField<FNameProperty>(Prop))
+    {
+        NameProp->SetPropertyValue(ValuePtr, FName(*Str));
+        return true;
+    }
+    else if (FTextProperty* TextProp = CastField<FTextProperty>(Prop))
+    {
+        TextProp->SetPropertyValue(ValuePtr, FText::FromString(Str));
+        return true;
+    }
+    else if (FByteProperty* ByteProp = CastField<FByteProperty>(Prop))
+    {
+        ByteProp->SetPropertyValue(ValuePtr, (uint8)FCString::Atoi(*Str));
+        return true;
+    }
+    else if (FStructProperty* StructProp = CastField<FStructProperty>(Prop))
+    {
+        // 支持常见结构体：FVector, FRotator, FLinearColor 等
+        // 格式: "X=1.0,Y=2.0,Z=3.0" 或 "1.0,2.0,3.0"
+        FName StructName = StructProp->Struct->GetFName();
+        
+        if (StructName == NAME_Vector || StructName == NAME_Vector3f || StructName == NAME_Vector3d)
+        {
+            FVector* Vec = static_cast<FVector*>(ValuePtr);
+            Vec->InitFromString(Str);
+            return true;
+        }
+        else if (StructName == NAME_Rotator)
+        {
+            FRotator* Rot = static_cast<FRotator*>(ValuePtr);
+            Rot->InitFromString(Str);
+            return true;
+        }
+        else if (StructName == NAME_LinearColor)
+        {
+            FLinearColor* Color = static_cast<FLinearColor*>(ValuePtr);
+            Color->InitFromString(Str);
+            return true;
+        }
+        else if (StructName == NAME_Color)
+        {
+            FColor* Color = static_cast<FColor*>(ValuePtr);
+            Color->InitFromString(Str);
+            return true;
+        }
+        else if (StructName == NAME_Vector2D || StructName == NAME_Vector2f || StructName == NAME_Vector2d)
+        {
+            FVector2D* Vec2 = static_cast<FVector2D*>(ValuePtr);
+            Vec2->InitFromString(Str);
+            return true;
+        }
+        // 尝试通用解析
+        return StructProp->Struct->ImportText(*Str, ValuePtr, nullptr, PPF_None, nullptr, StructProp->Struct->GetName()) != nullptr;
+    }
+    else if (FObjectPropertyBase* ObjProp = CastField<FObjectPropertyBase>(Prop))
+    {
+        // 尝试通过路径加载对象
+        UObject* LoadedObj = StaticLoadObject(ObjProp->PropertyClass, nullptr, *Str);
+        ObjProp->SetObjectPropertyValue(ValuePtr, LoadedObj);
+        return LoadedObj != nullptr || Str.IsEmpty();
+    }
+    else if (FEnumProperty* EnumProp = CastField<FEnumProperty>(Prop))
+    {
+        UEnum* Enum = EnumProp->GetEnum();
+        int64 EnumValue = Enum->GetValueByNameString(Str);
+        if (EnumValue == INDEX_NONE)
+        {
+            EnumValue = FCString::Atoi64(*Str);
+        }
+        EnumProp->GetUnderlyingProperty()->SetIntPropertyValue(ValuePtr, EnumValue);
+        return true;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("ParseStringToProperty: Unsupported property type '%s'"), *Prop->GetClass()->GetName());
+    return false;
+}
+
+bool Umineprep::CallDelegate(UObject* Object, const FString& DelegateName, const TArray<FString>& Params)
+{
+    if (!Object)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("CallDelegate: Object is null"));
+        return false;
+    }
+
+    UClass* Class = Object->GetClass();
+    if (!Class)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("CallDelegate: Failed to get class"));
+        return false;
+    }
+
+    // 如果 DelegateName 为空，打印所有委托信息
+    if (DelegateName.IsEmpty())
+    {
+        UE_LOG(LogTemp, Display, TEXT("=== Delegates on %s (%s) ==="), *Object->GetName(), *Class->GetName());
+        
+        int32 DelegateCount = 0;
+        for (TFieldIterator<FMulticastDelegateProperty> It(Class); It; ++It)
+        {
+            FMulticastDelegateProperty* Prop = *It;
+            FString ParamInfo;
+            
+            if (const UFunction* SigFunc = Prop->SignatureFunction)
+            {
+                TArray<FString> ParamList;
+                for (TFieldIterator<FProperty> ParamIt(SigFunc); ParamIt; ++ParamIt)
+                {
+                    if (ParamIt->PropertyFlags & CPF_ReturnParm) continue;
+                    
+                    FString TypeName = ParamIt->GetCPPType();
+                    ParamList.Add(FString::Printf(TEXT("%s %s"), *TypeName, *ParamIt->GetName()));
+                }
+                ParamInfo = ParamList.Num() > 0 ? FString::Join(ParamList, TEXT(", ")) : TEXT("void");
+            }
+            else
+            {
+                ParamInfo = TEXT("(unknown signature)");
+            }
+            
+            UE_LOG(LogTemp, Display, TEXT("  [%d] %s(%s)"), DelegateCount, *Prop->GetName(), *ParamInfo);
+            DelegateCount++;
+        }
+        
+        if (DelegateCount == 0)
+        {
+            UE_LOG(LogTemp, Display, TEXT("  (no delegates found)"));
+        }
+        UE_LOG(LogTemp, Display, TEXT("=== Total: %d delegates ==="), DelegateCount);
+        return false;
+    }
+
+    // 查找多播委托属性
+    FMulticastDelegateProperty* DelegateProp = FindFProperty<FMulticastDelegateProperty>(Class, *DelegateName);
+    if (!DelegateProp)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("CallDelegate: Delegate property '%s' not found on %s"), *DelegateName, *Class->GetName());
+        return false;
+    }
+
+    // 获取委托实例的地址
+    void* DelegateAddr = DelegateProp->ContainerPtrToValuePtr<void>(Object);
+    if (!DelegateAddr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("CallDelegate: Failed to get delegate address"));
+        return false;
+    }
+
+    // 获取委托签名函数
+    const UFunction* SignatureFunc = DelegateProp->SignatureFunction;
+    if (!SignatureFunc)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("CallDelegate: Delegate has no signature function"));
+        return false;
+    }
+
+    // 统计输入参数数量（排除返回值）
+    int32 InputParamCount = 0;
+    for (TFieldIterator<FProperty> It(SignatureFunc); It; ++It)
+    {
+        if (!(It->PropertyFlags & CPF_ReturnParm))
+        {
+            InputParamCount++;
+        }
+    }
+
+    // 检查参数数量（允许少于所需数量，多余的使用默认值）
+    if (Params.Num() > InputParamCount)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("CallDelegate: Too many parameters. Delegate '%s' expects %d parameters, got %d"),
+            *DelegateName, InputParamCount, Params.Num());
+        return false;
+    }
+
+    // 分配参数内存
+    uint8* ParamsBuffer = (uint8*)FMemory_Alloca(SignatureFunc->ParmsSize);
+    FMemory::Memzero(ParamsBuffer, SignatureFunc->ParmsSize);
+
+    // 初始化参数默认值
+    for (TFieldIterator<FProperty> It(SignatureFunc); It; ++It)
+    {
+        It->InitializeValue_InContainer(ParamsBuffer);
+    }
+
+    // 解析并填充参数（只处理提供的参数，其余保持默认值）
+    int32 ParamIndex = 0;
+    for (TFieldIterator<FProperty> It(SignatureFunc); It; ++It)
+    {
+        FProperty* Prop = *It;
+        if (Prop->PropertyFlags & CPF_ReturnParm)
+        {
+            continue;
+        }
+
+        // 如果有提供参数则解析，否则保持默认值
+        if (ParamIndex < Params.Num())
+        {
+            void* ValuePtr = Prop->ContainerPtrToValuePtr<void>(ParamsBuffer);
+            if (!ParseStringToProperty(Params[ParamIndex], Prop, ValuePtr))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("CallDelegate: Failed to parse parameter %d ('%s') for property '%s'"),
+                    ParamIndex, *Params[ParamIndex], *Prop->GetName());
+                // 清理
+                for (TFieldIterator<FProperty> CleanIt(SignatureFunc); CleanIt; ++CleanIt)
+                {
+                    CleanIt->DestroyValue_InContainer(ParamsBuffer);
+                }
+                return false;
+            }
+        }
+        ParamIndex++;
+    }
+
+    // 调用委托
+    FMulticastScriptDelegate* ScriptDelegate = static_cast<FMulticastScriptDelegate*>(DelegateAddr);
+    if (ScriptDelegate)
+    {
+        ScriptDelegate->ProcessMulticastDelegate<UObject>(ParamsBuffer);
+    }
+
+    // 清理参数
+    for (TFieldIterator<FProperty> It(SignatureFunc); It; ++It)
+    {
+        It->DestroyValue_InContainer(ParamsBuffer);
+    }
+
+    return true;
+}
+
+// ============== UMineprepAPIHandle ==============
+
+UMineprepAPIHandle* Umineprep::Panel(FString Name)
+{
+    UMineprepAPIHandle* Handle = NewObject<UMineprepAPIHandle>(GetTransientPackage());
+    Handle->Name = Name;
+    Handle->Target = nullptr;
+
+    // 调用蓝图函数 Panel 获取目标对象
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* PanelFunc = HotkeyObject->FindFunction(FName("Panel")))
+        {
+            struct {
+                FString NameStr;
+                UObject* ReturnValue;
+            } Params;
+            Params.NameStr = Name;
+            Params.ReturnValue = nullptr;
+            
+            HotkeyObject->ProcessEvent(PanelFunc, &Params);
+            Handle->Target = Params.ReturnValue;
+        }
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("[Panel] '%s' -> Target=%s"), *Name, Handle->Target ? *Handle->Target->GetName() : TEXT("null"));
+    return Handle;
+}
+
+UMineprepAPIHandle* Umineprep::Toolbar(FString Name)
+{
+    UMineprepAPIHandle* Handle = NewObject<UMineprepAPIHandle>(GetTransientPackage());
+    Handle->Name = Name;
+    Handle->Target = nullptr;
+
+    // 调用蓝图函数 Toolbar 获取目标对象
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* ToolbarFunc = HotkeyObject->FindFunction(FName("Toolbar")))
+        {
+            struct {
+                FString NameStr;
+                UObject* ReturnValue;
+            } Params;
+            Params.NameStr = Name;
+            Params.ReturnValue = nullptr;
+            
+            HotkeyObject->ProcessEvent(ToolbarFunc, &Params);
+            Handle->Target = Params.ReturnValue;
+        }
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("[Toolbar] '%s' -> Target=%s"), *Name, Handle->Target ? *Handle->Target->GetName() : TEXT("null"));
+    return Handle;
+}
+
+bool UMineprepAPIHandle::Trigger(FString TriggerName)
+{
+    UE_LOG(LogTemp, Display, TEXT("[Trigger] Handle='%s', Name='%s', Target=%s"),
+        *Name, *TriggerName, Target ? *Target->GetName() : TEXT("null"));
+    
+    // 调用蓝图函数 Trigger
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* TriggerFunc = HotkeyObject->FindFunction(FName("Trigger")))
+        {
+            struct {
+                UObject* TargetObj;
+                FString NameStr;
+                bool ReturnValue;
+            } FuncParams;
+            FuncParams.TargetObj = this->Target;
+            FuncParams.NameStr = TriggerName;
+            FuncParams.ReturnValue = false;
+            
+            HotkeyObject->ProcessEvent(TriggerFunc, &FuncParams);
+            return FuncParams.ReturnValue;
+        }
+    }
+    
+    return false;
+}
+
+bool UMineprepAPIHandle::Click(int32 Index)
+{
+    UE_LOG(LogTemp, Display, TEXT("[Click] Handle='%s', Index=%d, Target=%s"), 
+        *Name, Index, Target ? *Target->GetName() : TEXT("null"));
+    
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* ClickFunc = HotkeyObject->FindFunction(FName("Click")))
+        {
+            struct {
+                UObject* TargetObj;
+                int32 IndexVal;
+                bool ReturnValue;
+            } FuncParams;
+            FuncParams.TargetObj = this->Target;
+            FuncParams.IndexVal = Index;
+            FuncParams.ReturnValue = false;
+            
+            HotkeyObject->ProcessEvent(ClickFunc, &FuncParams);
+            return FuncParams.ReturnValue;
+        }
+    }
+    
+    return false;
+}
+
+FString UMineprepAPIHandle::Get(FString PropertyName)
+{
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* Func = HotkeyObject->FindFunction(FName("GetValue")))
+        {
+            struct {
+                UObject* TargetObj;
+                FString PropertyNameStr;
+                FString ReturnValue;
+            } FuncParams;
+            FuncParams.TargetObj = this->Target;
+            FuncParams.PropertyNameStr = PropertyName;
+            
+            HotkeyObject->ProcessEvent(Func, &FuncParams);
+            return FuncParams.ReturnValue;
+        }
+    }
+    return FString();
+}
+
+bool UMineprepAPIHandle::SetString(FString Value)
+{
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* Func = HotkeyObject->FindFunction(FName("SetString")))
+        {
+            struct {
+                UObject* TargetObj;
+                FString ValueStr;
+                bool ReturnValue;
+            } FuncParams;
+            FuncParams.TargetObj = this->Target;
+            FuncParams.ValueStr = Value;
+            FuncParams.ReturnValue = false;
+            
+            HotkeyObject->ProcessEvent(Func, &FuncParams);
+            return FuncParams.ReturnValue;
+        }
+    }
+    return false;
+}
+
+bool UMineprepAPIHandle::SetValue(double Value)
+{
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* Func = HotkeyObject->FindFunction(FName("SetValue")))
+        {
+            struct {
+                UObject* TargetObj;
+                double ValueDouble;
+                bool ReturnValue;
+            } FuncParams;
+            FuncParams.TargetObj = this->Target;
+            FuncParams.ValueDouble = Value;
+            FuncParams.ReturnValue = false;
+            
+            HotkeyObject->ProcessEvent(Func, &FuncParams);
+            return FuncParams.ReturnValue;
+        }
+    }
+    return false;
+}
+
+bool UMineprepAPIHandle::Select(int32 Index)
+{
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* Func = HotkeyObject->FindFunction(FName("Select")))
+        {
+            struct {
+                UObject* TargetObj;
+                int32 IndexVal;
+                bool ReturnValue;
+            } FuncParams;
+            FuncParams.TargetObj = this->Target;
+            FuncParams.IndexVal = Index;
+            FuncParams.ReturnValue = false;
+            
+            HotkeyObject->ProcessEvent(Func, &FuncParams);
+            return FuncParams.ReturnValue;
+        }
+    }
+    return false;
 }

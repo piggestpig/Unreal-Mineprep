@@ -60,6 +60,7 @@ public class Mineprep : ModuleRules
 				"RHI",
 				"Renderer",
 				"Projects",
+				"UMG", // 添加 UMG 模块依赖，用于 UButton
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

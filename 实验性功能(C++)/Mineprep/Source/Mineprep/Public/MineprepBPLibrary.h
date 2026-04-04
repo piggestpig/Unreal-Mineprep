@@ -57,6 +57,37 @@ enum class EEditorNotificationState : uint8
 	Fail    UMETA(DisplayName = "失败（叉号）"),
 };
 
+/** API 操作句柄 */
+UCLASS(BlueprintType)
+class UMineprepAPIHandle : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	FString Name;
+
+	UPROPERTY()
+	UObject* Target;
+
+	UFUNCTION(BlueprintCallable, Category = "Mineprep")
+	bool Trigger(FString TriggerName = TEXT(""));
+
+	UFUNCTION(BlueprintCallable, Category = "Mineprep")
+	bool Click(int32 Index = -1);
+
+	UFUNCTION(BlueprintCallable, Category = "Mineprep")
+	FString Get(FString PropertyName = TEXT(""));
+
+	UFUNCTION(BlueprintCallable, Category = "Mineprep")
+	bool SetString(FString Value = TEXT(""));
+
+	UFUNCTION(BlueprintCallable, Category = "Mineprep")
+	bool SetValue(double Value = 0.0);
+
+	UFUNCTION(BlueprintCallable, Category = "Mineprep")
+	bool Select(int32 Index = 0);
+};
+
 UCLASS()
 class Umineprep : public UBlueprintFunctionLibrary
 {
@@ -149,6 +180,24 @@ class Umineprep : public UBlueprintFunctionLibrary
 		EEditorNotificationState State = EEditorNotificationState::None,
 		float Duration = 3.0f,
 		bool bUseThrobber = false);
+
+	/**
+	 * 通用委托触发函数：通过反射查找并调用指定名称的多播委托
+	 * @param Object 目标对象
+	 * @param DelegateName 委托属性名称（如 "OnClicked", "OnValueChanged" 等）
+	 * @param Params 参数字符串数组，按顺序对应委托参数。不足的参数使用默认值，支持: bool, int, float, FString, FName, FVector, FRotator 等
+	 * @return 是否成功触发
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)", meta=(AutoCreateRefTerm="Params"))
+	static bool CallDelegate(UObject* Object, const FString& DelegateName, const TArray<FString>& Params);
+
+	/** 获取 API 操作句柄，调用蓝图函数 Panel 获取目标对象 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
+	static UMineprepAPIHandle* Panel(FString Name = TEXT(""));
+
+	/** 获取 API 操作句柄，调用蓝图函数 Toolbar 获取目标对象 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
+	static UMineprepAPIHandle* Toolbar(FString Name = TEXT(""));
 
 };
 

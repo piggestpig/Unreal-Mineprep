@@ -91,7 +91,9 @@ static TSharedPtr<FMineprepEditorTicker> MineprepEditorTicker;
 static TMap<FString, FText> GPendingParamLocalizations;
 static bool GLocTickerScheduled = false;
 
-// 递归遍历控件树，将文本匹配 OldText 的 STextBlock 替换为 NewText，返回替换数量
+// 递归遍历控件树，对每个 STextBlock 尝试本地化，返回替换数量
+// LocalizationMap: 预定义的映射（优先使用）
+// 如果 LocalizationMap 中没有，则尝试从本地化表中查找
 static int32 LocalizeTextBlocksInWidget(const TSharedRef<SWidget>& Widget, const TMap<FString, FText>& LocalizationMap)
 {
     int32 Count = 0;
@@ -99,10 +101,29 @@ static int32 LocalizeTextBlocksInWidget(const TSharedRef<SWidget>& Widget, const
     {
         TSharedPtr<STextBlock> TB = StaticCastSharedRef<STextBlock>(Widget);
         FString CurrentText = TB->GetText().ToString();
+        
+        // 优先使用预定义映射
         if (const FText* NewText = LocalizationMap.Find(CurrentText))
         {
             TB->SetText(*NewText);
             ++Count;
+        }
+        // 否则尝试从本地化表中查找（用于类别等未预定义的文本）
+        else if (!CurrentText.IsEmpty())
+        {
+            FText LocalizedText;
+            FString SourceStr = CurrentText;
+            bool bFound = FText::FindTextInLiveTable_Advanced(
+                FTextKey(TEXT("UObjectDisplayNames")),
+                FTextKey(*CurrentText),
+                LocalizedText,
+                &SourceStr);
+            
+            if (bFound)
+            {
+                TB->SetText(LocalizedText);
+                ++Count;
+            }
         }
         return Count;
     }
@@ -323,33 +344,34 @@ static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtension
         {
             // 记录待本地化映射
             GPendingParamLocalizations.Add(ParamNameStr, LocalizedParamName);
-
-            // 首次记录时注册一个一次性延迟帧，参数面板构建完毕后统一 SetText
-            if (!GLocTickerScheduled)
-            {
-                GLocTickerScheduled = true;
-                FTSTicker::GetCoreTicker().AddTicker(
-                    FTickerDelegate::CreateLambda([](float) -> bool
-                    {
-                        if (FSlateApplication::IsInitialized() && GPendingParamLocalizations.Num() > 0)
-                        {
-                            const TArray<TSharedRef<SWindow>>& TopWindows =
-                                FSlateApplication::Get().GetInteractiveTopLevelWindows();
-                            int32 TotalSet = 0;
-                            for (const TSharedRef<SWindow>& Window : TopWindows)
-                            {
-                                TotalSet += LocalizeTextBlocksInWidget(Window, GPendingParamLocalizations);
-                            }
-                            UE_LOG(LogTemp, Verbose, TEXT("Niagara参数本地化：共设置 %d 个标签"), TotalSet);
-                            GPendingParamLocalizations.Empty();
-                        }
-                        GLocTickerScheduled = false;
-                        return false; // 只执行一次，自动销毁
-                    }),
-                    0.0f // 下一帧执行
-                );
-            }
         }
+    }
+
+    // 首次记录时注册一个一次性延迟帧，参数面板构建完毕后统一 SetText
+    // 注意：类别名称的本地化现在由 LocalizeTextBlocksInWidget 自动处理
+    if (GPendingParamLocalizations.Num() > 0 && !GLocTickerScheduled)
+    {
+        GLocTickerScheduled = true;
+        FTSTicker::GetCoreTicker().AddTicker(
+            FTickerDelegate::CreateLambda([](float) -> bool
+            {
+                if (FSlateApplication::IsInitialized() && GPendingParamLocalizations.Num() > 0)
+                {
+                    const TArray<TSharedRef<SWindow>>& TopWindows =
+                        FSlateApplication::Get().GetInteractiveTopLevelWindows();
+                    int32 TotalSet = 0;
+                    for (const TSharedRef<SWindow>& Window : TopWindows)
+                    {
+                        TotalSet += LocalizeTextBlocksInWidget(Window, GPendingParamLocalizations);
+                    }
+                    UE_LOG(LogTemp, Verbose, TEXT("Niagara参数本地化：共设置 %d 个标签"), TotalSet);
+                    GPendingParamLocalizations.Empty();
+                }
+                GLocTickerScheduled = false;
+                return false; // 只执行一次，自动销毁
+            }),
+            0.0f // 下一帧执行
+        );
     }
 
     FText ParamTooltip;
