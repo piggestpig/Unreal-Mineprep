@@ -24,6 +24,7 @@ class MineprepProperties(bpy.types.PropertyGroup):
     exp_vr3d: bpy.props.BoolProperty()
     ini_ffmpeg: bpy.props.BoolProperty()
     ini_memory: bpy.props.BoolProperty(default=True)
+    adaptive_gbuffer: bpy.props.BoolProperty(default=False)
     install_mode: bpy.props.IntProperty()
     lite_version: bpy.props.BoolProperty()
     skip_other_platform: bpy.props.BoolProperty(default=True)
@@ -86,7 +87,8 @@ localization = {
         31: "为材质参数面板添加关键帧按钮和本地化翻译",
         32: "安装精简版 (无源代码/运动匹配/音效/不常用功能)",
         33: "当前所需空间：",
-        34: "跳过为其他平台编译的文件"
+        34: "跳过为其他平台编译的文件",
+        35: "使用兼容性更好的有限Adaptive GBuffer材质"
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -122,7 +124,8 @@ localization = {
         31: "Add keyframe buttons and localization for material parameter panel",
         32: "Lite version (No source code / motion matching / sound / rare assets)",
         33: "Estimated size: ",
-        34: "Skip files compiled for other platforms"
+        34: "Skip files compiled for other platforms",
+        35: "Use limited Adaptive GBuffer material for better compatibility"
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -158,7 +161,8 @@ localization = {
         31: "為材質參數面板添加關鍵幀按鈕和本地化翻譯",
         32: "安裝精簡版 (無源代碼/運動匹配/音效/不常用功能)",
         33: "當前所需空間：",
-        34: "跳過為其他平台編譯的文件"
+        34: "跳過為其他平台編譯的文件",
+        35: "使用兼容性更好的有限Adaptive GBuffer材質"
     },
 }
 
@@ -380,8 +384,9 @@ def install():
     config.set(RENDER, 'rhi.Bindless', 'Enabled')
     config.set(RENDER, 'r.Translucency.HeterogeneousVolumes', 'True')
     config.set(RENDER, 'r.Substrate', 'True')
-    config.set(RENDER, 'r.Substrate.ProjectGBufferFormat', '1')
+    config.set(RENDER, 'r.Substrate.ProjectGBufferFormat', '0' if mc.adaptive_gbuffer else '1')
     config.set(RENDER, 'r.Substrate.OpaqueMaterialRoughRefraction', 'True')
+    config.set(RENDER, 'r.GenerateMeshDistanceFields', 'True')
 
     GC = '/Script/Engine.GarbageCollectionSettings'
     if not config.has_section(GC):
@@ -528,9 +533,10 @@ class Installer1(bpy.types.Operator):
         layout.prop(mc, "ini_ffmpeg", text=loc(18,"手动指定FFmpeg路径 (如ffmpeg.exe)"))
         if mc.ini_ffmpeg:
             layout.prop(mc, "ffmpeg_path", text=loc(19,"路径"))
+        layout.prop(mc, "adaptive_gbuffer", text=loc(35,"使用兼容性更好的有限Adaptive GBuffer材质"))
         layout.prop(mc, "ini_memory", text=loc(20,"内存预加载"))
         layout.label(text=loc(21,"     · 打开插件时加载所有资源，启动速度较慢，但运行更流畅"))
-        
+
 
 
 
@@ -589,9 +595,10 @@ class Installer2(bpy.types.Operator):
         layout.prop(mc, "ini_ffmpeg", text=loc(18,"手动指定FFmpeg路径 (如ffmpeg.exe)"))
         if mc.ini_ffmpeg:
             layout.prop(mc, "ffmpeg_path", text=loc(19,"路径"))
+        layout.prop(mc, "adaptive_gbuffer", text=loc(35,"使用兼容性更好的有限Adaptive GBuffer材质"))
         layout.prop(mc, "ini_memory", text=loc(20,"内存预加载"))
         layout.label(text=loc(21,"     · 打开插件时加载所有资源，启动速度较慢，但运行更流畅"))
-        
+
 
 class Finish(bpy.types.Operator):
     bl_idname = "dialog.finish"
@@ -612,9 +619,9 @@ class Finish(bpy.types.Operator):
         abs_path = get_abs_path(mc.install_path)
         uproject_files = [f for f in os.listdir(abs_path) if f.endswith('.uproject')]
         newproj_path = join(abs_path, uproject_files[0]) if uproject_files else ""
-        #只有Windows有os.startfile，Mac和Linux先打开文件夹
+        #只有Windows有os.startfile，Mac和Linux用命令行
         button.press = {'Win64' : f"os.startfile(r\"{newproj_path}\")",
-                        'Mac': f"subprocess.Popen(['open', r\"{abs_path}\"])",
+                        'Mac': f"subprocess.Popen(['open', r\"{newproj_path}\"])",
                         'Linux': f"subprocess.Popen(['xdg-open', r\"{abs_path}\"])"}.get(system,"")
 
         box.separator(type='LINE')
