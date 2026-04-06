@@ -64,9 +64,10 @@ class UMineprepAPIHandle : public UObject
 	GENERATED_BODY()
 
 public:
-	FString Name;
+	UPROPERTY(BlueprintReadWrite)
+	FString HandleName;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	UObject* Target;
 
 	UFUNCTION(BlueprintCallable, Category = "Mineprep")
@@ -198,6 +199,10 @@ class Umineprep : public UBlueprintFunctionLibrary
 	/** 获取 API 操作句柄，调用蓝图函数 Toolbar 获取目标对象 */
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
 	static UMineprepAPIHandle* Toolbar(FString Name = TEXT(""));
+
+	/** 调用自定义快捷键对象中的函数 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
+	static bool Hotkey(FString FunctionName);
 
 };
 

@@ -1480,15 +1480,30 @@ bool Umineprep::CallDelegate(UObject* Object, const FString& DelegateName, const
     return true;
 }
 
+bool Umineprep::Hotkey(FString FunctionName)
+{
+    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* Func = HotkeyObject->FindFunction(FName(*FunctionName)))
+        {
+            HotkeyObject->ProcessEvent(Func, nullptr);
+            return true;  // 找到函数返回true，表示运行成功
+        }
+    }
+    return false;  // 找不到函数返回false
+}
+
+
 // ============== UMineprepAPIHandle ==============
 
 UMineprepAPIHandle* Umineprep::Panel(FString Name)
 {
     UMineprepAPIHandle* Handle = NewObject<UMineprepAPIHandle>(GetTransientPackage());
-    Handle->Name = Name;
+    Handle->HandleName = TEXT("");
     Handle->Target = nullptr;
 
-    // 调用蓝图函数 Panel 获取目标对象
+    // 调用蓝图函数 Panel 获取目标对象和 HandleName
     UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
     if (HotkeyObject)
     {
@@ -1496,27 +1511,31 @@ UMineprepAPIHandle* Umineprep::Panel(FString Name)
         {
             struct {
                 FString NameStr;
+                FString OutHandleName;
                 UObject* ReturnValue;
             } Params;
             Params.NameStr = Name;
+            Params.OutHandleName = TEXT("");
             Params.ReturnValue = nullptr;
             
             HotkeyObject->ProcessEvent(PanelFunc, &Params);
             Handle->Target = Params.ReturnValue;
+            Handle->HandleName = Params.OutHandleName;
         }
     }
 
-    UE_LOG(LogTemp, Display, TEXT("[Panel] '%s' -> Target=%s"), *Name, Handle->Target ? *Handle->Target->GetName() : TEXT("null"));
+    // UE_LOG(LogTemp, Display, TEXT("[Panel] '%s' -> HandleName='%s', Target=%s"), 
+    //     *Name, *Handle->HandleName, Handle->Target ? *Handle->Target->GetName() : TEXT("null"));
     return Handle;
 }
 
 UMineprepAPIHandle* Umineprep::Toolbar(FString Name)
 {
     UMineprepAPIHandle* Handle = NewObject<UMineprepAPIHandle>(GetTransientPackage());
-    Handle->Name = Name;
+    Handle->HandleName = TEXT("");
     Handle->Target = nullptr;
 
-    // 调用蓝图函数 Toolbar 获取目标对象
+    // 调用蓝图函数 Toolbar 获取目标对象和 HandleName
     UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
     if (HotkeyObject)
     {
@@ -1524,25 +1543,32 @@ UMineprepAPIHandle* Umineprep::Toolbar(FString Name)
         {
             struct {
                 FString NameStr;
+                FString OutHandleName;
                 UObject* ReturnValue;
             } Params;
             Params.NameStr = Name;
+            Params.OutHandleName = TEXT("");
             Params.ReturnValue = nullptr;
             
             HotkeyObject->ProcessEvent(ToolbarFunc, &Params);
             Handle->Target = Params.ReturnValue;
+            Handle->HandleName = Params.OutHandleName;
         }
     }
 
-    UE_LOG(LogTemp, Display, TEXT("[Toolbar] '%s' -> Target=%s"), *Name, Handle->Target ? *Handle->Target->GetName() : TEXT("null"));
+    // UE_LOG(LogTemp, Display, TEXT("[Toolbar] '%s' -> HandleName='%s', Target=%s"), 
+    //     *Name, *Handle->HandleName, Handle->Target ? *Handle->Target->GetName() : TEXT("null"));
     return Handle;
 }
 
 bool UMineprepAPIHandle::Trigger(FString TriggerName)
 {
-    UE_LOG(LogTemp, Display, TEXT("[Trigger] Handle='%s', Name='%s', Target=%s"),
-        *Name, *TriggerName, Target ? *Target->GetName() : TEXT("null"));
-    
+    // 如果TriggerName为空，使用HandleName
+    FString FinalName = TriggerName.IsEmpty() ? HandleName : TriggerName;
+
+    // UE_LOG(LogTemp, Display, TEXT("[Trigger] Handle='%s', TriggerName='%s', FinalName='%s', Target=%s"),
+    //     *HandleName, *TriggerName, *FinalName, Target ? *Target->GetName() : TEXT("null"));
+
     // 调用蓝图函数 Trigger
     UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
     if (HotkeyObject)
@@ -1555,7 +1581,7 @@ bool UMineprepAPIHandle::Trigger(FString TriggerName)
                 bool ReturnValue;
             } FuncParams;
             FuncParams.TargetObj = this->Target;
-            FuncParams.NameStr = TriggerName;
+            FuncParams.NameStr = FinalName;
             FuncParams.ReturnValue = false;
             
             HotkeyObject->ProcessEvent(TriggerFunc, &FuncParams);
@@ -1568,8 +1594,8 @@ bool UMineprepAPIHandle::Trigger(FString TriggerName)
 
 bool UMineprepAPIHandle::Click(int32 Index)
 {
-    UE_LOG(LogTemp, Display, TEXT("[Click] Handle='%s', Index=%d, Target=%s"), 
-        *Name, Index, Target ? *Target->GetName() : TEXT("null"));
+    // UE_LOG(LogTemp, Display, TEXT("[Click] Handle='%s', Index=%d, Target=%s"), 
+    //     *HandleName, Index, Target ? *Target->GetName() : TEXT("null"));
     
     UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
     if (HotkeyObject)

@@ -364,7 +364,7 @@ static void RegisterKeyframeExtensionHandler(const FOnGenerateGlobalRowExtension
                     {
                         TotalSet += LocalizeTextBlocksInWidget(Window, GPendingParamLocalizations);
                     }
-                    UE_LOG(LogTemp, Verbose, TEXT("Niagara参数本地化：共设置 %d 个标签"), TotalSet);
+                    // UE_LOG(LogTemp, Verbose, TEXT("Niagara参数本地化：共设置 %d 个标签"), TotalSet);
                     GPendingParamLocalizations.Empty();
                 }
                 GLocTickerScheduled = false;

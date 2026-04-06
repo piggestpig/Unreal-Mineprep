@@ -25,7 +25,7 @@ class MineprepProperties(bpy.types.PropertyGroup):
     exp_vr3d: bpy.props.BoolProperty()
     ini_ffmpeg: bpy.props.BoolProperty()
     ini_memory: bpy.props.BoolProperty(default=True)
-    adaptive_gbuffer: bpy.props.BoolProperty(default=False)
+    blendable_gbuffer: bpy.props.BoolProperty(default=False)
     install_mode: bpy.props.IntProperty()
     lite_version: bpy.props.BoolProperty()
     skip_other_platform: bpy.props.BoolProperty(default=True)
@@ -89,7 +89,7 @@ localization = {
         32: "安装精简版 (无源代码/运动匹配/音效/不常用功能)",
         33: "当前所需空间：",
         34: "跳过为其他平台编译的文件",
-        35: "使用兼容性更好的有限Adaptive GBuffer材质",
+        35: "使用兼容性更好的有限Blendable GBuffer材质",
         36: "工程文件名称 (.uproject):"
     },
     'en_US': {
@@ -127,7 +127,7 @@ localization = {
         32: "Lite version (No source code / motion matching / sound / rare assets)",
         33: "Estimated size: ",
         34: "Skip files compiled for other platforms",
-        35: "Use limited Adaptive GBuffer material for better compatibility",
+        35: "Use limited Blendable GBuffer material for better compatibility",
         36: "Project name (.uproject):"
     },
     'zh_TW': {
@@ -165,7 +165,7 @@ localization = {
         32: "安裝精簡版 (無源代碼/運動匹配/音效/不常用功能)",
         33: "當前所需空間：",
         34: "跳過為其他平台編譯的文件",
-        35: "使用兼容性更好的有限Adaptive GBuffer材賊",
+        35: "使用兼容性更好的有限Blendable GBuffer材賊",
         36: "工程文件名稱 (.uproject):"
     },
 }
@@ -397,7 +397,7 @@ def install():
     config.set(RENDER, 'rhi.Bindless', 'Enabled')
     config.set(RENDER, 'r.Translucency.HeterogeneousVolumes', 'True')
     config.set(RENDER, 'r.Substrate', 'True')
-    config.set(RENDER, 'r.Substrate.ProjectGBufferFormat', '0' if mc.adaptive_gbuffer else '1')
+    config.set(RENDER, 'r.Substrate.ProjectGBufferFormat', '0' if mc.blendable_gbuffer else '1')
     config.set(RENDER, 'r.Substrate.OpaqueMaterialRoughRefraction', 'True')
     config.set(RENDER, 'r.GenerateMeshDistanceFields', 'True')
 
@@ -552,7 +552,7 @@ class Installer1(bpy.types.Operator):
         layout.prop(mc, "ini_ffmpeg", text=loc(18,"手动指定FFmpeg路径 (如ffmpeg.exe)"))
         if mc.ini_ffmpeg:
             layout.prop(mc, "ffmpeg_path", text=loc(19,"路径"))
-        layout.prop(mc, "adaptive_gbuffer", text=loc(35,"使用兼容性更好的有限Adaptive GBuffer材质"))
+        layout.prop(mc, "blendable_gbuffer", text=loc(35,"使用兼容性更好的有限Blendable GBuffer材质"))
         layout.prop(mc, "ini_memory", text=loc(20,"内存预加载"))
         layout.label(text=loc(21,"     · 打开插件时加载所有资源，启动速度较慢，但运行更流畅"))
 
@@ -614,7 +614,7 @@ class Installer2(bpy.types.Operator):
         layout.prop(mc, "ini_ffmpeg", text=loc(18,"手动指定FFmpeg路径 (如ffmpeg.exe)"))
         if mc.ini_ffmpeg:
             layout.prop(mc, "ffmpeg_path", text=loc(19,"路径"))
-        layout.prop(mc, "adaptive_gbuffer", text=loc(35,"使用兼容性更好的有限Adaptive GBuffer材质"))
+        layout.prop(mc, "blendable_gbuffer", text=loc(35,"使用兼容性更好的有限Blendable GBuffer材质"))
         layout.prop(mc, "ini_memory", text=loc(20,"内存预加载"))
         layout.label(text=loc(21,"     · 打开插件时加载所有资源，启动速度较慢，但运行更流畅"))
 
