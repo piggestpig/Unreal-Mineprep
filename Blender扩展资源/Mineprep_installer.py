@@ -18,6 +18,7 @@ from pathlib import Path
 class MineprepProperties(bpy.types.PropertyGroup):
     install_path: bpy.props.StringProperty(subtype='DIR_PATH')
     ffmpeg_path: bpy.props.StringProperty(subtype='FILE_PATH')
+    project_name: bpy.props.StringProperty(default="MC_Startup")
     page: bpy.props.IntProperty()
     exp_basic: bpy.props.BoolProperty(default=True)
     exp_material: bpy.props.BoolProperty(default=True)
@@ -88,7 +89,8 @@ localization = {
         32: "安装精简版 (无源代码/运动匹配/音效/不常用功能)",
         33: "当前所需空间：",
         34: "跳过为其他平台编译的文件",
-        35: "使用兼容性更好的有限Adaptive GBuffer材质"
+        35: "使用兼容性更好的有限Adaptive GBuffer材质",
+        36: "工程文件名称 (.uproject):"
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -125,7 +127,8 @@ localization = {
         32: "Lite version (No source code / motion matching / sound / rare assets)",
         33: "Estimated size: ",
         34: "Skip files compiled for other platforms",
-        35: "Use limited Adaptive GBuffer material for better compatibility"
+        35: "Use limited Adaptive GBuffer material for better compatibility",
+        36: "Project name (.uproject):"
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -162,7 +165,8 @@ localization = {
         32: "安裝精簡版 (無源代碼/運動匹配/音效/不常用功能)",
         33: "當前所需空間：",
         34: "跳過為其他平台編譯的文件",
-        35: "使用兼容性更好的有限Adaptive GBuffer材質"
+        35: "使用兼容性更好的有限Adaptive GBuffer材賊",
+        36: "工程文件名稱 (.uproject):"
     },
 }
 
@@ -317,6 +321,15 @@ def install():
                 shutil.copytree(files, join(install_path, item), dirs_exist_ok=True, ignore=ignored_files)
             elif os.path.isfile(files):
                 shutil.copy(files, join(install_path, item))
+        
+        # 重命名 .uproject 文件
+        if mc.project_name and mc.project_name != "MC_Startup":
+            for file in os.listdir(install_path):
+                if file.endswith('.uproject'):
+                    old_path = join(install_path, file)
+                    new_path = join(install_path, f"{mc.project_name}.uproject")
+                    os.rename(old_path, new_path)
+                    break
     elif mc.install_mode == 2:
         shutil.copytree(startup_plugin, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
 
@@ -499,6 +512,7 @@ class Installer1(bpy.types.Operator):
     
     def invoke(self, context, event):
         mc.install_path = join(outer_dir, "MC_Startup")
+        mc.project_name = "MC_Startup"
         extract_zip(ffmpeg_zipfile, join(file_dir, 'Mineprep', 'Render'))
         return context.window_manager.invoke_props_dialog(self, width=420)
     
@@ -513,6 +527,11 @@ class Installer1(bpy.types.Operator):
             box = layout.box()
             box.alert = True
             box.label(text=loc(12,"警告: 文件夹路径包含中文或非ASCII字符！可能会导致部分功能失效"), icon='ERROR')
+
+        #选择文件名
+        layout.separator(factor=0.3)
+        layout.label(text=loc(36, "工程文件名称 (.uproject):"))
+        layout.prop(mc, "project_name", text="")
 
         layout.separator(type='LINE')
         layout.label(text=loc(33,"当前所需空间") + est_size())
