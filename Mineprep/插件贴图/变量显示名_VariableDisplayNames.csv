@@ -735,7 +735,8 @@ UObjectDisplayNames,转场类型.交叉叠化,交叉叠化,交叉叠化,Cross Di
 UObjectDisplayNames,输出图片格式.png,png,png,png,png
 UObjectDisplayNames,输出图片格式.jpeg,jpeg,jpeg,jpeg,jpeg
 UObjectDisplayNames,输出图片格式.exr,exr,exr,exr,exr
-UObjectDisplayNames,输出图片格式.exr(多层·DWAA压缩),exr (多层·DWAA压缩),exr (多层·DWAA压缩),exr (Multi-Layer DWAA Compression),exr (多層·DWAA壓縮)
+UObjectDisplayNames,输出图片格式.↪DWAA压缩,↪DWAA压缩,↪DWAA压缩,↪DWAA Compression,↪DWAA壓縮
+UObjectDisplayNames,输出图片格式.↪多层,↪多层,↪多层,↪Multilayer,↪多層
 UObjectDisplayNames,运动匹配动画库结构体:基础运动_33_44DDB12548D72913282BA7A2354CA033,基础运动,基础运动,Base Movement,基礎運動
 UObjectDisplayNames,运动扭曲结构体:运动扭曲组件_2_1DF12C17418347259CF053B10A3C0F15,运动扭曲组件,运动扭曲组件,Motion Warp Component,運動扭曲組件
 UObjectDisplayNames,运动扭曲结构体:扭曲目标_12_EBCB43C142A201B8699D6B82D66CE14B,扭曲目标,扭曲目标,Warp Target,扭曲目標
