@@ -3,6 +3,7 @@
 
 #include "MovieRenderPipelineDataTypes.h"
 #include "MoviePipelinePanoramicBlenderBase.h"
+#include "MoviePipelinePanoramicPass.h"
 
 // Forward Declares
 struct FImagePixelData;
@@ -19,7 +20,7 @@ namespace UE::MoviePipeline
 	class FMoviePipelinePanoramicBlender : public ::MoviePipeline::IMoviePipelineOutputMerger
 	{
 	public:
-		FMoviePipelinePanoramicBlender(TSharedPtr<::MoviePipeline::IMoviePipelineOutputMerger> InOutputMerger, const FIntPoint InOutputResolution);
+		FMoviePipelinePanoramicBlender(TSharedPtr<::MoviePipeline::IMoviePipelineOutputMerger> InOutputMerger, const FIntPoint InOutputResolution, bool bInStereo = false, EStereoOutputFormat InStereoOutputFormat = EStereoOutputFormat::Separate, bool bInDisablePanoramic = false);
 	public:
 		virtual FMoviePipelineMergerOutputFrame& QueueOutputFrame_GameThread(const FMoviePipelineFrameOutputState& CachedOutputState) override;
 		virtual void OnCompleteRenderPassDataAvailable_AnyThread(TUniquePtr<FImagePixelData>&& InData) override;
@@ -32,8 +33,11 @@ namespace UE::MoviePipeline
 			FMoviePipelinePanoramicBlenderBase Blender;
 			bool bActive;
 			int32 OutputFrameNumber;
-			int32 EyeIndex; // 新增：区分左右眼
+			int32 EyeIndex; // 区分左右眼
 			std::atomic<int32> NumCompletedAccumulations;
+			
+			// For bDisablePanoramic mode: store raw pixels directly (no panoramic blending needed)
+			TArray64<FLinearColor> RawPixels;
 		};
 
 		// Pool entries are allocated as pointers on the heap so that if the array is resized while a thread is
@@ -42,9 +46,14 @@ namespace UE::MoviePipeline
 
 		FCriticalSection GlobalQueueDataMutex;
 
-		// OutputResolution为单眼分辨率，输出时如为立体需高度翻倍
+		// OutputResolution为单眼分辨率
 		FIntPoint OutputResolution;
 
 		TWeakPtr<::MoviePipeline::IMoviePipelineOutputMerger> OutputMerger;
+
+		// Stereo settings
+		bool bStereo;
+		EStereoOutputFormat StereoOutputFormat;
+		bool bDisablePanoramic;
 	};
 }

@@ -29,6 +29,7 @@ UMoviePipelinePanoramicPass::UMoviePipelinePanoramicPass()
 	, bFollowCameraOrientation(true)
 	, bStereo(false)
 	, bDisablePanoramic(false)
+	, StereoOutputFormat(EStereoOutputFormat::Separate)
 	, EyeSeparation(3.0f)
 	, EyeConvergenceDistance(1000000000.f)
 	, bAllocateHistoryPerPane(true)
@@ -209,12 +210,23 @@ void UMoviePipelinePanoramicPass::SetupImpl(const MoviePipeline::FMoviePipelineR
 	// When bDisablePanoramic is true, we skip the panoramic blender and send output directly to OutputBuilder.
 	if (bStereo && bDisablePanoramic)
 	{
-		// No panoramic blending - use OutputBuilder directly
-		PanoramicOutputBlender.Reset();
+		// No panoramic blending - use OutputBuilder directly for non-VR stereo
+		// But we still need stereo compositing based on StereoOutputFormat
+		PanoramicOutputBlender = MakeShared<UE::MoviePipeline::FMoviePipelinePanoramicBlender>(
+			GetPipeline()->OutputBuilder, 
+			InPassInitSettings.BackbufferResolution, 
+			bStereo, 
+			StereoOutputFormat,
+			true /* bDisablePanoramic */);
 	}
 	else
 	{
-		PanoramicOutputBlender = MakeShared<UE::MoviePipeline::FMoviePipelinePanoramicBlender>(GetPipeline()->OutputBuilder, InPassInitSettings.BackbufferResolution);
+		PanoramicOutputBlender = MakeShared<UE::MoviePipeline::FMoviePipelinePanoramicBlender>(
+			GetPipeline()->OutputBuilder, 
+			InPassInitSettings.BackbufferResolution, 
+			bStereo, 
+			StereoOutputFormat,
+			false /* bDisablePanoramic */);
 	}
 
 	// Allocate an OCIO extension to do color grading if needed.
@@ -315,11 +327,20 @@ FSceneViewStateInterface* UMoviePipelinePanoramicPass::GetExposureSceneViewState
 
 void UMoviePipelinePanoramicPass::GatherOutputPassesImpl(TArray<FMoviePipelinePassIdentifier>& ExpectedRenderPasses)
 {
-	// When bStereo is enabled, we always output separate images for each eye (both panoramic and non-panoramic modes)
+	// When bStereo is enabled, output format depends on StereoOutputFormat
 	if (bStereo)
 	{
-		ExpectedRenderPasses.Add(FMoviePipelinePassIdentifier(TEXT("nDisplayLit_L")));
-		ExpectedRenderPasses.Add(FMoviePipelinePassIdentifier(TEXT("nDisplayLit_R")));
+		if (StereoOutputFormat == EStereoOutputFormat::Separate)
+		{
+			// Separate: output two images for each eye
+			ExpectedRenderPasses.Add(FMoviePipelinePassIdentifier(TEXT("nDisplayLit_L")));
+			ExpectedRenderPasses.Add(FMoviePipelinePassIdentifier(TEXT("nDisplayLit_R")));
+		}
+		else
+		{
+			// SideBySide, TopBottom, Anaglyph: output single combined image
+			Super::GatherOutputPassesImpl(ExpectedRenderPasses);
+		}
 	}
 	else
 	{
@@ -790,11 +811,16 @@ void UMoviePipelinePanoramicPass::ScheduleReadbackAndAccumulation(const FMoviePi
 		
 		// Generate a unique PassIdentifier for this Panoramic Pane. High Res tile isn't taken into account because
 		// the same accumulator is used for all tiles.
-		// When bDisablePanoramic, use eye index in the identifier to differentiate left/right eye
 		FMoviePipelinePassIdentifier PanePassIdentifier;
 		if (bStereo && bDisablePanoramic)
 		{
-			PanePassIdentifier = FMoviePipelinePassIdentifier(InPane.Data.EyeIndex == 0 ? TEXT("nDisplayLit_L") : TEXT("nDisplayLit_R"));
+			// For non-panoramic stereo, use eye index in the identifier
+			PanePassIdentifier = FMoviePipelinePassIdentifier(InPane.Data.EyeIndex == 0 ? TEXT("Eye0") : TEXT("Eye1"));
+		}
+		else if (bStereo)
+		{
+			// For panoramic stereo, include both pane position and eye index
+			PanePassIdentifier = FMoviePipelinePassIdentifier(FString::Printf(TEXT("%s_x%d_y%d_eye%d"), *PassIdentifier.Name, InPane.Data.VerticalStepIndex, InPane.Data.HorizontalStepIndex, InPane.Data.EyeIndex));
 		}
 		else
 		{
@@ -804,15 +830,8 @@ void UMoviePipelinePanoramicPass::ScheduleReadbackAndAccumulation(const FMoviePi
 	}
 
 	TSharedRef<FPanoramicImagePixelDataPayload, ESPMode::ThreadSafe> FramePayload = MakeShared<FPanoramicImagePixelDataPayload, ESPMode::ThreadSafe>();
-	// When bDisablePanoramic is true, use eye-specific pass identifier for separate output files
-	if (bStereo && bDisablePanoramic)
-	{
-		FramePayload->PassIdentifier = FMoviePipelinePassIdentifier(InPane.Data.EyeIndex == 0 ? TEXT("nDisplayLit_L") : TEXT("nDisplayLit_R"));
-	}
-	else
-	{
-		FramePayload->PassIdentifier = PassIdentifier;
-	}
+	// PassIdentifier will be set by the blender based on output format
+	FramePayload->PassIdentifier = PassIdentifier;
 	FramePayload->SampleState = InSampleState;
 	FramePayload->SortingOrder = GetOutputFileSortingOrder();
 	FramePayload->Pane = InPane;
@@ -834,8 +853,8 @@ void UMoviePipelinePanoramicPass::ScheduleReadbackAndAccumulation(const FMoviePi
 	
 	TSharedPtr<FMoviePipelineSurfaceQueue, ESPMode::ThreadSafe> LocalSurfaceQueue = GetOrCreateSurfaceQueue(InSampleState.BackbufferSize, (IViewCalcPayload*)(&FramePayload->Pane));
 
-	// When bDisablePanoramic is true, bypass the panoramic blender and send directly to OutputBuilder
-	TSharedPtr<MoviePipeline::IMoviePipelineOutputMerger> OutputMerger = (bStereo && bDisablePanoramic) ? GetPipeline()->OutputBuilder : PanoramicOutputBlender;
+	// Always use PanoramicOutputBlender for stereo compositing (handles all output formats)
+	TSharedPtr<MoviePipeline::IMoviePipelineOutputMerger> OutputMerger = PanoramicOutputBlender;
 	
 	MoviePipeline::FImageSampleAccumulationArgs AccumulationArgs;
 	{

@@ -2,11 +2,15 @@
 #include "MoviePipelinePanoramicBlender.h"
 #include "Math/PerspectiveMatrix.h"
 #include "MoviePipelinePanoramicPass.h"
+#include "ImagePixelData.h"
 
 namespace UE::MoviePipeline
 {
-FMoviePipelinePanoramicBlender::FMoviePipelinePanoramicBlender(TSharedPtr<::MoviePipeline::IMoviePipelineOutputMerger> InOutputMerger, const FIntPoint InOutputResolution)
+FMoviePipelinePanoramicBlender::FMoviePipelinePanoramicBlender(TSharedPtr<::MoviePipeline::IMoviePipelineOutputMerger> InOutputMerger, const FIntPoint InOutputResolution, bool bInStereo, EStereoOutputFormat InStereoOutputFormat, bool bInDisablePanoramic)
 	: OutputMerger(InOutputMerger)
+	, bStereo(bInStereo)
+	, StereoOutputFormat(InStereoOutputFormat)
+	, bDisablePanoramic(bInDisablePanoramic)
 {
 	OutputResolution = InOutputResolution;
 }
@@ -59,46 +63,87 @@ void FMoviePipelinePanoramicBlender::OnCompleteRenderPassDataAvailable_AnyThread
 			TargetBlender->EyeIndex = ThisEyeIndex;
 			TargetBlender->bActive = true;
 			TargetBlender->NumCompletedAccumulations = 0;
-			TargetBlender->Blender.Initialize(OutputResolution);
+			
+			if (!bDisablePanoramic)
+			{
+				TargetBlender->Blender.Initialize(OutputResolution);
+			}
 		}
 	}
 
-	// This can get called later (due to blending being async) so only capture by value.
-	auto OnDebugSampleAvailable = [
-		DataPayloadCopy = DataPayload->Copy(),
-		WeakOutputMerger = OutputMerger](FLinearColor* Data, FIntPoint Resolution)
+	// Handle bDisablePanoramic mode: store raw pixels directly without panoramic blending
+	if (bDisablePanoramic)
+	{
+		// For non-panoramic stereo, copy the pixel data
+		// Use CopyImageData to get a copy we can convert safely
+		TUniquePtr<FImagePixelData> CopiedData = InData->CopyImageData();
+		
+		FScopeLock ScopeLock(&GlobalQueueDataMutex);
+		const FIntPoint Size = CopiedData->GetSize();
+		TargetBlender->RawPixels.SetNumUninitialized(Size.X * Size.Y);
+		
+		// Convert to FLinearColor based on the actual pixel type
+		if (CopiedData->GetType() == EImagePixelType::Float32)
 		{
-			TSharedRef<FPanoramicImagePixelDataPayload> PayloadAsPano = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayloadCopy);
-			if (!PayloadAsPano->SampleState.bWriteSampleToDisk)
+			const TImagePixelData<FLinearColor>* LinearColorData = static_cast<const TImagePixelData<FLinearColor>*>(CopiedData.Get());
+			TargetBlender->RawPixels = LinearColorData->Pixels;
+		}
+		else if (CopiedData->GetType() == EImagePixelType::Float16)
+		{
+			const TImagePixelData<FFloat16Color>* Float16Data = static_cast<const TImagePixelData<FFloat16Color>*>(CopiedData.Get());
+			for (int64 i = 0; i < Float16Data->Pixels.Num(); ++i)
 			{
-				return;
+				TargetBlender->RawPixels[i] = FLinearColor(Float16Data->Pixels[i]);
 			}
-			if (PayloadAsPano->Pane.Data.EyeIndex >= 0)
+		}
+		else if (CopiedData->GetType() == EImagePixelType::Color)
+		{
+			const TImagePixelData<FColor>* ColorData = static_cast<const TImagePixelData<FColor>*>(CopiedData.Get());
+			for (int64 i = 0; i < ColorData->Pixels.Num(); ++i)
 			{
-				PayloadAsPano->Debug_OverrideFilename = FString::Printf(TEXT("/%s_PaneX_%d_PaneY_%dEye_%d-Blended.%d"),
-					*PayloadAsPano->PassIdentifier.Name, PayloadAsPano->Pane.Data.HorizontalStepIndex,
-					PayloadAsPano->Pane.Data.VerticalStepIndex, PayloadAsPano->Pane.Data.EyeIndex, PayloadAsPano->SampleState.OutputState.OutputFrameNumber);
+				TargetBlender->RawPixels[i] = FLinearColor(ColorData->Pixels[i]);
 			}
-			else
+		}
+	}
+	else
+	{
+		// This can get called later (due to blending being async) so only capture by value.
+		auto OnDebugSampleAvailable = [
+			DataPayloadCopy = DataPayload->Copy(),
+			WeakOutputMerger = OutputMerger](FLinearColor* Data, FIntPoint Resolution)
 			{
-				PayloadAsPano->Debug_OverrideFilename = FString::Printf(TEXT("/%s_PaneX_%d_PaneY_%d-Blended.%d"),
-					*PayloadAsPano->PassIdentifier.Name, PayloadAsPano->Pane.Data.HorizontalStepIndex,
-					PayloadAsPano->Pane.Data.VerticalStepIndex, PayloadAsPano->SampleState.OutputState.OutputFrameNumber);
-			}
+				TSharedRef<FPanoramicImagePixelDataPayload> PayloadAsPano = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayloadCopy);
+				if (!PayloadAsPano->SampleState.bWriteSampleToDisk)
+				{
+					return;
+				}
+				if (PayloadAsPano->Pane.Data.EyeIndex >= 0)
+				{
+					PayloadAsPano->Debug_OverrideFilename = FString::Printf(TEXT("/%s_PaneX_%d_PaneY_%dEye_%d-Blended.%d"),
+						*PayloadAsPano->PassIdentifier.Name, PayloadAsPano->Pane.Data.HorizontalStepIndex,
+						PayloadAsPano->Pane.Data.VerticalStepIndex, PayloadAsPano->Pane.Data.EyeIndex, PayloadAsPano->SampleState.OutputState.OutputFrameNumber);
+				}
+				else
+				{
+					PayloadAsPano->Debug_OverrideFilename = FString::Printf(TEXT("/%s_PaneX_%d_PaneY_%d-Blended.%d"),
+						*PayloadAsPano->PassIdentifier.Name, PayloadAsPano->Pane.Data.HorizontalStepIndex,
+						PayloadAsPano->Pane.Data.VerticalStepIndex, PayloadAsPano->SampleState.OutputState.OutputFrameNumber);
+				}
 
-			// We have to copy the memory because the blender is going to re-use it.
-			TArray64<FLinearColor> BlendDataCopy = TArray64<FLinearColor>(Data, Resolution.X * Resolution.Y);
-			TUniquePtr<TImagePixelData<FLinearColor>> FinalPixelData = MakeUnique<TImagePixelData<FLinearColor>>(Resolution, MoveTemp(BlendDataCopy), PayloadAsPano->Copy());
+				// We have to copy the memory because the blender is going to re-use it.
+				TArray64<FLinearColor> BlendDataCopy = TArray64<FLinearColor>(Data, Resolution.X * Resolution.Y);
+				TUniquePtr<TImagePixelData<FLinearColor>> FinalPixelData = MakeUnique<TImagePixelData<FLinearColor>>(Resolution, MoveTemp(BlendDataCopy), PayloadAsPano->Copy());
 
-			if (ensure(WeakOutputMerger.IsValid()))
-			{
-				WeakOutputMerger.Pin()->OnSingleSampleDataAvailable_AnyThread(MoveTemp(FinalPixelData));
-			}
-		};
+				if (ensure(WeakOutputMerger.IsValid()))
+				{
+					WeakOutputMerger.Pin()->OnSingleSampleDataAvailable_AnyThread(MoveTemp(FinalPixelData));
+				}
+			};
 
-	// Now that we know which blender we're trying to accumulate to, we can just send the data to it directly. We're already
-	// on a task thread, and the blending process supports multiple task threads working on blending at the same time.
-	TargetBlender->Blender.BlendSample_AnyThread(MoveTemp(InData), DataPayload->Pane.Data, OnDebugSampleAvailable);
+		// Now that we know which blender we're trying to accumulate to, we can just send the data to it directly. We're already
+		// on a task thread, and the blending process supports multiple task threads working on blending at the same time.
+		TargetBlender->Blender.BlendSample_AnyThread(MoveTemp(InData), DataPayload->Pane.Data, OnDebugSampleAvailable);
+	}
 
 	bool bIsStereo = (ThisEyeIndex >= 0);
 	bool bIsLastSample = false;
@@ -140,11 +185,16 @@ void FMoviePipelinePanoramicBlender::OnCompleteRenderPassDataAvailable_AnyThread
 	if (bIsLastSample)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_MoviePipeline_PanoBlendWait);
-		TargetBlender->Blender.TaskConcurrencyLimiter->Wait();
-		if (bIsStereo && OtherEyeBlender)
+		
+		if (!bDisablePanoramic)
 		{
-			OtherEyeBlender->Blender.TaskConcurrencyLimiter->Wait();
+			TargetBlender->Blender.TaskConcurrencyLimiter->Wait();
+			if (bIsStereo && OtherEyeBlender)
+			{
+				OtherEyeBlender->Blender.TaskConcurrencyLimiter->Wait();
+			}
 		}
+		
 		if (ensure(OutputMerger.IsValid()))
 		{
 			int32 OutputSizeX = OutputResolution.X;
@@ -152,33 +202,131 @@ void FMoviePipelinePanoramicBlender::OnCompleteRenderPassDataAvailable_AnyThread
 			
 			if (bIsStereo && OtherEyeBlender)
 			{
-				// Output each eye as a separate image with nDisplayLit_L / nDisplayLit_R naming
+				// Get left and right eye pixels
 				TArray64<FLinearColor> LeftPixels, RightPixels;
-				if (TargetBlender->EyeIndex == 0)
+				if (bDisablePanoramic)
 				{
-					TargetBlender->Blender.FetchFinalPixelDataLinearColor(LeftPixels);
-					OtherEyeBlender->Blender.FetchFinalPixelDataLinearColor(RightPixels);
+					// For non-panoramic mode, use raw pixels directly
+					if (TargetBlender->EyeIndex == 0)
+					{
+						LeftPixels = MoveTemp(TargetBlender->RawPixels);
+						RightPixels = MoveTemp(OtherEyeBlender->RawPixels);
+					}
+					else
+					{
+						RightPixels = MoveTemp(TargetBlender->RawPixels);
+						LeftPixels = MoveTemp(OtherEyeBlender->RawPixels);
+					}
 				}
 				else
 				{
-					TargetBlender->Blender.FetchFinalPixelDataLinearColor(RightPixels);
-					OtherEyeBlender->Blender.FetchFinalPixelDataLinearColor(LeftPixels);
+					// For panoramic mode, fetch from blender
+					if (TargetBlender->EyeIndex == 0)
+					{
+						TargetBlender->Blender.FetchFinalPixelDataLinearColor(LeftPixels);
+						OtherEyeBlender->Blender.FetchFinalPixelDataLinearColor(RightPixels);
+					}
+					else
+					{
+						TargetBlender->Blender.FetchFinalPixelDataLinearColor(RightPixels);
+						OtherEyeBlender->Blender.FetchFinalPixelDataLinearColor(LeftPixels);
+					}
 				}
 				
-				// Output left eye
+				// Output based on StereoOutputFormat
+				switch (StereoOutputFormat)
 				{
-					TSharedRef<FPanoramicImagePixelDataPayload> LeftPayload = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayload->Copy());
-					LeftPayload->PassIdentifier = FMoviePipelinePassIdentifier(TEXT("nDisplayLit_L"));
-					TUniquePtr<TImagePixelData<FLinearColor>> LeftPixelData = MakeUnique<TImagePixelData<FLinearColor>>(FIntPoint(OutputSizeX, OutputSizeY), MoveTemp(LeftPixels), LeftPayload);
-					OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(LeftPixelData));
-				}
-				
-				// Output right eye
-				{
-					TSharedRef<FPanoramicImagePixelDataPayload> RightPayload = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayload->Copy());
-					RightPayload->PassIdentifier = FMoviePipelinePassIdentifier(TEXT("nDisplayLit_R"));
-					TUniquePtr<TImagePixelData<FLinearColor>> RightPixelData = MakeUnique<TImagePixelData<FLinearColor>>(FIntPoint(OutputSizeX, OutputSizeY), MoveTemp(RightPixels), RightPayload);
-					OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(RightPixelData));
+				case EStereoOutputFormat::Separate:
+					{
+						// Output left eye
+						TSharedRef<FPanoramicImagePixelDataPayload> LeftPayload = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayload->Copy());
+						LeftPayload->PassIdentifier = FMoviePipelinePassIdentifier(TEXT("nDisplayLit_L"));
+						TUniquePtr<TImagePixelData<FLinearColor>> LeftPixelData = MakeUnique<TImagePixelData<FLinearColor>>(FIntPoint(OutputSizeX, OutputSizeY), MoveTemp(LeftPixels), LeftPayload);
+						OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(LeftPixelData));
+						
+						// Output right eye
+						TSharedRef<FPanoramicImagePixelDataPayload> RightPayload = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayload->Copy());
+						RightPayload->PassIdentifier = FMoviePipelinePassIdentifier(TEXT("nDisplayLit_R"));
+						TUniquePtr<TImagePixelData<FLinearColor>> RightPixelData = MakeUnique<TImagePixelData<FLinearColor>>(FIntPoint(OutputSizeX, OutputSizeY), MoveTemp(RightPixels), RightPayload);
+						OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(RightPixelData));
+					}
+					break;
+					
+				case EStereoOutputFormat::SideBySide:
+					{
+						// Combine left and right side by side (width x 2)
+						TArray64<FLinearColor> CombinedPixels;
+						CombinedPixels.SetNumUninitialized(OutputSizeX * 2 * OutputSizeY);
+						
+						for (int32 Y = 0; Y < OutputSizeY; ++Y)
+						{
+							// Left eye on the left side
+							FMemory::Memcpy(
+								&CombinedPixels[Y * OutputSizeX * 2],
+								&LeftPixels[Y * OutputSizeX],
+								OutputSizeX * sizeof(FLinearColor));
+							// Right eye on the right side
+							FMemory::Memcpy(
+								&CombinedPixels[Y * OutputSizeX * 2 + OutputSizeX],
+								&RightPixels[Y * OutputSizeX],
+								OutputSizeX * sizeof(FLinearColor));
+						}
+						
+						TSharedRef<FPanoramicImagePixelDataPayload> CombinedPayload = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayload->Copy());
+						TUniquePtr<TImagePixelData<FLinearColor>> CombinedPixelData = MakeUnique<TImagePixelData<FLinearColor>>(
+							FIntPoint(OutputSizeX * 2, OutputSizeY), MoveTemp(CombinedPixels), CombinedPayload);
+						OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(CombinedPixelData));
+					}
+					break;
+					
+				case EStereoOutputFormat::TopBottom:
+					{
+						// Combine left on top and right on bottom (height x 2)
+						TArray64<FLinearColor> CombinedPixels;
+						CombinedPixels.SetNumUninitialized(OutputSizeX * OutputSizeY * 2);
+						
+						// Left eye on top
+						FMemory::Memcpy(
+							CombinedPixels.GetData(),
+							LeftPixels.GetData(),
+							OutputSizeX * OutputSizeY * sizeof(FLinearColor));
+						// Right eye on bottom
+						FMemory::Memcpy(
+							&CombinedPixels[OutputSizeX * OutputSizeY],
+							RightPixels.GetData(),
+							OutputSizeX * OutputSizeY * sizeof(FLinearColor));
+						
+						TSharedRef<FPanoramicImagePixelDataPayload> CombinedPayload = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayload->Copy());
+						TUniquePtr<TImagePixelData<FLinearColor>> CombinedPixelData = MakeUnique<TImagePixelData<FLinearColor>>(
+							FIntPoint(OutputSizeX, OutputSizeY * 2), MoveTemp(CombinedPixels), CombinedPayload);
+						OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(CombinedPixelData));
+					}
+					break;
+					
+				case EStereoOutputFormat::Anaglyph:
+					{
+						// Red-Cyan anaglyph: Red channel from left eye, Green+Blue from right eye
+						TArray64<FLinearColor> AnaglyphPixels;
+						AnaglyphPixels.SetNumUninitialized(OutputSizeX * OutputSizeY);
+						
+						for (int64 i = 0; i < OutputSizeX * OutputSizeY; ++i)
+						{
+							// Left eye luminance for red channel
+							float LeftLuminance = 0.299f * LeftPixels[i].R + 0.587f * LeftPixels[i].G + 0.114f * LeftPixels[i].B;
+							// Right eye for cyan (green + blue)
+							AnaglyphPixels[i] = FLinearColor(
+								LeftLuminance,
+								RightPixels[i].G,
+								RightPixels[i].B,
+								FMath::Max(LeftPixels[i].A, RightPixels[i].A));
+						}
+						
+						TSharedRef<FPanoramicImagePixelDataPayload> AnaglyphPayload = StaticCastSharedRef<FPanoramicImagePixelDataPayload>(DataPayload->Copy());
+						TUniquePtr<TImagePixelData<FLinearColor>> AnaglyphPixelData = MakeUnique<TImagePixelData<FLinearColor>>(
+							FIntPoint(OutputSizeX, OutputSizeY), MoveTemp(AnaglyphPixels), AnaglyphPayload);
+						OutputMerger.Pin()->OnCompleteRenderPassDataAvailable_AnyThread(MoveTemp(AnaglyphPixelData));
+					}
+					break;
 				}
 			}
 			else

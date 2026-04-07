@@ -6,6 +6,20 @@
 #include "Templates/PimplPtr.h"
 #include "MoviePipelinePanoramicPass.generated.h"
 
+/** Stereo output format options */
+UENUM(BlueprintType)
+enum class EStereoOutputFormat : uint8
+{
+	/** Output separate left and right eye images */
+	Separate UMETA(DisplayName = "Separate (L/R)"),
+	/** Output single image with left and right side by side */
+	SideBySide UMETA(DisplayName = "Side by Side"),
+	/** Output single image with left on top and right on bottom */
+	TopBottom UMETA(DisplayName = "Top/Bottom"),
+	/** Output single anaglyph image (red-cyan) */
+	Anaglyph UMETA(DisplayName = "Anaglyph (Red-Cyan)")
+};
+
 class FCanvas;
 class FOpenColorIODisplayExtension;
 
@@ -139,6 +153,10 @@ public:
 	/** If true, only render stereo left/right eye views without panoramic stitching. Requires bStereo to be enabled. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Panoramic Settings", meta = (EditCondition = "bStereo"))
 	bool bDisablePanoramic;
+
+	/** Output format for stereo rendering. Requires bStereo to be enabled. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Panoramic Settings", meta = (EditCondition = "bStereo"))
+	EStereoOutputFormat StereoOutputFormat;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category = "Panoramic Settings")
 	float EyeSeparation;
