@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1775462772.634434,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
+﻿Mineprep:0.5 | 时间戳1775840299.0943897,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve,Steve,Steve,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,🔧,拴绳,Lead,牽繩(拴繩),,,,"低
 中
 高
@@ -190,7 +190,7 @@ Right‑click / Middle‑click will apply the param value first, then add keyfra
 23,视频编码,Encoder,視頻編碼,,,🟩👤,骷髅 [NPC],Skeleton [NPC],骷髏 [NPC],,,,💡,局部调色遮罩(2D),Color Correction Window(2D),局部調色遮罩(2D),,,,,,,,,,,,,,,,👤🟩,金合欢木压力板,acacia_pressure_plate,相思木壓力板,,,,👤🟩,竹告示牌,bamboo_sign,竹指示牌 (竹告示牌)
 24,硬件加速,Hardware,硬件加速,,,🟥,凋灵骷髅,Wither Skeleton,凋零骷髏,,,,💡,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,,,,,,,👤🟩,金合欢木压力板 [按下],acacia_pressure_plate_down,相思木壓力板 [按下],,,,#,屏障,barrier,障幕 (屏障)
 25,色度抽样,Color codec,色度抽樣,,,🟥👤,凋灵骷髅 [NPC],Wither Skeleton [NPC],凋零骷髏 [NPC],,,,✨👪🟩,蜘蛛群粒子,Spider Swarm Particles,蜘蛛群粒子,,,,,,,,,,,,,,,,🟩,金合欢树苗,acacia_sapling,相思木樹苗,,,,🟩,蝙蝠刷怪蛋,bat_spawn_egg,蝙蝠 生成蛋 (蝙蝠 生怪蛋)
-26,质量,Quality,質量,,,🟩,流浪者,Stray,流浪者(流髑),,,,✨👪🟩,虫群粒子(蠹虫),Silverfish Swarm Particles,蟲群粒子(蠹魚),,,,,,,,,,,,,,,,👤🟩,金合欢木架子,acacia_shelf,相思木架子,,,,🟩,生牛肉,beef,生牛肉
+26,编码质量,Codec Quality,編碼質量,,,🟩,流浪者,Stray,流浪者(流髑),,,,✨👪🟩,虫群粒子(蠹虫),Silverfish Swarm Particles,蟲群粒子(蠹魚),,,,,,,,,,,,,,,,👤🟩,金合欢木架子,acacia_shelf,相思木架子,,,,🟩,生牛肉,beef,生牛肉
 27,是HDR视频,HDR video,是HDR視頻,,,🟩👤,流浪者 [NPC],Stray [NPC],流浪者(流髑) [NPC],,,,✨👪🟨,虫群粒子(末影螨),Endermite Swarm Particles,蟲群粒子(終界蟎),,,,,,,,,,,,,,,,👤🟩,金合欢木架子 [中间],acacia_shelf_center,相思木架子 [中間],,,,🟩,甜菜根,beetroot,紅菜頭 (甜菜根)
 28,更新渲染配置,Update Config,更新渲染配置,,,🟩,沼骸,Bogged,沼骨(沼骸),,,,𝓕,径向力场 (全局扩展),Radial Force (+World Field),徑向力場 (全局擴展),,,,,,,,,,,,,,,,👤🟩,金合欢木架子 [物品栏],acacia_shelf_inventory,相思木架子 [物品欄],,,,🟩,甜菜种子,beetroot_seeds,紅菜頭種子 (甜菜種子)
 29,附魔,Enchant,附魔,,,🟩👤,沼骸 [NPC],Bogged [NPC],沼骨(沼骸) [NPC],,,,🧱🔧,距离场碰撞箱包裹器,SDF Collision Wrapper,距離場碰撞箱包裹器,,,,,,,,,,,,,,,,👤🟩,金合欢木架子 [左],acacia_shelf_left,相思木架子 [左],,,,🟩,甜菜汤,beetroot_soup,紅菜頭湯 (甜菜湯)

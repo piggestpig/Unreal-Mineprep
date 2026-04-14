@@ -304,9 +304,9 @@ UObjectDisplayNames,纹理贴图,纹理贴图,纹理贴图,Texture Map,紋理貼
 UObjectDisplayNames,堆放方块_C:方块数量,方块数量,方块数量,Block Count,方塊數量
 UObjectDisplayNames,堆放方块_C:悬空放置,悬空放置,悬空放置,Suspend Placement,懸空放置
 UObjectDisplayNames,堆放方块_C:自定义曲线区域,自定义曲线区域,自定义曲线区域,Custom Curve Area,自訂曲線區域
-UObjectDisplayNames,堆放方块_C:比例（方块1:方块2）,比例（方块1:方块2）,比例（方块1:方块2）,Ratio (Block1:Block2),比例（方塊1:方塊2）
+UObjectDisplayNames,堆放方块_C:比例（方块1:方块2）,比例（方块 1:方块2）,比例（方块1:方块2）,Ratio (Block1:Block2),比例（方塊1:方塊2）
 UObjectDisplayNames,堆放方块_C:方块模型,方块模型,方块模型,Block Mesh,方塊模型
-UObjectDisplayNames,堆放方块_C:方块模型2,方块模型2,方块模型2,Block Mesh 2,方塊模型2
+UObjectDisplayNames,堆放方块_C:方块模型2,方块模型 2,方块模型2,Block Mesh 2,方塊模型2
 UObjectDisplayNames,堆放方块_C:偏移,偏移,偏移,Offset,偏移
 UObjectDisplayNames,堆放方块_C:随机旋转,随机旋转,随机旋转,Random Rotation,隨機旋轉
 UObjectDisplayNames,堆放方块_C:location,location,location,Location,位置
@@ -372,7 +372,7 @@ UObjectDisplayNames,远景地形生成器_C:Blocks,Blocks,方块,Blocks,方塊
 UObjectDisplayNames,远景地形生成器_C:Block Size,Block Size,方块大小,Block Size,方塊大小
 UObjectDisplayNames,远景地形生成器_C:Generate On GPU,Generate on GPU,在GPU上生成,Generate on GP,在GPU上生成
 UObjectDisplayNames,远景地形生成器_C:Enable Plants Sway,Enable Plants Sway,启用植物摇摆,Enable Plants Sway,啟用植物搖擺
-UObjectDisplayNames,远景地形生成器_C:Overall Position Offset,Overall Position Offset,整体位置偏移,Overall Position Offset,整體位置偏移
+UObjectDisplayNames,远景地形生成器_C:Coords Offset XY / Scale XY,Coords Offset XY / Scale XY,坐标偏移XY/缩放XY,Coords Offset XY / Scale XY,坐标偏移XY/缩放XY
 UObjectDisplayNames,远景地形生成器_C:Plain/Mountain/Water Height Offset,Plain/ Mountain/ Water Height Offset,平原/山脉/水面高度偏移,Plain/Mountain/Water Height Offset,平原/山脈/水面高度偏移
 UObjectDisplayNames,远景地形生成器_C:Fill Water in Depressions,Fill Water In Depressions,低洼处填充水面,Fill Water in Depressions,低窪處填充水面
 UObjectDisplayNames,远景地形生成器_C:地形纹理,地形纹理,地形纹理,Terrain Texture,地形紋理
@@ -1618,6 +1618,7 @@ UObjectDisplayNames,TreeStructTable,TreeStructTable,TreeStructTable,Tree Struct 
 UObjectDisplayNames,XYZ方块数量,XYZ方块数量,XYZ方块数量,XYZ Block Count,XYZ方塊數量
 UObjectDisplayNames,低洼处填充水面,低洼处填充水面,低洼处填充水面,Fill Water in Depressions,低窪處填充水面
 UObjectDisplayNames,全局坐标偏移,全局坐标偏移,全局坐标偏移,Global Coordinate Offset,全域座標偏移
+UObjectDisplayNames,全局坐标缩放,全局坐标缩放,全局坐标缩放,Global Coordinate Scale,全域座標縮放
 UObjectDisplayNames,剔除内部方块,剔除内部方块,剔除内部方块,Cull Internal Blocks,剔除內部方塊
 UObjectDisplayNames,同时剔除边界方块,同时剔除边界方块,同时剔除边界方块,Also Cull Boundary Blocks,同時剔除邊界方塊
 UObjectDisplayNames,启用植物摇摆,启用植物摇摆,启用植物摇摆,Enable Plants Sway,啟用植物搖擺
@@ -1715,6 +1716,25 @@ UObjectCategory,Default|GPU材质场,Default|GPU材质场,GPU材质场,GPU Mater
 UObjectDisplayNames,粒子生成,粒子生成,粒子生成,Particle Spawn,粒子生成
 UObjectDisplayNames,力场,力场,力场,Force Field,力場
 UObjectDisplayNames,子粒子,子粒子,子粒子,Sub-Particles,子粒子
+UObjectDisplayNames,植物种类基础密度(%),植物种类基础密度(%),植物种类基础密度(%),Base Density for Plant Type (%),植物種類基礎密度(%)
+UObjectDisplayNames,环境碰撞,环境碰撞,环境碰撞,Environmental Collision,環境碰撞
+UObjectDisplayNames,涡旋力/中心吸引,涡旋力/中心吸引,涡旋力/中心吸引,Vortex Force / Attraction,渦旋力/中心吸引
+UObjectDisplayNames,无,无,无,None,無
+UObjectDisplayNames,线性力,线性力,线性力,Linear Force,線性力
+UObjectDisplayNames,线性速度,线性速度,线性速度,Linear Velocity,線性速度
+UObjectDisplayNames,线性速度+线性力,线性速度+线性力,线性速度+线性力,Linear Velocity + Linear Force,線性速度+線性力
+UObjectDisplayNames,角速度,角速度,角速度,Angular Velocity,角速度
+UObjectDisplayNames,角速度+线性力,角速度+线性力,角速度+线性力,Angular Velocity + Linear Force,角速度+線性力
+UObjectDisplayNames,角速度+线性速度,角速度+线性速度,角速度+线性速度,Angular Velocity + Linear Velocity,角速度+線性速度
+UObjectDisplayNames,角速度+线性速度+线性力,角速度+线性速度+线性力,角速度+线性速度+线性力,Angular Velocity + Linear Velocity + Linear Force,角速度+線性速度+線性力
+UObjectDisplayNames,角扭矩,角扭矩,角扭矩,Angular Torque,角扭矩
+UObjectDisplayNames,角扭矩+线性力,角扭矩+线性力,角扭矩+线性力,Angular Torque + Linear Force,角扭矩+線性力
+UObjectDisplayNames,角扭矩+线性速度,角扭矩+线性速度,角扭矩+线性速度,Angular Torque + Linear Velocity,角扭矩+線性速度
+UObjectDisplayNames,角扭矩+线性速度+线性力,角扭矩+线性速度+线性力,角扭矩+线性速度+线性力,Angular Torque + Linear Velocity + Linear Force,角扭矩+線性速度+線性力
+UObjectDisplayNames,角扭矩+角速度,角扭矩+角速度,角扭矩+角速度,Angular Torque + Angular Velocity,角扭矩+角速度
+UObjectDisplayNames,角扭矩+角速度+线性力,角扭矩+角速度+线性力,角扭矩+角速度+线性力,Angular Torque + Angular Velocity + Linear Force,角扭矩+角速度+線性力
+UObjectDisplayNames,角扭矩+角速度+线性速度,角扭矩+角速度+线性速度,角扭矩+角速度+线性速度,Angular Torque + Angular Velocity + Linear Velocity,角扭矩+角速度+線性速度
+UObjectDisplayNames,角扭矩+角速度+线性速度+线性力,角扭矩+角速度+线性速度+线性力,角扭矩+角速度+线性速度+线性力,Angular Torque + Angular Velocity + Linear Velocity + Linear Force,角扭矩+角速度+線性速度+線性力
 ,,,,,
 ,,,,,
 UObjectDisplayNames,渲染图像,渲染图像,渲染图像,Render Image,渲染圖像

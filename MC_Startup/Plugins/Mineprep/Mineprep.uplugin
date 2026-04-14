@@ -3,7 +3,7 @@
     "Version": 1,
     "VersionName": "1.0",
     "FriendlyName": "Mineprep",
-    "Description": "兼容UE5.6+版本，用于自动开启前置插件，不含实验性内容",
+    "Description": "兼容UE5.7+版本，用于自动开启前置插件，不含实验性内容",
     "Category": "Other",
     "CreatedBy": "Pig/冬猫夏羊工作室",
     "CreatedByURL": "https://github.com/piggestpig/Unreal-Mineprep",

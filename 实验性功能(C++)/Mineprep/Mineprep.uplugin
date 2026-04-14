@@ -1,9 +1,9 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "UE 5.6",
+	"VersionName": "UE 5.7",
 	"FriendlyName": "Mineprep",
-	"Description": "Mineprep实验性内容（C++脚本），适用于UE5.6",
+	"Description": "Mineprep实验性内容（C++脚本），适用于UE5.7",
 	"Category": "Other",
 	"CreatedBy": "Pig/冬猫夏羊工作室",
 	"CreatedByURL": "https://github.com/piggestpig/Unreal-Mineprep",
