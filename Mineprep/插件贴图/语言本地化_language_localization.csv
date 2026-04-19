@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1775840299.0943897,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
+﻿Mineprep:0.5 | 时间戳1776583492.8338094,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve,Steve,Steve,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,🔧,拴绳,Lead,牽繩(拴繩),,,,"低
 中
 高
@@ -213,14 +213,14 @@ Right‑click / Middle‑click will apply the param value first, then add keyfra
 46,启用Nanite,Enable Nanite,啟用Nanite,,,🟥,恶魂,Ghast,地獄幽靈,,,,🔧,粒子高精度碰撞箱,Particle High-Res Collision Box,粒子高精度碰撞箱,,,,,,,,,,,,,,,,👤,激活铁轨 [激活西南坡],activator_rail_on_raised_sw,觸發路軌 (觸發鐵軌) [激活西南坡],,,,🟥,烈焰人刷怪蛋,blaze_spawn_egg,烈焰使者 生成蛋 (烈焰使者 生怪蛋)
 47,渐变动画纹理,Gradient Animated Texture,漸變動畫紋理,,,🟥,快乐恶魂,Happy Ghast,快樂幽靈,,,,✨👪🟩,萤火虫粒子,Firefly Particles,螢火蟲粒子,,,,,,,,,,,,,,,,👤,激活铁轨 [东北坡],activator_rail_raised_ne,觸發路軌 (觸發鐵軌) [東北坡],,,,👤,蓝色收纳袋,blue_bundle,藍色收納袋 (束口袋)
 48,投射阴影,Cast shadow,投射陰影,,,🟥,小恶魂,Ghastling,幽靈仔(小幽靈),,,,𝓕,全局力场,Global Force Field,全局力場,,,,,,,,,,,,,,,,👤,激活铁轨 [西南坡],activator_rail_raised_sw,觸發路軌 (觸發鐵軌) [西南坡],,,,#,蓝色收纳袋 [打开背面],blue_bundle_open_back,藍色收納袋 (束口袋) [打開背面]
-49,材质包路径,Texture pack path,材質包路徑,,,🟩,村民,Villager,村民,,,,𝓕,材质遮罩场,Material Mask Field,材質遮罩場,,,,,,,,,,,,,,,,#,空气,air,空氣,,,,#,蓝色收纳袋 [打开正面],blue_bundle_open_front,藍色收納袋 (束口袋) [打開正面]
+49,材质包路径,Texture pack path,材質包路徑,,,🟩,村民,Villager,村民,,,,𝓕🔧,材质遮罩场,Material Mask Field,材質遮罩場,,,,,,,,,,,,,,,,#,空气,air,空氣,,,,#,蓝色收纳袋 [打开正面],blue_bundle_open_front,藍色收納袋 (束口袋) [打開正面]
 50,放置方块,Block,放置方塊,,,🟩👤,村民 [NPC],Villager [NPC],村民 [NPC],,,,𝓕,力场探测器,Force Field Detector,力場探測器,,,,,,,,,,,,,,,,🟩,绒球葱,allium,絨球葱 (紫紅球花),,,,👤💡,蓝色蜡烛,blue_candle,藍色蠟燭
 51,放置物品,Item,放置物品,,,🟥✨,烈焰人,Blaze,烈焰使者,,,,𝓕,动画偏移场,Anim Offset Field,動畫偏移場,,,,,,,,,,,,,,,,👤🟩,紫水晶块,amethyst_block,紫水晶磚 (紫水晶方塊),,,,👤🟩,蓝色染料,blue_dye,藍色染料
 52,搜索名称,Search,搜索名稱,,,🟥,凋灵,Wither,凋零,,,,𝓕,角速度旋转场,Angular Rotation Field,角速度旋轉場,,,,,,,,,,,,,,,,🟩💡,紫水晶簇,amethyst_cluster,紫水晶簇 (紫水晶晶簇),,,,🟩,蓝色鸡蛋,blue_egg,藍色雞蛋
 53,辉光,Bloom,輝光,,,🟥,疣猪兽,Hoglin,野豬獸(豬布獸),,,,✨🧱,动态地形粒子,Dynamic Landscape Particles,動態地形粒子,,,,,,,,,,,,,,,,🟥,远古残骸,ancient_debris,遠古殘骸 (遠古遺骸),,,,👤🟩,蓝色马铠,blue_harness,藍色馬鎧
 54,强度,Intensity,強度,,,🟩,雪傀儡,Snow Golem,雪人,,,,✨🔧,全局粒子生成区域,Global Particle Spawn Area,全局粒子生成區域,,,,,,,,,,,,,,,,🟩,安山岩,andesite,安山岩,,,,🟩,沼骸刷怪蛋,bogged_spawn_egg,沼骨 生成蛋 (沼骸 生怪蛋)
 55,阈值,Threshold,閾值,,,🟩,狼,Wolf,狼,,,,✨👪🟩,鸟群粒子,Bird Flock Particles,鸟群粒子,,,,,,,,,,,,,,,,👤🟩,安山岩台阶,andesite_slab,安山岩半磚,,,,🟩,锻造模板,bolt_armor_trim_smithing_template,鍛造模板
-56,动态模糊,Motion Blur,動態模糊,,,🟩,猫,Cat,貓,,,,,,,,,,,,,,,,,,,,,,,👤🟩,安山岩台阶 [顶部],andesite_slab_top,安山岩半磚 [頂部],,,,🟩,骨头,bone,骨頭
+56,动态模糊,Motion Blur,動態模糊,,,🟩,猫,Cat,貓,,,,🌊,水坑贴花,Water Puddle Decal,水坑貼花,,,,,,,,,,,,,,,,👤🟩,安山岩台阶 [顶部],andesite_slab_top,安山岩半磚 [頂部],,,,🟩,骨头,bone,骨頭
 57,最大值,Max blur,最大值,,,🟩,悦灵,Allay,悅灵,,,,,,,,,,,,,,,,,,,,,,,👤🟩,安山岩楼梯,andesite_stairs,安山岩樓梯 (安山岩階梯),,,,🟩,骨粉,bone_meal,骨粉
 58,光程,Light Paths,光程,,,🟩,流浪商人,Wandering Trader,流浪商人,,,,,,,,,,,,,,,,,,,,,,,👤🟩,安山岩楼梯 [内角],andesite_stairs_inner,安山岩樓梯 (安山岩階梯) [內角],,,,👤🟩,书,book,書
 59,反射次数,Reflection,反射次數,,,🟩👤,流浪商人 [NPC],Wandering Trader [NPC],流浪商人 [NPC],,,,,,,,,,,,,,,,,,,,,,,👤🟩,安山岩楼梯 [外角],andesite_stairs_outer,安山岩樓梯 (安山岩階梯) [外角],,,,👤,波纹边旗帜图案,bordure_indented_banner_pattern,波紋邊旗幟圖案

@@ -160,7 +160,7 @@ In addition to the minimum requirements in the [Unreal Engine Documentation](htt
 > ⚠️  
 > When using unofficial engine versions like NvRTX, experimental features are unavailable, though other features should work.  
 > Unofficial versions typically require manual compilation. If your environment is set up, you can actually install experimental features and recompile as prompted when opening the project.  
-> NvRTX 5.7 only supports Blendable GBuffer. Please check "Remote testing " during installation.
+> NvRTX 5.7 only supports Blendable GBuffer. Please check "Use limited Blendable GBuffer material for better compatibility" during installation.
 
 · Sufficient VRAM is the foundation for smooth operation. Rendering animations will consume additional VRAM. Windows (DX12) and MacOS can continue rendering using RAM/Disk when VRAM is exceeded, but at about 1/10 the speed. Exceeding VRAM on Vulkan will result in a direct crash.
 
@@ -279,6 +279,7 @@ Let's see what's new:
 - More localized translations in the plugin panel and preset assets.
 - Work-in-progress beginner tutorials, see [Mineprep Wiki](https://github.com/piggestpig/Unreal-Mineprep/wiki).
 
+</details>
 
 #### 0.5-pre3
 ![image](Readme素材/0.5-pre3封面图.jpg)
