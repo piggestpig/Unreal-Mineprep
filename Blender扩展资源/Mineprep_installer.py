@@ -417,6 +417,12 @@ def install():
         config.add_section(ENGINE)
     config.set(ENGINE, 'GenerateDefaultTimecodeFrameRate', '(Numerator=60,Denominator=1)')
 
+    WATER = '/Script/WaterAdvanced.ShallowWaterSettings'
+    if not config.has_section(WATER):
+        config.add_section(WATER)
+    config.set(WATER, 'UseDefaultShallowWaterSubsystem', 'True')
+    config.set(WATER, 'ShallowWaterSimParameters', '(WorldGridSize=5000,ResolutionMaxAxis=768)')
+
     with open(DefaultEngine_ini, 'w', encoding='utf-8') as f:
         config.write(f)
 
@@ -458,6 +464,7 @@ def install():
     config.set(BINDLESS, 'BindlessConfiguration', 'Minimal')
     with open(WindowsEngine_ini, 'w', encoding='utf-8') as f:
         config.write(f)
+
 
 class CustomButton(bpy.types.Operator):
     bl_idname = "custom.button"

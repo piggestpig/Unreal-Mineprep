@@ -212,6 +212,10 @@
         {
             "Name": "UAFWarping",
             "Enabled": true
+        },
+        {
+            "Name": "WaterAdvanced",
+            "Enabled": true
         }
     ]
 }

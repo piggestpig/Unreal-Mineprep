@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1776583492.8338094,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
+﻿Mineprep:0.5 | 时间戳1776703729.846279,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve,Steve,Steve,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,🔧,拴绳,Lead,牽繩(拴繩),,,,"低
 中
 高
@@ -221,7 +221,7 @@ Right‑click / Middle‑click will apply the param value first, then add keyfra
 54,强度,Intensity,強度,,,🟩,雪傀儡,Snow Golem,雪人,,,,✨🔧,全局粒子生成区域,Global Particle Spawn Area,全局粒子生成區域,,,,,,,,,,,,,,,,🟩,安山岩,andesite,安山岩,,,,🟩,沼骸刷怪蛋,bogged_spawn_egg,沼骨 生成蛋 (沼骸 生怪蛋)
 55,阈值,Threshold,閾值,,,🟩,狼,Wolf,狼,,,,✨👪🟩,鸟群粒子,Bird Flock Particles,鸟群粒子,,,,,,,,,,,,,,,,👤🟩,安山岩台阶,andesite_slab,安山岩半磚,,,,🟩,锻造模板,bolt_armor_trim_smithing_template,鍛造模板
 56,动态模糊,Motion Blur,動態模糊,,,🟩,猫,Cat,貓,,,,🌊,水坑贴花,Water Puddle Decal,水坑貼花,,,,,,,,,,,,,,,,👤🟩,安山岩台阶 [顶部],andesite_slab_top,安山岩半磚 [頂部],,,,🟩,骨头,bone,骨頭
-57,最大值,Max blur,最大值,,,🟩,悦灵,Allay,悅灵,,,,,,,,,,,,,,,,,,,,,,,👤🟩,安山岩楼梯,andesite_stairs,安山岩樓梯 (安山岩階梯),,,,🟩,骨粉,bone_meal,骨粉
+57,最大值,Max blur,最大值,,,🟩,悦灵,Allay,悅灵,,,,🌊,高级水体,Advanced Water Body,高級水體,,,,,,,,,,,,,,,,👤🟩,安山岩楼梯,andesite_stairs,安山岩樓梯 (安山岩階梯),,,,🟩,骨粉,bone_meal,骨粉
 58,光程,Light Paths,光程,,,🟩,流浪商人,Wandering Trader,流浪商人,,,,,,,,,,,,,,,,,,,,,,,👤🟩,安山岩楼梯 [内角],andesite_stairs_inner,安山岩樓梯 (安山岩階梯) [內角],,,,👤🟩,书,book,書
 59,反射次数,Reflection,反射次數,,,🟩👤,流浪商人 [NPC],Wandering Trader [NPC],流浪商人 [NPC],,,,,,,,,,,,,,,,,,,,,,,👤🟩,安山岩楼梯 [外角],andesite_stairs_outer,安山岩樓梯 (安山岩階梯) [外角],,,,👤,波纹边旗帜图案,bordure_indented_banner_pattern,波紋邊旗幟圖案
 60,折射次数,Refraction,折射次數,,,🟩,豹猫,Ocelot,豹貓(山貓),,,,,,,,,,,,,,,,,,,,,,,👤🟩,安山岩 [墙上物品栏],andesite_wall_inventory,安山岩 [牆上物品欄],,,,👤🟩,弓,bow,弓

@@ -43,6 +43,9 @@ if ffmpeg_zip.exists():
     ffmpeg_zip.unlink()
     print("已删除 ffmpeg.zip：", ffmpeg_zip)
 
+ffmpeg_multipart = plugin_dir / "Mineprep" / "Render" / "ffmpeg.zip.001"
+assert ffmpeg_multipart.exists(), "ffmpeg.zip.001 分卷压缩文件不存在"
+
 ############################################################
 
 #搜索plugin_dir下所有.pdb文件，打印并删除
