@@ -21,8 +21,11 @@ public class InlineMaterialInstanceEditor : ModuleRules
 				"Slate",
 				"SlateCore",
 				"UnrealEd",
-				"Niagara",
+				"MovieScene",
 				"MovieSceneTracks",
+				"Sequencer",
+				"LevelSequence",
+				"LevelSequenceEditor",
 				"ApplicationCore",
             }
 		);

@@ -13,20 +13,29 @@
 #include "PropertyHandle.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Framework/MultiBox/MultiBoxDefs.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Subsystems/AssetEditorSubsystem.h"
+#include "ILevelSequenceEditorToolkit.h"
+#include "LevelSequence.h"
+#include "LevelSequenceEditorBlueprintLibrary.h"
+#include "ISequencer.h"
 #include "Materials/MaterialInstance.h"
+#include "Materials/MaterialInterface.h"
 #include "Modules/ModuleManager.h"
+#include "MovieScene.h"
 #include "UObject/Object.h"
+#include "Sections/MovieSceneComponentMaterialParameterSection.h"
+#include "Sections/MovieSceneParameterSection.h"
 #include "Widgets/Layout/SWidgetSwitcher.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "Widgets/Views/SExpanderArrow.h"
 #include "Widgets/Views/STreeView.h"
 // Mineprep: Headers for keyframe functionality
 #include "Components/MeshComponent.h"
+#include "Engine/Font.h"
 #include "EngineUtils.h"
-#include "NiagaraTypes.h"
 #include "Tracks/MovieSceneMaterialTrack.h"
 #include "HAL/PlatformApplicationMisc.h"
-#include "Framework/Application/SlateApplication.h"
 
 #define LOCTEXT_NAMESPACE "MaterialDynamicParametersPanelWidget"
 
@@ -44,6 +53,481 @@ namespace KeyframeButtonConfig
 	
 	// Value widget left padding
 	static const FMargin ValueWidgetPadding = FMargin(5.0f, 2.0f, 2.0f, 2.0f);
+}
+
+enum class EMaterialParameterKeyKind : uint8
+{
+	Unsupported,
+	Scalar,
+	Vector,
+	Texture,
+	Font,
+};
+
+struct FResolvedMaterialParameterContext
+{
+	UMaterialInstance* MaterialInstance = nullptr;
+	UMeshComponent* Component = nullptr;
+	FComponentMaterialInfo MaterialInfo;
+	FMaterialParameterInfo ParameterInfo;
+	FString ParamType;
+	FString ParamName;
+	FString ParamValue;
+	EMaterialParameterKeyKind KeyKind = EMaterialParameterKeyKind::Unsupported;
+	float ScalarValue = 0.0f;
+	FLinearColor VectorValue = FLinearColor::Transparent;
+};
+
+static const FName GMaterialKeyedStyleName("Sequencer.KeyedStatus.Keyed");
+static const FName GMaterialUnkeyedStyleName("Sequencer.KeyedStatus.NotKeyed");
+static const FName GMaterialLegacyStyleName("Sequencer.AddKey.Details");
+
+static TSharedPtr<ISequencer> GetFocusedLevelSequencer()
+{
+	if (!GEditor)
+	{
+		return nullptr;
+	}
+
+	ULevelSequence* FocusedLevelSequence = ULevelSequenceEditorBlueprintLibrary::GetFocusedLevelSequence();
+	if (!FocusedLevelSequence)
+	{
+		return nullptr;
+	}
+
+	UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+	if (!AssetEditorSubsystem)
+	{
+		return nullptr;
+	}
+
+	IAssetEditorInstance* AssetEditor = AssetEditorSubsystem->FindEditorForAsset(FocusedLevelSequence, false);
+	if (!AssetEditor)
+	{
+		return nullptr;
+	}
+
+	ILevelSequenceEditorToolkit* LevelSequenceEditor = static_cast<ILevelSequenceEditorToolkit*>(AssetEditor);
+	return LevelSequenceEditor ? LevelSequenceEditor->GetSequencer() : nullptr;
+}
+
+static bool MaterialParameterInfoMatches(const FMaterialParameterInfo& A, const FMaterialParameterInfo& B)
+{
+	return A.Name == B.Name && A.Association == B.Association && A.Index == B.Index;
+}
+
+static bool ResolveMaterialOwnerComponent(UMaterialInstance* MaterialInstance, UMeshComponent*& OutComponent, FComponentMaterialInfo& OutMaterialInfo)
+{
+	if (!MaterialInstance)
+	{
+		return false;
+	}
+
+	auto TryResolveForComponent = [MaterialInstance, &OutComponent, &OutMaterialInfo](UMeshComponent* MeshComponent) -> bool
+	{
+		if (!IsValid(MeshComponent))
+		{
+			return false;
+		}
+
+		for (int32 MaterialIndex = 0; MaterialIndex < MeshComponent->GetNumMaterials(); ++MaterialIndex)
+		{
+			if (MeshComponent->GetMaterial(MaterialIndex) == MaterialInstance)
+			{
+				OutComponent = MeshComponent;
+				OutMaterialInfo.MaterialSlotIndex = MaterialIndex;
+				OutMaterialInfo.MaterialType = EComponentMaterialType::IndexedMaterial;
+				OutMaterialInfo.MaterialSlotName = MeshComponent->GetMaterialSlotNames().IsValidIndex(MaterialIndex)
+					? MeshComponent->GetMaterialSlotNames()[MaterialIndex]
+					: NAME_None;
+				return true;
+			}
+		}
+
+		return false;
+	};
+
+	if (UMeshComponent* OuterMeshComponent = MaterialInstance->GetTypedOuter<UMeshComponent>())
+	{
+		if (TryResolveForComponent(OuterMeshComponent))
+		{
+			return true;
+		}
+	}
+
+	for (TObjectIterator<UMeshComponent> It; It; ++It)
+	{
+		if (TryResolveForComponent(*It))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static bool ResolveMaterialParameterContext(TWeakObjectPtr<UMaterialInstance> MaterialInstanceWeak, const FMaterialParameterInfo& ParameterInfo, FResolvedMaterialParameterContext& OutContext)
+{
+	if (!MaterialInstanceWeak.IsValid())
+	{
+		return false;
+	}
+
+	UMaterialInstance* MaterialInstance = MaterialInstanceWeak.Get();
+	OutContext.MaterialInstance = MaterialInstance;
+	OutContext.ParameterInfo = ParameterInfo;
+	OutContext.ParamName = ParameterInfo.Name.ToString();
+	ResolveMaterialOwnerComponent(MaterialInstance, OutContext.Component, OutContext.MaterialInfo);
+
+	float ScalarValue = 0.0f;
+	if (MaterialInstance->GetScalarParameterValue(ParameterInfo, ScalarValue))
+	{
+		OutContext.KeyKind = EMaterialParameterKeyKind::Scalar;
+		OutContext.ParamType = TEXT("float");
+		OutContext.ParamValue = FString::SanitizeFloat(ScalarValue);
+		OutContext.ScalarValue = ScalarValue;
+		return true;
+	}
+
+	FLinearColor VectorValue;
+	if (MaterialInstance->GetVectorParameterValue(ParameterInfo, VectorValue))
+	{
+		OutContext.KeyKind = EMaterialParameterKeyKind::Vector;
+		OutContext.ParamType = TEXT("FLinearColor");
+		OutContext.ParamValue = VectorValue.ToString();
+		OutContext.VectorValue = VectorValue;
+		return true;
+	}
+
+	UTexture* TextureValue = nullptr;
+	if (MaterialInstance->GetTextureParameterValue(ParameterInfo, TextureValue))
+	{
+		OutContext.KeyKind = EMaterialParameterKeyKind::Texture;
+		OutContext.ParamType = TEXT("TObjectPtr<UTexture>");
+		OutContext.ParamValue = TextureValue ? TextureValue->GetPathName() : TEXT("None");
+		return true;
+	}
+
+	UFont* FontValue = nullptr;
+	int32 FontPage = 0;
+	if (MaterialInstance->GetFontParameterValue(ParameterInfo, FontValue, FontPage))
+	{
+		OutContext.KeyKind = EMaterialParameterKeyKind::Font;
+		OutContext.ParamType = TEXT("TObjectPtr<UFont>");
+		OutContext.ParamValue = FontValue ? FontValue->GetPathName() : TEXT("None");
+		return true;
+	}
+
+	return false;
+}
+
+static bool IsNativeMaterialParameterKeyable(const FResolvedMaterialParameterContext& Context)
+{
+	return Context.Component != nullptr
+		&& (Context.KeyKind == EMaterialParameterKeyKind::Scalar || Context.KeyKind == EMaterialParameterKeyKind::Vector);
+}
+
+static UMovieSceneComponentMaterialTrack* FindMaterialTrack(UMovieScene* MovieScene, const FGuid& ObjectBinding, const FComponentMaterialInfo& MaterialInfo)
+{
+	if (!MovieScene)
+	{
+		return nullptr;
+	}
+
+	const FMovieSceneBinding* Binding = MovieScene->FindBinding(ObjectBinding);
+	if (!Binding)
+	{
+		return nullptr;
+	}
+
+	for (UMovieSceneTrack* Track : Binding->GetTracks())
+	{
+		UMovieSceneComponentMaterialTrack* MaterialTrack = Cast<UMovieSceneComponentMaterialTrack>(Track);
+		if (MaterialTrack && MaterialTrack->GetMaterialInfo() == MaterialInfo)
+		{
+			return MaterialTrack;
+		}
+	}
+
+	return nullptr;
+}
+
+static UMovieSceneSection* FindMaterialTrackSection(UMovieSceneComponentMaterialTrack* MaterialTrack)
+{
+	return MaterialTrack && MaterialTrack->GetAllSections().Num() > 0
+		? MaterialTrack->GetAllSections()[0]
+		: nullptr;
+}
+
+static bool FloatChannelHasAnyKeys(const FMovieSceneFloatChannel& Channel)
+{
+	return Channel.GetData().GetTimes().Num() > 0;
+}
+
+static bool HasAnyMaterialParameterKeys(UMovieSceneSection* Section, const FResolvedMaterialParameterContext& Context)
+{
+	if (!Section)
+	{
+		return false;
+	}
+
+	if (Context.KeyKind == EMaterialParameterKeyKind::Scalar)
+	{
+		if (const UMovieSceneComponentMaterialParameterSection* MaterialSection = Cast<UMovieSceneComponentMaterialParameterSection>(Section))
+		{
+			for (const FScalarMaterialParameterInfoAndCurve& ScalarParameter : MaterialSection->ScalarParameterInfosAndCurves)
+			{
+				if (MaterialParameterInfoMatches(ScalarParameter.ParameterInfo, Context.ParameterInfo) && FloatChannelHasAnyKeys(ScalarParameter.ParameterCurve))
+				{
+					return true;
+				}
+			}
+		}
+
+		if (const UMovieSceneParameterSection* LegacySection = Cast<UMovieSceneParameterSection>(Section))
+		{
+			for (const FScalarParameterNameAndCurve& ScalarParameter : LegacySection->GetScalarParameterNamesAndCurves())
+			{
+				if (ScalarParameter.ParameterName == Context.ParameterInfo.Name && FloatChannelHasAnyKeys(ScalarParameter.ParameterCurve))
+				{
+					return true;
+				}
+			}
+		}
+	}
+
+	if (Context.KeyKind == EMaterialParameterKeyKind::Vector)
+	{
+		if (const UMovieSceneComponentMaterialParameterSection* MaterialSection = Cast<UMovieSceneComponentMaterialParameterSection>(Section))
+		{
+			for (const FColorMaterialParameterInfoAndCurves& ColorParameter : MaterialSection->ColorParameterInfosAndCurves)
+			{
+				if (MaterialParameterInfoMatches(ColorParameter.ParameterInfo, Context.ParameterInfo)
+					&& (FloatChannelHasAnyKeys(ColorParameter.RedCurve)
+						|| FloatChannelHasAnyKeys(ColorParameter.GreenCurve)
+						|| FloatChannelHasAnyKeys(ColorParameter.BlueCurve)
+						|| FloatChannelHasAnyKeys(ColorParameter.AlphaCurve)))
+				{
+					return true;
+				}
+			}
+		}
+
+		if (const UMovieSceneParameterSection* LegacySection = Cast<UMovieSceneParameterSection>(Section))
+		{
+			for (const FColorParameterNameAndCurves& ColorParameter : LegacySection->GetColorParameterNamesAndCurves())
+			{
+				if (ColorParameter.ParameterName == Context.ParameterInfo.Name
+					&& (FloatChannelHasAnyKeys(ColorParameter.RedCurve)
+						|| FloatChannelHasAnyKeys(ColorParameter.GreenCurve)
+						|| FloatChannelHasAnyKeys(ColorParameter.BlueCurve)
+						|| FloatChannelHasAnyKeys(ColorParameter.AlphaCurve)))
+				{
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+static bool KeyFocusedMaterialParameter(const FResolvedMaterialParameterContext& Context, UMovieSceneComponentMaterialTrack** OutTrack = nullptr, UMovieSceneSection** OutSection = nullptr)
+{
+	if (OutTrack)
+	{
+		*OutTrack = nullptr;
+	}
+
+	if (OutSection)
+	{
+		*OutSection = nullptr;
+	}
+
+	if (!IsNativeMaterialParameterKeyable(Context))
+	{
+		return false;
+	}
+
+	TSharedPtr<ISequencer> Sequencer = GetFocusedLevelSequencer();
+	if (!Sequencer.IsValid())
+	{
+		return false;
+	}
+
+	UMovieSceneSequence* FocusedSequence = Sequencer->GetFocusedMovieSceneSequence();
+	UMovieScene* MovieScene = FocusedSequence ? FocusedSequence->GetMovieScene() : nullptr;
+	if (!MovieScene || MovieScene->IsReadOnly())
+	{
+		return false;
+	}
+
+	const FScopedTransaction Transaction(LOCTEXT("InlineMaterialKeyParameter", "Key Material Parameter"));
+	MovieScene->Modify();
+
+	const FGuid ObjectBinding = Sequencer->GetHandleToObject(Context.Component, true);
+	if (!ObjectBinding.IsValid())
+	{
+		return false;
+	}
+
+	bool bCreatedTrack = false;
+	UMovieSceneComponentMaterialTrack* MaterialTrack = FindMaterialTrack(MovieScene, ObjectBinding, Context.MaterialInfo);
+	if (!MaterialTrack)
+	{
+		MaterialTrack = NewObject<UMovieSceneComponentMaterialTrack>(MovieScene, NAME_None, RF_Transactional);
+		MovieScene->AddGivenTrack(MaterialTrack, ObjectBinding);
+		MaterialTrack->Modify();
+		MaterialTrack->SetMaterialInfo(Context.MaterialInfo);
+		MaterialTrack->SetDisplayName(FText::FromString(Context.MaterialInfo.ToString()));
+		bCreatedTrack = true;
+	}
+
+	const int32 PreviousSectionCount = MaterialTrack->GetAllSections().Num();
+	const FFrameNumber KeyTime = Sequencer->GetLocalTime().Time.FrameNumber;
+
+	MaterialTrack->Modify();
+	if (Context.KeyKind == EMaterialParameterKeyKind::Scalar)
+	{
+		MaterialTrack->AddScalarParameterKey(Context.ParameterInfo, KeyTime, Context.ScalarValue, FString(), FString());
+	}
+	else if (Context.KeyKind == EMaterialParameterKeyKind::Vector)
+	{
+		MaterialTrack->AddColorParameterKey(Context.ParameterInfo, KeyTime, Context.VectorValue, FString(), FString());
+	}
+	else
+	{
+		return false;
+	}
+
+	UMovieSceneSection* MaterialSection = FindMaterialTrackSection(MaterialTrack);
+	const bool bCreatedSection = MaterialTrack->GetAllSections().Num() > PreviousSectionCount;
+	Sequencer->NotifyMovieSceneDataChanged(
+		(bCreatedTrack || bCreatedSection)
+			? EMovieSceneDataChangeType::MovieSceneStructureItemAdded
+			: EMovieSceneDataChangeType::TrackValueChanged);
+
+	if (FSlateApplication::IsInitialized())
+	{
+		FSlateApplication::Get().InvalidateAllWidgets(false);
+	}
+
+	if (OutTrack)
+	{
+		*OutTrack = MaterialTrack;
+	}
+
+	if (OutSection)
+	{
+		*OutSection = MaterialSection;
+	}
+
+	return true;
+}
+
+static void NotifyMaterialKeyVariable(UObject* TargetObject, UObject* Object, UMovieSceneTrack* Track, UMovieSceneSection* Section, const FString& ParamType, const FString& ParamName, const FString& ParamValue)
+{
+	static const FString BlueprintPath = TEXT("/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C");
+	UClass* LoadedClass = LoadClass<UObject>(nullptr, *BlueprintPath);
+	if (!LoadedClass)
+	{
+		return;
+	}
+
+	UObject* HotkeyObject = NewObject<UObject>(GetTransientPackage(), LoadedClass);
+	if (!HotkeyObject)
+	{
+		return;
+	}
+
+	UFunction* KeyVarFunc = HotkeyObject->FindFunction(FName(TEXT("KeyVariable")));
+	if (!KeyVarFunc)
+	{
+		return;
+	}
+
+	struct FKeyVariableParams
+	{
+		UObject* Target;
+		UObject* Object;
+		UMovieSceneTrack* Track;
+		UMovieSceneSection* Section;
+		FString ParamType;
+		FString ParamName;
+		FString ParamValue;
+	} Params;
+
+	Params.Target = TargetObject;
+	Params.Object = Object;
+	Params.Track = Track;
+	Params.Section = Section;
+	Params.ParamType = ParamType;
+	Params.ParamName = ParamName;
+	Params.ParamValue = ParamValue;
+
+	HotkeyObject->ProcessEvent(KeyVarFunc, &Params);
+}
+
+static const FSlateBrush* GetMaterialKeyframeBrush(const FMaterialParameterInfo& ParameterInfo, TWeakObjectPtr<UMaterialInstance> MaterialInstanceWeak)
+{
+	FResolvedMaterialParameterContext Context;
+	if (!ResolveMaterialParameterContext(MaterialInstanceWeak, ParameterInfo, Context))
+	{
+		return FAppStyle::Get().GetBrush(GMaterialLegacyStyleName);
+	}
+
+	if (!IsNativeMaterialParameterKeyable(Context))
+	{
+		return FAppStyle::Get().GetBrush(GMaterialLegacyStyleName);
+	}
+
+	TSharedPtr<ISequencer> Sequencer = GetFocusedLevelSequencer();
+	if (!Sequencer.IsValid())
+	{
+		return FAppStyle::Get().GetBrush(GMaterialUnkeyedStyleName);
+	}
+
+	UMovieSceneSequence* FocusedSequence = Sequencer->GetFocusedMovieSceneSequence();
+	UMovieScene* MovieScene = FocusedSequence ? FocusedSequence->GetMovieScene() : nullptr;
+	if (!MovieScene)
+	{
+		return FAppStyle::Get().GetBrush(GMaterialUnkeyedStyleName);
+	}
+
+	const FGuid ObjectBinding = Sequencer->GetHandleToObject(Context.Component, false);
+	if (!ObjectBinding.IsValid())
+	{
+		return FAppStyle::Get().GetBrush(GMaterialUnkeyedStyleName);
+	}
+
+	UMovieSceneComponentMaterialTrack* MaterialTrack = FindMaterialTrack(MovieScene, ObjectBinding, Context.MaterialInfo);
+	UMovieSceneSection* MaterialSection = FindMaterialTrackSection(MaterialTrack);
+	const FName& BrushName = HasAnyMaterialParameterKeys(MaterialSection, Context)
+		? GMaterialKeyedStyleName
+		: GMaterialUnkeyedStyleName;
+
+	return FAppStyle::Get().GetBrush(BrushName);
+}
+
+static FReply HandleMaterialKeyframeButtonClick(const FMaterialParameterInfo ParameterInfo, TWeakObjectPtr<UMaterialInstance> MaterialInstanceWeak)
+{
+	FResolvedMaterialParameterContext Context;
+	if (!ResolveMaterialParameterContext(MaterialInstanceWeak, ParameterInfo, Context))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("无法解析材质参数关键帧上下文: %s"), *ParameterInfo.Name.ToString());
+		return FReply::Handled();
+	}
+
+	UMovieSceneComponentMaterialTrack* MaterialTrack = nullptr;
+	UMovieSceneSection* MaterialSection = nullptr;
+	if (IsNativeMaterialParameterKeyable(Context)
+		&& !KeyFocusedMaterialParameter(Context, &MaterialTrack, &MaterialSection))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("为材质参数添加原生关键帧失败: %s"), *Context.ParamName);
+	}
+
+	NotifyMaterialKeyVariable(Context.MaterialInstance, Context.Component, MaterialTrack, MaterialSection, Context.ParamType, Context.ParamName, Context.ParamValue);
+	return FReply::Handled();
 }
 
 enum EStackDataType
@@ -650,129 +1134,17 @@ void SMaterialDynamicParametersOverviewTreeItem::Construct(const FArguments& InA
 									.ButtonStyle(FAppStyle::Get(), "SimpleButton")
 									.ContentPadding(KeyframeButtonConfig::ButtonPadding)
 									.ToolTipText(LOCTEXT("AddKeyframeTooltip", "Add a keyframe for this material parameter"))
-									.OnClicked_Lambda([ParameterInfo = StackParameterData->ParameterInfo, MaterialInstanceWeak = TWeakObjectPtr<UMaterialInstance>(MaterialInstance.Get())]()
-									{
-										// Get parameter name
-										FString ParamNameStr = ParameterInfo.Name.ToString();
-										UE_LOG(LogTemp, Log, TEXT("Keyframe button clicked: %s"), *ParamNameStr);
-										
-										// Check if material instance is valid
-										if (!MaterialInstanceWeak.IsValid())
-										{
-											UE_LOG(LogTemp, Warning, TEXT("Material instance is invalid"));
-											return FReply::Handled();
-										}
-										
-										UMaterialInstance* MatInstance = MaterialInstanceWeak.Get();
-										
-										// Find the component using this material instance
-										for (TObjectIterator<UMeshComponent> It; It; ++It)
-										{
-											UMeshComponent* MeshComp = *It;
-											if (!IsValid(MeshComp))
-											{
-												continue;
-											}
-											
-											bool bFound = false;
-											for (int32 i = 0; i < MeshComp->GetNumMaterials(); ++i)
-											{
-												UMaterialInterface* Mat = MeshComp->GetMaterial(i);
-												if (Mat == MatInstance)
-												{
-													// Create MaterialInfo
-													FComponentMaterialInfo MaterialInfo;
-													MaterialInfo.MaterialSlotIndex = i;
-													MaterialInfo.MaterialType = EComponentMaterialType::IndexedMaterial;
-													MaterialInfo.MaterialSlotName = MeshComp->GetMaterialSlotNames().IsValidIndex(i) ? 
-														MeshComp->GetMaterialSlotNames()[i] : NAME_None;
-													
-													// Get parameter type and value
-													FString ParamType;
-													FString ParamValueStr;
-													
-													// Try to get scalar parameter
-													float ScalarValue = 0.0f;
-													if (MatInstance->GetScalarParameterValue(ParameterInfo, ScalarValue))
-													{
-														ParamType = TEXT("float");
-														ParamValueStr = FString::SanitizeFloat(ScalarValue);
-													}
-													// Try to get vector parameter
-													else if (FLinearColor VectorValue; MatInstance->GetVectorParameterValue(ParameterInfo, VectorValue))
-													{
-														ParamType = TEXT("FLinearColor");
-														ParamValueStr = VectorValue.ToString();
-													}
-													// Try to get texture parameter
-													else if (UTexture* TextureValue = nullptr; MatInstance->GetTextureParameterValue(ParameterInfo, TextureValue))
-													{
-														ParamType = TEXT("TObjectPtr<UTexture>");
-														ParamValueStr = TextureValue ? TextureValue->GetPathName() : TEXT("None");
-													}
-													// Unknown parameter type, skip this parameter
-													else
-													{
-														UE_LOG(LogTemp, Warning, TEXT("Unknown parameter type for: %s"), *ParamNameStr);
-														bFound = true;
-														break;
-													}
-													
-													
-													// Call blueprint event
-													FString BlueprintPath = TEXT("/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C");
-													if (UClass* LoadedClass = LoadClass<UObject>(nullptr, *BlueprintPath))
-													{
-														if (UObject* CustomHotkeyWidget = NewObject<UObject>(GetTransientPackage(), LoadedClass))
-														{
-															if (UFunction* KeyVarFunc = CustomHotkeyWidget->FindFunction(FName(TEXT("KeyVariable"))))
-															{
-																struct
-																{
-																	USceneComponent* Component;
-																	FComponentMaterialInfo MaterialInfo;
-																	FMaterialParameterInfo ParamInfo;
-																	FString ParamType;
-																	FString ParamValue;
-																	FString ParamName;
-																	FNiagaraVariable NiagaraVar;
-																} Params;
-																
-																Params.Component = MeshComp;
-																Params.MaterialInfo = MaterialInfo;
-																Params.ParamInfo = ParameterInfo;
-																Params.ParamType = ParamType;
-																Params.ParamValue = ParamValueStr;
-																Params.ParamName = ParamNameStr;
-																Params.NiagaraVar = FNiagaraVariable(); // Empty for material parameters
-																
-																CustomHotkeyWidget->ProcessEvent(KeyVarFunc, &Params);
-																UE_LOG(LogTemp, Log, TEXT("Keyframe event called for parameter: %s on component: %s"), 
-																	*ParamNameStr, *MeshComp->GetName());
-															}
-														}
-													}
-													
-													bFound = true;
-													break;
-												}
-											}
-											
-											if (bFound)
-											{
-												break;
-											}
-										}
-										
-										return FReply::Handled();
-									})
+									.OnClicked_Static(&HandleMaterialKeyframeButtonClick, StackParameterData->ParameterInfo, TWeakObjectPtr<UMaterialInstance>(MaterialInstance.Get()))
 									[
 										SNew(SBox)
 										.WidthOverride(KeyframeButtonConfig::ButtonSize)
 										.HeightOverride(KeyframeButtonConfig::ButtonSize)
 										[
 											SNew(SImage)
-											.Image(FAppStyle::Get().GetBrush("Sequencer.AddKey.Details"))
+											.Image_Lambda([ParameterInfo = StackParameterData->ParameterInfo, MaterialInstanceWeak = TWeakObjectPtr<UMaterialInstance>(MaterialInstance.Get())]()
+											{
+												return GetMaterialKeyframeBrush(ParameterInfo, MaterialInstanceWeak);
+											})
 											.ColorAndOpacity(FSlateColor::UseForeground())
 										]
 									]

@@ -28,6 +28,7 @@ class MineprepProperties(bpy.types.PropertyGroup):
     blendable_gbuffer: bpy.props.BoolProperty()
     install_mode: bpy.props.IntProperty()
     lite_version: bpy.props.BoolProperty()
+    core_only: bpy.props.BoolProperty()
     skip_other_platform: bpy.props.BoolProperty(default=True)
     optimize_default: bpy.props.BoolProperty()
 
@@ -92,7 +93,8 @@ localization = {
         34: "跳过为其他平台编译的文件",
         35: "使用兼容性更好的有限Blendable GBuffer材质",
         36: "工程文件名称 (.uproject):",
-        37: "优化性能，降低默认画质"
+        37: "优化性能，降低默认画质",
+        38: "仅安装核心功能（跳过90%预设素材）"
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -131,7 +133,8 @@ localization = {
         34: "Skip files compiled for other platforms",
         35: "Use limited Blendable GBuffer material for better compatibility",
         36: "Project name (.uproject):",
-        37: "Optimize performance, reduce default image quality"
+        37: "Optimize performance, reduce default image quality",
+        38: "Install core features only (skip 90% of preset assets)"
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -170,7 +173,8 @@ localization = {
         34: "跳過為其他平台編譯的文件",
         35: "使用兼容性更好的有限Blendable GBuffer材賊",
         36: "工程文件名稱 (.uproject):",
-        37: "優化性能，降低默認畫質"
+        37: "優化性能，降低默認畫質",
+        38: "僅安裝核心功能（跳過90%預設素材）"
     },
 }
 
@@ -251,6 +255,40 @@ def get_lite_skip():
         skip.update({"第三人称运动匹配", "音效", "ffmpeg.zip", "whisper", "Source"})
     return skip
 
+def core_only_enabled():
+    return mc.lite_version and mc.core_only
+
+def skip_builtin_ffmpeg(path):
+    if not mc.ini_ffmpeg or not ffmpeg_default:
+        return False
+    return os.path.normcase(os.path.normpath(path)) == os.path.normcase(os.path.normpath(ffmpeg_default))
+
+def contains_core_folder(path):
+    try:
+        for entry in os.scandir(path):
+            if entry.is_dir(follow_symlinks=False):
+                if 'core' in entry.name.lower() or contains_core_folder(entry.path):
+                    return True
+    except (PermissionError, FileNotFoundError):
+        pass
+    return False
+
+CORE_LIST = ['插件贴图', 'Render']
+
+def get_mineprep_copy_policy(path):
+    rel_path = os.path.relpath(path, mineprep_dir)
+    if rel_path == '.':
+        return 'root'
+
+    parts = rel_path.split(os.sep)
+    if parts[0] in CORE_LIST:
+        return 'keep'
+    if any('core' in part.lower() for part in parts):
+        return 'keep'
+    if contains_core_folder(path):
+        return 'traverse'
+    return 'skip'
+
 def get_dir_size(path, skip):
     total = 0
     try:
@@ -266,10 +304,45 @@ def get_dir_size(path, skip):
         pass
     return total
 
+def get_mineprep_dir_size(path, skip):
+    total = 0
+    policy = get_mineprep_copy_policy(path) if core_only_enabled() else 'keep'
+    try:
+        for entry in os.scandir(path):
+            if entry.name in skip:
+                print(f"[lite] 跳过: {entry.path}")
+                continue
+            if skip_builtin_ffmpeg(entry.path):
+                print(f"[ffmpeg] 跳过: {entry.path}")
+                continue
+            if policy == 'root':
+                keep_entry = entry.is_file(follow_symlinks=False) or entry.name in CORE_LIST
+                if not keep_entry and entry.is_dir(follow_symlinks=False):
+                    keep_entry = contains_core_folder(entry.path)
+                if not keep_entry:
+                    print(f"[core_only] 跳过: {entry.path}")
+                    continue
+            elif policy == 'traverse':
+                if entry.is_file(follow_symlinks=False):
+                    print(f"[core_only] 跳过: {entry.path}")
+                    continue
+                entry_policy = get_mineprep_copy_policy(entry.path)
+                if entry_policy == 'skip':
+                    print(f"[core_only] 跳过: {entry.path}")
+                    continue
+
+            if entry.is_dir(follow_symlinks=False):
+                total += get_mineprep_dir_size(entry.path, skip)
+            else:
+                total += entry.stat(follow_symlinks=False).st_size
+    except (PermissionError, FileNotFoundError):
+        pass
+    return total
+
 _size_cache = {}
 
 def est_size():
-    cache_key = (mc.lite_version, mc.skip_other_platform, mc.install_mode, mc.exp_basic, mc.exp_material, mc.exp_vr3d)
+    cache_key = (mc.lite_version, mc.core_only, mc.ini_ffmpeg, mc.skip_other_platform, mc.install_mode, mc.exp_basic, mc.exp_material, mc.exp_vr3d)
     if cache_key in _size_cache:
         return _size_cache[cache_key]
 
@@ -279,7 +352,7 @@ def est_size():
         total += get_dir_size(startup_dir, skip)
     else:
         total += get_dir_size(startup_plugin, skip)
-    total += get_dir_size(mineprep_dir, skip)
+    total += get_mineprep_dir_size(mineprep_dir, skip)
     if mc.exp_basic:
         total += get_dir_size(exp_dir, skip)
     if mc.exp_material:
@@ -306,6 +379,40 @@ def ignored_files(dir, contents):
     ignored = {item for item in contents if item in skip}
     for item in ignored:
         print(f"[lite] 跳过: {os.path.join(dir, item)}")
+    return ignored
+
+def ignored_mineprep_files(dir, contents):
+    ignored = set(ignored_files(dir, contents))
+    for item in contents:
+        item_path = os.path.join(dir, item)
+        if skip_builtin_ffmpeg(item_path):
+            ignored.add(item)
+            print(f"[ffmpeg] 跳过: {item_path}")
+    if not core_only_enabled():
+        return ignored
+
+    policy = get_mineprep_copy_policy(dir)
+    for item in contents:
+        if item in ignored:
+            continue
+        item_path = os.path.join(dir, item)
+        if policy == 'root':
+            keep_item = os.path.isfile(item_path) or item in CORE_LIST
+            if not keep_item and os.path.isdir(item_path):
+                keep_item = contains_core_folder(item_path)
+        elif policy == 'keep':
+            keep_item = True
+        elif policy == 'traverse':
+            if os.path.isfile(item_path):
+                keep_item = False
+            else:
+                keep_item = get_mineprep_copy_policy(item_path) != 'skip'
+        else:
+            keep_item = False
+
+        if not keep_item:
+            ignored.add(item)
+            print(f"[core_only] 跳过: {item_path}")
     return ignored
 
 ###############################################################################
@@ -337,7 +444,7 @@ def install():
     elif mc.install_mode == 2:
         shutil.copytree(startup_plugin, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
 
-    shutil.copytree(mineprep_dir, join(install_path, 'Content', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
+    shutil.copytree(mineprep_dir, join(install_path, 'Content', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_mineprep_files)
     exe_files_dir = join(install_path, 'Content', 'Mineprep', 'Render', 'ffmpeg')
     # 为 Mac 和 Linux 系统下的可执行文件赋予执行权限
     if system in ['Mac', 'Linux'] and os.path.exists(exe_files_dir):
@@ -549,8 +656,11 @@ class Installer1(bpy.types.Operator):
         layout.label(text=loc(33,"当前所需空间") + est_size())
         if lite_only:
             layout.label(text=loc(32,"安装精简版"))
+            layout.prop(mc, "core_only", text=loc(38,"仅安装核心功能（跳过90%预设素材）"))
         else:
             layout.prop(mc, "lite_version", text=loc(32,"安装精简版"))
+            if mc.lite_version:
+                layout.prop(mc, "core_only", text=loc(38,"仅安装核心功能（跳过90%预设素材）"))
         layout.prop(mc, "skip_other_platform", text=loc(34,"跳过为其他平台编译的文件"))
         layout.separator(type='LINE')
         layout.label(text=loc(13,"实验性功能:"))
@@ -612,8 +722,11 @@ class Installer2(bpy.types.Operator):
         layout.label(text=loc(33,"当前所需空间") + est_size())
         if lite_only:
             layout.label(text=loc(32,"安装精简版"))
+            layout.prop(mc, "core_only", text=loc(38,"仅安装核心功能（跳过90%预设素材）"))
         else:
             layout.prop(mc, "lite_version", text=loc(32,"安装精简版"))
+            if mc.lite_version:
+                layout.prop(mc, "core_only", text=loc(38,"仅安装核心功能（跳过90%预设素材）"))
         layout.prop(mc, "skip_other_platform", text=loc(34,"跳过为其他平台编译的文件"))
         layout.separator(type='LINE')
         layout.label(text=loc(13,"实验性功能(仅适用于Windows+UE5.7):"))
@@ -704,6 +817,7 @@ def unregister():
 if __name__ == "__main__":
     register()
     merge_ffmpeg_zip()
+    mc.ffmpeg_path = ffmpeg_default
     if hasattr(bpy.context.scene, "mineprep"):
         mc.page = 0
     if lite_only:

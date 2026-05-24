@@ -20,11 +20,9 @@
 #include "ISettingsContainer.h"
 #include "ISettingsEditorModule.h"
 #include "ISettingsCategory.h"
-#include "Engine/UserDefinedStruct.h"
 #include "Engine/UserDefinedEnum.h"
 #include "StructUtils/UserDefinedStruct.h"  // UE5.5中的新路径
 #include "CoreMinimal.h"
-#include "Engine/UserDefinedStruct.h"
 #include "Engine/Blueprint.h"
 #include "UObject/UnrealType.h"
 #include "Engine/BlueprintGeneratedClass.h"
@@ -78,6 +76,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Mineprep")
 	FString Get(FString PropertyName = TEXT(""));
+
+	UFUNCTION(BlueprintCallable, Category = "Mineprep")
+	FString GetString(FString PropertyName = TEXT(""));
+
+	UFUNCTION(BlueprintCallable, Category = "Mineprep")
+	double GetValue(FString PropertyName = TEXT(""));
 
 	UFUNCTION(BlueprintCallable, Category = "Mineprep")
 	bool SetString(FString Value = TEXT(""));
@@ -199,6 +203,10 @@ class Umineprep : public UBlueprintFunctionLibrary
 	/** 获取 API 操作句柄，调用蓝图函数 Toolbar 获取目标对象 */
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
 	static UMineprepAPIHandle* Toolbar(FString Name = TEXT(""));
+
+	/** 获取 API 操作句柄，调用蓝图函数 Config 获取目标对象 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
+	static UMineprepAPIHandle* Config(FString Name = TEXT(""));
 
 	/** 调用自定义快捷键对象中的函数 */
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")

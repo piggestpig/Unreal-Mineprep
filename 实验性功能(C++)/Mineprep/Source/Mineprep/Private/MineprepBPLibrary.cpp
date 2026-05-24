@@ -1495,70 +1495,66 @@ bool Umineprep::Hotkey(FString FunctionName)
 }
 
 
+static UMineprepAPIHandle* CreateAPIHandleFromHotkeyFunction(const TCHAR* FunctionName, const FString& Name)
+{
+    UMineprepAPIHandle* Handle = NewObject<UMineprepAPIHandle>(GetTransientPackage());
+    Handle->HandleName = TEXT("");
+    Handle->Target = nullptr;
+
+    if (!GEditor)
+    {
+        return Handle;
+    }
+
+    UMineprepSubsystem* MineprepSubsystem = GEditor->GetEditorSubsystem<UMineprepSubsystem>();
+    if (!MineprepSubsystem)
+    {
+        return Handle;
+    }
+
+    UObject* HotkeyObject = MineprepSubsystem->GetHotkeyObject();
+    if (!HotkeyObject)
+    {
+        return Handle;
+    }
+
+    if (UFunction* ResolveFunc = HotkeyObject->FindFunction(FName(FunctionName)))
+    {
+        struct FResolveHandleParams
+        {
+            FString NameStr;
+            FString OutHandleName;
+            UObject* ReturnValue;
+        } Params;
+
+        Params.NameStr = Name;
+        Params.OutHandleName = TEXT("");
+        Params.ReturnValue = nullptr;
+
+        HotkeyObject->ProcessEvent(ResolveFunc, &Params);
+        Handle->Target = Params.ReturnValue;
+        Handle->HandleName = Params.OutHandleName;
+    }
+
+    return Handle;
+}
+
+
 // ============== UMineprepAPIHandle ==============
 
 UMineprepAPIHandle* Umineprep::Panel(FString Name)
 {
-    UMineprepAPIHandle* Handle = NewObject<UMineprepAPIHandle>(GetTransientPackage());
-    Handle->HandleName = TEXT("");
-    Handle->Target = nullptr;
-
-    // 调用蓝图函数 Panel 获取目标对象和 HandleName
-    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
-    if (HotkeyObject)
-    {
-        if (UFunction* PanelFunc = HotkeyObject->FindFunction(FName("Panel")))
-        {
-            struct {
-                FString NameStr;
-                FString OutHandleName;
-                UObject* ReturnValue;
-            } Params;
-            Params.NameStr = Name;
-            Params.OutHandleName = TEXT("");
-            Params.ReturnValue = nullptr;
-            
-            HotkeyObject->ProcessEvent(PanelFunc, &Params);
-            Handle->Target = Params.ReturnValue;
-            Handle->HandleName = Params.OutHandleName;
-        }
-    }
-
-    // UE_LOG(LogTemp, Display, TEXT("[Panel] '%s' -> HandleName='%s', Target=%s"), 
-    //     *Name, *Handle->HandleName, Handle->Target ? *Handle->Target->GetName() : TEXT("null"));
-    return Handle;
+    return CreateAPIHandleFromHotkeyFunction(TEXT("Panel"), Name);
 }
 
 UMineprepAPIHandle* Umineprep::Toolbar(FString Name)
 {
-    UMineprepAPIHandle* Handle = NewObject<UMineprepAPIHandle>(GetTransientPackage());
-    Handle->HandleName = TEXT("");
-    Handle->Target = nullptr;
+    return CreateAPIHandleFromHotkeyFunction(TEXT("Toolbar"), Name);
+}
 
-    // 调用蓝图函数 Toolbar 获取目标对象和 HandleName
-    UObject* HotkeyObject = GEditor->GetEditorSubsystem<UMineprepSubsystem>()->GetHotkeyObject();
-    if (HotkeyObject)
-    {
-        if (UFunction* ToolbarFunc = HotkeyObject->FindFunction(FName("Toolbar")))
-        {
-            struct {
-                FString NameStr;
-                FString OutHandleName;
-                UObject* ReturnValue;
-            } Params;
-            Params.NameStr = Name;
-            Params.OutHandleName = TEXT("");
-            Params.ReturnValue = nullptr;
-            
-            HotkeyObject->ProcessEvent(ToolbarFunc, &Params);
-            Handle->Target = Params.ReturnValue;
-            Handle->HandleName = Params.OutHandleName;
-        }
-    }
-
-    // UE_LOG(LogTemp, Display, TEXT("[Toolbar] '%s' -> HandleName='%s', Target=%s"), 
-    //     *Name, *Handle->HandleName, Handle->Target ? *Handle->Target->GetName() : TEXT("null"));
-    return Handle;
+UMineprepAPIHandle* Umineprep::Config(FString Name)
+{
+    return CreateAPIHandleFromHotkeyFunction(TEXT("Config"), Name);
 }
 
 bool UMineprepAPIHandle::Trigger(FString TriggerName)
@@ -1639,6 +1635,22 @@ FString UMineprepAPIHandle::Get(FString PropertyName)
         }
     }
     return FString();
+}
+
+FString UMineprepAPIHandle::GetString(FString PropertyName)
+{
+    return Get(PropertyName);
+}
+
+double UMineprepAPIHandle::GetValue(FString PropertyName)
+{
+    const FString StringValue = Get(PropertyName);
+    if (StringValue.IsEmpty())
+    {
+        return 0.0;
+    }
+
+    return FCString::Atod(*StringValue);
 }
 
 bool UMineprepAPIHandle::SetString(FString Value)

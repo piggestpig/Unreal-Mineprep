@@ -41,6 +41,7 @@ public class Mineprep : ModuleRules
 			{
 				"CoreUObject",
 				"Engine",
+				"MovieScene",
 				"Slate",
 				"SlateCore",
 				"Blutility",
@@ -49,6 +50,9 @@ public class Mineprep : ModuleRules
 				"ToolWidgets",
 				"LevelEditor",
 				"PropertyEditor",
+				"Sequencer",
+				"LevelSequence",
+				"LevelSequenceEditor",
 				"MovieSceneTracks",
 				"SettingsEditor",
 				"BlueprintGraph",

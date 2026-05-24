@@ -13,6 +13,12 @@
 	"CanContainContent": true,
 	"IsBetaVersion": true,
 	"Installed": false,
+	"Plugins": [
+		{
+			"Name": "LevelSequenceEditor",
+			"Enabled": true
+		}
+	],
 	"Modules": [
 		{
 			"Name": "InlineMaterialInstanceEditor",
