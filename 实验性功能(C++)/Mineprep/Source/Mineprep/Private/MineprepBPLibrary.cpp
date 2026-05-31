@@ -3,6 +3,490 @@
 #include "MineprepBPLibrary.h"
 #include "Mineprep.h"
 #include "MineprepSubsystem.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Engine/GameViewportClient.h"
+#include "LevelEditorViewport.h"
+#include "MoviePipeline.h"
+#include "MoviePipelineBase.h"
+#include "MoviePipelineExecutor.h"
+#include "MoviePipelineQueueEngineSubsystem.h"
+#include "MoviePipelineQueueSubsystem.h"
+#include "Engine/BlendableInterface.h"
+#include "PostProcess/PostProcessMaterialInputs.h"
+#include "RenderingThread.h"
+#include "RenderGraphUtils.h"
+#include "RHIUtilities.h"
+#include "ScreenPass.h"
+#include "SceneViewExtension.h"
+#include "Slate/SceneViewport.h"
+#include "UnrealClient.h"
+#include "Widgets/SViewport.h"
+
+struct FMineprepCaptureSource
+{
+    FViewport* Viewport = nullptr;
+    FTextureRenderTargetResource* RenderTargetResource = nullptr;
+    FIntPoint Size = FIntPoint::ZeroValue;
+};
+
+class FMineprepPostProcessStageCaptureExtension : public FSceneViewExtensionBase
+{
+public:
+    FMineprepPostProcessStageCaptureExtension(
+        const FAutoRegister& AutoRegister,
+        FViewport* InTargetViewport,
+        UWorld* InTargetWorld,
+        EMineprepPostProcessStage InStage,
+        FTextureRHIRef InTargetTexture,
+        FIntPoint InTargetSize,
+        bool bInMatchAnyViewport = false)
+        : FSceneViewExtensionBase(AutoRegister)
+        , TargetViewport(InTargetViewport)
+        , TargetWorld(InTargetWorld)
+        , CaptureStage(InStage)
+        , CapturePass(MineprepToSceneViewPass(InStage))
+        , TargetTexture(MoveTemp(InTargetTexture))
+        , TargetSize(InTargetSize)
+        , bMatchAnyViewport(bInMatchAnyViewport)
+    {
+    }
+
+    bool WasCaptured() const
+    {
+        return bCaptured.Load();
+    }
+
+    virtual void SubscribeToPostProcessingPass(EPostProcessingPass Pass, const FSceneView& View, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled) override
+    {
+        const bool bPassMatches = Pass == CapturePass
+            || (CaptureStage == EMineprepPostProcessStage::SceneColorBeforeBloom && Pass == EPostProcessingPass::Tonemap);
+
+        if (!bIsPassEnabled || bCaptured.Load() || !bPassMatches || !TargetTexture.IsValid())
+        {
+            return;
+        }
+
+        InOutPassCallbacks.Add(FAfterPassCallbackDelegate::CreateRaw(this, &FMineprepPostProcessStageCaptureExtension::CapturePass_RenderThread));
+    }
+
+protected:
+    virtual bool IsActiveThisFrame_Internal(const FSceneViewExtensionContext& Context) const override
+    {
+        const bool bViewportMatches = bMatchAnyViewport || Context.Viewport == TargetViewport;
+
+        return !bCaptured.Load()
+            && bViewportMatches
+            && (!TargetWorld.IsValid() || Context.GetWorld() == TargetWorld.Get());
+    }
+
+private:
+    static EBlendableLocation MineprepToBlendableLocation(EMineprepPostProcessStage Stage)
+    {
+        switch (Stage)
+        {
+        case EMineprepPostProcessStage::SceneColorBeforeDOF:
+            return BL_SceneColorBeforeDOF;
+        case EMineprepPostProcessStage::SceneColorAfterDOF:
+            return BL_SceneColorAfterDOF;
+        case EMineprepPostProcessStage::TranslucencyAfterDOF:
+            return BL_TranslucencyAfterDOF;
+        case EMineprepPostProcessStage::SSRInput:
+            return BL_SSRInput;
+        case EMineprepPostProcessStage::SceneColorBeforeBloom:
+            return BL_SceneColorBeforeBloom;
+        case EMineprepPostProcessStage::ReplacingTonemapper:
+            return BL_ReplacingTonemapper;
+        case EMineprepPostProcessStage::SceneColorAfterTonemapping:
+        default:
+            return BL_SceneColorAfterTonemapping;
+        }
+    }
+
+    static EPostProcessingPass MineprepToSceneViewPass(EMineprepPostProcessStage Stage)
+    {
+        switch (Stage)
+        {
+        case EMineprepPostProcessStage::SceneColorBeforeDOF:
+            return EPostProcessingPass::BeforeDOF;
+        case EMineprepPostProcessStage::SceneColorAfterDOF:
+            return EPostProcessingPass::AfterDOF;
+        case EMineprepPostProcessStage::TranslucencyAfterDOF:
+            return EPostProcessingPass::TranslucencyAfterDOF;
+        case EMineprepPostProcessStage::SSRInput:
+            return EPostProcessingPass::SSRInput;
+        case EMineprepPostProcessStage::SceneColorBeforeBloom:
+            return EPostProcessingPass::MotionBlur;
+        case EMineprepPostProcessStage::ReplacingTonemapper:
+            return EPostProcessingPass::Tonemap;
+        case EMineprepPostProcessStage::SceneColorAfterTonemapping:
+        default:
+            return EPostProcessingPass::Tonemap;
+        }
+    }
+
+    static FScreenPassTextureSlice GetCaptureSlice(const EMineprepPostProcessStage Stage, const FPostProcessMaterialInputs& Inputs)
+    {
+        FScreenPassTextureSlice CaptureSlice = Inputs.GetSceneColorOutput(MineprepToBlendableLocation(Stage));
+
+        if (!CaptureSlice.IsValid()
+            && (Stage == EMineprepPostProcessStage::SceneColorBeforeBloom || Stage == EMineprepPostProcessStage::ReplacingTonemapper))
+        {
+            CaptureSlice = Inputs.GetInput(EPostProcessMaterialInput::SceneColor);
+        }
+
+        return CaptureSlice;
+    }
+
+    static FScreenPassTextureSlice GetPassthroughSlice(const EMineprepPostProcessStage Stage, const FPostProcessMaterialInputs& Inputs, const FScreenPassTextureSlice& CaptureSlice)
+    {
+        if (Stage == EMineprepPostProcessStage::SceneColorBeforeBloom || Stage == EMineprepPostProcessStage::ReplacingTonemapper)
+        {
+            return Inputs.GetSceneColorOutput(BL_SceneColorAfterTonemapping);
+        }
+
+        return CaptureSlice;
+    }
+
+    FScreenPassTexture CapturePass_RenderThread(FRDGBuilder& GraphBuilder, const FSceneView& View, const FPostProcessMaterialInputs& Inputs)
+    {
+        const FScreenPassTextureSlice CaptureSlice = GetCaptureSlice(CaptureStage, Inputs);
+        const FScreenPassTextureSlice PassthroughSlice = GetPassthroughSlice(CaptureStage, Inputs, CaptureSlice);
+
+        auto ReturnSlice = [&](const FScreenPassTextureSlice& Slice) -> FScreenPassTexture
+        {
+            if (Slice.IsValid())
+            {
+                if (Inputs.OverrideOutput.IsValid())
+                {
+                    AddDrawTexturePass(GraphBuilder, View, Slice, Inputs.OverrideOutput);
+                    return Inputs.OverrideOutput;
+                }
+
+                return FScreenPassTexture::CopyFromSlice(GraphBuilder, Slice);
+            }
+
+            return Inputs.ReturnUntouchedSceneColorForPostProcessing(GraphBuilder);
+        };
+
+        if (!CaptureSlice.IsValid())
+        {
+            return ReturnSlice(PassthroughSlice);
+        }
+
+        FRDGTextureRef TargetTextureRDG = RegisterExternalTexture(GraphBuilder, TargetTexture, TEXT("MineprepPostProcessStageCaptureTarget"));
+        if (TargetTextureRDG)
+        {
+            AddDrawTexturePass(
+                GraphBuilder,
+                FScreenPassViewInfo(View.GetFeatureLevel()),
+                CaptureSlice,
+                FScreenPassRenderTarget(TargetTextureRDG, FIntRect(FIntPoint::ZeroValue, TargetSize), ERenderTargetLoadAction::ENoAction));
+
+            bCaptured.Store(true);
+        }
+
+        return ReturnSlice(PassthroughSlice);
+    }
+
+    FViewport* TargetViewport = nullptr;
+    TWeakObjectPtr<UWorld> TargetWorld;
+    EMineprepPostProcessStage CaptureStage = EMineprepPostProcessStage::SceneColorBeforeDOF;
+    EPostProcessingPass CapturePass = EPostProcessingPass::BeforeDOF;
+    FTextureRHIRef TargetTexture;
+    FIntPoint TargetSize = FIntPoint::ZeroValue;
+    TAtomic<bool> bCaptured = false;
+    bool bMatchAnyViewport = false;
+};
+
+static TArray<TSharedPtr<FMineprepPostProcessStageCaptureExtension, ESPMode::ThreadSafe>> GMineprepPendingPostProcessCaptures;
+
+static void MineprepPrunePendingPostProcessCaptures()
+{
+    for (int32 Index = GMineprepPendingPostProcessCaptures.Num() - 1; Index >= 0; --Index)
+    {
+        const TSharedPtr<FMineprepPostProcessStageCaptureExtension, ESPMode::ThreadSafe>& PendingCapture = GMineprepPendingPostProcessCaptures[Index];
+        if (!PendingCapture.IsValid() || PendingCapture->WasCaptured())
+        {
+            GMineprepPendingPostProcessCaptures.RemoveAtSwap(Index);
+        }
+    }
+}
+
+static FTextureRHIRef MineprepResolveViewportSourceTexture(FViewport* Viewport);
+
+static FSceneViewport* MineprepAsSceneViewport(FViewport* Viewport)
+{
+    static const FName SceneViewportType(TEXT("SceneViewport"));
+
+    if (!Viewport || Viewport->GetViewportType() != SceneViewportType)
+    {
+        return nullptr;
+    }
+
+    return static_cast<FSceneViewport*>(Viewport);
+}
+
+static bool MineprepIsSimulateViewport(FViewport* Viewport)
+{
+    if (!GEditor || !GEditor->bIsSimulatingInEditor || !Viewport)
+    {
+        return false;
+    }
+
+    for (FLevelEditorViewportClient* LevelViewportClient : GEditor->GetLevelViewportClients())
+    {
+        if (LevelViewportClient && LevelViewportClient->Viewport == Viewport && LevelViewportClient->IsSimulateInEditorViewport())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool MineprepIsViewportInActiveWindow(FViewport* Viewport, const TSharedPtr<SWindow>& ActiveWindow)
+{
+    FSceneViewport* SceneViewport = MineprepAsSceneViewport(Viewport);
+    if (!SceneViewport)
+    {
+        return false;
+    }
+
+    if (ActiveWindow.IsValid())
+    {
+        if (TSharedPtr<SWindow> ViewportWindow = SceneViewport->FindWindow())
+        {
+            if (ViewportWindow == ActiveWindow)
+            {
+                return true;
+            }
+        }
+    }
+
+    return SceneViewport->IsForegroundWindow();
+}
+
+static FViewport* MineprepResolveViewportForCapture()
+{
+    const TSharedPtr<SWindow> ActiveWindow = FSlateApplication::IsInitialized()
+        ? FSlateApplication::Get().GetActiveTopLevelWindow()
+        : nullptr;
+
+    if (GEditor && GEditor->bIsSimulatingInEditor)
+    {
+        FViewport* ActiveViewport = GEditor->GetActiveViewport();
+        if (MineprepIsSimulateViewport(ActiveViewport))
+        {
+            return ActiveViewport;
+        }
+
+        for (FLevelEditorViewportClient* LevelViewportClient : GEditor->GetLevelViewportClients())
+        {
+            if (LevelViewportClient && LevelViewportClient->Viewport && LevelViewportClient->IsSimulateInEditorViewport())
+            {
+                if (!ActiveWindow.IsValid() || MineprepIsViewportInActiveWindow(LevelViewportClient->Viewport, ActiveWindow))
+                {
+                    return LevelViewportClient->Viewport;
+                }
+            }
+        }
+    }
+
+    if (GEditor)
+    {
+        if (FViewport* PIEViewport = GEditor->GetPIEViewport())
+        {
+            if (!ActiveWindow.IsValid() || MineprepIsViewportInActiveWindow(PIEViewport, ActiveWindow))
+            {
+                return PIEViewport;
+            }
+        }
+    }
+
+    if (GEngine && GEngine->GameViewport)
+    {
+        if (FSceneViewport* GameViewport = GEngine->GameViewport->GetGameViewport())
+        {
+            if (MineprepIsViewportInActiveWindow(GameViewport, ActiveWindow))
+            {
+                return GameViewport;
+            }
+        }
+    }
+
+    if (GEditor)
+    {
+        if (FViewport* ActiveViewport = GEditor->GetActiveViewport())
+        {
+            if (!ActiveWindow.IsValid() || MineprepIsViewportInActiveWindow(ActiveViewport, ActiveWindow))
+            {
+                return ActiveViewport;
+            }
+        }
+    }
+
+    if (GEngine && GEngine->GameViewport)
+    {
+        if (FSceneViewport* GameViewport = GEngine->GameViewport->GetGameViewport())
+        {
+            return GameViewport;
+        }
+    }
+
+    if (GEditor)
+    {
+        if (FViewport* ActiveViewport = GEditor->GetActiveViewport())
+        {
+            return ActiveViewport;
+        }
+
+        for (FLevelEditorViewportClient* LevelViewportClient : GEditor->GetLevelViewportClients())
+        {
+            if (LevelViewportClient && LevelViewportClient->AllowsCinematicControl() && LevelViewportClient->Viewport)
+            {
+                return LevelViewportClient->Viewport;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+static bool MineprepResolveViewportCaptureSize(FViewport*& OutViewport, FIntPoint& OutSize)
+{
+    OutViewport = MineprepResolveViewportForCapture();
+    if (!OutViewport)
+    {
+        return false;
+    }
+
+    OutSize = OutViewport->GetRenderTargetTextureSizeXY();
+    if (OutSize.X <= 0 || OutSize.Y <= 0)
+    {
+        OutSize = OutViewport->GetSizeXY();
+    }
+
+    return OutSize.X > 0 && OutSize.Y > 0;
+}
+
+static UMoviePipelineBase* MineprepGetActiveMoviePipelineFromExecutor(UMoviePipelineExecutorBase* Executor)
+{
+    if (!Executor)
+    {
+        return nullptr;
+    }
+
+    const FObjectPropertyBase* ActiveMoviePipelineProperty = FindFProperty<FObjectPropertyBase>(Executor->GetClass(), TEXT("ActiveMoviePipeline"));
+    if (!ActiveMoviePipelineProperty)
+    {
+        return nullptr;
+    }
+
+    return Cast<UMoviePipelineBase>(ActiveMoviePipelineProperty->GetObjectPropertyValue_InContainer(Executor));
+}
+
+static UMoviePipelineBase* MineprepGetActiveMoviePipeline()
+{
+    if (GEditor)
+    {
+        if (UMoviePipelineQueueSubsystem* QueueSubsystem = GEditor->GetEditorSubsystem<UMoviePipelineQueueSubsystem>())
+        {
+            if (UMoviePipelineBase* Pipeline = MineprepGetActiveMoviePipelineFromExecutor(QueueSubsystem->GetActiveExecutor()))
+            {
+                return Pipeline;
+            }
+        }
+    }
+
+    if (GEngine)
+    {
+        if (UMoviePipelineQueueEngineSubsystem* QueueSubsystem = GEngine->GetEngineSubsystem<UMoviePipelineQueueEngineSubsystem>())
+        {
+            if (UMoviePipelineBase* Pipeline = MineprepGetActiveMoviePipelineFromExecutor(QueueSubsystem->GetActiveExecutor()))
+            {
+                return Pipeline;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+static bool MineprepResolveCaptureSource(FMineprepCaptureSource& OutSource)
+{
+    if (UMoviePipeline* MoviePipeline = Cast<UMoviePipeline>(MineprepGetActiveMoviePipeline()))
+    {
+        if (UTextureRenderTarget2D* PreviewRenderTarget = Cast<UTextureRenderTarget2D>(MoviePipeline->GetPreviewTexture()))
+        {
+            if (FTextureRenderTargetResource* PreviewRenderTargetResource = PreviewRenderTarget->GameThread_GetRenderTargetResource())
+            {
+                OutSource.RenderTargetResource = PreviewRenderTargetResource;
+                OutSource.Size = FIntPoint(PreviewRenderTarget->SizeX, PreviewRenderTarget->SizeY);
+                if (OutSource.Size.X > 0 && OutSource.Size.Y > 0)
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    FViewport* ActiveViewport = MineprepResolveViewportForCapture();
+    if (!ActiveViewport)
+    {
+        return false;
+    }
+
+    FIntPoint CaptureSize = ActiveViewport->GetRenderTargetTextureSizeXY();
+    if (CaptureSize.X <= 0 || CaptureSize.Y <= 0)
+    {
+        CaptureSize = ActiveViewport->GetSizeXY();
+    }
+
+    if (CaptureSize.X <= 0 || CaptureSize.Y <= 0)
+    {
+        return false;
+    }
+
+    OutSource.Viewport = ActiveViewport;
+    OutSource.Size = CaptureSize;
+    return true;
+}
+
+static FTextureRHIRef MineprepResolveViewportSourceTexture(FViewport* Viewport)
+{
+    if (!Viewport)
+    {
+        return nullptr;
+    }
+
+    if (FSceneViewport* SceneViewport = MineprepAsSceneViewport(Viewport))
+    {
+        if (TSharedPtr<SViewport> ViewportWidget = SceneViewport->GetViewportWidget().Pin())
+        {
+            if (!ViewportWidget->ShouldRenderDirectly())
+            {
+                return SceneViewport->GetRenderTargetTexture();
+            }
+        }
+    }
+
+    if (Viewport->GetViewportRHI().IsValid())
+    {
+        FTextureRHIRef BackBuffer = RHIGetViewportBackBuffer(Viewport->GetViewportRHI());
+        if (BackBuffer.IsValid())
+        {
+            return BackBuffer;
+        }
+    }
+
+    return Viewport->GetRenderTargetTexture();
+}
+
+
+
+
+//////////////////////////////////////////////////////////////// Mineprep函数库
+
 
 Umineprep::Umineprep(const FObjectInitializer& ObjectInitializer)
 : Super(ObjectInitializer)
@@ -19,6 +503,197 @@ float Umineprep::SetEditorUIScale(float Scale)
         FSlateApplication::Get().SetApplicationScale(Scale);
     }
     return Scale;
+}
+
+bool Umineprep::DrawViewportToRenderTarget(UTextureRenderTarget2D* RenderTarget, bool bAutoResize, bool bBlockUntilReady)
+{
+    if (!RenderTarget || (!GEditor && !GEngine))
+    {
+        return false;
+    }
+
+    FMineprepCaptureSource CaptureSource;
+    if (!MineprepResolveCaptureSource(CaptureSource))
+    {
+        return false;
+    }
+
+    const bool bShouldForceDraw = CaptureSource.Viewport && bBlockUntilReady;
+    if (bShouldForceDraw)
+    {
+        CaptureSource.Viewport->Draw(false);
+        FlushRenderingCommands();
+    }
+
+    const bool bNeedsResize = RenderTarget->SizeX != CaptureSource.Size.X || RenderTarget->SizeY != CaptureSource.Size.Y;
+    if (bNeedsResize && !bAutoResize)
+    {
+        return false;
+    }
+
+    if (bNeedsResize && bAutoResize)
+    {
+        RenderTarget->ResizeTarget(CaptureSource.Size.X, CaptureSource.Size.Y);
+    }
+
+    FTextureRenderTargetResource* RenderTargetResource = RenderTarget->GameThread_GetRenderTargetResource();
+    if (!RenderTargetResource || !RenderTargetResource->GetRenderTargetTexture())
+    {
+        return false;
+    }
+
+    FTextureRHIRef TargetTexture = RenderTargetResource->GetRenderTargetTexture();
+    const FIntPoint SourceSize = CaptureSource.Size;
+    const FIntPoint TargetSize(RenderTarget->SizeX, RenderTarget->SizeY);
+    if (SourceSize.X <= 0 || SourceSize.Y <= 0 || TargetSize.X <= 0 || TargetSize.Y <= 0)
+    {
+        return false;
+    }
+
+    ENQUEUE_RENDER_COMMAND(MineprepDrawViewportToRenderTarget)(
+        [CaptureSource, TargetTexture, SourceSize, TargetSize](FRHICommandListImmediate& RHICmdList)
+        {
+            FTextureRHIRef SourceTexture = CaptureSource.RenderTargetResource
+                ? CaptureSource.RenderTargetResource->GetRenderTargetTexture()
+                : MineprepResolveViewportSourceTexture(CaptureSource.Viewport);
+
+            if (!SourceTexture.IsValid() || !TargetTexture.IsValid())
+            {
+                return;
+            }
+
+            FRDGBuilder GraphBuilder(RHICmdList);
+            FRDGTextureRef SourceRDG = RegisterExternalTexture(GraphBuilder, SourceTexture, TEXT("MineprepViewportCaptureSource"));
+            FRDGTextureRef TargetRDG = RegisterExternalTexture(GraphBuilder, TargetTexture, TEXT("MineprepViewportCaptureTarget"));
+            if (!SourceRDG || !TargetRDG)
+            {
+                return;
+            }
+
+            AddDrawTexturePass(
+                GraphBuilder,
+                FScreenPassViewInfo(GMaxRHIFeatureLevel),
+                FScreenPassTexture(SourceRDG, FIntRect(FIntPoint::ZeroValue, SourceSize)),
+                FScreenPassRenderTarget(TargetRDG, FIntRect(FIntPoint::ZeroValue, TargetSize), ERenderTargetLoadAction::ENoAction));
+
+            GraphBuilder.Execute();
+        });
+
+    if (bBlockUntilReady)
+    {
+        FlushRenderingCommands();
+    }
+
+    return true;
+}
+
+bool Umineprep::DrawPostProcessStageToRenderTarget(UTextureRenderTarget2D* RenderTarget, EMineprepPostProcessStage Stage, bool bAutoResize, bool bBlockUntilReady)
+{
+    if (!RenderTarget || (!GEditor && !GEngine))
+    {
+        return false;
+    }
+
+    FViewport* CaptureViewport = nullptr;
+    FIntPoint CaptureSize = FIntPoint::ZeroValue;
+    UWorld* CaptureWorld = nullptr;
+    bool bMatchAnyViewport = false;
+
+    if (UMoviePipelineBase* ActiveMoviePipeline = MineprepGetActiveMoviePipeline())
+    {
+        CaptureWorld = ActiveMoviePipeline->GetWorld();
+        bMatchAnyViewport = CaptureWorld != nullptr;
+
+        if (UMoviePipeline* MoviePipeline = Cast<UMoviePipeline>(ActiveMoviePipeline))
+        {
+            if (UTextureRenderTarget2D* PreviewRenderTarget = Cast<UTextureRenderTarget2D>(MoviePipeline->GetPreviewTexture()))
+            {
+                CaptureSize = FIntPoint(PreviewRenderTarget->SizeX, PreviewRenderTarget->SizeY);
+            }
+        }
+
+        if ((CaptureSize.X <= 0 || CaptureSize.Y <= 0) && CaptureWorld)
+        {
+            if (UGameViewportClient* GameViewportClient = CaptureWorld->GetGameViewport())
+            {
+                CaptureViewport = GameViewportClient->Viewport;
+                if (CaptureViewport)
+                {
+                    CaptureSize = CaptureViewport->GetRenderTargetTextureSizeXY();
+                    if (CaptureSize.X <= 0 || CaptureSize.Y <= 0)
+                    {
+                        CaptureSize = CaptureViewport->GetSizeXY();
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        if (!MineprepResolveViewportCaptureSize(CaptureViewport, CaptureSize))
+        {
+            return false;
+        }
+
+        if (FViewportClient* ViewportClient = CaptureViewport->GetClient())
+        {
+            CaptureWorld = ViewportClient->GetWorld();
+        }
+    }
+
+    if ((CaptureSize.X <= 0 || CaptureSize.Y <= 0) && RenderTarget)
+    {
+        CaptureSize = FIntPoint(RenderTarget->SizeX, RenderTarget->SizeY);
+    }
+
+    if (CaptureSize.X <= 0 || CaptureSize.Y <= 0)
+    {
+        return false;
+    }
+
+    const bool bNeedsResize = RenderTarget->SizeX != CaptureSize.X || RenderTarget->SizeY != CaptureSize.Y;
+    if (bNeedsResize && bAutoResize)
+    {
+        RenderTarget->ResizeTarget(CaptureSize.X, CaptureSize.Y);
+    }
+
+    FTextureRenderTargetResource* RenderTargetResource = RenderTarget->GameThread_GetRenderTargetResource();
+    if (!RenderTargetResource || !RenderTargetResource->GetRenderTargetTexture())
+    {
+        return false;
+    }
+
+    const FIntPoint OutputSize(RenderTarget->SizeX, RenderTarget->SizeY);
+    if (OutputSize.X <= 0 || OutputSize.Y <= 0)
+    {
+        return false;
+    }
+
+    MineprepPrunePendingPostProcessCaptures();
+
+    TSharedRef<FMineprepPostProcessStageCaptureExtension, ESPMode::ThreadSafe> CaptureExtension =
+        FSceneViewExtensions::NewExtension<FMineprepPostProcessStageCaptureExtension>(
+            CaptureViewport,
+            CaptureWorld,
+            Stage,
+            RenderTargetResource->GetRenderTargetTexture(),
+            OutputSize,
+            bMatchAnyViewport);
+
+    if (CaptureViewport && bBlockUntilReady)
+    {
+        CaptureViewport->Draw(false);
+    }
+
+    if (bBlockUntilReady)
+    {
+        FlushRenderingCommands();
+        MineprepPrunePendingPostProcessCaptures();
+        return CaptureExtension->WasCaptured();
+    }
+
+    GMineprepPendingPostProcessCaptures.Add(CaptureExtension);
+    return true;
 }
 
 void Umineprep::SetTickRunOnAnyThread(UObject* Object, bool bRunOnAnyThread)
@@ -1494,6 +2169,40 @@ bool Umineprep::Hotkey(FString FunctionName)
     return false;  // 找不到函数返回false
 }
 
+FString Umineprep::Help(FString Name)
+{
+    if (!GEditor)
+    {
+        return FString();
+    }
+
+    UMineprepSubsystem* MineprepSubsystem = GEditor->GetEditorSubsystem<UMineprepSubsystem>();
+    if (!MineprepSubsystem)
+    {
+        return FString();
+    }
+
+    UObject* HotkeyObject = MineprepSubsystem->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* Func = HotkeyObject->FindFunction(FName("Help")))
+        {
+            struct {
+                UObject* TargetObj;
+                FString NameStr;
+                FString ReturnValue;
+            } FuncParams;
+            FuncParams.TargetObj = nullptr;
+            FuncParams.NameStr = Name;
+
+            HotkeyObject->ProcessEvent(Func, &FuncParams);
+            return FuncParams.ReturnValue;
+        }
+    }
+
+    return FString();
+}
+
 
 static UMineprepAPIHandle* CreateAPIHandleFromHotkeyFunction(const TCHAR* FunctionName, const FString& Name)
 {
@@ -1720,4 +2429,38 @@ bool UMineprepAPIHandle::Select(int32 Index)
         }
     }
     return false;
+}
+
+FString UMineprepAPIHandle::Help(FString Name)
+{
+    if (!GEditor)
+    {
+        return FString();
+    }
+
+    UMineprepSubsystem* MineprepSubsystem = GEditor->GetEditorSubsystem<UMineprepSubsystem>();
+    if (!MineprepSubsystem)
+    {
+        return FString();
+    }
+
+    UObject* HotkeyObject = MineprepSubsystem->GetHotkeyObject();
+    if (HotkeyObject)
+    {
+        if (UFunction* Func = HotkeyObject->FindFunction(FName("Help")))
+        {
+            struct {
+                UObject* TargetObj;
+                FString NameStr;
+                FString ReturnValue;
+            } FuncParams;
+            FuncParams.TargetObj = this;
+            FuncParams.NameStr = Name;
+
+            HotkeyObject->ProcessEvent(Func, &FuncParams);
+            return FuncParams.ReturnValue;
+        }
+    }
+
+    return FString();
 }

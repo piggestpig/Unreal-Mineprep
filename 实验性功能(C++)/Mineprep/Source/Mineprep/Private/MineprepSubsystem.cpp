@@ -59,6 +59,63 @@ private:
     TMap<FString, TSharedPtr<FUICommandInfo>> CommandMap;
 };
 
+static FString MineprepInputChordToString(const FInputChord& Chord)
+{
+    return Chord.GetInputText().ToString();
+}
+
+static bool MineprepIsStrictConflictContext(const FName& ContextName)
+{
+    static const TSet<FName> StrictContexts =
+    {
+        TEXT("Mineprep自定义快捷键"),
+        TEXT("LevelEditor"),
+        TEXT("MainFrame"),
+        TEXT("GenericCommands"),
+        TEXT("ContentBrowser"),
+        TEXT("BlueprintEditor"),
+    };
+
+    return StrictContexts.Contains(ContextName);
+}
+
+static bool MineprepFindHotkeyConflict(const FInputChord& Chord, bool bCheckStrictContexts, FString& OutConflictName, FString& OutConflictDisplayName)
+{
+    if (!Chord.IsValidChord())
+    {
+        return false;
+    }
+
+    TArray<TSharedPtr<FBindingContext>> KnownContexts;
+    FInputBindingManager::Get().GetKnownInputContexts(KnownContexts);
+
+    for (const TSharedPtr<FBindingContext>& Context : KnownContexts)
+    {
+        if (!Context.IsValid())
+        {
+            continue;
+        }
+
+        const FName ContextName = Context->GetContextName();
+        if (MineprepIsStrictConflictContext(ContextName) != bCheckStrictContexts)
+        {
+            continue;
+        }
+
+        const TSharedPtr<FUICommandInfo> Command = FInputBindingManager::Get().FindCommandInContext(ContextName, Chord, false);
+        if (!Command.IsValid())
+        {
+            continue;
+        }
+
+        OutConflictName = FString::Printf(TEXT("%s.%s"), *ContextName.ToString(), *Command->GetCommandName().ToString());
+        OutConflictDisplayName = Command->GetLabel().ToString();
+        return true;
+    }
+
+    return false;
+}
+
 void UMineprepSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     // 获取编辑器命令列表
@@ -102,61 +159,7 @@ void UMineprepSubsystem::InitializeDynamicCommands()
 
 bool UMineprepSubsystem::CheckHotkeyConflict(const FInputChord& Chord, FString& OutConflictName, FString& OutConflictDisplayName)
 {
-    if (!Chord.IsValidChord()) return false;
-
-    // 1. 检查我们自己已注册的自定义快捷键
-    if (DynamicCommands.IsValid())
-    {
-        for (const auto& Pair : CommandToEventMap)
-        {
-            TSharedPtr<FUICommandInfo> Cmd = DynamicCommands->GetCommand(Pair.Key);
-            if (!Cmd.IsValid()) continue;
-            for (int32 i = 0; i < static_cast<int32>(EMultipleKeyBindingIndex::NumChords); ++i)
-            {
-                const FInputChord& Existing = *Cmd->GetActiveChord(static_cast<EMultipleKeyBindingIndex>(i));
-                if (Existing.IsValidChord() && Existing == Chord)
-                {
-                    OutConflictName        = Pair.Key;
-                    OutConflictDisplayName = Cmd->GetLabel().ToString();
-                    return true;
-                }
-            }
-        }
-    }
-
-    // 2. 检查常用编辑器上下文
-    static const TArray<FName> ContextsToCheck =
-    {
-        TEXT("LevelEditor"),
-        TEXT("MainFrame"),
-        TEXT("GenericCommands"),
-        TEXT("ContentBrowser"),
-        TEXT("BlueprintEditor"),
-    };
-    for (const FName& ContextName : ContextsToCheck)
-    {
-        TSharedPtr<FBindingContext> Context = FInputBindingManager::Get().GetContextByName(ContextName);
-        if (!Context.IsValid()) continue;
-
-        TArray<TSharedPtr<FUICommandInfo>> Commands;
-        FInputBindingManager::Get().GetCommandInfosFromContext(ContextName, Commands);
-        for (const auto& Cmd : Commands)
-        {
-            if (!Cmd.IsValid()) continue;
-            for (int32 i = 0; i < static_cast<int32>(EMultipleKeyBindingIndex::NumChords); ++i)
-            {
-                const FInputChord& Existing = *Cmd->GetActiveChord(static_cast<EMultipleKeyBindingIndex>(i));
-                if (Existing.IsValidChord() && Existing == Chord)
-                {
-                    OutConflictName        = Cmd->GetCommandName().ToString();
-                    OutConflictDisplayName = Cmd->GetLabel().ToString();
-                    return true;
-                }
-            }
-        }
-    }
-
-    return false;
+    return MineprepFindHotkeyConflict(Chord, true, OutConflictName, OutConflictDisplayName);
 }
 
 bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FString& DisplayName, const FString& Description,
@@ -192,18 +195,13 @@ bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FStrin
         return false;
     }
 
+    const FString ChordStr = MineprepInputChordToString(Chord);
+
     // 检测快捷键冲突
     {
         FString ConflictName, ConflictDisplayName;
         if (CheckHotkeyConflict(Chord, ConflictName, ConflictDisplayName))
         {
-            const FString ModStr = Chord.NeedsControl() ? TEXT("Ctrl+") : TEXT("");
-            const FString ChordStr = ModStr +
-                (Chord.NeedsShift()   ? TEXT("Shift+")  : TEXT("")) +
-                (Chord.NeedsAlt()     ? TEXT("Alt+")    : TEXT("")) +
-                (Chord.NeedsCommand() ? TEXT("Cmd+")    : TEXT("")) +
-                Chord.Key.ToString();
-
             const FString Msg = FString::Printf(
                 TEXT("快捷键冲突：[%s] 已被 \"%s\" 占用，注册失败"),
                 *ChordStr, *ConflictDisplayName);
@@ -218,6 +216,25 @@ bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FStrin
                 false);
 
             return false;
+        }
+    }
+
+    {
+        FString ConflictName, ConflictDisplayName;
+        if (MineprepFindHotkeyConflict(Chord, false, ConflictName, ConflictDisplayName))
+        {
+            const FString Msg = FString::Printf(
+                TEXT("快捷键提醒：[%s] 已被 \"%s\" 使用，将继续注册 Mineprep 快捷键"),
+                *ChordStr, *ConflictDisplayName);
+
+            UE_LOG(LogTemp, Warning, TEXT("%s（命令：%s）"), *Msg, *ConflictName);
+
+            // Umineprep::ShowEditorNotification(
+            //     Msg,
+            //     FString::Printf(TEXT("现有命令：%s"), *ConflictName),
+            //     EEditorNotificationState::None,
+            //     5.0f,
+            //     false);
         }
     }
 

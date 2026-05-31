@@ -57,14 +57,16 @@ public class Mineprep : ModuleRules
 				"SettingsEditor",
 				"BlueprintGraph",
 				"EditorSubsystem",
-				"NiagaraEditor", // 添加 NiagaraEditor 模块依赖，用于 UNiagaraScriptVariable
-				"InteractiveToolsFramework", // 添加 InteractiveToolsFramework 模块依赖，用于 ToolManager
-				// Bevel渲染系统依赖
+				"NiagaraEditor",
+				"InteractiveToolsFramework",
 				"RenderCore",
 				"RHI",
 				"Renderer",
+				"MovieRenderPipelineCore",
+				"MovieRenderPipelineEditor",
+				"Mover",
 				"Projects",
-				"UMG", // 添加 UMG 模块依赖，用于 UButton
+				"UMG",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

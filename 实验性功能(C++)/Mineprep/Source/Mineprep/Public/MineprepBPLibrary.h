@@ -45,6 +45,20 @@
 
 #include "MineprepBPLibrary.generated.h"
 
+class UTextureRenderTarget2D;
+
+UENUM(BlueprintType)
+enum class EMineprepPostProcessStage : uint8
+{
+	SceneColorBeforeDOF UMETA(DisplayName = "Scene Color Before DOF"),
+	SceneColorAfterDOF UMETA(DisplayName = "Scene Color After DOF"),
+	TranslucencyAfterDOF UMETA(DisplayName = "Translucency After DOF"),
+	SSRInput UMETA(DisplayName = "SSR Input"),
+	SceneColorBeforeBloom UMETA(DisplayName = "Scene Color Before Bloom"),
+	ReplacingTonemapper UMETA(DisplayName = "Replacing the Tonemapper"),
+	SceneColorAfterTonemapping UMETA(DisplayName = "Scene Color After Tonemapping"),
+};
+
 /** 编辑器右下角通知弹窗的状态图标 */
 UENUM(BlueprintType)
 enum class EEditorNotificationState : uint8
@@ -91,6 +105,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Mineprep")
 	bool Select(int32 Index = 0);
+
+	UFUNCTION(BlueprintCallable, Category = "Mineprep")
+	FString Help(FString Name = TEXT(""));
 };
 
 UCLASS()
@@ -196,6 +213,16 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)", meta=(AutoCreateRefTerm="Params"))
 	static bool CallDelegate(UObject* Object, const FString& DelegateName, const TArray<FString>& Params);
 
+	// 将当前视口画面绘制到渲染目标
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static bool DrawViewportToRenderTarget(UTextureRenderTarget2D* RenderTarget, bool bAutoResize = true, bool bBlockUntilReady = false);
+
+	// 将当前编辑器视口在指定后处理阶段的结果绘制到渲染目标
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static bool DrawPostProcessStageToRenderTarget(UTextureRenderTarget2D* RenderTarget, EMineprepPostProcessStage Stage, bool bAutoResize = true, bool bBlockUntilReady = false);
+
+/////////////////////////////////////////////////////////////////
+
 	/** 获取 API 操作句柄，调用蓝图函数 Panel 获取目标对象 */
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
 	static UMineprepAPIHandle* Panel(FString Name = TEXT(""));
@@ -211,6 +238,10 @@ class Umineprep : public UBlueprintFunctionLibrary
 	/** 调用自定义快捷键对象中的函数 */
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
 	static bool Hotkey(FString FunctionName);
+
+	/** 调用自定义快捷键对象中的 Help 函数 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
+	static FString Help(FString Name = TEXT(""));
 
 };
 
