@@ -81,6 +81,12 @@ for intermediate_dir in plugin_dir.rglob("Intermediate"):
         shutil.rmtree(intermediate_dir)
         print("已删除 Intermediate 文件夹：", intermediate_dir)
 
+#删除__pycache__文件夹
+for pycache_dir in plugin_dir.rglob("__pycache__"):
+    if pycache_dir.is_dir():
+        shutil.rmtree(pycache_dir)
+        print("已删除 __pycache__ 文件夹：", pycache_dir)
+
 #############################################################
 # 创建 Mineprep-Lite
 

@@ -69,46 +69,6 @@ enum class EEditorNotificationState : uint8
 	Fail    UMETA(DisplayName = "失败（叉号）"),
 };
 
-/** API 操作句柄 */
-UCLASS(BlueprintType)
-class UMineprepAPIHandle : public UObject
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(BlueprintReadWrite)
-	FString HandleName;
-
-	UPROPERTY(BlueprintReadWrite)
-	UObject* Target;
-
-	UFUNCTION(BlueprintCallable, Category = "Mineprep")
-	bool Trigger(FString TriggerName = TEXT(""));
-
-	UFUNCTION(BlueprintCallable, Category = "Mineprep")
-	bool Click(int32 Index = -1);
-
-	UFUNCTION(BlueprintCallable, Category = "Mineprep")
-	FString Get(FString PropertyName = TEXT(""));
-
-	UFUNCTION(BlueprintCallable, Category = "Mineprep")
-	FString GetString(FString PropertyName = TEXT(""));
-
-	UFUNCTION(BlueprintCallable, Category = "Mineprep")
-	double GetValue(FString PropertyName = TEXT(""));
-
-	UFUNCTION(BlueprintCallable, Category = "Mineprep")
-	bool SetString(FString Value = TEXT(""));
-
-	UFUNCTION(BlueprintCallable, Category = "Mineprep")
-	bool SetValue(double Value = 0.0);
-
-	UFUNCTION(BlueprintCallable, Category = "Mineprep")
-	bool Select(int32 Index = 0);
-
-	UFUNCTION(BlueprintCallable, Category = "Mineprep")
-	FString Help(FString Name = TEXT(""));
-};
 
 UCLASS()
 class Umineprep : public UBlueprintFunctionLibrary
@@ -221,27 +181,6 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool DrawPostProcessStageToRenderTarget(UTextureRenderTarget2D* RenderTarget, EMineprepPostProcessStage Stage, bool bAutoResize = true, bool bBlockUntilReady = false);
 
-/////////////////////////////////////////////////////////////////
-
-	/** 获取 API 操作句柄，调用蓝图函数 Panel 获取目标对象 */
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
-	static UMineprepAPIHandle* Panel(FString Name = TEXT(""));
-
-	/** 获取 API 操作句柄，调用蓝图函数 Toolbar 获取目标对象 */
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
-	static UMineprepAPIHandle* Toolbar(FString Name = TEXT(""));
-
-	/** 获取 API 操作句柄，调用蓝图函数 Config 获取目标对象 */
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
-	static UMineprepAPIHandle* Config(FString Name = TEXT(""));
-
-	/** 调用自定义快捷键对象中的函数 */
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
-	static bool Hotkey(FString FunctionName);
-
-	/** 调用自定义快捷键对象中的 Help 函数 */
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|Panel")
-	static FString Help(FString Name = TEXT(""));
 
 };
 

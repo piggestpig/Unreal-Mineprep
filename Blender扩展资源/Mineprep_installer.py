@@ -530,6 +530,11 @@ def install():
     config.set(WATER, 'UseDefaultShallowWaterSubsystem', 'True')
     config.set(WATER, 'ShallowWaterSimParameters', '(WorldGridSize=5000,ResolutionMaxAxis=768)')
 
+    DLSS = '/Script/DLSS.DLSSSettings'
+    if not config.has_section(DLSS):
+        config.add_section(DLSS)
+    config.set(DLSS, 'bEnableDLSSInEditorViewport', 'True')
+
     with open(DefaultEngine_ini, 'w', encoding='utf-8') as f:
         config.write(f)
 
