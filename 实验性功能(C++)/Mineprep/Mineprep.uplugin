@@ -42,7 +42,9 @@
 		{
 			"Name": "AppleProResMedia",
 			"Enabled": true,
-			"SupportedTargetPlatforms": [ "Win64" ]
+			"SupportedTargetPlatforms": [
+				"Win64"
+			]
 		},
 		{
 			"Name": "NiagaraFluids",
@@ -139,7 +141,10 @@
 		{
 			"Name": "nDisplay",
 			"Enabled": true,
-			"SupportedTargetPlatforms": [ "Win64" , "Linux" ]
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Linux"
+			]
 		},
 		{
 			"Name": "DaySequence",

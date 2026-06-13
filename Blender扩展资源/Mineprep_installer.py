@@ -455,6 +455,9 @@ def install():
     #实验性功能
     if mc.exp_basic:
         shutil.copytree(exp_dir, join(install_path, 'Plugins', 'Mineprep'), dirs_exist_ok=True, ignore=ignored_files)
+    else:
+        #只复制其中的Content文件夹,无C++模块
+        shutil.copytree(join(exp_dir, 'Content'), join(install_path, 'Plugins', 'Mineprep', 'Content'), dirs_exist_ok=True, ignore=ignored_files)
     if mc.exp_material:
         shutil.copytree(material_dir, join(install_path, 'Plugins', 'InlineMaterialInstance'), dirs_exist_ok=True, ignore=ignored_files)
     if mc.exp_vr3d:
