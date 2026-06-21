@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import math
 import re
 import struct
 
@@ -13,6 +14,24 @@ SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9_]+")
 BLOCK_SIZE_CM = 100.0
 MC_UNIT_TO_CM = BLOCK_SIZE_CM / 16.0
 DEFAULT_GROUP_LAYER = unreal.GeometryScriptGroupLayer()
+FACE_NAMES = ("north", "south", "up", "down", "west", "east")
+FACE_CORNER_INDICES = {
+    "north": [0, 1, 2, 3],
+    "south": [5, 4, 7, 6],
+    "up": [1, 0, 4, 5],
+    "down": [7, 6, 2, 3],
+    "west": [4, 0, 3, 7],
+    "east": [1, 5, 6, 2],
+}
+FACE_UV_CORNER_ROLES = {
+    "north": ("tl", "tr", "br", "bl"),
+    "south": ("tr", "tl", "bl", "br"),
+    "up": ("tr", "tl", "bl", "br"),
+    "down": ("bl", "br", "tr", "tl"),
+    "east": ("tl", "tr", "br", "bl"),
+    "west": ("tl", "tr", "br", "bl"),
+}
+DOWN_FACE_UV_CORNER_ROLES = ("tl", "tr", "br", "bl")
 BASE_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR1_基础_材质实例.LabPBR1_基础_材质实例"
 BASE_TEXTURE_PARAMETER_NAME = "纹理贴图"
 
@@ -536,22 +555,94 @@ def _rotate_uv(u_value, v_value, rotation_deg):
     return u_value, v_value
 
 
-def _face_uv_rect(face_name, face_uv, bounds_from, bounds_to):
-    if face_uv is None:
-        if face_name in {"north", "south"}:
-            face_uv = [bounds_from[0], 16 - bounds_to[1], bounds_to[0], 16 - bounds_from[1]]
-        elif face_name in {"west", "east"}:
-            face_uv = [bounds_from[2], 16 - bounds_to[1], bounds_to[2], 16 - bounds_from[1]]
-        elif face_name in {"up", "down"}:
-            face_uv = [bounds_from[0], bounds_from[2], bounds_to[0], bounds_to[2]]
-        else:
-            face_uv = [0, 0, 16, 16]
+def _resolve_face_uv_rect(face_name, face_uv, bounds_from, bounds_to):
+    if face_uv is not None:
+        return [float(face_uv[0]), float(face_uv[1]), float(face_uv[2]), float(face_uv[3])]
 
-    u_min = float(face_uv[0]) / 16.0
-    u_max = float(face_uv[2]) / 16.0
-    v_min = 1.0 - (float(face_uv[3]) / 16.0)
-    v_max = 1.0 - (float(face_uv[1]) / 16.0)
-    return u_min, v_min, u_max, v_max
+    if face_name in {"north", "south"}:
+        return [bounds_from[0], 16 - bounds_to[1], bounds_to[0], 16 - bounds_from[1]]
+    if face_name in {"west", "east"}:
+        return [bounds_from[2], 16 - bounds_to[1], bounds_to[2], 16 - bounds_from[1]]
+    if face_name in {"up", "down"}:
+        return [bounds_from[0], bounds_from[2], bounds_to[0], bounds_to[2]]
+    return [0.0, 0.0, 16.0, 16.0]
+
+
+def _compute_face_uv_corners(face_name, face_uv, bounds_from, bounds_to, uv_rotation_deg=0, use_down_winding=False):
+    u_min, v_min, u_max, v_max = _resolve_face_uv_rect(face_name, face_uv, bounds_from, bounds_to)
+
+    # MC 与 UE 均使用 V=0 在贴图顶部的约定，直接按角点映射，无需 Blender 镜像。
+    corner_uvs = {
+        "tl": unreal.Vector2D(u_min / 16.0, v_min / 16.0),
+        "tr": unreal.Vector2D(u_max / 16.0, v_min / 16.0),
+        "br": unreal.Vector2D(u_max / 16.0, v_max / 16.0),
+        "bl": unreal.Vector2D(u_min / 16.0, v_max / 16.0),
+    }
+
+    if use_down_winding:
+        role_order = DOWN_FACE_UV_CORNER_ROLES
+    else:
+        role_order = FACE_UV_CORNER_ROLES[face_name]
+
+    uv_turn = (int(uv_rotation_deg) // 90) % 4
+    return [corner_uvs[role_order[(index + uv_turn) % 4]] for index in range(4)]
+
+
+def _position_key(position, precision=4):
+    return (
+        round(float(position.x), precision),
+        round(float(position.y), precision),
+        round(float(position.z), precision),
+    )
+
+
+def _get_triangle_positions(mesh, triangle_id):
+    result = unreal.GeometryScript_MeshQueries.get_triangle_positions(mesh, triangle_id)
+    positions = [item for item in _as_tuple(result) if isinstance(item, unreal.Vector)]
+    if len(positions) != 3:
+        raise RuntimeError(f"Failed to query triangle positions: {triangle_id}")
+    return positions
+
+
+def _set_uv_corners_on_triangles(mesh, triangle_ids, vertices, uv_corners):
+    uv_by_position = {}
+    for vertex, uv_value in zip(vertices, uv_corners):
+        uv_by_position[_position_key(vertex)] = uv_value
+
+    for triangle_id in triangle_ids:
+        triangle_positions = _get_triangle_positions(mesh, triangle_id)
+        triangle_uvs = []
+        for position in triangle_positions:
+            uv_value = uv_by_position.get(_position_key(position))
+            if uv_value is None:
+                raise RuntimeError(f"Failed to match triangle UV for triangle {triangle_id}")
+            triangle_uvs.append(uv_value)
+        _set_triangle_uvs(mesh, triangle_id, triangle_uvs)
+
+
+def _append_quad_with_uvs(mesh, vertices, uv_corners, material_id=0):
+    existing_triangle_ids = set(_get_all_triangle_ids(mesh))
+
+    primitive_options = unreal.GeometryScriptPrimitiveOptions()
+    primitive_options.polygroup_mode = unreal.GeometryScriptPrimitivePolygroupMode.PER_FACE
+    primitive_options.material_id = int(material_id)
+    primitive_options.uv_mode = unreal.GeometryScriptPrimitiveUVMode.UNIFORM
+
+    unreal.GeometryScript_Primitives.append_triangulated_polygon3d(
+        mesh,
+        primitive_options,
+        _identity_transform(),
+        list(vertices),
+    )
+
+    triangle_ids = [triangle_id for triangle_id in _get_all_triangle_ids(mesh) if triangle_id not in existing_triangle_ids]
+    if not triangle_ids:
+        raise RuntimeError("Failed to identify appended quad triangles")
+
+    unreal.GeometryScript_UVs.set_num_uv_sets(mesh, 1)
+    _set_uv_corners_on_triangles(mesh, triangle_ids, vertices, uv_corners)
+    if int(material_id) > 0:
+        _set_material_id_on_triangles(mesh, triangle_ids, material_id)
 
 
 def _apply_uv_rect_to_triangles(mesh, triangle_ids, uv_rect, rotation_deg):
@@ -651,6 +742,57 @@ def _load_mc_model(model_path):
         result["elements"] = model_data.get("elements")
 
     return result
+
+
+def _mc_point_to_ue(mc_pos):
+    return unreal.Vector(
+        (float(mc_pos[0]) - 8.0) * MC_UNIT_TO_CM,
+        (float(mc_pos[2]) - 8.0) * MC_UNIT_TO_CM,
+        float(mc_pos[1]) * MC_UNIT_TO_CM,
+    )
+
+
+def _mc_rotate_point(mc_pos, origin, axis, angle_deg):
+    axis_index = ord(str(axis).lower()) - ord("x")
+    position = [float(mc_pos[0]), float(mc_pos[1]), float(mc_pos[2])]
+    pivot = [float(origin[0]), float(origin[1]), float(origin[2])]
+    angle_rad = -math.radians(float(angle_deg))
+
+    axis_a = position[(1 + axis_index) % 3]
+    axis_b = position[(2 + axis_index) % 3]
+    axis_c = position[(3 + axis_index) % 3]
+    pivot_a = pivot[(1 + axis_index) % 3]
+    pivot_b = pivot[(2 + axis_index) % 3]
+
+    rotated = [0.0, 0.0, 0.0]
+    rotated[(1 + axis_index) % 3] = math.cos(angle_rad) * (axis_a - pivot_a) + (axis_b - pivot_b) * math.sin(angle_rad) + pivot_a
+    rotated[(2 + axis_index) % 3] = -math.sin(angle_rad) * (axis_a - pivot_a) + math.cos(angle_rad) * (axis_b - pivot_b) + pivot_b
+    rotated[(3 + axis_index) % 3] = axis_c
+    return _mc_point_to_ue(rotated)
+
+
+def _build_element_corners(bounds_from, bounds_to, rotation=None):
+    if rotation is None:
+        rotation = {"angle": 0, "axis": "y", "origin": [8, 8, 8]}
+
+    origin = rotation.get("origin", [8, 8, 8])
+    axis = rotation.get("axis", "y")
+    angle = float(rotation.get("angle", 0))
+
+    mc_corner_specs = [
+        [bounds_from[0], bounds_to[1], bounds_from[2]],
+        [bounds_to[0], bounds_to[1], bounds_from[2]],
+        [bounds_to[0], bounds_from[1], bounds_from[2]],
+        [bounds_from[0], bounds_from[1], bounds_from[2]],
+        [bounds_from[0], bounds_to[1], bounds_to[2]],
+        [bounds_to[0], bounds_to[1], bounds_to[2]],
+        [bounds_to[0], bounds_from[1], bounds_to[2]],
+        [bounds_from[0], bounds_from[1], bounds_to[2]],
+    ]
+
+    if angle == 0.0:
+        return [_mc_point_to_ue(spec) for spec in mc_corner_specs]
+    return [_mc_rotate_point(spec, origin, axis, angle) for spec in mc_corner_specs]
 
 
 def _mc_to_ue_center(bounds_from, bounds_to):
@@ -831,56 +973,39 @@ def _build_block_dynamic_mesh(model_path, destination_path, asset_name):
         if not bounds_from or not bounds_to:
             continue
 
-        box_mesh = _new_dynamic_mesh()
-        try:
-            primitive_options = unreal.GeometryScriptPrimitiveOptions()
-            primitive_options.polygroup_mode = unreal.GeometryScriptPrimitivePolygroupMode.PER_FACE
-            primitive_options.material_id = 0
-            primitive_options.uv_mode = unreal.GeometryScriptPrimitiveUVMode.UNIFORM
+        corners = _build_element_corners(bounds_from, bounds_to, element.get("rotation"))
+        faces = element.get("faces") or {}
 
-            unreal.GeometryScript_Primitives.append_box(
-                box_mesh,
-                primitive_options,
-                _transform(location=_mc_to_ue_center(bounds_from, bounds_to)),
-                *_mc_to_ue_dimensions(bounds_from, bounds_to),
-                0,
-                0,
-                0,
-                unreal.GeometryScriptPrimitiveOriginMode.CENTER,
+        for face_name in FACE_NAMES:
+            face_data = faces.get(face_name)
+            if not face_data:
+                continue
+
+            texture_ref = face_data.get("texture")
+            if not texture_ref:
+                continue
+
+            if texture_ref.startswith("#"):
+                texture_file = _resolve_texture_reference(model_path, textures, texture_ref[1:])
+            else:
+                texture_file = _resolve_texture_reference(model_path, {"direct": texture_ref}, "direct")
+
+            material_index, _, _ = get_material_index(texture_file)
+            use_down_winding = face_name == "down"
+            face_indices = list(FACE_CORNER_INDICES[face_name])
+            if use_down_winding:
+                face_indices.reverse()
+
+            face_vertices = [corners[index] for index in face_indices]
+            uv_corners = _compute_face_uv_corners(
+                face_name,
+                face_data.get("uv"),
+                bounds_from,
+                bounds_to,
+                face_data.get("rotation", 0),
+                use_down_winding=use_down_winding,
             )
-            unreal.GeometryScript_UVs.set_num_uv_sets(box_mesh, 1)
-
-            faces = element.get("faces") or {}
-            polygroup_ids = _get_polygroup_ids(box_mesh)
-            face_groups = {}
-            for polygroup_id in polygroup_ids:
-                face_groups[_infer_face_direction(box_mesh, polygroup_id)] = polygroup_id
-
-            for face_name, polygroup_id in face_groups.items():
-                triangle_ids = _get_triangles_in_polygroup(box_mesh, polygroup_id)
-                face_data = faces.get(face_name)
-                if not face_data:
-                    _delete_triangles(box_mesh, triangle_ids)
-                    continue
-
-                texture_ref = face_data.get("texture")
-                if not texture_ref:
-                    _delete_triangles(box_mesh, triangle_ids)
-                    continue
-
-                if texture_ref.startswith("#"):
-                    texture_file = _resolve_texture_reference(model_path, textures, texture_ref[1:])
-                else:
-                    texture_file = _resolve_texture_reference(model_path, {"direct": texture_ref}, "direct")
-
-                material_index, _, _ = get_material_index(texture_file)
-                _set_material_id_on_triangles(box_mesh, triangle_ids, material_index)
-                uv_rect = _face_uv_rect(face_name, face_data.get("uv"), bounds_from, bounds_to)
-                _apply_uv_rect_to_triangles(box_mesh, triangle_ids, uv_rect, face_data.get("rotation", 0))
-
-            unreal.GeometryScript_MeshEdits.append_mesh(target_mesh, box_mesh, _identity_transform())
-        finally:
-            _return_dynamic_mesh(box_mesh)
+            _append_quad_with_uvs(target_mesh, face_vertices, uv_corners, material_index)
 
     if not material_slots:
         raise RuntimeError(f"Model produced no materials: {model_path}")

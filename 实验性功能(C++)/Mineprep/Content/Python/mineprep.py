@@ -1,25 +1,34 @@
 import unreal
+import os
 import re
-import mc_importer, mc_utils
+import json
+from collections.abc import Iterable
+from pprint import pformat
+from pathlib import Path
+
+import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
 from mc_importer import import_block, import_item
-from mc_utils import asynctask, reload, cast, uclass, world, askopenfilename, set_actor_label_unique
+from mc_utils import (reload, cast, uclass, world, prints, warn, throw, panic,
+                      asynctask, askopenfilename, set_actor_label, select_actors,
+                      lazy_import, safe)
 from mc_prep import prep_texture
+from mc_localization import language, get_kernel_language, loctext, nsloctext, loctable_col
+from mc_structure import parse_structure, structure_to_tex
+from mc_config import config, paths
 
-cache = True
+
 HotkeyObjCache = None
-
 ActorCache = None
-
+LocalizationCache = None
+SpawnIDCache = None
+SpawnNameCache = None
 
 def get_hotkey_object(reload=False):
     global HotkeyObjCache
-    global cache
-    if HotkeyObjCache and cache and not reload:
+    if HotkeyObjCache and not reload:
         return HotkeyObjCache
 
-    blueprint_path = '/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C'
-    loaded_class = unreal.load_class(None, blueprint_path)
-    
+    loaded_class = uclass(paths.hotkey)
     if loaded_class:
         hotkey_object = unreal.new_object(loaded_class)
         HotkeyObjCache = hotkey_object
@@ -30,8 +39,7 @@ def get_hotkey_object(reload=False):
 ####################################################################################
 
 def help():
-    text = f'前往https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API查看更多信息'
-    unreal.SystemLibrary.print_string(None, text)
+    prints(f'前往https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API查看更多信息')
     return
 
 
@@ -39,14 +47,12 @@ class helper:
     @staticmethod
     def default_class_help(cls, *args, **kwargs):
         text = f'【{cls.__name__}类】 \n前往https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API查看更多信息'
-        unreal.SystemLibrary.print_string(None, text)
-        return text
+        return prints(text)
 
     @staticmethod
     def default_instance_help(instance, *args, **kwargs):
         text = f'【{instance.__class__.__name__}实例】\n前往https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API查看更多信息'
-        unreal.SystemLibrary.print_string(None, text)
-        return text
+        return prints(text)
 
     def __init__(self, class_func=None, instance_func=None):
         self.class_func = class_func or self.default_class_help
@@ -60,6 +66,7 @@ class helper:
             # 在实例上调用
             return lambda *args, **kwargs: self.instance_func(instance, *args, **kwargs)
 
+
 class MineprepAPIHandle:
     help = helper()
 
@@ -71,11 +78,21 @@ class MineprepAPIHandle:
     def __class_getitem__(cls, target):
         return cls(target).target
 
-    # 调用不存在的函数时，自动转发到 target
+    # 调用不存在的属性或函数时，自动转发到target，支持数组
     def __getattr__(self, name):
+        if isinstance(self.target, Iterable):
+            if not self.target:
+                return []
+            if callable(getattr(self.target[0], name)):
+                def wrapper(*args, **kwargs):
+                    return [getattr(t, name)(*args, **kwargs) for t in self.target]
+                return wrapper
+            else:
+                return [getattr(t, name) for t in self.target]
+
         return getattr(self.target, name)
 
-    #############################################################################################
+    ########################################################################
 
     def get(self, prop=None):
         cast = prop if isinstance(prop, type) else None
@@ -102,6 +119,11 @@ class MineprepAPIHandle:
     def click(self, index=-1):
         return get_hotkey_object().call_method('Click', (self.target, int(index)))
     
+    def set(self, value=''):
+        if isinstance(value, (int, float, bool)):
+            return self.set_value(value)
+        return self.set_string(str(value))
+
     def set_string(self, value=''):
         return get_hotkey_object().call_method('SetString', (self.target, str(value)))
     
@@ -122,50 +144,152 @@ class toolbar(MineprepAPIHandle):
         get_hotkey_object().call_method('Toolbar', (str(name),))
         super().__init__(None, name)
 
-class config(MineprepAPIHandle):
-    def __init__(self, name = ''):
-        label, target = get_hotkey_object().call_method('Config', (str(name),))
-        super().__init__(target, label)
-
 class hotkey(MineprepAPIHandle):
     def __init__(self, name = ''):
         target = get_hotkey_object().call_method(str(name))
         super().__init__(target, name)
 
+###########################################################################
 
-class actor(MineprepAPIHandle):
-    def __init__(self, name = unreal.Actor):
+class MineprepWorldHandle(MineprepAPIHandle):
+    def __str__(self):
+        return pformat(self.label)
+    
+    def __repr__(self):
+        return f'<mineprep.{self.__class__.__name__} object at' + pformat(self.label)
+    
+    def get(self, prop=''):
+        return self.get_editor_property(prop)
+
+    def set(self, prop='', value=''):
+        return self.set_editor_property(prop, value)
+
+
+class component(MineprepWorldHandle):
+    def __init__(self, target=None):
+        super().__init__(target, target.get_name() if target else '')
+
+    @staticmethod
+    def find(actor_obj, name):
+        """静态方法：从单个 Actor 中提取符合条件的单个组件"""
+        if not actor_obj:
+            return None
+        if not name:
+            return actor_obj.root_component
+        if isinstance(name, type):
+            return actor_obj.get_component_by_class(name)
+        
+        comps = actor_obj.get_components_by_class(unreal.ActorComponent)
+        if isinstance(name, str):
+            name_lower = name.lower()
+            target = next((c for c in comps if c.get_name().lower() == name_lower), None)
+            if not target:
+                target = next((c for c in comps if re.sub(r'[\s\d]+$', '', c.get_name().lower()) == name_lower), None)
+            return target
+        if callable(name):
+            return next((c for c in comps if name(c)), None)
+        return None
+
+
+class components(MineprepWorldHandle):
+    def __init__(self, target=None):
+        target = target or []
+        super().__init__(target, [c.get_name() for c in target])
+
+    @staticmethod
+    def find(actor_obj, name):
+        """静态方法：从单个 Actor 中提取符合条件的所有组件列表"""
+        if not actor_obj:
+            return []
+        if not name:
+            return actor_obj.get_components_by_class(unreal.ActorComponent)
+        if isinstance(name, type):
+            return actor_obj.get_components_by_class(name)
+        
+        comps = actor_obj.get_components_by_class(unreal.ActorComponent)
+        if isinstance(name, str):
+            name = f'*{name}*' if '*' not in name else name
+            return unreal.EditorFilterLibrary.by_id_name(comps, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
+        if callable(name):
+            return [c for c in comps if name(c)]
+        return []
+
+
+class actor(MineprepWorldHandle):
+    def __init__(self, name=unreal.Actor):
         target = None
         if isinstance(name, type):
             target = unreal.GameplayStatics.get_actor_of_class(world(), name)
-        elif isinstance(name, str):
-            actors = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
-            target = next((a for a in actors if a.get_actor_label() == name), None)
-            if not target:
-                target = next((a for a in actors if re.sub(r'[\s\d]+$', '', a.get_actor_label()) == name), None)
-        label = target.get_actor_label() if target else ''
-        super().__init__(target, label)
+        else:
+            actors_list = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
+            if isinstance(name, str):
+                target = next((a for a in actors_list if a.get_actor_label() == name), None)
+                if not target:
+                    target = next((a for a in actors_list if re.sub(r'[\s\d]+$', '', a.get_actor_label()) == name), None)
+            elif callable(name):
+                target = next((a for a in actors_list if name(a)), None)
+        super().__init__(target, target.get_actor_label() if target else '')
+
+        class ComponentHandle(component):
+            def __init__(sub_self, name=None):
+                comp_target = component.find(self.target, name)
+                super().__init__(comp_target)
+
+        class ComponentsHandle(components):
+            def __init__(sub_self, name=None):
+                comps_target = components.find(self.target, name)
+                super().__init__(comps_target)
+
+        self.component = ComponentHandle
+        self.components = ComponentsHandle
 
 
-class actors(MineprepAPIHandle):
-    def __init__(self, name = unreal.Actor):
+class actors(MineprepWorldHandle):
+    def __init__(self, name=unreal.Actor):
         target = []
         if isinstance(name, type):
             target = unreal.GameplayStatics.get_all_actors_of_class(world(), name)
-        elif isinstance(name, str):
-            actors = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
-            target = [a for a in actors if name.lower() in a.get_actor_label().lower()]
-        label = [a.get_actor_label() for a in target] if target else []
-        super().__init__(target, label)
+        else:
+            actors_list = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
+            if isinstance(name, str):
+                name = f'*{name}*' if '*' not in name else name
+                target = unreal.EditorFilterLibrary.by_actor_label(actors_list, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
+            elif callable(name):
+                target = [a for a in actors_list if name(a)]
+        super().__init__(target, [a.get_actor_label() for a in target])
+
+        class ComponentHandle(components):  # 多个 Actor 各取一个组件，返回的仍是组件数组
+            def __init__(sub_self, name=None):
+                results = [comp for a in self.target if (comp := component.find(a, name))]
+                super().__init__(results)
+
+        class ComponentsHandle(components): # 多个 Actor 各取多个组件，返回组件数组
+            def __init__(sub_self, name=None):
+                results = []
+                for a in self.target:
+                    results.extend(components.find(a, name))
+                super().__init__(results)
+
+        self.component = ComponentHandle
+        self.components = ComponentsHandle
+
 
 ##########################################################################
 
-def spawn_helper(button='', target='', loc=None, rot=None, scale=None):
+def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None):
+    global SpawnIDCache, SpawnNameCache, ActorCache
+    SpawnIDCache = id if id else target if isinstance(target, int) else None
+    SpawnNameCache = target if isinstance(target, str) else None
+    ActorCache = None
+
     panel(f'生成器子面板.{button}选项').set_string(target)
     panel(f'生成器子面板.{button}_可右键').click(0)
+    SpawnIDCache = None
+    SpawnNameCache = None
     actor = ActorCache
+
     if not ActorCache:
-        unreal.SystemLibrary.print_string(None, f'{button}: {target} 失败')
+        warn(f'{button}: {target} 不存在')
         return None
     if loc:
         actor.set_actor_location(loc, False, True)
@@ -175,28 +299,28 @@ def spawn_helper(button='', target='', loc=None, rot=None, scale=None):
         actor.set_actor_scale3d(scale)
     return actor
 
-def spawn_block(target='', loc=None, rot=None, scale=None):
-    return spawn_helper('放置方块', target, loc, rot, scale)
 
-def spawn_item(target='', loc=None, rot=None, scale=None):
-    return spawn_helper('放置物品', target, loc, rot, scale)
+def spawn_block(target='', loc=None, rot=None, scale=None, id=None):
+    return spawn_helper('放置方块', target, loc, rot, scale, id)
 
-def spawn_mob(target='', loc=None, rot=None, scale=None, baby=None):
+def spawn_item(target='', loc=None, rot=None, scale=None, id=None):
+    return spawn_helper('放置物品', target, loc, rot, scale, id)
+
+def spawn_mob(target='', loc=None, rot=None, scale=None, baby=None, id=None):
     if baby is not None and panel("生成器子面板.生物宝宝_可点击").get() != int(baby):
         panel("生成器子面板.生物宝宝_可点击").click()
-    return spawn_helper('放置生物', target, loc, rot, scale)
+    return spawn_helper('放置生物', target, loc, rot, scale, id)
 
-def spawn_preset(target='', loc=None, rot=None, scale=None):
-    return spawn_helper('预设素材', target, loc, rot, scale)
+def spawn_preset(target='', loc=None, rot=None, scale=None, id=None):
+    return spawn_helper('预设素材', target, loc, rot, scale, id)
 
-def attach(target='', loc=None, rot=None, scale=None):
-    return spawn_helper('附加组件', target, loc, rot, scale)
+def attach(target='', loc=None, rot=None, scale=None, id=None):
+    return spawn_helper('附加组件', target, loc, rot, scale, id)
 
 
-def spawn_blocks(mesh=None, transforms=[unreal.Transform()], pivot=(0,0,0)):
-    blueprint_path = '/Game/Mineprep/MC_Blueprint/Core/实例化方块.实例化方块_C'
-    loaded_class = unreal.load_class(None, blueprint_path)
-    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, pivot)
+def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0,0,0)):
+    loaded_class = uclass('/Game/Mineprep/MC_Blueprint/Core/实例化方块.实例化方块')
+    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
     ism = actor.root_component
 
     if isinstance(mesh, str):
@@ -211,3 +335,48 @@ def spawn_blocks(mesh=None, transforms=[unreal.Transform()], pivot=(0,0,0)):
     ism.add_instances(transforms, False, False, True)
     return actor
 
+
+def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=False):
+    map = parse_structure(filepath)
+    filename = Path(filepath).stem
+    inventory = loctable_col(6,2)
+
+    actors = []
+    meshes = []
+    for name, transforms in map.items():
+        path = paths.blocks + f'/{name}.json'
+        mesh = None
+        if os.path.exists(path):
+            mesh = import_block(path)
+        else:
+            #在放置方块选项中寻找第一个以name开头的方块
+            candidate = next((n for n in inventory if n.startswith(name)), None)
+            path = paths.blocks + f'/{candidate}.json'
+            if os.path.exists(path):
+                mesh = import_block(path)
+            else:
+                warn(f'未找到{name}模型')
+
+        meshes.append(mesh)
+        if not gpu:
+            actor = spawn_blocks(mesh, transforms, loc, rot)
+            actor.set_folder_path(filename)
+            actors.append(actor)
+            set_actor_label(actor, f'{filename}_{name}')
+    
+    if gpu:
+        BPT_Tex, BRT_Tex, mapping_data = structure_to_tex(map, filename)
+        loaded_class = uclass('/Game/Mineprep/MC_Blueprint/PCG/PCG实例化方块.PCG实例化方块')
+        actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
+        actor.set_folder_path('Structures')
+        actors.append(actor)
+        set_actor_label(actor, f'{filename}')
+
+        # meshes转换为软对象路径数组
+        mesh_paths = [unreal.SystemLibrary.get_soft_object_path(mesh) for mesh in meshes]
+        actor.set_editor_property('Blocks', mesh_paths)
+        actor.set_editor_property('PosTex', BPT_Tex)
+        actor.set_editor_property('RotTex', BRT_Tex)
+
+    select_actors(actors)
+    return actors
