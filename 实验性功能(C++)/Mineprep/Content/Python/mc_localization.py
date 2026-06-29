@@ -2,6 +2,7 @@ import unreal
 from contextlib import contextmanager
 
 KernelLanguage = None
+LocalizationCache = None
 
 @contextmanager
 def language(lang=None):
@@ -31,10 +32,10 @@ def nsloctext(namespace='UObjectDisplayNames', key='', source_string=''):
     return str(text) or key
 
 def loctable_col(block=1, lang=None):
+    global LocalizationCache
     try:
-        import mineprep
-        lang = lang or int(mineprep.LocalizationCache[0][0].split(',')[0])
-        col_index = int(mineprep.LocalizationCache[0][0].split(',')[block])
-        return mineprep.LocalizationCache[lang+col_index]
+        lang = lang or int(LocalizationCache[0][0].split(',')[0])
+        col_index = int(LocalizationCache[0][0].split(',')[block])
+        return LocalizationCache[lang+col_index]
     except:
         return []

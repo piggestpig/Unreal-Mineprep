@@ -11,7 +11,7 @@ class MCpath:
     
     project: str = unreal.Paths.project_dir()
     game: str = unreal.Paths.project_content_dir()
-    content:str = game
+    content: str = game
     plugin: str = unreal.Paths.project_plugins_dir()
     mineprep: str = game + 'Mineprep/'
     config: str = mineprep + 'Mineprep_config.txt'
@@ -19,6 +19,7 @@ class MCpath:
     installer: str = ''
     blocks: str = ''
     cache: str = project + 'cache/'
+    mcprep_data: str = mineprep + 'mcprep_data.json'
 
 
 

@@ -5,7 +5,8 @@ import re
 import struct
 
 import unreal
-from mc_prep import prep_texture
+from mc_prep import prep_texture, colorize_material
+from mc_utils import warn
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tga", ".bmp", ".exr"}
@@ -32,7 +33,34 @@ FACE_UV_CORNER_ROLES = {
     "west": ("tl", "tr", "br", "bl"),
 }
 DOWN_FACE_UV_CORNER_ROLES = ("tl", "tr", "br", "bl")
-BASE_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR1_基础_材质实例.LabPBR1_基础_材质实例"
+FLUID_BLOCK_NAMES = frozenset({
+    "water",
+    "flowing_water",
+    "lava",
+    "flowing_lava",
+    "bubble_column",
+})
+FLUID_MODEL_ALIASES = {
+    "flowing_water": "water",
+    "flowing_lava": "lava",
+}
+FLUID_TEXTURE_BY_BLOCK = {
+    "water": "block/water_still",
+    "flowing_water": "block/water_still",
+    "lava": "block/lava_still",
+    "flowing_lava": "block/lava_still",
+    "bubble_column": "block/water_still",
+}
+FLUID_FLOW_TEXTURE_BY_BLOCK = {
+    "water": "block/water_flow",
+    "flowing_water": "block/water_flow",
+    "lava": "block/lava_flow",
+    "flowing_lava": "block/lava_flow",
+    "bubble_column": "block/water_flow",
+}
+FLUID_HORIZONTAL_FACES = frozenset({"up", "down"})
+BASE_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面1_材质实例.LabPBR单面1_材质实例"
+ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面2_材质实例.LabPBR单面2_材质实例"
 BASE_TEXTURE_PARAMETER_NAME = "纹理贴图"
 
 if not hasattr(unreal, "mineprep"):
@@ -147,6 +175,7 @@ def _mc_mesh_asset_name(name):
 
 
 def _mc_material_asset_name(name):
+    name = name.replace("grass_block_side_overlay", "grass_block_overlay")
     return f"◉{_sanitize_asset_name(name)}"
 
 
@@ -271,6 +300,17 @@ def _get_texture_size(texture_asset):
     width = texture_asset.blueprint_get_size_x()
     height = texture_asset.blueprint_get_size_y()
     return max(int(width), 1), max(int(height), 1)
+
+
+def _is_square_texture(texture_asset):
+    width, height = _get_texture_size(texture_asset)
+    return width == height
+
+
+def _material_instance_path_for_texture(texture_asset):
+    if _is_square_texture(texture_asset):
+        return BASE_MATERIAL_INSTANCE_PATH
+    return ANIMATED_MATERIAL_INSTANCE_PATH
 
 
 def _sample_texture_alpha_mask(texture_asset, alpha_threshold=0.5, max_resolution=32):
@@ -487,9 +527,10 @@ def _import_texture_asset(source, texture_package_path, asset_name=None):
 def _create_texture_material(texture_asset, destination_path, asset_name):
     material_name = _mc_material_asset_name(asset_name)
     material_path = _asset_path(destination_path, material_name)
+    base_material_path = _material_instance_path_for_texture(texture_asset)
     material = _load_asset_if_exists(material_path, unreal.MaterialInstanceConstant)
     if material is None:
-        material = unreal.EditorAssetLibrary.duplicate_asset(BASE_MATERIAL_INSTANCE_PATH, material_path)
+        material = unreal.EditorAssetLibrary.duplicate_asset(base_material_path, material_path)
         if not material:
             raise RuntimeError(f"Failed to duplicate material instance asset: {material_path}")
 
@@ -503,6 +544,7 @@ def _create_texture_material(texture_asset, destination_path, asset_name):
         texture_asset,
     )
 
+    colorize_material(material)
     unreal.EditorAssetLibrary.save_loaded_asset(material)
     return material
 
@@ -930,7 +972,127 @@ def _material_context_for_texture(texture_cache, material_cache, texture_source,
     return texture_cache[texture_key], material_cache[texture_key]
 
 
-def _build_block_dynamic_mesh(model_path, destination_path, asset_name):
+def _is_fluid_block_name(name):
+    return str(name).lower().replace("minecraft:", "") in FLUID_BLOCK_NAMES
+
+
+def resolve_block_json_path(block_name, models_dir=None):
+    if models_dir is None:
+        from mc_config import paths
+        models_dir = Path(paths.blocks)
+
+    stem = _sanitize_asset_name(str(block_name).lower().replace("minecraft:", ""))
+    direct = Path(models_dir) / f"{stem}.json"
+    if direct.exists():
+        return direct.resolve()
+
+    alias = FLUID_MODEL_ALIASES.get(stem)
+    if alias:
+        aliased = Path(models_dir) / f"{alias}.json"
+        if aliased.exists():
+            return aliased.resolve()
+    return None
+
+
+def _fluid_height_ratio(level):
+    level = int(level)
+    if level <= 0:
+        return 1.0
+    if level >= 8:
+        return 1.0
+    return max(0.125, (8 - level) / 9.0)
+
+
+def _resolve_fluid_texture_path(model_path, model_data, block_name, flow=False):
+    textures = model_data.get("textures") or {}
+    if not flow:
+        particle = textures.get("particle")
+        if particle:
+            if particle.startswith("#"):
+                particle = textures.get(particle[1:], "")
+            if particle and not particle.startswith("#"):
+                return _resolve_texture_reference(model_path, {"fluid": particle}, "fluid")
+
+    lookup = FLUID_FLOW_TEXTURE_BY_BLOCK if flow else FLUID_TEXTURE_BY_BLOCK
+    fallback = lookup.get(str(block_name).lower().replace("minecraft:", ""))
+    if fallback:
+        return _resolve_texture_reference(model_path, {"fluid": fallback}, "fluid")
+    return None
+
+
+def _fluid_flow_texture_path(still_texture_path):
+    still_path = Path(still_texture_path)
+    flow_path = still_path.with_name(still_path.stem.replace("_still", "_flow") + still_path.suffix)
+    if flow_path.exists():
+        return flow_path.resolve()
+    return still_path.resolve()
+
+
+def _build_fluid_dynamic_mesh(model_path, destination_path, asset_name, fluid_level=0):
+    block_name = str(asset_name or model_path.stem).lower().replace("minecraft:", "")
+    model_data = _load_mc_model(model_path)
+    still_texture_source = _resolve_fluid_texture_path(model_path, model_data, block_name, flow=False)
+    if still_texture_source is None or not still_texture_source.exists():
+        warn(f"导入流体方块失败: {model_path} (找不到静止流体贴图)")
+        return None
+
+    flow_texture_source = _resolve_fluid_texture_path(model_path, model_data, block_name, flow=True)
+    if flow_texture_source is None or not flow_texture_source.exists():
+        flow_texture_source = _fluid_flow_texture_path(still_texture_source)
+    if not flow_texture_source.exists():
+        warn(f"导入流体方块失败: {model_path} (找不到流动流体贴图)")
+        return None
+
+    height_ratio = _fluid_height_ratio(fluid_level)
+    bounds_from = [0.0, 0.0, 0.0]
+    bounds_to = [16.0, 16.0 * height_ratio, 16.0]
+    full_face_uv = [0.0, 0.0, 16.0, 16.0]
+
+    category = "block"
+    texture_package = _mc_texture_path(destination_path, category)
+    material_package = _mc_material_path(destination_path, category)
+    imported_textures = {}
+    created_materials = {}
+
+    _, still_material = _material_context_for_texture(
+        imported_textures,
+        created_materials,
+        still_texture_source,
+        texture_package,
+        material_package,
+    )
+    _, flow_material = _material_context_for_texture(
+        imported_textures,
+        created_materials,
+        flow_texture_source,
+        texture_package,
+        material_package,
+    )
+
+    target_mesh = _new_dynamic_mesh()
+    corners = _build_element_corners(bounds_from, bounds_to, None)
+    for face_name in FACE_NAMES:
+        material_index = 0 if face_name in FLUID_HORIZONTAL_FACES else 1
+        use_down_winding = face_name == "down"
+        face_indices = list(FACE_CORNER_INDICES[face_name])
+        if use_down_winding:
+            face_indices.reverse()
+
+        face_vertices = [corners[index] for index in face_indices]
+        uv_corners = _compute_face_uv_corners(
+            face_name,
+            full_face_uv,
+            bounds_from,
+            bounds_to,
+            0,
+            use_down_winding=use_down_winding,
+        )
+        _append_quad_with_uvs(target_mesh, face_vertices, uv_corners, material_index)
+
+    return category, target_mesh, [still_material, flow_material]
+
+
+def _build_block_dynamic_mesh(model_path, destination_path, asset_name, fluid_level=0):
     model_data = _load_mc_model(model_path)
     elements = model_data.get("elements") or []
     textures = model_data.get("textures") or {}
@@ -942,7 +1104,11 @@ def _build_block_dynamic_mesh(model_path, destination_path, asset_name):
         return "item", item_texture
 
     if not elements:
-        raise RuntimeError(f"Model has no renderable elements: {model_path}")
+        block_name = str(asset_name or model_path.stem).lower().replace("minecraft:", "")
+        if _is_fluid_block_name(block_name):
+            return _build_fluid_dynamic_mesh(model_path, destination_path, block_name, fluid_level)
+        warn(f"导入方块失败: {model_path} (无可渲染元素)")
+        return None
 
     texture_package = _mc_texture_path(destination_path, category)
     material_package = _mc_material_path(destination_path, category)
@@ -1008,7 +1174,9 @@ def _build_block_dynamic_mesh(model_path, destination_path, asset_name):
             _append_quad_with_uvs(target_mesh, face_vertices, uv_corners, material_index)
 
     if not material_slots:
-        raise RuntimeError(f"Model produced no materials: {model_path}")
+        _return_dynamic_mesh(target_mesh)
+        warn(f"导入方块失败: {model_path} (未产生材质)")
+        return None
 
     return category, target_mesh, material_slots
 
@@ -1086,60 +1254,66 @@ def import_block(
     filepath,
     destination_path="/Game/mc",
     asset_name=None,
-    max_resolution=32,  # 添加 max_resolution 参数传给生成的 item
-    reload=False,       # 新增：是否重新导入
+    max_resolution=32,
+    reload=False,
+    fluid_level=0,
 ):
     source = _normalize_source_file(filepath)
     suffix = source.suffix.lower()
     base_name = _sanitize_asset_name(asset_name or source.stem)
 
     if suffix == ".json":
-        # 针对 JSON 的轻量级预判（只读配置，不触发生成逻辑）
-        model_data = _load_mc_model(source)
-        elements = model_data.get("elements") or []
-        textures = model_data.get("textures") or {}
-        category = "item" if model_data.get("parent") in {"item/generated", "builtin/generated"} else "block"
-
-        # 判断最终的 category 存放夹
-        if not elements and category == "item" and "layer0" in textures:
-            target_root = _mc_root_path(destination_path, "item")
-        else:
-            target_root = _mc_root_path(destination_path, category)
-
-        target_mesh_path = _asset_path(target_root, _mc_mesh_asset_name(base_name))
-        
-        if not reload:
-            existing_mesh = _load_asset_if_exists(target_mesh_path, unreal.StaticMesh)
-            if existing_mesh:
-                unreal.log(f"import_block (json): Asset already exists, skipping: {target_mesh_path}")
-                return existing_mesh
-
-        # 若资产不存在或 reload=True，正常进入构建工作流
-        built = _build_block_dynamic_mesh(source, destination_path, base_name)
-
-        if built[0] == "item" and len(built) == 2:
-            return import_item(
-                built[1],
-                destination_path=destination_path,
-                asset_name=base_name,
-                max_resolution=max_resolution,
-                reload=reload,  # 向下传递 reload 状态
-            )
-
-        category, dynamic_mesh, materials = built
-        model_root = _mc_root_path(destination_path, category)
-
         try:
-            mesh_asset = _create_static_mesh_asset(
-                dynamic_mesh,
-                _asset_path(model_root, _mc_mesh_asset_name(base_name)),
-                materials,
-            )
-            _generate_collision(mesh_asset)
-            unreal.log(f"import_block created from json: {mesh_asset.get_path_name()}")
-            return mesh_asset
-        finally:
-            _return_dynamic_mesh(dynamic_mesh)
+            # 针对 JSON 的轻量级预判（只读配置，不触发生成逻辑）
+            model_data = _load_mc_model(source)
+            elements = model_data.get("elements") or []
+            textures = model_data.get("textures") or {}
+            category = "item" if model_data.get("parent") in {"item/generated", "builtin/generated"} else "block"
+
+            # 判断最终的 category 存放夹
+            if not elements and category == "item" and "layer0" in textures:
+                target_root = _mc_root_path(destination_path, "item")
+            else:
+                target_root = _mc_root_path(destination_path, category)
+
+            target_mesh_path = _asset_path(target_root, _mc_mesh_asset_name(base_name))
+
+            if not reload:
+                existing_mesh = _load_asset_if_exists(target_mesh_path, unreal.StaticMesh)
+                if existing_mesh:
+                    unreal.log(f"import_block (json): Asset already exists, skipping: {target_mesh_path}")
+                    return existing_mesh
+
+            built = _build_block_dynamic_mesh(source, destination_path, base_name, fluid_level)
+            if built is None:
+                return None
+
+            if built[0] == "item" and len(built) == 2:
+                return import_item(
+                    built[1],
+                    destination_path=destination_path,
+                    asset_name=base_name,
+                    max_resolution=max_resolution,
+                    reload=reload,
+                )
+
+            category, dynamic_mesh, materials = built
+            model_root = _mc_root_path(destination_path, category)
+
+            try:
+                mesh_asset = _create_static_mesh_asset(
+                    dynamic_mesh,
+                    _asset_path(model_root, _mc_mesh_asset_name(base_name)),
+                    materials,
+                )
+                _generate_collision(mesh_asset)
+                unreal.log(f"import_block created from json: {mesh_asset.get_path_name()}")
+                return mesh_asset
+            finally:
+                _return_dynamic_mesh(dynamic_mesh)
+        except Exception as exc:
+            warn(f"导入方块失败: {source} ({exc})")
+            return None
 
     if suffix not in MESH_SUFFIXES:
         raise ValueError(f"import_block only supports json or mesh files: {source}")
@@ -1154,11 +1328,16 @@ def import_block(
             unreal.log(f"import_block (mesh): Asset already exists, skipping: {target_mesh_path}")
             return existing_mesh
 
-    imported_assets = _run_import_task(_make_import_task(source, block_root, _mc_mesh_asset_name(base_name)))
-    mesh_asset = _first_static_mesh(imported_assets)
-    if mesh_asset is None:
-        raise RuntimeError(f"No StaticMesh was imported from: {source}")
+    try:
+        imported_assets = _run_import_task(_make_import_task(source, block_root, _mc_mesh_asset_name(base_name)))
+        mesh_asset = _first_static_mesh(imported_assets)
+        if mesh_asset is None:
+            warn(f"导入方块失败: {source} (未生成 StaticMesh)")
+            return None
 
-    _generate_collision(mesh_asset)
-    unreal.log(f"import_block imported: {mesh_asset.get_path_name()}")
-    return mesh_asset
+        _generate_collision(mesh_asset)
+        unreal.log(f"import_block imported: {mesh_asset.get_path_name()}")
+        return mesh_asset
+    except Exception as exc:
+        warn(f"导入方块失败: {source} ({exc})")
+        return None

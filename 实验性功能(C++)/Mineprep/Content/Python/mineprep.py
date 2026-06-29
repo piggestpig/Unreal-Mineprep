@@ -7,19 +7,18 @@ from pprint import pformat
 from pathlib import Path
 
 import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
-from mc_importer import import_block, import_item
+from mc_importer import import_block, import_item, resolve_block_json_path
 from mc_utils import (reload, cast, uclass, world, prints, warn, throw, panic,
                       asynctask, askopenfilename, set_actor_label, select_actors,
                       lazy_import, safe)
-from mc_prep import prep_texture
-from mc_localization import language, get_kernel_language, loctext, nsloctext, loctable_col
+from mc_prep import prep_texture, load_mcprep_data, colorize_material
+from mc_localization import language, get_kernel_language, loctext, nsloctext, loctable_col, LocalizationCache
 from mc_structure import parse_structure, structure_to_tex
 from mc_config import config, paths
 
 
 HotkeyObjCache = None
 ActorCache = None
-LocalizationCache = None
 SpawnIDCache = None
 SpawnNameCache = None
 
@@ -344,18 +343,20 @@ def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=False):
     actors = []
     meshes = []
     for name, transforms in map.items():
-        path = paths.blocks + f'/{name}.json'
+        path = resolve_block_json_path(name)
         mesh = None
-        if os.path.exists(path):
-            mesh = import_block(path)
+        if path is not None:
+            mesh = import_block(path, asset_name=name)
         else:
-            #在放置方块选项中寻找第一个以name开头的方块
             candidate = next((n for n in inventory if n.startswith(name)), None)
-            path = paths.blocks + f'/{candidate}.json'
-            if os.path.exists(path):
-                mesh = import_block(path)
+            path = resolve_block_json_path(candidate) if candidate else None
+            if path is not None:
+                mesh = import_block(path, asset_name=name)
             else:
                 warn(f'未找到{name}模型')
+
+        if mesh is None:
+            continue
 
         meshes.append(mesh)
         if not gpu:
