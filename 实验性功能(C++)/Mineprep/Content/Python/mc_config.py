@@ -2,7 +2,7 @@ import unreal
 import json
 from dataclasses import dataclass, asdict
 
-from mc_utils import prints
+from mc_utils import prints, uclass
 
 @dataclass
 class MCpath:
@@ -22,6 +22,18 @@ class MCpath:
     mcprep_data: str = mineprep + 'mcprep_data.json'
 
 
+@dataclass
+class wclass:
+    button: type = unreal.Button
+    MCbutton: type = uclass('/Game/Mineprep/插件贴图/小控件/可右键按钮.可右键按钮')
+    MCtext: type = uclass('/Game/Mineprep/插件贴图/小控件/可双击文本.可双击文本')
+    MCimage: type = uclass('/Game/Mineprep/插件贴图/小控件/可点击图片.可点击图片')
+    checkbox: type = unreal.CheckBox
+    slider: type = unreal.SpinBox
+    option: type = unreal.ComboBoxString
+    textbox: type = unreal.EditableTextBox
+    MCsection: type = uclass('/Game/Mineprep/插件贴图/小控件/折叠框.折叠框')
+    prop: type = unreal.SinglePropertyView
 
 
 class ConfigNode:

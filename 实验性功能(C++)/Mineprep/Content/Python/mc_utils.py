@@ -137,6 +137,7 @@ def reload():
     import importlib, types
     import mineprep
     localization_copy = mineprep.LocalizationCache
+    widgets_copy = mineprep.WidgetsCache
 
     for attr in mineprep.__dict__.values():
         if isinstance(attr, types.ModuleType) and 'mc_' in attr.__name__:
@@ -146,6 +147,11 @@ def reload():
     importlib.reload(mineprep)
     print("重新加载 mineprep")
     mineprep.LocalizationCache = localization_copy
+    mineprep.WidgetsCache = widgets_copy
+
+
+def enum(input):
+    return list(type(input))
 
 
 def world():
@@ -153,17 +159,19 @@ def world():
     return subsystem.get_editor_world() or subsystem.get_game_world()
 
 
-def prints(*args, color=unreal.LinearColor(0, 0.66, 1, 1), duration=2.0):
-    text = '\n'.join(pformat(arg, sort_dicts=False) for arg in args)
+def prints(*args, duration=2.0, color=unreal.LinearColor(0, 0.66, 1, 1)):
+    text = '\n'.join(arg if isinstance(arg, str) else pformat(arg, sort_dicts=False) for arg in args)
     unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration)
     return text
 
-def warn(warnings, duration=5.0, color=unreal.LinearColor(1, 1, 0, 1)):
-    unreal.SystemLibrary.print_string(None, pformat(warnings, sort_dicts=False), text_color=color, duration=duration)
+def warn(*warnings, duration=5.0, color=unreal.LinearColor(1, 1, 0, 1)):
+    text = '\n'.join(arg if isinstance(arg, str) else pformat(arg, sort_dicts=False) for arg in warnings)
+    unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration)
     return warnings
 
-def throw(errors, duration=5.0, color=unreal.LinearColor(1, 0, 0, 1)):
-    unreal.SystemLibrary.print_string(None, pformat(errors, sort_dicts=False), text_color=color, duration=duration)
+def throw(*errors, duration=5.0, color=unreal.LinearColor(1, 0, 0, 1)):
+    text = '\n'.join(arg if isinstance(arg, str) else pformat(arg, sort_dicts=False) for arg in errors)
+    unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration)
     raise RuntimeError(errors)
 
 def panic(title, message=''):
@@ -176,25 +184,54 @@ def panic(title, message=''):
     if status == unreal.AppReturnType.YES:
         throw(f'{title}: {message}')
 
-def uclass(path):
-    if isinstance(path, str):
-        asset = unreal.load_asset(path)
-        if isinstance(asset, unreal.Blueprint):
-            return unreal.EditorAssetLibrary.load_blueprint_class(path)
-        return asset.get_class()
 
-    elif isinstance(path, type):
-        return path
+def uclass(input):
+    """从蓝图路径、引擎内置类或对象中获取自身类"""
+    if isinstance(input, (type, unreal.Class)):
+        return input
+    elif isinstance(input, str):
+        asset = unreal.load_asset(input)
+        if isinstance(asset, unreal.Blueprint):
+            return unreal.EditorAssetLibrary.load_blueprint_class(input)
+        return type(asset)
+    elif isinstance(input, unreal.Object):
+        return type(input)
     return None
 
 
-def cast(obj, cls):
-    if isinstance(cls, str):
-        loaded_class = uclass(cls)
-        if loaded_class and isinstance(obj, loaded_class):
-            return obj
-    elif isinstance(obj, cls):
-        return obj
+def bpclass(input):
+    """从蓝图路径、引擎内置类或对象中获取资产类"""
+    if isinstance(input, (type, unreal.Class)):
+        return input
+    elif isinstance(input, str):
+        asset = unreal.load_asset(input)
+        if isinstance(asset, unreal.Blueprint):
+            return unreal.EditorAssetLibrary.load_blueprint_class(input)
+        return type(asset)
+    elif isinstance(input, unreal.Object):
+        return input.get_class()
+    return None
+
+
+def cast(input, target):
+    """判断输入对象是否为指定类（支持蓝图类和对象类），或输入类是否为子类"""
+    target_cls = uclass(target)
+    if target_cls is None:
+        return None
+
+    input_cls = input.get_class() if isinstance(input, unreal.Object) else uclass(input)
+    if input_cls is None:
+        return None
+
+    if isinstance(input_cls, unreal.Class) and isinstance(target_cls, unreal.Class):
+        return input if unreal.MathLibrary.class_is_child_of(input_cls, target_cls) else None
+
+    if isinstance(target_cls, type):
+        if isinstance(input, unreal.Object):
+            return input if isinstance(input, target_cls) else None
+        if isinstance(input_cls, type):
+            return input if issubclass(input_cls, target_cls) else None
+
     return None
 
 
@@ -256,13 +293,13 @@ def askopenfilename(title="Select File", filetypes=None):
 
 
 
-def set_actor_label(actor, label, unique=True, uclass=unreal.Actor) -> str:
+def set_actor_label(actor, label, unique=True, filter_class=unreal.Actor) -> str:
     if not actor:
         return ''
     
     modified = label
     if unique:
-        all_actors = unreal.GameplayStatics.get_all_actors_of_class(actor, uclass)
+        all_actors = unreal.GameplayStatics.get_all_actors_of_class(actor, filter_class)
         existing_labels = {a.get_actor_label() for a in all_actors}
 
         if modified in existing_labels:

@@ -68,11 +68,11 @@ namespace
         return IsMainSkeletalMeshCategory(GetTopLevelCategoryName(Property));
     }
 
-    static FText MakeSkeletalMeshCategoryLabel(const FString& ComponentLabel, const int32 TotalComponentGroups)
+    static FText MakeSkeletalMeshCategoryLabel(const FString& ComponentLabel, const bool bShowComponentLabel)
     {
         const FText BaseLabel = NSLOCTEXT("UObjectCategory", "Mesh", "Mesh");
 
-        if (TotalComponentGroups <= 1)
+        if (!bShowComponentLabel)
         {
             return BaseLabel;
         }
@@ -80,16 +80,101 @@ namespace
         return FText::Format(NSLOCTEXT("Mineprep", "MeshWithComponentLabel", "{0} ({1})"), BaseLabel, FText::FromString(ComponentLabel));
     }
 
-    static FText MakeMaterialsCategoryLabel(const FString& ComponentLabel, const int32 TotalComponentGroups)
+    static FText MakeMaterialsCategoryLabel(const FString& ComponentLabel, const bool bShowComponentLabel)
     {
         const FText BaseLabel = NSLOCTEXT("UObjectCategory", "Materials", "Materials");
 
-        if (TotalComponentGroups <= 1)
+        if (!bShowComponentLabel)
         {
             return BaseLabel;
         }
 
         return FText::Format(NSLOCTEXT("Mineprep", "MaterialsWithComponentLabel", "{0} ({1})"), BaseLabel, FText::FromString(ComponentLabel));
+    }
+
+    struct FSkeletalMeshComponentGroupsCustomizationOptions
+    {
+        bool bAlwaysShowComponentLabel = false;
+        bool bSortAfterRootMeshCategories = false;
+    };
+
+    static TPair<int32, int32> GetMineprepSkeletalMeshCategoryOrder(const FName CategoryName)
+    {
+        const FString CategoryString = CategoryName.ToString();
+        if (CategoryString == TEXT("MineprepSkeletalMesh"))
+        {
+            return {0, 0};
+        }
+
+        if (CategoryString == TEXT("MineprepSkeletalMeshMaterials"))
+        {
+            return {0, 1};
+        }
+
+        if (CategoryString.StartsWith(TEXT("MineprepSkeletalMeshMaterials_")))
+        {
+            return {FCString::Atoi(*CategoryString.Mid(32)), 1};
+        }
+
+        if (CategoryString.StartsWith(TEXT("MineprepSkeletalMesh_")))
+        {
+            return {FCString::Atoi(*CategoryString.Mid(23)), 0};
+        }
+
+        return {MAX_int32, MAX_int32};
+    }
+
+    static void SortAdditionalSkeletalMeshCategoriesAfterRoot(IDetailLayoutBuilder& DetailLayout)
+    {
+        DetailLayout.SortCategories([](const TMap<FName, IDetailCategoryBuilder*>& AllCategoryMap)
+        {
+            static const FName RootMeshCategoryNames[] = {
+                TEXT("Mesh"),
+                TEXT("Materials"),
+                TEXT("Animation"),
+            };
+
+            int32 RootSectionMaxSortOrder = MIN_int32;
+            for (const FName& CategoryName : RootMeshCategoryNames)
+            {
+                if (IDetailCategoryBuilder* const* Category = AllCategoryMap.Find(CategoryName))
+                {
+                    RootSectionMaxSortOrder = FMath::Max(RootSectionMaxSortOrder, (*Category)->GetSortOrder());
+                }
+            }
+
+            if (RootSectionMaxSortOrder == MIN_int32)
+            {
+                RootSectionMaxSortOrder = static_cast<int32>(ECategoryPriority::Default) * 1000;
+            }
+
+            TArray<TPair<FName, IDetailCategoryBuilder*>> AdditionalCategories;
+            for (const TPair<FName, IDetailCategoryBuilder*>& Pair : AllCategoryMap)
+            {
+                if (GetMineprepSkeletalMeshCategoryOrder(Pair.Key).Key != MAX_int32)
+                {
+                    AdditionalCategories.Add(Pair);
+                }
+            }
+
+            AdditionalCategories.Sort([](const TPair<FName, IDetailCategoryBuilder*>& A, const TPair<FName, IDetailCategoryBuilder*>& B)
+            {
+                const TPair<int32, int32> OrderA = GetMineprepSkeletalMeshCategoryOrder(A.Key);
+                const TPair<int32, int32> OrderB = GetMineprepSkeletalMeshCategoryOrder(B.Key);
+                if (OrderA.Key != OrderB.Key)
+                {
+                    return OrderA.Key < OrderB.Key;
+                }
+
+                return OrderA.Value < OrderB.Value;
+            });
+
+            int32 NextSortOrder = RootSectionMaxSortOrder + 1;
+            for (const TPair<FName, IDetailCategoryBuilder*>& Pair : AdditionalCategories)
+            {
+                Pair.Value->SetSortOrder(NextSortOrder++);
+            }
+        });
     }
 
     class FMineprepComponentMaterialCategory : public TSharedFromThis<FMineprepComponentMaterialCategory>
@@ -336,6 +421,26 @@ namespace
         }
     }
 
+    static void AddSkeletalMeshComponentToGroups(
+        USkeletalMeshComponent* SkeletalMeshComponent,
+        TMap<FString, TArray<UObject*>>& ComponentGroups,
+        TArray<FString>& ComponentGroupOrder)
+    {
+        if (!SkeletalMeshComponent)
+        {
+            return;
+        }
+
+        const FString ComponentLabel = SkeletalMeshComponent->GetName();
+        TArray<UObject*>& GroupObjects = ComponentGroups.FindOrAdd(ComponentLabel);
+        if (GroupObjects.IsEmpty())
+        {
+            ComponentGroupOrder.Add(ComponentLabel);
+        }
+
+        GroupObjects.AddUnique(SkeletalMeshComponent);
+    }
+
     static void CollectMoverDrivenSkeletalMeshes(APawn* Pawn, TMap<FString, TArray<UObject*>>& ComponentGroups, TArray<FString>& ComponentGroupOrder)
     {
         if (!Pawn)
@@ -358,20 +463,96 @@ namespace
 
             for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
             {
-                if (!SkeletalMeshComponent)
+                AddSkeletalMeshComponentToGroups(SkeletalMeshComponent, ComponentGroups, ComponentGroupOrder);
+            }
+        }
+    }
+
+    static void CollectAdditionalSkeletalMeshes(AActor* Actor, TMap<FString, TArray<UObject*>>& ComponentGroups, TArray<FString>& ComponentGroupOrder)
+    {
+        if (!Actor)
+        {
+            return;
+        }
+
+        USkeletalMeshComponent* RootSkeletalMeshComponent = Cast<USkeletalMeshComponent>(Actor->GetRootComponent());
+
+        TInlineComponentArray<USkeletalMeshComponent*> SkeletalMeshComponents;
+        Actor->GetComponents(SkeletalMeshComponents);
+
+        for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
+        {
+            if (!SkeletalMeshComponent || SkeletalMeshComponent == RootSkeletalMeshComponent)
+            {
+                continue;
+            }
+
+            AddSkeletalMeshComponentToGroups(SkeletalMeshComponent, ComponentGroups, ComponentGroupOrder);
+        }
+    }
+
+    static void CustomizeSkeletalMeshComponentGroups(
+        IDetailLayoutBuilder& DetailLayout,
+        const TMap<FString, TArray<UObject*>>& ComponentGroups,
+        const TArray<FString>& ComponentGroupOrder,
+        TArray<TSharedPtr<FMineprepComponentMaterialCategory>>& MaterialCategories,
+        const FSkeletalMeshComponentGroupsCustomizationOptions& Options = FSkeletalMeshComponentGroupsCustomizationOptions())
+    {
+        const int32 TotalComponentGroups = ComponentGroupOrder.Num();
+        const bool bShowComponentLabel = Options.bAlwaysShowComponentLabel || TotalComponentGroups > 1;
+
+        for (int32 GroupIndex = 0; GroupIndex < TotalComponentGroups; ++GroupIndex)
+        {
+            const FString& ComponentLabel = ComponentGroupOrder[GroupIndex];
+            const TArray<UObject*>* GroupObjects = ComponentGroups.Find(ComponentLabel);
+            if (!GroupObjects || GroupObjects->IsEmpty())
+            {
+                continue;
+            }
+
+            const UObject* FirstObject = (*GroupObjects)[0];
+            if (!FirstObject)
+            {
+                continue;
+            }
+
+            const FString CategoryName = TotalComponentGroups > 1
+                ? FString::Printf(TEXT("MineprepSkeletalMesh_%d"), GroupIndex)
+                : TEXT("MineprepSkeletalMesh");
+
+            IDetailCategoryBuilder& SkeletalMeshCategory = DetailLayout.EditCategory(
+                *CategoryName,
+                MakeSkeletalMeshCategoryLabel(ComponentLabel, bShowComponentLabel),
+                ECategoryPriority::Important);
+
+            SkeletalMeshCategory.InitiallyCollapsed(false);
+
+            const FString MaterialsCategoryName = TotalComponentGroups > 1
+                ? FString::Printf(TEXT("MineprepSkeletalMeshMaterials_%d"), GroupIndex)
+                : TEXT("MineprepSkeletalMeshMaterials");
+            TSharedPtr<FMineprepComponentMaterialCategory> MaterialCategory = MakeShared<FMineprepComponentMaterialCategory>(
+                *GroupObjects,
+                MaterialsCategoryName,
+                MakeMaterialsCategoryLabel(ComponentLabel, bShowComponentLabel));
+            MaterialCategory->Create(DetailLayout);
+            MaterialCategories.Add(MaterialCategory);
+
+            for (const FProperty* Property : TFieldRange<FProperty>(FirstObject->GetClass()))
+            {
+                if (!ShouldExposeSkeletalMeshProperty(Property))
                 {
                     continue;
                 }
 
-                const FString ComponentLabel = SkeletalMeshComponent->GetName();
-                TArray<UObject*>& GroupObjects = ComponentGroups.FindOrAdd(ComponentLabel);
-                if (GroupObjects.IsEmpty())
-                {
-                    ComponentGroupOrder.Add(ComponentLabel);
-                }
-
-                GroupObjects.AddUnique(SkeletalMeshComponent);
+                const bool bAdvancedDisplay = Property->HasAnyPropertyFlags(CPF_AdvancedDisplay);
+                const EPropertyLocation::Type PropertyLocation = bAdvancedDisplay ? EPropertyLocation::Advanced : EPropertyLocation::Default;
+                SkeletalMeshCategory.AddExternalObjectProperty(*GroupObjects, Property->GetFName(), PropertyLocation);
             }
+        }
+
+        if (Options.bSortAfterRootMeshCategories)
+        {
+            SortAdditionalSkeletalMeshCategoriesAfterRoot(DetailLayout);
         }
     }
 
@@ -404,55 +585,51 @@ namespace
                 CollectMoverDrivenSkeletalMeshes(Pawn, ComponentGroups, ComponentGroupOrder);
             }
 
-            const int32 TotalComponentGroups = ComponentGroupOrder.Num();
-            for (int32 GroupIndex = 0; GroupIndex < TotalComponentGroups; ++GroupIndex)
+            CustomizeSkeletalMeshComponentGroups(DetailLayout, ComponentGroups, ComponentGroupOrder, MaterialCategories);
+        }
+
+    private:
+        TArray<TSharedPtr<FMineprepComponentMaterialCategory>> MaterialCategories;
+    };
+
+    class FCustomSkeletalMeshActorDetails : public IDetailCustomization
+    {
+    public:
+        static TSharedRef<IDetailCustomization> MakeInstance()
+        {
+            return MakeShareable(new FCustomSkeletalMeshActorDetails());
+        }
+
+        virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override
+        {
+            MaterialCategories.Reset();
+
+            TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
+            DetailLayout.GetObjectsBeingCustomized(ObjectsBeingCustomized);
+
+            TMap<FString, TArray<UObject*>> ComponentGroups;
+            TArray<FString> ComponentGroupOrder;
+
+            for (const TWeakObjectPtr<UObject>& WeakObject : ObjectsBeingCustomized)
             {
-                const FString& ComponentLabel = ComponentGroupOrder[GroupIndex];
-                TArray<UObject*>* GroupObjects = ComponentGroups.Find(ComponentLabel);
-                if (!GroupObjects || GroupObjects->IsEmpty())
+                AActor* Actor = Cast<AActor>(WeakObject.Get());
+                if (!Actor)
                 {
                     continue;
                 }
 
-                const UObject* FirstObject = (*GroupObjects)[0];
-                if (!FirstObject)
-                {
-                    continue;
-                }
-
-                const FString CategoryName = TotalComponentGroups > 1
-                    ? FString::Printf(TEXT("MineprepSkeletalMesh_%d"), GroupIndex)
-                    : TEXT("MineprepSkeletalMesh");
-
-                IDetailCategoryBuilder& SkeletalMeshCategory = DetailLayout.EditCategory(
-                    *CategoryName,
-                    MakeSkeletalMeshCategoryLabel(ComponentLabel, TotalComponentGroups),
-                    ECategoryPriority::Important);
-
-                SkeletalMeshCategory.InitiallyCollapsed(false);
-
-                const FString MaterialsCategoryName = TotalComponentGroups > 1
-                    ? FString::Printf(TEXT("MineprepSkeletalMeshMaterials_%d"), GroupIndex)
-                    : TEXT("MineprepSkeletalMeshMaterials");
-                TSharedPtr<FMineprepComponentMaterialCategory> MaterialCategory = MakeShared<FMineprepComponentMaterialCategory>(
-                    *GroupObjects,
-                    MaterialsCategoryName,
-                    MakeMaterialsCategoryLabel(ComponentLabel, TotalComponentGroups));
-                MaterialCategory->Create(DetailLayout);
-                MaterialCategories.Add(MaterialCategory);
-
-                for (const FProperty* Property : TFieldRange<FProperty>(FirstObject->GetClass()))
-                {
-                    if (!ShouldExposeSkeletalMeshProperty(Property))
-                    {
-                        continue;
-                    }
-
-                    const bool bAdvancedDisplay = Property->HasAnyPropertyFlags(CPF_AdvancedDisplay);
-                    const EPropertyLocation::Type PropertyLocation = bAdvancedDisplay ? EPropertyLocation::Advanced : EPropertyLocation::Default;
-                    SkeletalMeshCategory.AddExternalObjectProperty(*GroupObjects, Property->GetFName(), PropertyLocation);
-                }
+                CollectAdditionalSkeletalMeshes(Actor, ComponentGroups, ComponentGroupOrder);
             }
+
+            CustomizeSkeletalMeshComponentGroups(
+                DetailLayout,
+                ComponentGroups,
+                ComponentGroupOrder,
+                MaterialCategories,
+                FSkeletalMeshComponentGroupsCustomizationOptions{
+                    .bAlwaysShowComponentLabel = true,
+                    .bSortAfterRootMeshCategories = true,
+                });
         }
 
     private:
@@ -468,6 +645,9 @@ namespace Mineprep::CustomDetailsPanel
         PropertyEditorModule.RegisterCustomClassLayout(
             TEXT("Pawn"),
             FOnGetDetailCustomizationInstance::CreateStatic(&FCustomMoverPawnDetails::MakeInstance));
+        PropertyEditorModule.RegisterCustomClassLayout(
+            TEXT("SkeletalMeshActor"),
+            FOnGetDetailCustomizationInstance::CreateStatic(&FCustomSkeletalMeshActorDetails::MakeInstance));
         PropertyEditorModule.NotifyCustomizationModuleChanged();
     }
 
@@ -480,6 +660,7 @@ namespace Mineprep::CustomDetailsPanel
 
         FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"));
         PropertyEditorModule.UnregisterCustomClassLayout(TEXT("Pawn"));
+        PropertyEditorModule.UnregisterCustomClassLayout(TEXT("SkeletalMeshActor"));
         PropertyEditorModule.NotifyCustomizationModuleChanged();
     }
 }

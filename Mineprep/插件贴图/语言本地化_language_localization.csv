@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1782570272.721233,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
+﻿Mineprep:0.5 | 时间戳1782914419.474133,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve,Steve,Steve,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,🔧,拴绳,Lead,牽繩(拴繩),,,,"低
 中
 高
@@ -173,7 +173,13 @@ Red-Cyan Anaglyph","兩組獨立輸出
 9,"关键帧按钮，左键对所有选中项添加关键帧，若参数名不存在则跳过
 右键/中键会先应用参数值，再添加关键帧","Keyframe button: Left‑click to add keyframes to all selected actors; skip if the param name does not exist.
 Right‑click / Middle‑click will apply the param value first, then add keyframes.","關鍵幀按鈕，左鍵為所有選中項添加關鍵幀，若參數名稱不存在則跳過
-右鍵/中鍵會先套用參數值，再添加關鍵幀",,,🟩👤,僵尸 [NPC],Zombie [NPC],喪屍(殭屍) [NPC],,,,✨🌊,下雨粒子,Rain Particles,下雨粒子,,,📸,nDisplay 3D摄像机组,nDisplay 3D Camera Rig,nDisplay 3D攝像機組,,,,,,,,,,👤🟩,金合欢木门 [顶部右],acacia_door_top_right,相思木門 [頂部右],,,,🟩,弓箭纹样陶片,archer_pottery_sherd,弓箭陶罐碎片 (弓箭陶器碎片)
+右鍵/中鍵會先套用參數值，再添加關鍵幀",,,🟩👤,僵尸 [NPC],Zombie [NPC],喪屍(殭屍) [NPC],,,,✨🌊,下雨粒子,Rain Particles,下雨粒子,,,📸,nDisplay 3D摄像机组,nDisplay 3D Camera Rig,nDisplay 3D攝像機組,,,,"CPU（实例）
+GPU（PCG）
+GPU（粒子）","CPU (Instances)
+GPU (PCG)
+GPU (Particles)","CPU（實例）
+GPU（PCG）
+GPU（粒子）",,,,👤🟩,金合欢木门 [顶部右],acacia_door_top_right,相思木門 [頂部右],,,,🟩,弓箭纹样陶片,archer_pottery_sherd,弓箭陶罐碎片 (弓箭陶器碎片)
 10,植物摇摆,Sway,植物搖擺,,,🟩,尸壳,Husk,屍殼,,,,✨🌊,下雪粒子,Snow Particles,下雪粒子,,,💡,局部调色遮罩(2D),Color Correction Window(2D),局部調色遮罩(2D),,,,,,,,,,👤🟩,金合欢木门 [顶部右打开],acacia_door_top_right_open,相思木門 [頂部右打開],,,,🟩,犰狳鳞甲,armadillo_scute,犰狳鱗甲
 11,应用所选参数,Apply Selected Params,套用所選參數,,,🟩👤,尸壳 [NPC],Husk [NPC],屍殼 [NPC],,,,✨,爆炸粒子,Explosion Particles,爆炸粒子,,,💡,局部调色区域(3D),Color Correction Region(3D),局部調色區域(3D),,,,,,,,,,👤🟩,金合欢木栅栏门,acacia_fence_gate,相思木閘門 (相思木柵欄門),,,,🟩,犰狳刷怪蛋,armadillo_spawn_egg,犰狳 生成蛋 (犰狳 生怪蛋)
 12,按动态材质等级过滤参数,Filter params based on dynamic level,按動態材質等級過濾參數,,,🟩🌊,溺尸,Drowned,溺屍(沉屍),,,,👤,软体史蒂夫,Soft Body Steve,軟體史蒂夫,,,🔧,绑定父级至最后选中项,Set Parent to the last selected one,綁定父級至最後選中項,,,,,,,,,,👤🟩,金合欢木栅栏门 [打开],acacia_fence_gate_open,相思木閘門 (相思木柵欄門) [打開],,,,👤🟩,盔甲架,armor_stand,盔甲座
@@ -313,8 +319,8 @@ Right Click (Red): Disable Megalights and fall back to Lumen","調整定向光�
 132,渲染结束打开文件夹,Open Folder After Render,渲染結束打開文件夾,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤,旗帜,banner,旗幟,,,,#,时钟 [24],clock_24,時鐘 [24]
 133,渲染结束提示音,Render Finish Sound,渲染結束提示音,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤,木桶,barrel,木桶,,,,#,时钟 [25],clock_25,時鐘 [25]
 134,删除原图,Delete Source Sequence,刪除原圖,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤,木桶 [打开],barrel_open,木桶 [打開],,,,#,时钟 [26],clock_26,時鐘 [26]
-135,#,#,#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,#,屏障,barrier,障幕 (屏障),,,,#,时钟 [27],clock_27,時鐘 [27]
-136,导入世界,Import Wortld,導入世界,,,,,,,,,,,,,,,,,,,,,,,,,,,,,🟥,玄武岩,basalt,玄武岩,,,,#,时钟 [28],clock_28,時鐘 [28]
+135,生成模式,Backend,生成模式,,,,,,,,,,,,,,,,,,,,,,,,,,,,,#,屏障,barrier,障幕 (屏障),,,,#,时钟 [27],clock_27,時鐘 [27]
+136,导入世界,Import World,導入世界,,,,,,,,,,,,,,,,,,,,,,,,,,,,,🟥,玄武岩,basalt,玄武岩,,,,#,时钟 [28],clock_28,時鐘 [28]
 137,自动准备场景,Run Prep Scene,自動準備場景,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤💡,信标,beacon,烽火台,,,,#,时钟 [29],clock_29,時鐘 [29]
 138,平直着色（重置法线）,Shade Flat (Reset Normal),平直著色（重置法綫）,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤,床,bed,床,,,,#,时钟 [30],clock_30,時鐘 [30]
 139,左键打开插件面板本地化文件，右键打开Actor细节面板本地化文件,Left‑click to open the localization file for plugin panel; right‑click to open the localization file for Actor details panel.,左鍵打開插件面板的本地化文件，右鍵開啟 Actor 細節面板的本地化文件,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤,基岩,bedrock,基岩,,,,#,时钟 [31],clock_31,時鐘 [31]
@@ -347,7 +353,7 @@ GPU暖場：渲染畫面（將額外占用一些顯存），例如調整曝光�
 154,点击以加载资源并放置到场景中。左键在后台异步加载，右键立即阻塞加载,"Click to load asset and place in scene
 Left click loads asynchronously in background, right click loads immediately blocking",點擊以加載資源並放置到場景中。左鍵在後台異步加載，右鍵立即阻塞加載,,,,,,,,,,,,,,,,,,,,,,,,,,,,,🟩,大型垂滴叶 [full_tilt],big_dripleaf_full_tilt,大懸葉草 [full_tilt],,,,#,时钟 [46],clock_46,時鐘 [46]
 155,导入到世界原点,Import to World Origin,導入到世界原點,,,,,,,,,,,,,,,,,,,,,,,,,,,,,🟩,大型垂滴叶 [partial_tilt],big_dripleaf_partial_tilt,大懸葉草 [partial_tilt],,,,#,时钟 [47],clock_47,時鐘 [47]
-156,在GPU上生成模型,Spawn on GPU,在GPU上生成模型,,,,,,,,,,,,,,,,,,,,,,,,,,,,,🟩,大型垂滴叶茎,big_dripleaf_stem,大懸葉草葉椗 (大懸葉草葉柄),,,,#,时钟 [48],clock_48,時鐘 [48]
+156,剔除内部方块,Culling,剔除内部方塊,,,,,,,,,,,,,,,,,,,,,,,,,,,,,🟩,大型垂滴叶茎,big_dripleaf_stem,大懸葉草葉椗 (大懸葉草葉柄),,,,#,时钟 [48],clock_48,時鐘 [48]
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,白桦木按钮,birch_button,樺木按鈕,,,,#,时钟 [49],clock_49,時鐘 [49]
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,白桦木按钮 [物品栏],birch_button_inventory,樺木按鈕 [物品欄],,,,#,时钟 [50],clock_50,時鐘 [50]
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,白桦木按钮 [按下],birch_button_pressed,樺木按鈕 [按下],,,,#,时钟 [51],clock_51,時鐘 [51]

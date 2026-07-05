@@ -6,6 +6,7 @@ LocalizationCache = None
 
 @contextmanager
 def language(lang=None):
+    global KernelLanguage
     map = {['zh-Hans','zh-CN','zh',1]: 1,
            ['en','English',2]: 2,
            ['zh-Hant','zh-TW','zh-HK',3]: 3}
@@ -17,8 +18,6 @@ def language(lang=None):
     yield
     KernelLanguage = None
 
-def get_kernel_language():
-    return KernelLanguage
 
 
 def loctext(key='', source_string=''):
@@ -39,3 +38,10 @@ def loctable_col(block=1, lang=None):
         return LocalizationCache[lang+col_index]
     except:
         return []
+
+def bilingual(chinese, english):
+    text = unreal.TextLibrary.find_text_in_live_table_advanced('UObjectDisplayNames', chinese, chinese)
+    if 'zh-' in unreal.InternationalizationLibrary.get_current_language():
+        return text or chinese
+    else:
+        return text or english

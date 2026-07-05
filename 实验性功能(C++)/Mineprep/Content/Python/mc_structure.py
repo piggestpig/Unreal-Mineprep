@@ -7,7 +7,7 @@ from pprint import pformat
 from mc_utils import lazy_import
 from mc_config import paths
 from mc_importer import _make_import_task, _run_import_task
-from mc_prep import prep_texture
+from mc_prep import prep_texture, load_mcprep_data
 
 if __name__ == "__main__":
     import numpy as np
@@ -17,7 +17,12 @@ if __name__ == "__main__":
 # 0. 全局常量配置
 # ==========================================
 # 支持 .nbt / .mcstructure / .schematic / .schem
-BLOCK_SIZE = 100.0 
+BLOCK_SIZE = 100.0
+_NEIGHBOR_OFFSETS = (
+    (1, 0, 0), (-1, 0, 0),
+    (0, 1, 0), (0, -1, 0),
+    (0, 0, 1), (0, 0, -1),
+)
 
 
 # ==========================================
@@ -222,11 +227,109 @@ def convert_to_unreal_transforms(sparse_dict, center=False):
         
     return ue_transform_dict
 
+
+_CULL_FLUID_NAMES = frozenset({"water", "flowing_water"})
+_SOLID_PATTERNS_CACHE = None
+
+
+def _get_solid_patterns():
+    global _SOLID_PATTERNS_CACHE
+    if _SOLID_PATTERNS_CACHE is None:
+        _SOLID_PATTERNS_CACHE = load_mcprep_data()["blocks"]["solid"]
+    return _SOLID_PATTERNS_CACHE
+
+
+def _block_name_variants(block_name):
+    name = str(block_name).lower()
+    variants = {name}
+    if name.endswith("_planks"):
+        variants.add(f"planks_{name[:-7]}")
+    if name.endswith("_log"):
+        variants.add(f"log_{name[:-4]}")
+    return variants
+
+
+def _matches_solid_pattern(block_name, pattern):
+    pattern = str(pattern).lower()
+    for variant in _block_name_variants(block_name):
+        if "*" not in pattern:
+            if variant == pattern:
+                return True
+            continue
+        prefix, _, suffix = pattern.partition("*")
+        if prefix and prefix in variant:
+            return True
+        if suffix and suffix in variant:
+            return True
+    return False
+
+
+def _is_water_block(block_name):
+    return str(block_name).lower() in _CULL_FLUID_NAMES
+
+
+def _is_solid_block(block_name):
+    return any(_matches_solid_pattern(block_name, pattern) for pattern in _get_solid_patterns())
+
+
+def _is_internal_block(pos, occupied):
+    return all(
+        (pos[0] + dx, pos[1] + dy, pos[2] + dz) in occupied
+        for dx, dy, dz in _NEIGHBOR_OFFSETS
+    )
+
+
+def _cull_internal_blocks_per_type(sparse_dict):
+    positions_by_name = {}
+    for pos, block_info in sparse_dict.items():
+        name = block_info["name"]
+        if not (_is_solid_block(name) or _is_water_block(name)):
+            continue
+        positions_by_name.setdefault(name, set()).add(pos)
+
+    culled = {}
+    for pos, block_info in sparse_dict.items():
+        name = block_info["name"]
+        if name not in positions_by_name:
+            culled[pos] = block_info
+            continue
+        if _is_internal_block(pos, positions_by_name[name]):
+            continue
+        culled[pos] = block_info
+    return culled
+
+
+def _cull_internal_blocks_unified_solids(sparse_dict):
+    solid_positions = set()
+    water_positions = set()
+    for pos, block_info in sparse_dict.items():
+        name = block_info["name"]
+        if _is_water_block(name):
+            water_positions.add(pos)
+        elif _is_solid_block(name):
+            solid_positions.add(pos)
+
+    culled = {}
+    for pos, block_info in sparse_dict.items():
+        name = block_info["name"]
+        if _is_water_block(name):
+            occupied = water_positions
+        elif _is_solid_block(name):
+            occupied = solid_positions
+        else:
+            culled[pos] = block_info
+            continue
+        if _is_internal_block(pos, occupied):
+            continue
+        culled[pos] = block_info
+    return culled
+
+
 # ==========================================
 # 4. 主函数 (新增 center 参数)
 # ==========================================
 
-def parse_structure(filepath='', center=True):
+def parse_structure(filepath='', center=True, cull=0):
     if not os.path.exists(filepath):
         unreal.log_error(f"未能找到结构文件: {filepath}")
         return {}
@@ -249,6 +352,12 @@ def parse_structure(filepath='', center=True):
         unreal.log_warning(f"不支持的文件格式: {ext}")
         return {}
 
+    cull_mode = int(cull)
+    if cull_mode == 1:
+        sparse_dict = _cull_internal_blocks_per_type(sparse_dict)
+    elif cull_mode == 2:
+        sparse_dict = _cull_internal_blocks_unified_solids(sparse_dict)
+
     # 核心转换：将 center 参数传递给转换逻辑
     ue_data = convert_to_unreal_transforms(sparse_dict, center=center)
     print(pformat(ue_data))
@@ -259,7 +368,7 @@ def parse_structure(filepath='', center=True):
 
 
 @lazy_import
-def structure_to_tex(ue_data, name='structure', fp32=False):
+def structure_to_tex(ue_data, name='structure', fp32=True):
     dtype = np.float32 # if fp32 else np.float16
     exr_type = cv2.IMWRITE_EXR_TYPE_FLOAT if fp32 else cv2.IMWRITE_EXR_TYPE_HALF
 

@@ -794,7 +794,7 @@ def _mc_point_to_ue(mc_pos):
     )
 
 
-def _mc_rotate_point(mc_pos, origin, axis, angle_deg):
+def _mc_rotate_point_raw(mc_pos, origin, axis, angle_deg):
     axis_index = ord(str(axis).lower()) - ord("x")
     position = [float(mc_pos[0]), float(mc_pos[1]), float(mc_pos[2])]
     pivot = [float(origin[0]), float(origin[1]), float(origin[2])]
@@ -810,7 +810,23 @@ def _mc_rotate_point(mc_pos, origin, axis, angle_deg):
     rotated[(1 + axis_index) % 3] = math.cos(angle_rad) * (axis_a - pivot_a) + (axis_b - pivot_b) * math.sin(angle_rad) + pivot_a
     rotated[(2 + axis_index) % 3] = -math.sin(angle_rad) * (axis_a - pivot_a) + math.cos(angle_rad) * (axis_b - pivot_b) + pivot_b
     rotated[(3 + axis_index) % 3] = axis_c
-    return _mc_point_to_ue(rotated)
+    return rotated
+
+
+def _mc_rescale_point_raw(mc_pos, origin, axis, angle_deg):
+    axis_index = ord(str(axis).lower()) - ord("x")
+    position = [float(mc_pos[0]), float(mc_pos[1]), float(mc_pos[2])]
+    pivot = [float(origin[0]), float(origin[1]), float(origin[2])]
+    cos_angle = math.cos(math.radians(abs(float(angle_deg))))
+    if cos_angle < 1e-6:
+        return position
+
+    factor = 1.0 / cos_angle
+    scaled = list(position)
+    for index in range(3):
+        if index != axis_index:
+            scaled[index] = pivot[index] + (position[index] - pivot[index]) * factor
+    return scaled
 
 
 def _build_element_corners(bounds_from, bounds_to, rotation=None):
@@ -820,6 +836,7 @@ def _build_element_corners(bounds_from, bounds_to, rotation=None):
     origin = rotation.get("origin", [8, 8, 8])
     axis = rotation.get("axis", "y")
     angle = float(rotation.get("angle", 0))
+    rescale = bool(rotation.get("rescale", False))
 
     mc_corner_specs = [
         [bounds_from[0], bounds_to[1], bounds_from[2]],
@@ -832,9 +849,15 @@ def _build_element_corners(bounds_from, bounds_to, rotation=None):
         [bounds_from[0], bounds_from[1], bounds_to[2]],
     ]
 
-    if angle == 0.0:
-        return [_mc_point_to_ue(spec) for spec in mc_corner_specs]
-    return [_mc_rotate_point(spec, origin, axis, angle) for spec in mc_corner_specs]
+    corners = []
+    for spec in mc_corner_specs:
+        position = [float(spec[0]), float(spec[1]), float(spec[2])]
+        if angle != 0.0:
+            position = _mc_rotate_point_raw(position, origin, axis, angle)
+            if rescale:
+                position = _mc_rescale_point_raw(position, origin, axis, angle)
+        corners.append(_mc_point_to_ue(position))
+    return corners
 
 
 def _mc_to_ue_center(bounds_from, bounds_to):
