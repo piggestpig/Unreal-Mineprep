@@ -87,6 +87,12 @@ for pycache_dir in plugin_dir.rglob("__pycache__"):
         shutil.rmtree(pycache_dir)
         print("已删除 __pycache__ 文件夹：", pycache_dir)
 
+#删除.vscode文件夹
+for vscode_dir in plugin_dir.rglob(".vscode"):
+    if vscode_dir.is_dir():
+        shutil.rmtree(vscode_dir)
+        print("已删除 .vscode 文件夹：", vscode_dir)
+
 #############################################################
 # 创建 Mineprep-Lite
 

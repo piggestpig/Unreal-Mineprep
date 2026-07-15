@@ -1,3 +1,5 @@
+from numpy import isin
+
 import unreal
 import os
 import re
@@ -5,7 +7,9 @@ import subprocess
 import sys
 from dataclasses import dataclass, asdict
 from pprint import pformat
-from functools import wraps
+from functools import lru_cache, wraps
+
+HotkeyObjCache = None
 
 libs = {
     'np': 'numpy',
@@ -15,7 +19,7 @@ libs = {
 }
 
 def lazy_import(func):
-    # 在装饰阶段，自动扫描函数内部引用的所有全局名称
+    """函数装饰器，自动扫描函数内部引用的全局名称，并导入libs中匹配的库"""
     referenced_names = func.__code__.co_names
     # 筛选出匹配我们映射表的库
     detected_dependencies = {name: libs[name] for name in referenced_names if name in libs}
@@ -29,15 +33,16 @@ def lazy_import(func):
                 # 动态导入库，fromlist=['*'] 是为了兼容 matplotlib.pyplot 这种带点的子模块
                 module = __import__(real_lib_name, fromlist=['*'] if '.' in real_lib_name else [])
                 # 把导入的模块以别名（如 np）的形式，直接注入到该函数的全局命名空间中！
-                func.__globals__[alias] = module             
+                func.__globals__[alias] = module
         return func(*args, **kwargs)
     return wrapper
 
 
 _active_async_runners = set()
 
-# 装饰器，使函数内部可以使用 yield 秒数 延迟执行
+
 def asynctask(func):
+    """函数装饰器，可在内部使用 yield（秒数）延迟执行"""
     def wrapper(*args, **kwargs):
         # 1. 执行原函数，获取生成器对象 (Generator)
         gen = func(*args, **kwargs)
@@ -112,6 +117,7 @@ def asynctask(func):
 
 
 class safe:
+    """数组包装器 safe(iterable, default=None)[id]，当索引超出范围时，返回输入的默认值或首个元素类型的默认值"""
     def __init__(self, iterable, default=None):
         self._data = iterable
         self._default = default
@@ -133,8 +139,36 @@ class safe:
                 return self._default
 
 
-def reload():
+def undo(arg: str=None):
+    """函数装饰器，添加编辑器撤销功能，相当于with unreal.ScopedEditorTransaction()"""
+    def decorator(func):
+        if isinstance(arg, str):
+            tx_name = arg
+        else:
+            tx_name = func.__name__
+            
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with unreal.ScopedEditorTransaction(tx_name):
+                return func(*args, **kwargs)
+        return wrapper
+
+    # 如果不带括号使用 @undo，此时arg就是被装饰的函数本身
+    if callable(arg):
+        return decorator(arg)
+
+    return decorator
+
+
+def reload(*args):
+    """重新加载mineprep及其所有子模块；传入特定模块时，只重新加载这些模块"""
     import importlib, types
+    if args:
+        for mod in args:
+            importlib.reload(mod)
+            unreal.log(f'重新加载 {mod.__name__}')
+        return
+
     import mineprep
     localization_copy = mineprep.LocalizationCache
     widgets_copy = mineprep.WidgetsCache
@@ -142,39 +176,57 @@ def reload():
     for attr in mineprep.__dict__.values():
         if isinstance(attr, types.ModuleType) and 'mc_' in attr.__name__:
             importlib.reload(attr)
-            print(f'重新加载 {attr.__name__}')
+            unreal.log(f'重新加载 {attr.__name__}')
 
     importlib.reload(mineprep)
-    print("重新加载 mineprep")
+    unreal.log("重新加载 mineprep")
     mineprep.LocalizationCache = localization_copy
     mineprep.WidgetsCache = widgets_copy
 
+    import mods
+    for attr in mods.__dict__.values():
+        if isinstance(attr, types.ModuleType):
+            info = getattr(attr, 'mod_info', None)
+            if info and info.get('ReloadWithMineprep'):
+                importlib.reload(attr)
+                unreal.log(f'重新加载 {attr.__name__}')
 
-def enum(input):
-    return list(type(input))
+
+def enum(input: type | unreal.EnumBase):
+    """用下标获取UE枚举类型的对应值，如enum(var)[0]"""
+    if isinstance(input, type):
+        return list(input)
+    else:
+        return list(type(input))
 
 
 def world():
+    """获取当前编辑器或游戏世界"""
     subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
     return subsystem.get_editor_world() or subsystem.get_game_world()
 
 
 def prints(*args, duration=2.0, color=unreal.LinearColor(0, 0.66, 1, 1)):
+    """在屏幕上打印多行文本"""
     text = '\n'.join(arg if isinstance(arg, str) else pformat(arg, sort_dicts=False) for arg in args)
     unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration)
     return text
 
 def warn(*warnings, duration=5.0, color=unreal.LinearColor(1, 1, 0, 1)):
+    """在屏幕上打印多行警告文本"""
     text = '\n'.join(arg if isinstance(arg, str) else pformat(arg, sort_dicts=False) for arg in warnings)
-    unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration)
+    unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration, print_to_log=False)
+    unreal.log_warning(text)
     return warnings
 
 def throw(*errors, duration=5.0, color=unreal.LinearColor(1, 0, 0, 1)):
+    """在屏幕上打印多行错误文本并抛出异常"""
     text = '\n'.join(arg if isinstance(arg, str) else pformat(arg, sort_dicts=False) for arg in errors)
-    unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration)
+    unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration, print_to_log=False)
     raise RuntimeError(errors)
 
 def panic(title, message=''):
+    """弹出提示框，由用户决定是否继续运行"""
     if not message:
         message = title
         title = '警告'
@@ -183,6 +235,17 @@ def panic(title, message=''):
     status = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO)
     if status == unreal.AppReturnType.YES:
         throw(f'{title}: {message}')
+
+
+def uasset(input):
+    """从蓝图路径或对象中获取资产"""
+    if isinstance(input, str):
+        return unreal.load_asset(input)
+    elif isinstance(input, unreal.Class):
+        return unreal.BlueprintEditorLibrary.get_blueprint_for_class(input)[0]
+    elif isinstance(input, unreal.Object):
+        return input
+    return None
 
 
 def uclass(input):
@@ -194,6 +257,8 @@ def uclass(input):
         if isinstance(asset, unreal.Blueprint):
             return unreal.EditorAssetLibrary.load_blueprint_class(input)
         return type(asset)
+    elif isinstance(input, unreal.Blueprint):
+        return unreal.EditorAssetLibrary.load_blueprint_class(input.get_path_name())
     elif isinstance(input, unreal.Object):
         return type(input)
     return None
@@ -235,7 +300,27 @@ def cast(input, target):
     return None
 
 
+def get_hotkey_object(reload=False):
+    """获取自定义快捷键对象"""
+    global HotkeyObjCache
+    if HotkeyObjCache and not reload:
+        return HotkeyObjCache
+
+    loaded_class = uclass('/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键')
+    if loaded_class:
+        hotkey_object = unreal.new_object(loaded_class)
+        HotkeyObjCache = hotkey_object
+        return hotkey_object
+
+    return None
+
+
+def construct(cls, outer=None):
+    return get_hotkey_object().call_method('Construct', (bpclass(cls), outer))
+
+
 def askopenfilename(title="Select File", filetypes=None):
+    """跨平台文件选择对话框，返回选中的文件路径"""
     # 1. tkinter (Windows)
     try:
         import tkinter as tk
@@ -286,14 +371,16 @@ def askopenfilename(title="Select File", filetypes=None):
         except Exception:
             pass
 
-    return ""
+    return ''
 
 
 
 
 
 
-def set_actor_label(actor, label, unique=True, filter_class=unreal.Actor) -> str:
+
+def set_actor_label(actor, label, unique=True, filter_class=unreal.Actor):
+    """设置Actor的标签，支持唯一后缀"""
     if not actor:
         return ''
     
@@ -322,6 +409,7 @@ def set_actor_label(actor, label, unique=True, filter_class=unreal.Actor) -> str
 
 
 def select_actors(actors=[], append=False):
+    """选择Actor，支持追加选择"""
     subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     if append:
         actors = subsystem.get_selected_level_actors() + list(actors)
@@ -329,3 +417,103 @@ def select_actors(actors=[], append=False):
         actors = list(actors)
     subsystem.set_selected_level_actors(actors)
     return actors
+
+def copy(source, target=None):
+    """复制Actor或资产, 名称冲突时自动添加后缀, target为坐标或路径"""
+    if isinstance(source, unreal.Actor):
+        subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+        offset = unreal.Vector(*target) - source.get_actor_location()
+        return subsystem.duplicate_actor(source, None, offset)
+
+    asset = uasset(source) if not isinstance(source, str) else None
+    source_path = asset.get_path_name() if asset else source
+    if not unreal.EditorAssetLibrary.does_asset_exist(source_path):
+        return None
+
+    base_path = target if target else source_path
+    if '.' in base_path.rsplit('/', 1)[-1]:
+        base_path = base_path.rsplit('.', 1)[0]
+    dest_path = base_path
+    counter = 2
+    while unreal.EditorAssetLibrary.does_asset_exist(dest_path):
+        dest_path = f"{base_path}_{counter}"
+        counter += 1
+    return unreal.EditorAssetLibrary.duplicate_asset(source_path, dest_path)
+
+
+#############################################################################
+
+
+_UE_ARGS_SECTION = re.compile(r'Args:\s*\n(.*?)(?:\nReturns:|\Z)', re.DOTALL)
+_UE_ARG_LINE = re.compile(r'^\s*(\w+)\s*\(([^)]+)\)', re.MULTILINE)
+_BUILTIN_TYPES = {'bool': bool, 'int': int, 'float': float, 'str': str}
+
+
+def _resolve_ue_type(type_str):
+    type_str = type_str.strip().rstrip(':')
+    if type_str.startswith('type(') and type_str.endswith(')'):
+        return _resolve_ue_type(type_str[5:-1])
+    if type_str in _BUILTIN_TYPES:
+        return _BUILTIN_TYPES[type_str]
+    return getattr(unreal, type_str, None)
+
+
+def _is_ue_enum(cls):
+    try:
+        return isinstance(cls, type) and issubclass(cls, unreal.EnumBase)
+    except TypeError:
+        return False
+
+
+def _to_ue_enum(value, enum_type):
+    try:
+        return enum_type.cast(value)
+    except Exception:
+        return list(enum_type)[value]
+
+
+def _has_int_arg(args, kwargs):
+    return any(isinstance(v, int) and not isinstance(v, bool) for v in args) or \
+           any(isinstance(v, int) and not isinstance(v, bool) for v in kwargs.values())
+
+
+@lru_cache(maxsize=256)
+def parse_ue_method_args(doc):
+    """解析UE函数的参数类型"""
+    if not doc:
+        return ()
+    match = _UE_ARGS_SECTION.search(doc)
+    if not match:
+        return ()
+    return tuple((name, _resolve_ue_type(type_str)) for name, type_str in _UE_ARG_LINE.findall(match.group(1)))
+
+
+def convert_ue_call_args(args, kwargs, doc):
+    """将int类型参数转换为对应的UE枚举值"""
+    if not _has_int_arg(args, kwargs):
+        return args, kwargs
+    specs = parse_ue_method_args(doc or '')
+    if not specs:
+        return args, kwargs
+    names = [name for name, _ in specs]
+    types = [typ for _, typ in specs]
+    args = list(args)
+    for i, value in enumerate(args):
+        if i < len(types) and isinstance(value, int) and not isinstance(value, bool) and _is_ue_enum(types[i]):
+            args[i] = _to_ue_enum(value, types[i])
+    kwargs = dict(kwargs)
+    for key, value in kwargs.items():
+        if key in names and isinstance(value, int) and not isinstance(value, bool):
+            typ = types[names.index(key)]
+            if _is_ue_enum(typ):
+                kwargs[key] = _to_ue_enum(value, typ)
+    return tuple(args), kwargs
+
+
+def wrap_ue_method(method):
+    """包装UE函数，将int类型参数转换为对应的UE枚举值"""
+    doc = getattr(method, '__doc__', None)
+    def wrapper(*args, **kwargs):
+        args, kwargs = convert_ue_call_args(args, kwargs, doc)
+        return method(*args, **kwargs)
+    return wrapper

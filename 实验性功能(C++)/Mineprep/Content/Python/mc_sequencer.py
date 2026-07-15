@@ -66,6 +66,22 @@ def _get_active_sequence():
     return sequence
 
 
+def sequencer_frame(sequence=None):
+    sequence = resolve_sequence(sequence)
+    if not sequence:
+        throw('未打开 Level Sequence，请先在 Sequencer 中打开或聚焦一个序列')
+    return _resolve_frame(None, sequence)
+
+
+def sequencer_time(sequence=None):
+    sequence = resolve_sequence(sequence)
+    if not sequence:
+        throw('未打开 Level Sequence，请先在 Sequencer 中打开或聚焦一个序列')
+    frame_number = _resolve_frame(None, sequence)
+    rate = sequence.get_display_rate()
+    return frame_number * rate.denominator / rate.numerator
+
+
 def _resolve_frame(time, sequence):
     if time is None:
         playback = unreal.LevelSequenceEditorBlueprintLibrary.get_local_position(time_unit=_TIME_UNIT)
@@ -444,10 +460,63 @@ def labels_for(objects, sequence=None):
     return [obj.get_name() for obj in objects]
 
 
+def _filter_tracks(tracks, name=None, ctx=None):
+    tracks = list(tracks)
+    if not name:
+        return tracks
+    if isinstance(name, type):
+        return [track for track in tracks if isinstance(track, name)]
+    if isinstance(name, str):
+        pattern = name if '*' in name else f'*{name}*'
+        if ctx is None:
+            ctx = _build_label_context(resolve_sequence())
+        result = []
+        for track in tracks:
+            label = label_track(track, ctx)
+            short = _track_short_name(track)
+            internal = ''
+            try:
+                internal = track.get_name()
+            except Exception:
+                pass
+            if (fnmatch.fnmatch(label, pattern)
+                    or fnmatch.fnmatch(short, pattern)
+                    or (internal and fnmatch.fnmatch(internal, pattern))):
+                result.append(track)
+        return result
+    if callable(name):
+        return [track for track in tracks if name(track)]
+    return []
+
+
+def _filter_sections(sections, name=None, ctx=None):
+    sections = list(sections)
+    if not name:
+        return sections
+    if isinstance(name, type):
+        return [section for section in sections if isinstance(section, name)]
+    if isinstance(name, str):
+        pattern = name if '*' in name else f'*{name}*'
+        if ctx is None:
+            ctx = _build_label_context(resolve_sequence())
+        return [
+            section for section in sections
+            if fnmatch.fnmatch(label_section(section, ctx), pattern)
+        ]
+    if callable(name):
+        return [section for section in sections if name(section)]
+    return []
+
+
 def filter_items(items, name=None):
     items = list(items)
-    if not name:
+    if not items or not name:
         return items
+    sample = items[0]
+    if isinstance(sample, unreal.MovieSceneTrack):
+        return _filter_tracks(items, name)
+    if isinstance(sample, unreal.MovieSceneSection):
+        return _filter_sections(items, name)
     if isinstance(name, type):
         return [item for item in items if isinstance(item, name)]
     if isinstance(name, str):
@@ -556,24 +625,24 @@ def gather_tracks(source, name=None):
     if source is None:
         return []
     if isinstance(source, unreal.MovieSceneTrack):
-        return filter_items([source], name)
+        return _filter_tracks([source], name)
     if is_binding(source):
-        return filter_items(_tracks_from_bindings([source]), name)
+        return _filter_tracks(_tracks_from_bindings([source]), name)
     if isinstance(source, unreal.LevelSequence):
-        return filter_items(list(_iter_all_tracks(source)), name)
+        return _filter_tracks(list(_iter_all_tracks(source)), name)
     if isinstance(source, Iterable) and not isinstance(source, (str, bytes)):
         items = list(source)
         if not items:
             return []
         if isinstance(items[0], unreal.MovieSceneTrack):
-            return filter_items(items, name)
+            return _filter_tracks(items, name)
         if is_binding(items[0]):
-            return filter_items(_tracks_from_bindings(items), name)
+            return _filter_tracks(_tracks_from_bindings(items), name)
         if isinstance(items[0], unreal.LevelSequence):
             tracks = []
             for seq in items:
                 tracks.extend(gather_tracks(seq))
-            return filter_items(tracks, name)
+            return _filter_tracks(tracks, name)
     return []
 
 
@@ -581,20 +650,20 @@ def gather_sections(source, name=None):
     if source is None:
         return []
     if isinstance(source, unreal.MovieSceneSection):
-        return filter_items([source], name)
+        return _filter_sections([source], name)
     if isinstance(source, unreal.MovieSceneTrack):
-        return filter_items(source.get_sections(), name)
+        return _filter_sections(source.get_sections(), name)
     if isinstance(source, Iterable) and not isinstance(source, (str, bytes)):
         items = list(source)
         if not items:
             return []
         if isinstance(items[0], unreal.MovieSceneSection):
-            return filter_items(items, name)
+            return _filter_sections(items, name)
         if isinstance(items[0], unreal.MovieSceneTrack):
             sections = []
             for track in items:
                 sections.extend(track.get_sections())
-            return filter_items(sections, name)
+            return _filter_sections(sections, name)
     return []
 
 

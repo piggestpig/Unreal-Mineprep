@@ -15,7 +15,6 @@ class MCpath:
     plugin: str = unreal.Paths.project_plugins_dir()
     mineprep: str = game + 'Mineprep/'
     config: str = mineprep + 'Mineprep_config.txt'
-    hotkey: str = '/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键'
     installer: str = ''
     blocks: str = ''
     cache: str = project + 'cache/'
@@ -34,6 +33,8 @@ class wclass:
     textbox: type = unreal.EditableTextBox
     MCsection: type = uclass('/Game/Mineprep/插件贴图/小控件/折叠框.折叠框')
     prop: type = unreal.SinglePropertyView
+
+    mod_panel = uclass('/Game/Mineprep/插件贴图/小控件/MOD自定义面板.MOD自定义面板')
 
 
 class ConfigNode:

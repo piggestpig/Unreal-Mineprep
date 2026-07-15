@@ -360,7 +360,7 @@ def parse_structure(filepath='', center=True, cull=0):
 
     # 核心转换：将 center 参数传递给转换逻辑
     ue_data = convert_to_unreal_transforms(sparse_dict, center=center)
-    print(pformat(ue_data))
+    unreal.log(pformat(ue_data))
 
     return ue_data
 
@@ -445,7 +445,7 @@ def structure_to_tex(ue_data, name='structure', fp32=True):
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(mapping_data, f, indent=4, ensure_ascii=False)
         
-    print(f"成功导出贴图！\n位置图: {bpt_path}\n旋转图: {brt_path}\n索引表: {json_path}")
+    unreal.log(f"成功导出贴图！\n位置图: {bpt_path}\n旋转图: {brt_path}\n索引表: {json_path}")
 
     #导入引擎
     BPT_Tex = _run_import_task(_make_import_task(bpt_path, paths.game + f'mc/structure'))[0]

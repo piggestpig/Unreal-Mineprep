@@ -149,14 +149,12 @@ Mineprep 0.5 使用 Windows + UE5.7 开发，建议在此环境下使用。其�
 > · 可交互3D水池非常不稳定，产生剧烈的自碰撞  
 > · 没有DLSS等超分辨率插件，默认使用引擎自带的TSR，拖影严重且性能差，空场景占用6ms比光追还慢  
 > · 缺少nDisplay，不支持3D立体渲染，安装实验性功能才后有初步的3D渲染功能  
-> · 缺少tkinter，无法显示快捷键提示等面板  
 > · Mac的文件夹可以随意摆放文件位置，渲染后好像要向下滚动才能在底部看到视频  
 > · 生成器子面板的排序和Windows不一样，好像是python sort的问题，反正中文名都没啥顺序，就当特性好了  
 > · 快捷键的Ctrl似乎会变成Cmd，远程连接时一个快捷键也没按出来，本地使用应该没问题
 
 > ⚠️  
-> Linux使用E5+64G+3090的服务器测试，只简短地测过一次  
-> · 除了缺少tkinter外，暂时没发现大问题  
+> Linux使用E5+64G+3090的服务器测试，只简短地测过一次，没发现什么大问题  
 > · E5实在是太太太慢了，别看有18个核心，编译着色器竟然花了半小时，进编辑器只有四五十帧qwq （我第一次直观感受到单核性能的重要性）  
 > · 真的有人用linux做动画吗？
 
@@ -201,6 +199,67 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
 
 
 ## 版本更新
+
+#### 26w28a
+- 本周为Mineprep Python API添加了许多功能，支持像Blender一样创建UI界面，同时为“模组”打下基础。展望未来，我们将以模组的形式提供扩展功能，这不需要重新安装插件，而且体积小、开发快
+- 由于Mineprep Wiki一直没更新，这里将直接展示几个python示例。在命令行中运行mineprep.ui函数，即可快速创建ui界面：  
+  `mineprep.ui("""`
+  ```py
+  layout.text("第1行文字")
+  layout.text("第2行文字")
+  row = layout.row()
+  row.text("并排文字1")
+  row.text("并排文字2")
+  """)
+  ```
+- 用PropertyGroup定义参数集，它会自动注册，随后能在别处使用：  
+  `mineprep.ui("""`
+  ```py
+  class MyProps(mineprep.PropertyGroup):
+    a: int
+    b: int = 1
+    c = 1
+    d: float = (0, {'UIMin': 0, 'UIMax': 10})
+    e: str = "Hello, Mineprep!"
+    f: unreal.Object
+
+  layout.prop(MyProps, "a", "整数")
+  layout.prop(MyProps, "b", "整数，带默认值")
+  layout.prop(MyProps, "c", "整数，从默认值推断类型")
+  layout.prop(MyProps, "d", "小数，通过 (值,meta字典) 定义元数据")
+  layout.prop(MyProps, "e", "字符串")
+  layout.prop(MyProps, "f", "对象")
+
+  layout.button("点击打印字符串", align=(1,1),
+    on_clicked=lambda: mineprep.prints(MyProps.e)
+  )
+
+  #显示所有属性
+  layout.prop(MyProps)
+  """)
+  ```
+- 编写大型程序时，可以使用mineprep.Mod类和其中的self.layout，在创建实例时自动注册UI界面：
+  ```py
+  class MyMod(mineprep.Mod):
+    def __init__(self):
+        layout = self.layout
+        layout.text("在类中编程能看到IDE提示")
+
+  MyMod()
+  ```  
+  如果模组不需要UI界面，可以重载__new__方法，此时self.layout的默认值为None
+- 快捷键提示面板现已改用Mineprep Python API编写，不再依赖tkinter，理论上能在Mac和Linux上显示。点击第一列的按钮可直接触发快捷键，即使未安装实验性功能也能这样“使用”它了。整个窗口可停靠在任意位置，底部的滑块能调整UI界面缩放
+- 由于UE5.7缺少关键的编辑器函数，现在无法保证UI界面唯一存在，我们将在UE5.8完善整个模组系统。
+
+
+#### 26w27a
+- 改进了导入世界功能，现在始终会自动准备场景，此选项已隐藏。导入nbt/mcstructure/schematics时，能选择内部剔除和导入方式（CPU实例化方块 / GPU PCG / GPU粒子）
+- 新增`动态结构粒子`，由动态地形粒子简化而来，从MC结构纹理中读取方块的位置和旋转，非常高效，并且能和效应器一起使用。
+- 继续开发Mineprep Python API，加入了sequencer/关键帧等功能
+- 修复了单面材质启用植物摇摆时的阴影问题
+- 修复了插件启动时未注册快捷键的bug
+- 修复了爆炸粒子和营火烟雾粒子无法录制缓存的bug。烈焰人粒子仍然保留轻量级发射器
+
 
 #### 26w26a
 - 在导入世界的选项中新增了实验性的`nbt`，`mcstructure`和`schematics`选项。本周重点改进了导入程序，但是仍然有一些问题

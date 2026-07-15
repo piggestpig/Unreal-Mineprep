@@ -41,6 +41,6 @@ def spawner(step=200, offset=(0,0,0)):
     for pos, name in options.items():
         if name == -1 or name == '-1':
             continue
-        print(f'生成 {name} 于 {pos}')
+        unreal.log(f'生成 {name} 于 {pos}')
         mineprep.spawn_mob(name, pos)
         yield

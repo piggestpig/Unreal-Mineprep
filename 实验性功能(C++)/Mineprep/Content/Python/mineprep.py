@@ -2,52 +2,41 @@ import unreal
 import os
 import re
 import json
+import builtins
 from collections.abc import Iterable
 from pprint import pformat
 from pathlib import Path
+from typing import Any
 
-import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config, mc_sequencer
+import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
+import mc_sequencer, mc_widget, mc_mod
+import mc_sequencer as mcseq
 from mc_importer import import_block, import_item, resolve_block_json_path
 from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
                       enum, asynctask, askopenfilename, set_actor_label, select_actors,
-                      lazy_import, safe)
+                      lazy_import, safe, undo, get_hotkey_object, construct, uasset, copy)
 from mc_prep import prep_texture, load_mcprep_data, colorize_material
 from mc_localization import (language, KernelLanguage, LocalizationCache,
-                             loctext, nsloctext, loctable_col, bilingual)
+                             loctext, nsloctext, loctable_col, bilingual, tooltip)
 from mc_structure import parse_structure, structure_to_tex
 from mc_config import config, paths, wclass
-from mc_sequencer import (keyframe, resolve_sequence, gather_bindings, gather_tracks,
-                          gather_sections, gather_channels, gather_keys, labels_for,
-                          sequence_label, is_binding)
+from mc_sequencer import keyframe
+from mc_widget import Layout, PropertyGroup, add_widget, ui
+from mc_mod import mods, Mod
 
-HotkeyObjCache = None
+
 WidgetsCache = {}
 ActorCache = None
 SpawnIDCache = None
 SpawnNameCache = None
 
-def get_hotkey_object(reload=False):
-    global HotkeyObjCache
-    if HotkeyObjCache and not reload:
-        return HotkeyObjCache
 
-    loaded_class = uclass(paths.hotkey)
-    if loaded_class:
-        hotkey_object = unreal.new_object(loaded_class)
-        HotkeyObjCache = hotkey_object
-        return hotkey_object
-
-    return None
 
 ####################################################################################
 
-default_help_text = bilingual(
-    '前往https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API查看更多信息',
-    'Go to https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API for more information'
-)
-
 def help():
-    return prints(default_help_text)
+    """打印Mineprep Python API的默认提示"""
+    return prints(tooltip('help'), duration=5)
 
 class helper:
     def __init__(self, func):
@@ -58,62 +47,94 @@ class helper:
         return lambda: self.func(target)
 
 
+class CallableList(list):
+    def __call__(self, *args, **kwargs):
+        return self
+
+
 class MineprepAPIHandle:
-    class_help = ''
-    inst_help = ''
+    """对象包装器，提供语法糖"""
+    target: Any = None
+    label: str = None
+    class_help: str = ''
+    inst_help: str = ''
 
     @helper
     def help(obj):
+        """打印这个类的帮助信息，在实例上调用help有时能得到专属信息"""
         if isinstance(obj, type):
-            text = obj.class_help or f'{obj} {default_help_text}'
+            builtins.help(obj)
+            text = obj.class_help or f'{obj!r}\n{tooltip("help")}'
         else:
-            text = obj.__class__.inst_help or f'{obj} {default_help_text}'
-        return prints(text)
+            builtins.help(obj.__class__)
+            text = obj.__class__.inst_help or f'{obj!r}\n{tooltip("help")}'
+        return prints(text, color=unreal.LinearColor(0, 1, 0, 1), duration=5)
 
     def __init__(self, target, label=''):
+        """设置包装的对象为target，对象名称为label。可通过.target直接访问对象"""
         self.target = target
         self.label = label
 
-    # MineprepAPIHandle[target] 先调用子类init，然后返回 self.target
+    def __str__(self):
+        return pformat(self.label)
+    
+    def __repr__(self):
+        return f'<mineprep.{self.__class__.__name__} object of ' + pformat(self.label) + '>'
+
     def __class_getitem__(cls, target):
+        """直接使用类下标[...]时，先调用init, 然后返回self.target"""
         return cls(target).target
 
-    # 调用不存在的属性或函数时，自动转发到target，支持数组
+    @undo
     def __getattr__(self, name):
+        """调用不存在的属性或函数时, 自动转发到target, 支持数组，能自动转换整数为枚举"""
         if isinstance(self.target, Iterable):
             if not self.target:
-                return []
-            if callable(getattr(self.target[0], name)):
+                return CallableList()
+            method = getattr(self.target[0], name)
+            if callable(method):
+                doc = getattr(method, '__doc__', None)
                 def wrapper(*args, **kwargs):
+                    args, kwargs = mc_utils.convert_ue_call_args(args, kwargs, doc)
                     return [getattr(t, name)(*args, **kwargs) for t in self.target]
                 return wrapper
-            else:
-                return [getattr(t, name) for t in self.target]
+            return [getattr(t, name) for t in self.target]
 
-        return getattr(self.target, name)
+        attr = getattr(self.target, name)
+        return mc_utils.wrap_ue_method(attr) if callable(attr) else attr
 
-    def get(self, prop=None):
+    def get(self, prop: str=None):
+        """获取属性值，支持泛型"""
         pass
 
-    def get_value(self, prop=None):
+    def get_value(self, prop: str=None):
+        """获取属性值，转换为浮点数"""
         return float(self.get(prop))
     
-    def get_string(self, prop=None):
+    def get_string(self, prop: str=None):
+        """获取属性值，转换为字符串"""
         return str(self.get(prop))
 
-    def set(self, prop=None, value=None):
+    @undo
+    def set(self, prop: str=None, value: Any=None):
+        """设置属性值，支持泛型"""
         pass
 
-    def set_string(self, prop=None, value=None):
+    @undo
+    def set_string(self, prop: str=None, value: str=None):
+        """用字符串设置属性值"""
         return self.set(prop, str(value))
 
-    def set_value(self, prop=None, value=None):
+    @undo
+    def set_value(self, prop:str=None, value:float=None):
+        """用浮点数设置属性值"""
         return self.set(prop, float(value))
 
 ######################################################################################
 
 class MineprepAddonHandle(MineprepAPIHandle):
-    def get(self, prop=None):
+    def get(self, prop: type=None):
+        """获取属性值，自动转换为prop类型；如果target是数组，则返回数组"""
         value = None
         cast_type = prop if isinstance(prop, type) else None
         type_str = cast_type.__name__ if cast_type else str(prop)
@@ -158,19 +179,21 @@ class MineprepAddonHandle(MineprepAPIHandle):
             pass
         return cast_type(value) if cast_type else value
 
-    def get_value(self, prop=None):
+    def get_value(self, prop: type=None):
         return float(self.get(prop))
 
-    def get_string(self, prop=None):
+    def get_string(self, prop: type=None):
         return str(self.get(prop))
 
     #############################################################################################
 
     def trigger(self, name: str = ''):
+        """触发按钮"""
         trigger_name = name if name else self.label
         return get_hotkey_object().call_method('Trigger', (self.target, str(trigger_name)))
 
     def click(self, index: int = -1):
+        """模拟点击按钮, -1左键, 0中键, 1右键, 2双击"""
         return get_hotkey_object().call_method('Click', (self.target, int(index)))
 
     def set(self, value = ''):
@@ -178,7 +201,7 @@ class MineprepAddonHandle(MineprepAPIHandle):
             return self.set_value(value)
         return self.set_string(str(value))
 
-    def set_string(self, value: str =''):
+    def set_string(self, value: str = ''):
         value = str(value)
         if cast(self.target, wclass.checkbox):
             if value.lower() in ('true', '1'):
@@ -206,11 +229,10 @@ class MineprepAddonHandle(MineprepAPIHandle):
             prop_name = self.target.get_property_name()
             outer_widget = unreal.UserWidgetFunctionLibrary.get_outer_user_widget(self.target)
             value = eval(value)
-            print(outer_widget, prop_name, value)
+            unreal.log(f"设置属性 {prop_name} 的值为 {value}")
             outer_widget.set_editor_property(prop_name, value)
             self.target.on_property_changed.broadcast(prop_name)
             return True
-
 
     def set_value(self, value: float = 0.0):
         if cast(self.target, wclass.checkbox):
@@ -227,8 +249,8 @@ class MineprepAddonHandle(MineprepAPIHandle):
         elif cast(self.target, wclass.textbox):
             return self.set_string(str(value))
 
-
     def select(self, index: int = 0):
+        """用整数设置选项"""
         if cast(self.target, wclass.checkbox):
             state = unreal.CheckBoxState.UNDETERMINED
             if index > 0:
@@ -276,19 +298,13 @@ class panel(MineprepAddonHandle):
         target = None
         if not name:
             id_cls_map = {k:bpclass(v).get_name() for k,v in WidgetsCache.items()}
-            prints(bilingual('【unreal.mineprep.panel() 可用的对象->类别】',
-                'Available objects -> classes for unreal.mineprep.panel()'),
-                id_cls_map)
+            prints(tooltip('所有插件面板'), id_cls_map)
             return
 
         target = WidgetsCache.get(name)
         if not target:
             candidate = [k for k in WidgetsCache.keys() if name.lower() in k.lower()]
-            warn(bilingual(f'未找到"{name}", 运行 unreal.mineprep.panel() 在日志中打印所有控件',
-                f'No widget found for "{name}", run unreal.mineprep.panel() to print all available widgets'),
-                '---------------',
-                bilingual('你可能在寻找:', 'You may be looking for:'),
-                candidate)
+            warn(tooltip('未找到面板', name), '---------------', tooltip('你可能在寻找'), candidate)
         super().__init__(target, label)
 
 class toolbar(MineprepAddonHandle):
@@ -314,7 +330,7 @@ class MineprepWorldHandle(MineprepAPIHandle):
             return [target[i] for i in key]
         return target[key]
 
-    @classmethod
+    @undo
     def __class_getitem__(cls, key):
         if isinstance(key, (int, slice)) or (isinstance(key, tuple) and (not key or isinstance(key[0], int))):
             return cls._pick(cls().target, key, cls._collection)
@@ -323,17 +339,192 @@ class MineprepWorldHandle(MineprepAPIHandle):
     def __getitem__(self, key):
         return self._pick(self.target, key, self._collection)
 
-    def __str__(self):
-        return pformat(self.label)
-    
-    def __repr__(self):
-        return f'<mineprep.{self.__class__.__name__} object of ' + pformat(self.label) + '>'
-    
-    def get(self, prop=''):
+    def get(self, prop: str):
         return self.get_editor_property(prop)
 
-    def set(self, prop='', value=''):
+    @undo
+    def set(self, prop: str, value: Any):
+        if isinstance(value, int):
+            values = self.get_editor_property(prop)
+            values = values if isinstance(values, Iterable) else [values]
+            enums = [v for v in values if isinstance(v, unreal.EnumBase)]
+            if enums:
+                var = enums[0]
+                value = enum(var)[value]
         return self.set_editor_property(prop, value)
+    
+    @undo
+    def key(self, prop: str='', value: Any=None, time: int|float=None):
+        """在当前时刻对指定属性打关键帧。
+        提供value时会先设置值，然后打关键帧。
+        如果重载时间time，传入int表示帧数，传入float表示秒数。
+        """
+        if isinstance(self.target, Iterable):
+            return [keyframe(t, prop, value, time) for t in self.target]
+        return keyframe(self.target, prop, value, time)
+
+
+class actor(MineprepWorldHandle):
+    def __init__(self, name=unreal.Actor):
+        target = None
+        if isinstance(name, unreal.Actor):
+            target = name
+        elif isinstance(name, type):
+            target = unreal.GameplayStatics.get_actor_of_class(world(), name)
+        else:
+            actors_list = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
+            if isinstance(name, str):
+                name = f'*{name}*' if '*' not in name else name
+                actors = unreal.EditorFilterLibrary.by_actor_label(actors_list, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
+                target = next((a for a in actors if a.get_actor_label() == name), None)
+                if not target and actors:
+                    target = actors[0]
+            elif callable(name):
+                target = next((a for a in actors_list if name(a)), None)
+        super().__init__(target, target.get_actor_label() if target else '')
+
+        class ComponentHandle(component):
+            def __init__(sub_self, name=None):
+                comp_target = component.find(self.target, name)
+                super().__init__(comp_target)
+
+        class ComponentsHandle(components):
+            def __init__(sub_self, name=None):
+                comps_target = components.find(self.target, name)
+                super().__init__(comps_target)
+
+        class MaterialsHandle(materials):
+            def __init__(sub_self, name=None):
+                comps = self.target.get_components_by_class(unreal.MeshComponent) if self.target else []
+                super().__init__(materials.gather_materials(comps, name))
+
+        self.component = ComponentHandle
+        self.components = ComponentsHandle
+        self.materials = MaterialsHandle
+        self.comp = ComponentHandle
+        self.comps = ComponentsHandle
+        self.mats = MaterialsHandle
+
+
+class actors(MineprepWorldHandle):
+    _collection = True
+
+    def __init__(self, name=unreal.Actor):
+        target = []
+        if isinstance(name, unreal.Actor):
+            target = [name]
+        elif isinstance(name, Iterable) and not isinstance(name, (str, bytes, type)):
+            target = list(name)
+        elif isinstance(name, type):
+            target = unreal.GameplayStatics.get_all_actors_of_class(world(), name)
+        else:
+            actors_list = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
+            if isinstance(name, str):
+                name = f'*{name}*' if '*' not in name else name
+                target = unreal.EditorFilterLibrary.by_actor_label(actors_list, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
+            elif callable(name):
+                target = [a for a in actors_list if name(a)]
+        super().__init__(target, [a.get_actor_label() for a in target])
+
+        class ComponentHandle(components):  # 多个 Actor 各取一个组件, 返回的仍是组件数组
+            def __init__(sub_self, name=None):
+                results = [comp for a in self.target if (comp := component.find(a, name))]
+                super().__init__(results)
+
+        class ComponentsHandle(components): # 多个 Actor 各取多个组件, 返回组件数组
+            def __init__(sub_self, name=None):
+                results = []
+                for a in self.target:
+                    results.extend(components.find(a, name))
+                super().__init__(results)
+
+        class MaterialsHandle(materials):
+            def __init__(sub_self, name=None):
+                comps = [c for a in self.target for c in a.get_components_by_class(unreal.MeshComponent)]
+                super().__init__(materials.gather_materials(comps, name))
+
+        self.component = ComponentHandle
+        self.components = ComponentsHandle
+        self.materials = MaterialsHandle
+        self.comp = ComponentHandle
+        self.comps = ComponentsHandle
+        self.mats = MaterialsHandle
+
+
+class component(MineprepWorldHandle):
+    def __init__(self, target=None):
+        super().__init__(target, target.get_name() if target else '')
+
+        class MaterialsHandle(materials):
+            def __init__(sub_self, name=None):
+                comps = [self.target] if isinstance(self.target, unreal.MeshComponent) else []
+                super().__init__(materials.gather_materials(comps, name))
+
+        self.materials = MaterialsHandle
+        self.mats = MaterialsHandle
+
+    @staticmethod
+    def find(actor_obj, name):
+        """静态方法：从单个 Actor 中提取符合条件的单个组件"""
+        if not actor_obj:
+            return None
+        if not name:
+            return actor_obj.root_component
+        if isinstance(name, type):
+            return actor_obj.get_component_by_class(name)
+        
+        comps = actor_obj.get_components_by_class(unreal.ActorComponent)
+        if isinstance(name, str):
+            name = f'*{name}*' if '*' not in name else name
+            filtered_comps = unreal.EditorFilterLibrary.by_id_name(comps, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
+            comp = next((c for c in filtered_comps if c.get_name() == name), None)
+            if not comp and filtered_comps:
+                comp = filtered_comps[0]
+            return comp
+        if callable(name):
+            return next((c for c in comps if name(c)), None)
+        return None
+
+
+class components(MineprepWorldHandle):
+    _collection = True
+
+    def __init__(self, target=None):
+        if isinstance(target, unreal.ActorComponent):
+            target = [target]
+        elif isinstance(target, Iterable) and not isinstance(target, (str, bytes)):
+            target = list(target)
+        else:
+            target = []
+        super().__init__(target, [c.get_name() for c in target])
+
+        class MaterialsHandle(materials):
+            def __init__(sub_self, name=None):
+                super().__init__(materials.gather_materials(self.target, name))
+
+        self.materials = MaterialsHandle
+        self.mats = MaterialsHandle
+
+    @staticmethod
+    def find(actor_obj, name):
+        """静态方法：从单个 Actor 中提取符合条件的所有组件列表"""
+        if not actor_obj:
+            return []
+        if not name:
+            return actor_obj.get_components_by_class(unreal.ActorComponent)
+        if isinstance(name, type):
+            return actor_obj.get_components_by_class(name)
+        
+        comps = actor_obj.get_components_by_class(unreal.ActorComponent)
+        if isinstance(name, str):
+            name = f'*{name}*' if '*' not in name else name
+            return unreal.EditorFilterLibrary.by_id_name(comps, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
+        if callable(name):
+            return [c for c in comps if name(c)]
+        return []
+
+
+
 
 
 class materials(MineprepWorldHandle):
@@ -417,189 +608,42 @@ class materials(MineprepWorldHandle):
         results = [self.get_material_param(m, param) for m in self.target]
         return results[0] if len(self.target) == 1 else results
 
-    def set(self, param='', value=''):
+    @undo
+    def set(self, param: str, value: Any):
         for m in self.target:
             self.set_material_param(m, param, value)
         return self
 
-
-class component(MineprepWorldHandle):
-    def __init__(self, target=None):
-        super().__init__(target, target.get_name() if target else '')
-
-        class MaterialsHandle(materials):
-            def __init__(sub_self, name=None):
-                comps = [self.target] if isinstance(self.target, unreal.MeshComponent) else []
-                super().__init__(materials.gather_materials(comps, name))
-
-        self.materials = MaterialsHandle
-        self.mats = MaterialsHandle
-
-    @staticmethod
-    def find(actor_obj, name):
-        """静态方法：从单个 Actor 中提取符合条件的单个组件"""
-        if not actor_obj:
-            return None
-        if not name:
-            return actor_obj.root_component
-        if isinstance(name, type):
-            return actor_obj.get_component_by_class(name)
-        
-        comps = actor_obj.get_components_by_class(unreal.ActorComponent)
-        if isinstance(name, str):
-            name = f'*{name}*' if '*' not in name else name
-            filtered_comps = unreal.EditorFilterLibrary.by_id_name(comps, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
-            comp = next((c for c in filtered_comps if c.get_name() == name), None)
-            if not comp and filtered_comps:
-                comp = filtered_comps[0]
-            return comp
-        if callable(name):
-            return next((c for c in comps if name(c)), None)
-        return None
-
-
-class components(MineprepWorldHandle):
-    _collection = True
-
-    def __init__(self, target=None):
-        if isinstance(target, unreal.ActorComponent):
-            target = [target]
-        elif isinstance(target, Iterable) and not isinstance(target, (str, bytes)):
-            target = list(target)
-        else:
-            target = []
-        super().__init__(target, [c.get_name() for c in target])
-
-        class MaterialsHandle(materials):
-            def __init__(sub_self, name=None):
-                super().__init__(materials.gather_materials(self.target, name))
-
-        self.materials = MaterialsHandle
-        self.mats = MaterialsHandle
-
-    @staticmethod
-    def find(actor_obj, name):
-        """静态方法：从单个 Actor 中提取符合条件的所有组件列表"""
-        if not actor_obj:
-            return []
-        if not name:
-            return actor_obj.get_components_by_class(unreal.ActorComponent)
-        if isinstance(name, type):
-            return actor_obj.get_components_by_class(name)
-        
-        comps = actor_obj.get_components_by_class(unreal.ActorComponent)
-        if isinstance(name, str):
-            name = f'*{name}*' if '*' not in name else name
-            return unreal.EditorFilterLibrary.by_id_name(comps, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
-        if callable(name):
-            return [c for c in comps if name(c)]
-        return []
-
-
-class actor(MineprepWorldHandle):
-    def __init__(self, name=unreal.Actor):
-        target = None
-        if isinstance(name, unreal.Actor):
-            target = name
-        elif isinstance(name, type):
-            target = unreal.GameplayStatics.get_actor_of_class(world(), name)
-        else:
-            actors_list = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
-            if isinstance(name, str):
-                name = f'*{name}*' if '*' not in name else name
-                actors = unreal.EditorFilterLibrary.by_actor_label(actors_list, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
-                target = next((a for a in actors if a.get_actor_label() == name), None)
-                if not target and actors:
-                    target = actors[0]
-            elif callable(name):
-                target = next((a for a in actors_list if name(a)), None)
-        super().__init__(target, target.get_actor_label() if target else '')
-
-        class ComponentHandle(component):
-            def __init__(sub_self, name=None):
-                comp_target = component.find(self.target, name)
-                super().__init__(comp_target)
-
-        class ComponentsHandle(components):
-            def __init__(sub_self, name=None):
-                comps_target = components.find(self.target, name)
-                super().__init__(comps_target)
-
-        class MaterialsHandle(materials):
-            def __init__(sub_self, name=None):
-                comps = self.target.get_components_by_class(unreal.MeshComponent) if self.target else []
-                super().__init__(materials.gather_materials(comps, name))
-
-        self.component = ComponentHandle
-        self.components = ComponentsHandle
-        self.materials = MaterialsHandle
-        self.comp = ComponentHandle
-        self.comps = ComponentsHandle
-        self.mats = MaterialsHandle
-
-
-class actors(MineprepWorldHandle):
-    _collection = True
-
-    def __init__(self, name=unreal.Actor):
-        target = []
-        if isinstance(name, unreal.Actor):
-            target = [name]
-        elif isinstance(name, Iterable) and not isinstance(name, (str, bytes, type)):
-            target = list(name)
-        elif isinstance(name, type):
-            target = unreal.GameplayStatics.get_all_actors_of_class(world(), name)
-        else:
-            actors_list = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
-            if isinstance(name, str):
-                name = f'*{name}*' if '*' not in name else name
-                target = unreal.EditorFilterLibrary.by_actor_label(actors_list, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
-            elif callable(name):
-                target = [a for a in actors_list if name(a)]
-        super().__init__(target, [a.get_actor_label() for a in target])
-
-        class ComponentHandle(components):  # 多个 Actor 各取一个组件，返回的仍是组件数组
-            def __init__(sub_self, name=None):
-                results = [comp for a in self.target if (comp := component.find(a, name))]
-                super().__init__(results)
-
-        class ComponentsHandle(components): # 多个 Actor 各取多个组件，返回组件数组
-            def __init__(sub_self, name=None):
-                results = []
-                for a in self.target:
-                    results.extend(components.find(a, name))
-                super().__init__(results)
-
-        class MaterialsHandle(materials):
-            def __init__(sub_self, name=None):
-                comps = [c for a in self.target for c in a.get_components_by_class(unreal.MeshComponent)]
-                super().__init__(materials.gather_materials(comps, name))
-
-        self.component = ComponentHandle
-        self.components = ComponentsHandle
-        self.materials = MaterialsHandle
-        self.comp = ComponentHandle
-        self.comps = ComponentsHandle
-        self.mats = MaterialsHandle
-
 ###########################################################################
 
 class MineprepSequencerHandle(MineprepWorldHandle):
-    pass
+    def key():
+        """⚠暂不支持"""
+        return None
+
+    @staticmethod
+    def frame():
+        """获取当前播放头所在帧数"""
+        return mcseq.sequencer_frame()
+
+    @staticmethod
+    def time():
+        """获取当前播放头所在时间"""
+        return mcseq.sequencer_time()
 
 
 class sequencer(MineprepSequencerHandle):
     def __init__(self, target=None):
-        target = resolve_sequence(target)
-        super().__init__(target, sequence_label(target))
+        target = mcseq.resolve_sequence(target)
+        super().__init__(target, mcseq.sequence_label(target))
 
         class BindingsHandle(bindings):
             def __init__(sub_self, name=None):
-                super().__init__(gather_bindings(self.target, name))
+                super().__init__(mcseq.gather_bindings(self.target, name))
 
         class TracksHandle(tracks):
             def __init__(sub_self, name=None):
-                super().__init__(gather_tracks(self.target, name))
+                super().__init__(mcseq.gather_tracks(self.target, name))
 
         self.bindings = BindingsHandle
         self.tracks = TracksHandle
@@ -609,35 +653,35 @@ class bindings(MineprepSequencerHandle):
     _collection = True
 
     def __init__(self, target=None):
-        if is_binding(target):
+        if mcseq.is_binding(target):
             target = [target]
         elif isinstance(target, unreal.LevelSequence):
-            target = gather_bindings(target)
+            target = mcseq.gather_bindings(target)
         elif isinstance(target, Iterable) and not isinstance(target, (str, bytes, type)):
             items = list(target)
-            if items and is_binding(items[0]):
+            if items and mcseq.is_binding(items[0]):
                 target = items
             elif items and isinstance(items[0], unreal.LevelSequence):
-                target = [b for seq in items for b in gather_bindings(seq)]
+                target = [b for seq in items for b in mcseq.gather_bindings(seq)]
             else:
                 target = []
         elif target is None:
-            target = gather_bindings(resolve_sequence())
+            target = mcseq.gather_bindings(mcseq.resolve_sequence())
         elif isinstance(target, str):
-            target = gather_bindings(resolve_sequence(), target)
+            target = mcseq.gather_bindings(mcseq.resolve_sequence(), target)
         else:
             target = []
-        super().__init__(target, labels_for(target))
+        super().__init__(target, mcseq.labels_for(target))
 
         class TracksHandle(tracks):
             def __init__(sub_self, name=None):
-                super().__init__(gather_tracks(self.target, name))
+                super().__init__(mcseq.gather_tracks(self.target, name))
 
         self.tracks = TracksHandle
 
     @staticmethod
     def find(parent, name=None):
-        return gather_bindings(parent, name)
+        return mcseq.gather_bindings(parent, name)
 
 
 class tracks(MineprepSequencerHandle):
@@ -647,34 +691,34 @@ class tracks(MineprepSequencerHandle):
         if isinstance(target, unreal.MovieSceneTrack):
             target = [target]
         elif isinstance(target, unreal.LevelSequence):
-            target = gather_tracks(target)
+            target = mcseq.gather_tracks(target)
         elif isinstance(target, Iterable) and not isinstance(target, (str, bytes, type)):
             items = list(target)
             if items and isinstance(items[0], unreal.MovieSceneTrack):
                 target = items
-            elif items and is_binding(items[0]):
-                target = gather_tracks(items)
+            elif items and mcseq.is_binding(items[0]):
+                target = mcseq.gather_tracks(items)
             elif items and isinstance(items[0], unreal.LevelSequence):
-                target = [t for seq in items for t in gather_tracks(seq)]
+                target = [t for seq in items for t in mcseq.gather_tracks(seq)]
             else:
                 target = []
         elif target is None:
-            target = gather_tracks(resolve_sequence())
+            target = mcseq.gather_tracks(mcseq.resolve_sequence())
         elif isinstance(target, str):
-            target = gather_tracks(resolve_sequence(), target)
+            target = mcseq.gather_tracks(mcseq.resolve_sequence(), target)
         else:
             target = []
-        super().__init__(target, labels_for(target))
+        super().__init__(target, mcseq.labels_for(target))
 
         class SectionsHandle(sections):
             def __init__(sub_self, name=None):
-                super().__init__(gather_sections(self.target, name))
+                super().__init__(mcseq.gather_sections(self.target, name))
 
         self.sections = SectionsHandle
 
     @staticmethod
     def find(parent, name=None):
-        return gather_tracks(parent, name)
+        return mcseq.gather_tracks(parent, name)
 
 
 class sections(MineprepSequencerHandle):
@@ -684,32 +728,32 @@ class sections(MineprepSequencerHandle):
         if isinstance(target, unreal.MovieSceneSection):
             target = [target]
         elif isinstance(target, unreal.MovieSceneTrack):
-            target = gather_sections(target)
+            target = mcseq.gather_sections(target)
         elif isinstance(target, Iterable) and not isinstance(target, (str, bytes, type)):
             items = list(target)
             if items and isinstance(items[0], unreal.MovieSceneSection):
                 target = items
             elif items and isinstance(items[0], unreal.MovieSceneTrack):
-                target = gather_sections(items)
+                target = mcseq.gather_sections(items)
             else:
                 target = []
         elif target is None:
-            target = gather_sections(gather_tracks(resolve_sequence()))
+            target = mcseq.gather_sections(mcseq.gather_tracks(mcseq.resolve_sequence()))
         elif isinstance(target, str):
-            target = gather_sections(gather_tracks(resolve_sequence()), target)
+            target = mcseq.gather_sections(mcseq.gather_tracks(mcseq.resolve_sequence()), target)
         else:
             target = []
-        super().__init__(target, labels_for(target))
+        super().__init__(target, mcseq.labels_for(target))
 
         class ChannelsHandle(channels):
             def __init__(sub_self, name=None):
-                super().__init__(gather_channels(self.target, name))
+                super().__init__(mcseq.gather_channels(self.target, name))
 
         self.channels = ChannelsHandle
 
     @staticmethod
     def find(parent, name=None):
-        return gather_sections(parent, name)
+        return mcseq.gather_sections(parent, name)
 
 
 class channels(MineprepSequencerHandle):
@@ -719,34 +763,34 @@ class channels(MineprepSequencerHandle):
         if isinstance(target, unreal.MovieSceneScriptingChannel):
             target = [target]
         elif isinstance(target, unreal.MovieSceneSection):
-            target = gather_channels(target)
+            target = mcseq.gather_channels(target)
         elif isinstance(target, Iterable) and not isinstance(target, (str, bytes, type)):
             items = list(target)
             if items and isinstance(items[0], unreal.MovieSceneScriptingChannel):
                 target = items
             elif items and isinstance(items[0], unreal.MovieSceneSection):
-                target = gather_channels(items)
+                target = mcseq.gather_channels(items)
             else:
                 target = []
         elif target is None:
-            target = gather_channels(gather_sections(gather_tracks(resolve_sequence())))
+            target = mcseq.gather_channels(mcseq.gather_sections(mcseq.gather_tracks(mcseq.resolve_sequence())))
         elif isinstance(target, str):
-            target = gather_channels(
-                gather_sections(gather_tracks(resolve_sequence())), target,
+            target = mcseq.gather_channels(
+                mcseq.gather_sections(mcseq.gather_tracks(mcseq.resolve_sequence())), target,
             )
         else:
             target = []
-        super().__init__(target, labels_for(target))
+        super().__init__(target, mcseq.labels_for(target))
 
         class KeysHandle(keys):
             def __init__(sub_self, name=None):
-                super().__init__(gather_keys(self.target, name))
+                super().__init__(mcseq.gather_keys(self.target, name))
 
         self.keys = KeysHandle
 
     @staticmethod
     def find(parent, name=None):
-        return gather_channels(parent, name)
+        return mcseq.gather_channels(parent, name)
 
 
 class keys(MineprepSequencerHandle):
@@ -756,36 +800,36 @@ class keys(MineprepSequencerHandle):
         if isinstance(target, unreal.MovieSceneScriptingKey):
             target = [target]
         elif isinstance(target, unreal.MovieSceneScriptingChannel):
-            target = gather_keys(target)
+            target = mcseq.gather_keys(target)
         elif isinstance(target, Iterable) and not isinstance(target, (str, bytes, type)):
             items = list(target)
             if items and isinstance(items[0], unreal.MovieSceneScriptingKey):
                 target = items
             elif items and isinstance(items[0], unreal.MovieSceneScriptingChannel):
-                target = gather_keys(items)
+                target = mcseq.gather_keys(items)
             else:
                 target = []
         elif target is None:
-            target = gather_keys(
-                gather_channels(gather_sections(gather_tracks(resolve_sequence()))),
+            target = mcseq.gather_keys(
+                mcseq.gather_channels(mcseq.gather_sections(mcseq.gather_tracks(mcseq.resolve_sequence()))),
             )
         elif isinstance(target, int):
-            target = gather_keys(
-                gather_channels(gather_sections(gather_tracks(resolve_sequence()))),
+            target = mcseq.gather_keys(
+                mcseq.gather_channels(mcseq.gather_sections(mcseq.gather_tracks(mcseq.resolve_sequence()))),
                 target,
             )
         elif isinstance(target, str) or callable(target):
-            target = gather_keys(
-                gather_channels(gather_sections(gather_tracks(resolve_sequence()))),
+            target = mcseq.gather_keys(
+                mcseq.gather_channels(mcseq.gather_sections(mcseq.gather_tracks(mcseq.resolve_sequence()))),
                 target,
             )
         else:
             target = []
-        super().__init__(target, labels_for(target))
+        super().__init__(target, mcseq.labels_for(target))
 
     @staticmethod
     def find(parent, name=None):
-        return gather_keys(parent, name)
+        return mcseq.gather_keys(parent, name)
 
 ##########################################################################
 
@@ -813,24 +857,30 @@ def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None):
     return actor
 
 
-def spawn_block(target='', loc=None, rot=None, scale=None, id=None):
+def spawn_block(target='', loc=None, rot=None, scale=None, id: int=None):
+    """放置单个方块, 指定id时忽略target名称"""
     return spawn_helper('放置方块', target, loc, rot, scale, id)
 
-def spawn_item(target='', loc=None, rot=None, scale=None, id=None):
+def spawn_item(target='', loc=None, rot=None, scale=None, id: int=None):
+    """放置物品, 指定id时忽略target名称"""
     return spawn_helper('放置物品', target, loc, rot, scale, id)
 
-def spawn_mob(target='', loc=None, rot=None, scale=None, baby=False, id=None):
+def spawn_mob(target='', loc=None, rot=None, scale=None, baby=False, id: int=None):
+    """放置生物, 指定id时忽略target名称"""
     panel("生成器子面板.生物宝宝_可点击").select(int(baby))
     return spawn_helper('放置生物', target, loc, rot, scale, id)
 
-def spawn_preset(target='', loc=None, rot=None, scale=None, id=None):
+def spawn_preset(target='', loc=None, rot=None, scale=None, id: int=None):
+    """放置预设素材, 指定id时忽略target名称"""
     return spawn_helper('预设素材', target, loc, rot, scale, id)
 
-def attach(target='', loc=None, rot=None, scale=None, id=None):
+def attach(target='', loc=None, rot=None, scale=None, id: int=None):
+    """附加组件至选中项, 指定id时忽略target名称"""
     return spawn_helper('附加组件', target, loc, rot, scale, id)
 
 
 def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0,0,0)):
+    """放置多个方块为实例化方块"""
     loaded_class = uclass('/Game/Mineprep/MC_Blueprint/Core/实例化方块.实例化方块')
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
     ism = actor.root_component
@@ -849,6 +899,7 @@ def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0
 
 
 def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0):
+    """生成MC结构, gpu=1是PCG, gpu=2是粒子, cull=1按类型剔除内部实心方块, cull=2整体内部剔除"""
     map = parse_structure(filepath, cull=cull)
     filename = Path(filepath).stem
     inventory = loctable_col(6,2)
