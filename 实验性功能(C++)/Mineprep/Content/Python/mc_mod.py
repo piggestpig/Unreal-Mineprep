@@ -1,51 +1,215 @@
 import unreal
 import importlib
+import sys
+import random
+import mcvars
 from pathlib import Path
 from mc_config import wclass
 from mc_widget import Layout, copy
+from mc_utils import uclass
+
+
+def _iter_mod_names():
+    """扫描 mods/ 目录，产出模块名（如 mods.template）"""
+    mods_dir = Path(__file__).with_name('mods')
+    if not mods_dir.is_dir():
+        return
+    for entry in sorted(mods_dir.iterdir()):
+        if entry.name.startswith('_'):
+            continue
+        if entry.is_file() and entry.suffix == '.py':
+            yield f'mods.{entry.stem}'
+        elif entry.is_dir() and (entry / '__init__.py').is_file():
+            yield f'mods.{entry.name}'
+
+
+def iter_mod_modules(*, loaded_only=False):
+    """迭代 mod 模块。loaded_only=True 时只返回已在 sys.modules 中的。"""
+    for name in _iter_mod_names():
+        if loaded_only and name not in sys.modules:
+            continue
+        try:
+            yield name, importlib.import_module(name)
+        except Exception as e:
+            unreal.log_warning(f'导入 mod 失败: {name}: {e}')
+
+
+def register_mod(mod, *, force=False):
+    """注册单个 mod；默认需 EnabledByDefault 为真，成功后设置 EnabledByDefault=True"""
+    info = getattr(mod, 'mod_info', None)
+    if info is None:
+        mod.mod_info = info = {}
+    if not force and not info.get('EnabledByDefault'):
+        return False
+    register = getattr(mod, 'register', None)
+    if not callable(register):
+        return False
+    register()
+    info['EnabledByDefault'] = True
+    unreal.log(f'已注册 mod: {getattr(mod, "__name__", mod)}')
+    return True
+
+
+def unregister_mod(mod):
+    """注销单个 mod：清理 RegisteredMods/菜单，再调用模组 unregister，并设置 EnabledByDefault=False"""
+    name = getattr(mod, '__name__', str(mod))
+    try:
+        for path, cls in list(mcvars.RegisteredMods.items()):
+            if path == name or path.startswith(name + '.'):
+                cls.unregister()
+        unregister = getattr(mod, 'unregister', None)
+        if callable(unregister):
+            unregister()
+        info = getattr(mod, 'mod_info', None)
+        if info is None:
+            mod.mod_info = info = {}
+        info['EnabledByDefault'] = False
+        unreal.log(f'已注销 mod: {name}')
+        return True
+    except Exception as e:
+        unreal.log_warning(f'注销 mod 失败: {name}: {e}')
+        return False
+
+
+def register_all():
+    """扫描 mods/ 并注册 EnabledByDefault 的 mod"""
+    for _name, mod in iter_mod_modules():
+        register_mod(mod)
+
+
+def unregister_all(*, loaded_only=True):
+    """注销 mod；默认只处理已加载的模块"""
+    for _name, mod in iter_mod_modules(loaded_only=loaded_only):
+        unregister_mod(mod)
+
+
+def reloadable_mods():
+    """已加载且 mod_info.ReloadWithMineprep 为真的 mod 列表"""
+    result = []
+    for _name, mod in iter_mod_modules(loaded_only=True):
+        info = getattr(mod, 'mod_info', None) or {}
+        if info.get('ReloadWithMineprep'):
+            result.append(mod)
+    return result
+
 
 class mods():
+    @staticmethod
+    def register(mod):
+        """注册单个 mod"""
+        register_mod(mod, force=True)
+
+    @staticmethod
+    def unregister(mod):
+        """注销单个 mod"""
+        unregister_mod(mod)
 
     @staticmethod
     def register_all():
-        mods_dir = Path(__file__).with_name('mods')
-        if mods_dir.is_dir():
-            for entry in sorted(mods_dir.iterdir()):
-                if entry.name.startswith('_'):
-                    continue
-                if entry.is_file() and entry.suffix == '.py':
-                    name = f'mods.{entry.stem}'
-                elif entry.is_dir() and (entry / '__init__.py').is_file():
-                    name = f'mods.{entry.name}'
-                else:
-                    continue
-                mod = importlib.import_module(name)
-                info = getattr(mod, 'mod_info', None)
-                if info and info.get('EnabledByDefault') and callable(getattr(mod, 'register', None)):
-                    mod.register()
-                    unreal.log(f'已注册 mod: {name}')
+        """扫描 mods/ 目录并注册 EnabledByDefault 的 mod"""
+        register_all()
+
+    @staticmethod
+    def unregister_all():
+        """注销已加载的 mod"""
+        unregister_all()
 
 
 class Mod():
+    """模组基类，继承 mineprep.Mod 可创建自定义UI面板，self.layout默认是scrollbox"""
     layout: Layout = None
+    context = None
+    _public_ = False
+    _guid_ = None
+    _label_ = None
+    _root_ = 'Root'
+    _template_ = wclass.mod_panel
 
-    def __new__(cls):
-        """在/Game/mc/mods/创建同名控件蓝图"""
+    def __new__(cls, context=None):
+        """初始化layout, 默认由蓝图调用Mod(widget)"""
         instance = super().__new__(cls)
+        instance.layout = Layout(context.find_child_widget_by_name(cls._root_),
+                                 public=cls._public_) if context else Layout()
+        return instance
+
+    def __init__(self, context=None):
+        """保存 context 并调用 draw 构建界面"""
+        self.context = context
+        self.draw(context)
+
+    def draw(self, context=None):
+        """重载此方法以创建自定义UI"""
+        pass
+
+    def redraw(self):
+        """清空面板并重绘UI。不应被重载。绝不能在draw()中调用此方法，否则会陷入死循环"""
+        if self.layout:
+            self.layout.clear_children()
+        self.draw(self.context)
+
+    @classmethod
+    def bp_script(cls):
+        mod_path = f'{cls.__module__}.{cls.__name__}'
+        return f"""
+mod_class = mcvars.RegisteredMods.get('{mod_path}')
+if mod_class:
+    mod_class(context)
+else:
+    mineprep.warn(mineprep.bilingual('[未注册模组] {mod_path}', '[Unregistered Mod] {mod_path}'))
+"""
+
+    @classmethod
+    def toolbar_script(cls):
+        id = f"'{cls._guid_}'" if cls._guid_ else 'str(random.randint(0, 999999999))'
+        return f"""
+import unreal
+import random
+widget_bp = unreal.load_object(None, f"/Game/mc/mods/{cls.__name__}")
+subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
+subsystem.spawn_and_register_tab_with_id(widget_bp, {id})
+"""
+
+
+    @classmethod
+    def register(cls, open=False):
+        """注册mod并创建/更新控件蓝图；open=True 时立即打开面板"""
+        mod_path = f'{cls.__module__}.{cls.__name__}'
+        mcvars.RegisteredMods[mod_path] = cls
 
         widget_path = f"/Game/mc/mods/{cls.__name__}"
         if not unreal.EditorAssetLibrary.does_asset_exist(widget_path):
-            copy(wclass.mod_panel, widget_path)
+            copy(cls._template_, widget_path)
             unreal.log(f"已创建自定义控件蓝图: {widget_path}")
         else:
-            unreal.log(f"自定义控件蓝图已存在: {widget_path}")
+            unreal.log(f"自定义控件蓝图已存在, 更新 {widget_path}")
 
-        widget_bp = unreal.load_asset(widget_path)
-        subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
-        widget = subsystem.find_utility_widget_from_blueprint(widget_bp)
+        widget_bp = unreal.load_object(None, widget_path)
+        default_widget = unreal.get_default_object(uclass(widget_path))
+        default_widget.set_editor_property("Script", cls.bp_script())
+        default_widget.set_editor_property("TabDisplayName", cls._label_ or cls.__name__)
 
-        if widget:
-            instance.layout = Layout(widget.find_child_widget_by_name('Root'))
-        else:
-            instance.layout = Layout(widget_path)
-        return instance
+        if open:
+            id = str(cls._guid_ or random.randint(0, 999999999))
+            subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
+            subsystem.spawn_and_register_tab_with_id(widget_bp, id)
+
+        # 在顶部工具栏添加菜单项
+        mod_entry = unreal.ToolMenuEntry(
+            name= f'{cls.__module__}.{cls.__name__}',
+            type=unreal.MultiBlockType.MENU_ENTRY,
+        )
+        mod_entry.set_label(cls._label_ or cls.__name__)
+        mod_entry.set_string_command(type=unreal.ToolMenuStringCommandType.PYTHON,
+                                    custom_type='',
+                                    string=cls.toolbar_script()
+        )
+        toolbar = unreal.ToolMenus.get().find_menu("LevelEditor.MainMenu.mineprep")
+        toolbar.add_menu_entry('mods', mod_entry)
+
+    @classmethod
+    def unregister(cls):
+        """从 RegisteredMods 和工具栏菜单中移除本模组"""
+        mod_path = f'{cls.__module__}.{cls.__name__}'
+        mcvars.RegisteredMods.pop(mod_path, None)
+        menus = unreal.ToolMenus.get()
+        menus.remove_entry("LevelEditor.MainMenu.mineprep", "mods", mod_path)

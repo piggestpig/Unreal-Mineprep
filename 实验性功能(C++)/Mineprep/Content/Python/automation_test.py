@@ -25,7 +25,7 @@ def reshape(arr, dim=2):
 def coords_dict(arr, step=100, offset=(0,0,0)):
     arr = np.asarray(arr)
     result = {}
-    
+
     for idx, val in np.ndenumerate(arr):
         # 将坐标补齐为3维，并乘以步长
         coord = tuple(idx[i] * step + offset[i] if i < len(idx) else offset[i] for i in range(3))

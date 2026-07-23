@@ -7,6 +7,7 @@ from mc_config import paths
 MCprepDataCache = None
 
 def load_mcprep_data():
+    """加载并缓存 mcprep_data.json"""
     global MCprepDataCache
     if MCprepDataCache:
         return MCprepDataCache
@@ -14,7 +15,8 @@ def load_mcprep_data():
         MCprepDataCache = json.load(f)
     return MCprepDataCache
 
-def prep_texture(tex, compression=unreal.TextureCompressionSettings.TC_EDITOR_ICON):
+def prep_texture(tex, compression=unreal.TextureCompressionSettings.TC_EDITOR_ICON) -> unreal.Texture:
+    """将贴图设为最近邻过滤并刷新，适合像素风材质"""
     tex.set_editor_property('filter', unreal.TextureFilter.TF_NEAREST)
     tex.set_editor_property('compression_settings', compression)
     tex.set_editor_property('oodle_preserve_extremes', True)
@@ -22,6 +24,7 @@ def prep_texture(tex, compression=unreal.TextureCompressionSettings.TC_EDITOR_IC
     return tex
 
 def colorize_material(mat, color=None):
+    """设置材质实例“纹理颜色”；未指定时按 mcprep 去饱和色表匹配"""
     if color:
         unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(mat, '纹理颜色', color)
         return

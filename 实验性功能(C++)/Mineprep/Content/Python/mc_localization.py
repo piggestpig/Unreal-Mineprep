@@ -24,14 +24,12 @@ def language(lang=None):
 def loctext(key='', source_string=''):
     """获取本地化文本"""
     source_string = source_string or key
-    text = unreal.TextLibrary.find_text_in_live_table_advanced('UObjectDisplayNames', key, source_string)
-    return str(text) or key
+    return unreal.NSLOCTEXT('UObjectDisplayNames', key, source_string)
 
 def nsloctext(namespace='UObjectDisplayNames', key='', source_string=''):
     """按命名空间获取本地化文本"""
     source_string = source_string or key
-    text = unreal.TextLibrary.find_text_in_live_table_advanced(namespace, key, source_string)
-    return str(text) or key
+    return unreal.NSLOCTEXT(namespace, key, source_string)
 
 
 def loctable_col(block=1, lang=None):
@@ -48,10 +46,16 @@ def loctable_col(block=1, lang=None):
 def bilingual(chinese, english):
     """双语文本"""
     text = unreal.TextLibrary.find_text_in_live_table_advanced('UObjectDisplayNames', chinese, chinese)
-    if 'zh-' in unreal.InternationalizationLibrary.get_current_language():
-        return text or chinese
-    else:
-        return text or english
+    if not text:
+        polyglot = unreal.PolyglotTextData(category = unreal.LocalizedTextSourceCategory.EDITOR,
+                                   namespace = 'UObjectDisplayNames',
+                                   key = chinese,
+                                   native_string = chinese,
+                                   localized_strings = {'zh-Hans': chinese, 'en': english},
+                                   is_minimal_patch = False)
+        text = unreal.TextLibrary.polyglot_data_to_text(polyglot)
+
+    return loctext(chinese)
 
 
 class tooltip(str):

@@ -1,13 +1,13 @@
-from numpy import isin
-
 import unreal
 import os
 import re
 import subprocess
 import sys
+import mcvars
 from dataclasses import dataclass, asdict
 from pprint import pformat
 from functools import lru_cache, wraps
+from typing import Iterable
 
 HotkeyObjCache = None
 
@@ -68,6 +68,7 @@ def asynctask(func):
                 self._advance()
 
             def _tick(self, delta_time):
+                """每帧累加等待时间，到期后推进协程"""
                 # 时间轮询检查
                 if self.target_wait_time > 0.0:
                     self.elapsed_time += delta_time
@@ -80,6 +81,7 @@ def asynctask(func):
                 self._advance()
 
             def _advance(self):
+                """推进 generator；若 yield 数字则进入秒级等待"""
                 try:
                     # 关键点：接收 yield 后面的返回值
                     result = next(self.gen)
@@ -116,27 +118,115 @@ def asynctask(func):
     return wrapper
 
 
-class safe:
-    """数组包装器 safe(iterable, default=None)[id]，当索引超出范围时，返回输入的默认值或首个元素类型的默认值"""
-    def __init__(self, iterable, default=None):
-        self._data = iterable
-        self._default = default
+class List(list):
+    """改进版list：
+    1. 支持 List(1, 2, 3) 变长参数构造，也支持 List([1, 2, 3]) 迭代器构造
+    2. 调用不存在的属性或函数时, 尝试转发到内部元素，返回结果数组
+    3. 支持 [index, default] 越界安全取值
+    """
+
+    def __new__(cls, *args):
+        # 必须重写 __new__，统一返回一个空的子类实例，以此绕过内置 list() 的单参数限制
+        return super().__new__(cls)
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            arg = args[0]
+            # 判断是否为可迭代对象，同时排除字符串和字节流
+            if isinstance(arg, Iterable) and not isinstance(arg, (str, bytes)):
+                super().__init__(arg)
+            else:
+                super().__init__([arg])
+        elif len(args) > 1:
+            # 传入多个参数时，打包成的 tuple 已经是可迭代对象，直接初始化
+            super().__init__(args)
+        else:
+            super().__init__()
 
     def __getitem__(self, index):
-        try:
-            # 尝试正常获取索引值
-            return self._data[index]
-        except IndexError:
-            # 1. 如果数组为空，直接返回默认值/None
-            if not self._data:
-                return self._default
-            
-            # 2. 获取首个元素的类型，尝试获取默认值
-            first_element_type = type(self._data[0])
+        # 检测 [index, default] 双参数形式
+        if isinstance(index, tuple) and len(index) == 2:
+            real_idx, default = index
             try:
-                return self._default or first_element_type()
-            except:
-                return self._default
+                return super().__getitem__(real_idx)
+            except IndexError:
+                return default
+
+        res = super().__getitem__(index)
+        if isinstance(index, slice):
+            return type(self)(res)
+        return res
+
+    def __getattr__(self, name):
+        if not self:
+            return self
+
+        cls = type(self)
+        try:
+            first_attr = getattr(self[0], name)
+        except AttributeError as e:
+            raise AttributeError(f"'{cls.__name__}' 及其元素均无属性 '{name}'") from e
+
+        if callable(first_attr):
+            return lambda *args, **kwargs: cls(getattr(item, name)(*args, **kwargs) for item in self)
+        else:
+            return cls(getattr(item, name) for item in self)
+
+    def __call__(self, *args, **kwargs):
+        if not self:
+            return type(self)()
+        raise TypeError(f"'{type(self).__name__}' object is not callable")
+
+
+class SafeList(List):
+    """安全版List：越界不报错（默认返回None），属性不存在不报错"""
+
+    # SafeList 无需重写 __new__ 和 __init__，它们会完美继承父类 List 的新构造函数
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return super().__getitem__(index)
+        
+        if isinstance(index, tuple) and len(index) == 2:
+            return super().__getitem__(index)
+        
+        try:
+            return super().__getitem__(index)
+        except IndexError:
+            return None
+
+    def __getattr__(self, name):
+        if not self:
+            return self
+
+        cls = type(self)
+        first_has_attr = next((item for item in self if hasattr(item, name)), None)
+
+        if first_has_attr is not None and callable(getattr(first_has_attr, name)):
+            def safe_method_wrapper(*args, **kwargs):
+                res = []
+                for item in self:
+                    if hasattr(item, name):
+                        val = getattr(item, name)
+                        if callable(val):
+                            res.append(val(*args, **kwargs))
+                            continue
+                    res.append(None)
+                return cls(res)
+            return safe_method_wrapper
+
+        return cls(getattr(item, name) if hasattr(item, name) else None for item in self)
+
+
+
+def WrapList(*args):
+    """按 SafeBroadcast 构造 List 或 SafeList"""
+    return (SafeList if mcvars.SafeBroadcast else List)(*args)
+
+
+def iscollection(obj):
+    """判断对象是否为集合类型（list, tuple, set, dict等），排除字符串"""
+    return isinstance(obj, Iterable) and not isinstance(obj, (str, bytes))
 
 
 def undo(arg: str=None):
@@ -161,35 +251,58 @@ def undo(arg: str=None):
 
 
 def reload(*args):
-    """重新加载mineprep及其所有子模块；传入特定模块时，只重新加载这些模块"""
-    import importlib, types
+    """重新加载mineprep及其所有子模块；传入特定模块时，只重新加载这些模块。
+    全量重载时会先 unregister ReloadWithMineprep 的 mod，再 reload 后重新 register。
+    """
+    import importlib
+    import types
+
     if args:
         for mod in args:
             importlib.reload(mod)
             unreal.log(f'重新加载 {mod.__name__}')
         return
 
+    import mc_mod
+    reloadable = mc_mod.reloadable_mods()
+    # importlib.reload 会重置模组源码中的 mod_info，需先记住运行时 EnabledByDefault
+    enabled_names = {
+        mod.__name__
+        for mod in reloadable
+        if (getattr(mod, 'mod_info', None) or {}).get('EnabledByDefault')
+    }
+    for mod in reloadable:
+        mc_mod.unregister_mod(mod)
+
     import mineprep
+    import mc_widget
     localization_copy = mineprep.LocalizationCache
-    widgets_copy = mineprep.WidgetsCache
+    widgets_copy = mc_widget.WidgetsCache
 
     for attr in mineprep.__dict__.values():
-        if isinstance(attr, types.ModuleType) and 'mc_' in attr.__name__:
+        if isinstance(attr, types.ModuleType) and attr.__name__.startswith('mc_'):
             importlib.reload(attr)
             unreal.log(f'重新加载 {attr.__name__}')
 
     importlib.reload(mineprep)
-    unreal.log("重新加载 mineprep")
+    unreal.log('重新加载 mineprep')
     mineprep.LocalizationCache = localization_copy
-    mineprep.WidgetsCache = widgets_copy
+    mc_widget.WidgetsCache = widgets_copy
 
-    import mods
-    for attr in mods.__dict__.values():
-        if isinstance(attr, types.ModuleType):
-            info = getattr(attr, 'mod_info', None)
-            if info and info.get('ReloadWithMineprep'):
-                importlib.reload(attr)
-                unreal.log(f'重新加载 {attr.__name__}')
+
+    import mc_mod
+    for mod in reloadable:
+        try:
+            importlib.reload(mod)
+            if mod.__name__ in enabled_names:
+                info = getattr(mod, 'mod_info', None)
+                if info is None:
+                    mod.mod_info = info = {}
+                info['EnabledByDefault'] = True
+            mc_mod.register_mod(mod)
+            unreal.log(f'重新加载 {mod.__name__}')
+        except Exception as e:
+            warn(f'重新加载 {mod.__name__} 时出错: {e}')
 
 
 def enum(input: type | unreal.EnumBase):
@@ -200,30 +313,33 @@ def enum(input: type | unreal.EnumBase):
         return list(type(input))
 
 
-def world():
+def world() -> unreal.World:
     """获取当前编辑器或游戏世界"""
     subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
     return subsystem.get_editor_world() or subsystem.get_game_world()
 
 
-def prints(*args, duration=2.0, color=unreal.LinearColor(0, 0.66, 1, 1)):
+def prints(*args, duration=2.0, color=unreal.LinearColor(0, 0.66, 1, 1)) -> str:
     """在屏幕上打印多行文本"""
-    text = '\n'.join(arg if isinstance(arg, str) else pformat(arg, sort_dicts=False) for arg in args)
+    text = '\n'.join(str(arg) if isinstance(arg, (str, unreal.Text)) else pformat(arg, sort_dicts=False) for arg in args)
     unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration)
     return text
 
+
 def warn(*warnings, duration=5.0, color=unreal.LinearColor(1, 1, 0, 1)):
     """在屏幕上打印多行警告文本"""
-    text = '\n'.join(arg if isinstance(arg, str) else pformat(arg, sort_dicts=False) for arg in warnings)
+    text = '\n'.join(str(arg) if isinstance(arg, (str, unreal.Text)) else pformat(arg, sort_dicts=False) for arg in warnings)
     unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration, print_to_log=False)
     unreal.log_warning(text)
     return warnings
 
+
 def throw(*errors, duration=5.0, color=unreal.LinearColor(1, 0, 0, 1)):
     """在屏幕上打印多行错误文本并抛出异常"""
-    text = '\n'.join(arg if isinstance(arg, str) else pformat(arg, sort_dicts=False) for arg in errors)
+    text = '\n'.join(str(arg) if isinstance(arg, (str, unreal.Text)) else pformat(arg, sort_dicts=False) for arg in errors)
     unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration, print_to_log=False)
     raise RuntimeError(errors)
+
 
 def panic(title, message=''):
     """弹出提示框，由用户决定是否继续运行"""
@@ -235,6 +351,25 @@ def panic(title, message=''):
     status = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO)
     if status == unreal.AppReturnType.YES:
         throw(f'{title}: {message}')
+
+
+def dialog(title, message=''):
+    """弹出对话框"""
+    if not message:
+        message = title
+        title = '提示'
+    message = str(message)
+    title = str(title)
+    result = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO,
+                                     message_category=unreal.AppMsgCategory.INFO)
+    return result == unreal.AppReturnType.YES
+
+
+def debug(*args):
+    """启用DebugMode时在日志中打印信息"""
+    if mcvars.DebugMode:
+        text = '\n'.join(str(arg) if isinstance(arg, (str, unreal.Text)) else pformat(arg, sort_dicts=False) for arg in args)
+        unreal.log(text)
 
 
 def uasset(input):
@@ -300,6 +435,15 @@ def cast(input, target):
     return None
 
 
+def resolve_soft(path: str | unreal.SoftObjectPath):
+    """解析软引用路径，返回对象或None"""
+    if isinstance(path, unreal.SoftObjectPath):
+        path = path.export_text() if path else ''
+    if not path:
+        return None
+    return unreal.find_object(None, path) or unreal.load_object(None, path)
+
+
 def get_hotkey_object(reload=False):
     """获取自定义快捷键对象"""
     global HotkeyObjCache
@@ -316,10 +460,11 @@ def get_hotkey_object(reload=False):
 
 
 def construct(cls, outer=None):
+    """在指定 outer 下构造控件实例（走快捷键蓝图 Construct）"""
     return get_hotkey_object().call_method('Construct', (bpclass(cls), outer))
 
 
-def askopenfilename(title="Select File", filetypes=None):
+def askopenfilename(title="Select File", filetypes=None) -> str:
     """跨平台文件选择对话框，返回选中的文件路径"""
     # 1. tkinter (Windows)
     try:
@@ -374,12 +519,176 @@ def askopenfilename(title="Select File", filetypes=None):
     return ''
 
 
+def askdirectory(title="Select Directory") -> str:
+    """跨平台文件夹选择对话框，返回选中的文件夹路径"""
+    # 1. tkinter（Windows）
+    try:
+        import tkinter as tk
+        from tkinter import filedialog as fd
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        result = fd.askdirectory(title=title)
+        root.destroy()
+        return result
+    except Exception:
+        pass
+
+    # 2. zenity（常见于 Linux 桌面环境）
+    if sys.platform.startswith("linux"):
+        try:
+            result = subprocess.run(
+                ["zenity", "--file-selection", "--directory", f"--title={title}"],
+                capture_output=True, text=True, timeout=120
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except Exception:
+            pass
+
+    # 3. osascript（macOS 原生）
+    if sys.platform == "darwin":
+        try:
+            script = f'POSIX path of (choose folder with prompt "{title}")'
+            result = subprocess.run(
+                ["osascript", "-e", script],
+                capture_output=True, text=True, timeout=120
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except Exception:
+            pass
+
+    return ''
 
 
+def asksaveasfilename(title="Save File", defaultextension="", initialfile="", filetypes=None):
+    """跨平台文件保存对话框，返回要保存的文件路径"""
+    # 1. tkinter
+    try:
+        import tkinter as tk
+        from tkinter import filedialog as fd
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        result = fd.asksaveasfilename(
+            title=title,
+            defaultextension=defaultextension,
+            initialfile=initialfile,
+            filetypes=filetypes or []
+        )
+        root.destroy()
+        return result
+    except Exception:
+        pass
+
+    # 2. zenity（Linux）
+    if sys.platform.startswith("linux"):
+        try:
+            cmd = ["zenity", "--file-selection", "--save", "--confirm-overwrite", f"--title={title}"]
+            if initialfile:
+                cmd += [f"--filename={initialfile}"]
+            if filetypes:
+                for desc, pattern in filetypes:
+                    cmd += [f"--file-filter={desc} | {pattern}"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if result.returncode == 0:
+                path = result.stdout.strip()
+                if defaultextension and not os.path.splitext(path)[1]:
+                    path += defaultextension
+                return path
+        except Exception:
+            pass
+
+    # 3. osascript（macOS）
+    if sys.platform == "darwin":
+        try:
+            init = initialfile or "untitled"
+            script = f'POSIX path of (choose file name with prompt "{title}" default name "{init}")'
+            result = subprocess.run(
+                ["osascript", "-e", script],
+                capture_output=True, text=True, timeout=120
+            )
+            if result.returncode == 0:
+                path = result.stdout.strip()
+                if defaultextension and not os.path.splitext(path)[1]:
+                    path += defaultextension
+                return path
+        except Exception:
+            pass
+
+    return ""
 
 
+def startfile(folder_path):
+    """跨平台打开文件夹"""
+    if sys.platform == 'win32':
+        os.startfile(folder_path)
+    elif sys.platform == 'darwin':
+        subprocess.Popen(['open', folder_path])
+    else:
+        subprocess.Popen(['xdg-open', folder_path])
+    return True
 
-def set_actor_label(actor, label, unique=True, filter_class=unreal.Actor):
+
+def send2trash(path, delete=False) -> str:
+    """将文件或文件夹移至回收站；delete=True 或回收站失败时则彻底删除"""
+    import shutil
+    path = os.path.abspath(str(path))
+    if not os.path.exists(path):
+        return path
+
+    def _purge():
+        if os.path.isdir(path) and not os.path.islink(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+
+    if delete:
+        _purge()
+        return path
+
+    try:
+        if sys.platform == 'win32':
+            import ctypes
+            from ctypes import wintypes
+
+            class SHFILEOPSTRUCTW(ctypes.Structure):
+                _fields_ = [
+                    ('hwnd', wintypes.HWND),
+                    ('wFunc', wintypes.UINT),
+                    ('pFrom', wintypes.LPCWSTR),
+                    ('pTo', wintypes.LPCWSTR),
+                    ('fFlags', wintypes.WORD),
+                    ('fAnyOperationsAborted', wintypes.BOOL),
+                    ('hNameMappings', wintypes.LPVOID),
+                    ('lpszProgressTitle', wintypes.LPCWSTR),
+                ]
+
+            op = SHFILEOPSTRUCTW()
+            op.wFunc = 3  # FO_DELETE
+            op.pFrom = path + '\0\0'
+            op.fFlags = 0x40 | 0x10 | 0x04  # ALLOWUNDO | NOCONFIRMATION | SILENT
+            if ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op)):
+                raise OSError(f'无法移至回收站: {path}')
+        elif sys.platform == 'darwin':
+            script = f'tell application "Finder" to delete POSIX file {path!r}'
+            subprocess.run(['osascript', '-e', script], check=True, capture_output=True)
+        else:
+            for cmd in (['gio', 'trash', path], ['trash-put', path]):
+                try:
+                    subprocess.run(cmd, check=True, capture_output=True)
+                    break
+                except (FileNotFoundError, subprocess.CalledProcessError):
+                    continue
+            else:
+                raise OSError(f'无法移至回收站（需要 gio 或 trash-cli）: {path}')
+    except Exception:
+        _purge()
+    return path
+
+
+def set_actor_label(actor, label, unique=True, filter_class=unreal.Actor) -> str:
     """设置Actor的标签，支持唯一后缀"""
     if not actor:
         return ''
@@ -408,7 +717,7 @@ def set_actor_label(actor, label, unique=True, filter_class=unreal.Actor):
     return modified
 
 
-def select_actors(actors=[], append=False):
+def select_actors(actors=[], append=False) -> list[unreal.Actor]:
     """选择Actor，支持追加选择"""
     subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     if append:
@@ -450,6 +759,7 @@ _BUILTIN_TYPES = {'bool': bool, 'int': int, 'float': float, 'str': str}
 
 
 def _resolve_ue_type(type_str):
+    """将 UE 文档中的类型字符串解析为 Python/unreal 类型"""
     type_str = type_str.strip().rstrip(':')
     if type_str.startswith('type(') and type_str.endswith(')'):
         return _resolve_ue_type(type_str[5:-1])
@@ -458,7 +768,8 @@ def _resolve_ue_type(type_str):
     return getattr(unreal, type_str, None)
 
 
-def _is_ue_enum(cls):
+def _is_ue_enum(cls) -> bool:
+    """判断类型是否为 unreal.EnumBase 子类"""
     try:
         return isinstance(cls, type) and issubclass(cls, unreal.EnumBase)
     except TypeError:
@@ -466,13 +777,15 @@ def _is_ue_enum(cls):
 
 
 def _to_ue_enum(value, enum_type):
+    """把整数或值转换为指定 UE 枚举"""
     try:
         return enum_type.cast(value)
     except Exception:
         return list(enum_type)[value]
 
 
-def _has_int_arg(args, kwargs):
+def _has_int_arg(args, kwargs) -> bool:
+    """检查位置/关键字参数中是否含非 bool 的 int"""
     return any(isinstance(v, int) and not isinstance(v, bool) for v in args) or \
            any(isinstance(v, int) and not isinstance(v, bool) for v in kwargs.values())
 

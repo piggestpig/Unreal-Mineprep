@@ -13,8 +13,10 @@ import mc_sequencer, mc_widget, mc_mod
 import mc_sequencer as mcseq
 from mc_importer import import_block, import_item, resolve_block_json_path
 from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
-                      enum, asynctask, askopenfilename, set_actor_label, select_actors,
-                      lazy_import, safe, undo, get_hotkey_object, construct, uasset, copy)
+                      enum, asynctask, askopenfilename, send2trash, set_actor_label, select_actors,
+                      lazy_import, undo, get_hotkey_object, construct, uasset, copy,
+                      List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
+                      askdirectory, asksaveasfilename, startfile)
 from mc_prep import prep_texture, load_mcprep_data, colorize_material
 from mc_localization import (language, KernelLanguage, LocalizationCache,
                              loctext, nsloctext, loctable_col, bilingual, tooltip)
@@ -25,12 +27,9 @@ from mc_widget import Layout, PropertyGroup, add_widget, ui
 from mc_mod import mods, Mod
 
 
-WidgetsCache = {}
 ActorCache = None
 SpawnIDCache = None
 SpawnNameCache = None
-
-
 
 ####################################################################################
 
@@ -47,17 +46,13 @@ class helper:
         return lambda: self.func(target)
 
 
-class CallableList(list):
-    def __call__(self, *args, **kwargs):
-        return self
-
-
 class MineprepAPIHandle:
     """对象包装器，提供语法糖"""
     target: Any = None
     label: str = None
     class_help: str = ''
     inst_help: str = ''
+    _collection = False
 
     @helper
     def help(obj):
@@ -72,6 +67,8 @@ class MineprepAPIHandle:
 
     def __init__(self, target, label=''):
         """设置包装的对象为target，对象名称为label。可通过.target直接访问对象"""
+        if self._collection:
+            target = WrapList(target) if iscollection(target) else WrapList()
         self.target = target
         self.label = label
 
@@ -88,30 +85,29 @@ class MineprepAPIHandle:
     @undo
     def __getattr__(self, name):
         """调用不存在的属性或函数时, 自动转发到target, 支持数组，能自动转换整数为枚举"""
-        if isinstance(self.target, Iterable):
-            if not self.target:
-                return CallableList()
-            method = getattr(self.target[0], name)
-            if callable(method):
-                doc = getattr(method, '__doc__', None)
+        target = self.target
+        if isinstance(target, List):
+            attr = getattr(target, name)
+            if callable(attr) and target:
+                doc = getattr(getattr(target[0], name), '__doc__', None)
                 def wrapper(*args, **kwargs):
                     args, kwargs = mc_utils.convert_ue_call_args(args, kwargs, doc)
-                    return [getattr(t, name)(*args, **kwargs) for t in self.target]
+                    return attr(*args, **kwargs)
                 return wrapper
-            return [getattr(t, name) for t in self.target]
+            return attr
 
-        attr = getattr(self.target, name)
+        attr = getattr(target, name)
         return mc_utils.wrap_ue_method(attr) if callable(attr) else attr
 
     def get(self, prop: str=None):
         """获取属性值，支持泛型"""
         pass
 
-    def get_value(self, prop: str=None):
+    def get_value(self, prop: str=None) -> float:
         """获取属性值，转换为浮点数"""
         return float(self.get(prop))
     
-    def get_string(self, prop: str=None):
+    def get_string(self, prop: str=None) -> str:
         """获取属性值，转换为字符串"""
         return str(self.get(prop))
 
@@ -179,10 +175,12 @@ class MineprepAddonHandle(MineprepAPIHandle):
             pass
         return cast_type(value) if cast_type else value
 
-    def get_value(self, prop: type=None):
+    def get_value(self, prop: type=None) -> float:
+        """获取属性值并转为浮点数"""
         return float(self.get(prop))
 
-    def get_string(self, prop: type=None):
+    def get_string(self, prop: type=None) -> str:
+        """获取属性值并转为字符串"""
         return str(self.get(prop))
 
     #############################################################################################
@@ -197,11 +195,13 @@ class MineprepAddonHandle(MineprepAPIHandle):
         return get_hotkey_object().call_method('Click', (self.target, int(index)))
 
     def set(self, value = ''):
+        """按值类型自动调用 set_value 或 set_string"""
         if isinstance(value, (int, float, bool)):
             return self.set_value(value)
         return self.set_string(str(value))
 
     def set_string(self, value: str = ''):
+        """用字符串设置控件值（选项/文本框/复选框等）"""
         value = str(value)
         if cast(self.target, wclass.checkbox):
             if value.lower() in ('true', '1'):
@@ -235,6 +235,7 @@ class MineprepAddonHandle(MineprepAPIHandle):
             return True
 
     def set_value(self, value: float = 0.0):
+        """用数值设置控件值（滑块/复选框/选项等）"""
         if cast(self.target, wclass.checkbox):
             return self.select(int(value))
 
@@ -249,7 +250,7 @@ class MineprepAddonHandle(MineprepAPIHandle):
         elif cast(self.target, wclass.textbox):
             return self.set_string(str(value))
 
-    def select(self, index: int = 0):
+    def select(self, index: int = 0) -> bool:
         """用整数设置选项"""
         if cast(self.target, wclass.checkbox):
             state = unreal.CheckBoxState.UNDETERMINED
@@ -294,56 +295,57 @@ class MineprepAddonHandle(MineprepAPIHandle):
 
 class panel(MineprepAddonHandle):
     def __init__(self, name = ''):
+        """按名称获取插件面板控件；空名称时打印所有可用面板"""
         label = name
         target = None
         if not name:
-            id_cls_map = {k:bpclass(v).get_name() for k,v in WidgetsCache.items()}
+            id_cls_map = {k:bpclass(v).get_name() for k,v in mc_widget.WidgetsCache.items()}
             prints(tooltip('所有插件面板'), id_cls_map)
             return
 
-        target = WidgetsCache.get(name)
+        target = mc_widget.WidgetsCache.get(name)
         if not target:
-            candidate = [k for k in WidgetsCache.keys() if name.lower() in k.lower()]
+            candidate = [k for k in mc_widget.WidgetsCache.keys() if name.lower() in k.lower()]
             warn(tooltip('未找到面板', name), '---------------', tooltip('你可能在寻找'), candidate)
         super().__init__(target, label)
 
 class toolbar(MineprepAddonHandle):
     def __init__(self, name = ''):
+        """触发工具栏按钮"""
         get_hotkey_object().call_method('Toolbar', (str(name),))
         super().__init__(None, name)
 
 class hotkey(MineprepAddonHandle):
     def __init__(self, name = ''):
+        """调用自定义快捷键蓝图中的同名函数"""
         target = get_hotkey_object().call_method(str(name))
         super().__init__(target, name)
 
 ###########################################################################
 
 class MineprepWorldHandle(MineprepAPIHandle):
-    _collection = False
-
-    @staticmethod
-    def _pick(target, key, collection):
-        if not collection:
-            return target
-        if isinstance(key, tuple):
-            return [target[i] for i in key]
-        return target[key]
-
     @undo
     def __class_getitem__(cls, key):
-        if isinstance(key, (int, slice)) or (isinstance(key, tuple) and (not key or isinstance(key[0], int))):
-            return cls._pick(cls().target, key, cls._collection)
+        """类下标：int/slice/[i, default] 取集合元素；其它参数走构造查找"""
+        if isinstance(key, (int, slice)):
+            return cls()[key]
+        if isinstance(key, tuple) and len(key) == 2:
+            return cls()[key]
         return cls(key).target
 
     def __getitem__(self, key):
-        return self._pick(self.target, key, self._collection)
+        """实例下标：集合支持 int/slice/[i, default]；非集合返回自身 target"""
+        if not self._collection:
+            return self.target
+        return self.target[key]
 
     def get(self, prop: str):
+        """获取 Actor/组件/材质等对象的编辑器属性"""
         return self.get_editor_property(prop)
 
     @undo
     def set(self, prop: str, value: Any):
+        """设置编辑器属性；传入 int 时自动匹配枚举下标"""
         if isinstance(value, int):
             values = self.get_editor_property(prop)
             values = values if isinstance(values, Iterable) else [values]
@@ -359,13 +361,14 @@ class MineprepWorldHandle(MineprepAPIHandle):
         提供value时会先设置值，然后打关键帧。
         如果重载时间time，传入int表示帧数，传入float表示秒数。
         """
-        if isinstance(self.target, Iterable):
-            return [keyframe(t, prop, value, time) for t in self.target]
+        if isinstance(self.target, List):
+            return WrapList(keyframe(t, prop, value, time) for t in self.target)
         return keyframe(self.target, prop, value, time)
 
 
 class actor(MineprepWorldHandle):
     def __init__(self, name=unreal.Actor):
+        """按标签/类型/回调查找单个 Actor，支持 .comp/.comps/.mats 链式访问"""
         target = None
         if isinstance(name, unreal.Actor):
             target = name
@@ -410,6 +413,7 @@ class actors(MineprepWorldHandle):
     _collection = True
 
     def __init__(self, name=unreal.Actor):
+        """按标签/类型/回调查找多个 Actor，支持批量组件与材质操作"""
         target = []
         if isinstance(name, unreal.Actor):
             target = [name]
@@ -547,6 +551,7 @@ class materials(MineprepWorldHandle):
 
     @staticmethod
     def find(mesh_comp, name=None):
+        """从网格组件中按名称/类型筛选材质列表"""
         if not mesh_comp or not isinstance(mesh_comp, unreal.MeshComponent):
             return []
         mats = [m for m in mesh_comp.get_materials() if m]
@@ -565,10 +570,12 @@ class materials(MineprepWorldHandle):
 
     @staticmethod
     def gather_materials(mesh_comps, name=None):
+        """从多个网格组件汇总材质，可选名称过滤"""
         return [m for c in mesh_comps if isinstance(c, unreal.MeshComponent) for m in materials.find(c, name)]
 
     @staticmethod
     def get_material_param(mat, name):
+        """读取材质标量/向量/贴图参数值"""
         if not mat or not name:
             return None
         for getter in ('get_scalar_parameter_value', 'get_vector_parameter_value', 'get_texture_parameter_value'):
@@ -582,6 +589,7 @@ class materials(MineprepWorldHandle):
 
     @staticmethod
     def set_material_param(mat, name, value):
+        """设置材质标量/向量/贴图参数值"""
         if not mat or not name:
             return
         if isinstance(value, unreal.Texture):
@@ -605,11 +613,13 @@ class materials(MineprepWorldHandle):
 
 
     def get(self, param=''):
+        """获取当前材质集合的参数值；单个材质时返回标量结果"""
         results = [self.get_material_param(m, param) for m in self.target]
         return results[0] if len(self.target) == 1 else results
 
     @undo
     def set(self, param: str, value: Any):
+        """批量设置当前材质集合的参数值"""
         for m in self.target:
             self.set_material_param(m, param, value)
         return self
@@ -622,18 +632,19 @@ class MineprepSequencerHandle(MineprepWorldHandle):
         return None
 
     @staticmethod
-    def frame():
+    def frame() -> int:
         """获取当前播放头所在帧数"""
         return mcseq.sequencer_frame()
 
     @staticmethod
-    def time():
+    def time() -> float:
         """获取当前播放头所在时间"""
         return mcseq.sequencer_time()
 
 
 class sequencer(MineprepSequencerHandle):
     def __init__(self, target=None):
+        """获取当前或指定 Level Sequence，可链式访问 .bindings/.tracks"""
         target = mcseq.resolve_sequence(target)
         super().__init__(target, mcseq.sequence_label(target))
 
@@ -681,6 +692,7 @@ class bindings(MineprepSequencerHandle):
 
     @staticmethod
     def find(parent, name=None):
+        """从序列中收集绑定，可按显示名过滤"""
         return mcseq.gather_bindings(parent, name)
 
 
@@ -718,6 +730,7 @@ class tracks(MineprepSequencerHandle):
 
     @staticmethod
     def find(parent, name=None):
+        """从序列/绑定中收集轨道，可按显示名过滤"""
         return mcseq.gather_tracks(parent, name)
 
 
@@ -753,6 +766,7 @@ class sections(MineprepSequencerHandle):
 
     @staticmethod
     def find(parent, name=None):
+        """从轨道中收集片段，可按显示名过滤"""
         return mcseq.gather_sections(parent, name)
 
 
@@ -790,6 +804,7 @@ class channels(MineprepSequencerHandle):
 
     @staticmethod
     def find(parent, name=None):
+        """从片段中收集通道，可按显示名过滤"""
         return mcseq.gather_channels(parent, name)
 
 
@@ -829,11 +844,13 @@ class keys(MineprepSequencerHandle):
 
     @staticmethod
     def find(parent, name=None):
+        """从通道中收集关键帧，可按帧号或显示名过滤"""
         return mcseq.gather_keys(parent, name)
 
 ##########################################################################
 
-def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None):
+def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None) -> unreal.Actor:
+    """通过生成器面板放置 Actor，可指定位置/旋转/缩放"""
     global SpawnIDCache, SpawnNameCache, ActorCache
     SpawnIDCache = id if id else target if isinstance(target, int) else None
     SpawnNameCache = target if isinstance(target, str) else None
@@ -857,29 +874,29 @@ def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None):
     return actor
 
 
-def spawn_block(target='', loc=None, rot=None, scale=None, id: int=None):
+def spawn_block(target='', loc=None, rot=None, scale=None, id: int=None) -> unreal.Actor:
     """放置单个方块, 指定id时忽略target名称"""
     return spawn_helper('放置方块', target, loc, rot, scale, id)
 
-def spawn_item(target='', loc=None, rot=None, scale=None, id: int=None):
+def spawn_item(target='', loc=None, rot=None, scale=None, id: int=None) -> unreal.Actor:
     """放置物品, 指定id时忽略target名称"""
     return spawn_helper('放置物品', target, loc, rot, scale, id)
 
-def spawn_mob(target='', loc=None, rot=None, scale=None, baby=False, id: int=None):
+def spawn_mob(target='', loc=None, rot=None, scale=None, baby=False, id: int=None) -> unreal.Actor:
     """放置生物, 指定id时忽略target名称"""
     panel("生成器子面板.生物宝宝_可点击").select(int(baby))
     return spawn_helper('放置生物', target, loc, rot, scale, id)
 
-def spawn_preset(target='', loc=None, rot=None, scale=None, id: int=None):
+def spawn_preset(target='', loc=None, rot=None, scale=None, id: int=None) -> unreal.Actor:
     """放置预设素材, 指定id时忽略target名称"""
     return spawn_helper('预设素材', target, loc, rot, scale, id)
 
-def attach(target='', loc=None, rot=None, scale=None, id: int=None):
+def attach(target='', loc=None, rot=None, scale=None, id: int=None) -> unreal.Actor:
     """附加组件至选中项, 指定id时忽略target名称"""
     return spawn_helper('附加组件', target, loc, rot, scale, id)
 
 
-def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0,0,0)):
+def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0,0,0)) -> unreal.Actor:
     """放置多个方块为实例化方块"""
     loaded_class = uclass('/Game/Mineprep/MC_Blueprint/Core/实例化方块.实例化方块')
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
@@ -898,7 +915,7 @@ def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0
     return actor
 
 
-def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0):
+def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0) -> list[unreal.Actor]:
     """生成MC结构, gpu=1是PCG, gpu=2是粒子, cull=1按类型剔除内部实心方块, cull=2整体内部剔除"""
     map = parse_structure(filepath, cull=cull)
     filename = Path(filepath).stem
@@ -919,10 +936,10 @@ def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0):
             else:
                 warn(f'未找到{name}模型')
 
+        meshes.append(mesh)
         if mesh is None:
             continue
 
-        meshes.append(mesh)
         if not gpu:
             actor = spawn_blocks(mesh, transforms, loc, rot)
             actor.set_folder_path(filename)

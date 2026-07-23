@@ -6,9 +6,10 @@ from mc_utils import prints, uclass
 
 @dataclass
 class MCpath:
+    """各种路径"""
     def __str__(self):
         return str(asdict(self))
-    
+
     project: str = unreal.Paths.project_dir()
     game: str = unreal.Paths.project_content_dir()
     content: str = game
@@ -23,6 +24,7 @@ class MCpath:
 
 @dataclass
 class wclass:
+    """各种控件类"""
     button: type = unreal.Button
     MCbutton: type = uclass('/Game/Mineprep/插件贴图/小控件/可右键按钮.可右键按钮')
     MCtext: type = uclass('/Game/Mineprep/插件贴图/小控件/可双击文本.可双击文本')
@@ -66,6 +68,7 @@ class ConfigMeta(type):
         cls.load()  # 类定义加载时，自动读取文件
 
     def load(cls):
+        """从 Mineprep_config.txt 读取配置字典"""
         try:
             with open(MCpath.config, 'r', encoding='utf-8') as file:
                 cls.config_dict = json.load(file)
@@ -73,6 +76,7 @@ class ConfigMeta(type):
             cls.config_dict = {}
 
     def save(cls):
+        """将配置字典写回 Mineprep_config.txt"""
         with open(MCpath.config, 'w', encoding='utf-8') as file:
             json.dump(cls.config_dict, file, indent=4, ensure_ascii=False)
 

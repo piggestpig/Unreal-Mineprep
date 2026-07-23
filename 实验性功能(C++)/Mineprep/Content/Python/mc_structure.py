@@ -74,6 +74,7 @@ def parse_nbt_value(stream, tag_type, endian):
     return None
 
 def load_nbt_file(stream, endian='>'):
+    """从二进制流读取 NBT 根标签"""
     root_type = read_numeric(stream, 'b', endian)
     if root_type == 10:
         _ = read_string(stream, endian)
@@ -85,6 +86,7 @@ def load_nbt_file(stream, endian='>'):
 # ==========================================
 
 def process_java_nbt(data):
+    """将 Java .nbt 结构转为稀疏字典 {(x,y,z): {name, properties}}"""
     palette = [(item.get('Name', 'air').replace("minecraft:", ""), item.get('Properties', {})) 
                for item in data.get('palette', [])]
     sparse_dict = {}
@@ -97,6 +99,7 @@ def process_java_nbt(data):
     return sparse_dict
 
 def process_bedrock_structure(data):
+    """将基岩版 .mcstructure 转为稀疏字典 {(x,y,z): {name, properties}}"""
     structure = data.get('structure', {})
     block_indices = structure.get('block_indices', [])
     if not block_indices: return {}
@@ -119,6 +122,7 @@ def process_bedrock_structure(data):
     return sparse_dict
 
 def process_sponge_schematic(data):
+    """将 Sponge .schem/.schematic 转为稀疏字典 {(x,y,z): {name, properties}}"""
     schem = data.get('Schematic', data) if 'Schematic' in data else data
     width, height, length = schem.get('Width', 0), schem.get('Height', 0), schem.get('Length', 0)
     palette_data = schem.get('Palette', {})
@@ -233,6 +237,7 @@ _SOLID_PATTERNS_CACHE = None
 
 
 def _get_solid_patterns():
+    """从 mcprep_data 缓存实心方块通配模式列表"""
     global _SOLID_PATTERNS_CACHE
     if _SOLID_PATTERNS_CACHE is None:
         _SOLID_PATTERNS_CACHE = load_mcprep_data()["blocks"]["solid"]
@@ -240,6 +245,7 @@ def _get_solid_patterns():
 
 
 def _block_name_variants(block_name):
+    """生成方块名变体（含旧版 planks_/log_ 别名）"""
     name = str(block_name).lower()
     variants = {name}
     if name.endswith("_planks"):
@@ -249,7 +255,8 @@ def _block_name_variants(block_name):
     return variants
 
 
-def _matches_solid_pattern(block_name, pattern):
+def _matches_solid_pattern(block_name, pattern) -> bool:
+    """判断方块名是否匹配某条 solid 通配模式"""
     pattern = str(pattern).lower()
     for variant in _block_name_variants(block_name):
         if "*" not in pattern:
@@ -264,15 +271,18 @@ def _matches_solid_pattern(block_name, pattern):
     return False
 
 
-def _is_water_block(block_name):
+def _is_water_block(block_name) -> bool:
+    """判断是否为水流方块名"""
     return str(block_name).lower() in _CULL_FLUID_NAMES
 
 
-def _is_solid_block(block_name):
+def _is_solid_block(block_name) -> bool:
+    """判断是否为实心方块（按 mcprep solid 表）"""
     return any(_matches_solid_pattern(block_name, pattern) for pattern in _get_solid_patterns())
 
 
-def _is_internal_block(pos, occupied):
+def _is_internal_block(pos, occupied) -> bool:
+    """六邻域均被占用时视为内部方块"""
     return all(
         (pos[0] + dx, pos[1] + dy, pos[2] + dz) in occupied
         for dx, dy, dz in _NEIGHBOR_OFFSETS
@@ -280,6 +290,7 @@ def _is_internal_block(pos, occupied):
 
 
 def _cull_internal_blocks_per_type(sparse_dict):
+    """按方块类型分别剔除内部实心块（cull=1）"""
     positions_by_name = {}
     for pos, block_info in sparse_dict.items():
         name = block_info["name"]
@@ -300,6 +311,7 @@ def _cull_internal_blocks_per_type(sparse_dict):
 
 
 def _cull_internal_blocks_unified_solids(sparse_dict):
+    """全体实心块统一剔除内部，保留流体外壳（cull=2）"""
     solid_positions = set()
     water_positions = set()
     for pos, block_info in sparse_dict.items():
@@ -330,6 +342,7 @@ def _cull_internal_blocks_unified_solids(sparse_dict):
 # ==========================================
 
 def parse_structure(filepath='', center=True, cull=0):
+    """解析 .nbt/.schem/.mcstructure，返回 {方块名: Transform列表}；cull=1按类型剔除, cull=2整体剔除"""
     if not os.path.exists(filepath):
         unreal.log_error(f"未能找到结构文件: {filepath}")
         return {}
@@ -369,6 +382,7 @@ def parse_structure(filepath='', center=True, cull=0):
 
 @lazy_import
 def structure_to_tex(ue_data, name='structure', fp32=True):
+    """将结构 Transform 数据烘焙为位置/旋转贴图，供 PCG/粒子使用"""
     dtype = np.float32 # if fp32 else np.float16
     exr_type = cv2.IMWRITE_EXR_TYPE_FLOAT if fp32 else cv2.IMWRITE_EXR_TYPE_HALF
 

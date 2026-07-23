@@ -33,7 +33,7 @@
         "open_file_after_render": "true",
         "render_finish_sound": "",
         "ui_scale": "1.0",
-        "python_tooltip": "true",
+        "python_tooltip": "false",
         "optimize_default": false
     },
     "ProjectSettings": {

@@ -46,7 +46,8 @@ _ROTATION_PROPS = frozenset({'Rotation', 'RelativeRotation'})
 _SCALE_PROPS = frozenset({'Scale', 'RelativeScale3D'})
 
 
-def resolve_sequence(target=None):
+def resolve_sequence(target=None) -> unreal.LevelSequence:
+    """解析 Level Sequence：默认取当前聚焦/打开的序列，也可传对象或资产路径"""
     if target is None:
         sequence = unreal.LevelSequenceEditorBlueprintLibrary.get_focused_level_sequence()
         if not sequence:
@@ -59,21 +60,24 @@ def resolve_sequence(target=None):
     return None
 
 
-def _get_active_sequence():
+def _get_active_sequence() -> unreal.LevelSequence:
+    """获取当前序列，不存在则抛错"""
     sequence = resolve_sequence()
     if not sequence:
         throw('未打开 Level Sequence，请先在 Sequencer 中打开或聚焦一个序列')
     return sequence
 
 
-def sequencer_frame(sequence=None):
+def sequencer_frame(sequence=None) -> int:
+    """获取 Sequencer 播放头所在帧号"""
     sequence = resolve_sequence(sequence)
     if not sequence:
         throw('未打开 Level Sequence，请先在 Sequencer 中打开或聚焦一个序列')
     return _resolve_frame(None, sequence)
 
 
-def sequencer_time(sequence=None):
+def sequencer_time(sequence=None) -> float:
+    """获取 Sequencer 播放头所在时间（秒）"""
     sequence = resolve_sequence(sequence)
     if not sequence:
         throw('未打开 Level Sequence，请先在 Sequencer 中打开或聚焦一个序列')
@@ -82,7 +86,8 @@ def sequencer_time(sequence=None):
     return frame_number * rate.denominator / rate.numerator
 
 
-def _resolve_frame(time, sequence):
+def _resolve_frame(time, sequence) -> int:
+    """将 None/帧/秒 解析为整数帧号；None 取播放头"""
     if time is None:
         playback = unreal.LevelSequenceEditorBlueprintLibrary.get_local_position(time_unit=_TIME_UNIT)
         return playback.frame.frame_number.value
@@ -103,13 +108,15 @@ def _resolve_frame(time, sequence):
     throw(f'不支持的时间类型: {type(time).__name__}')
 
 
-def _binding_id(binding):
+def _binding_id(binding) -> unreal.MovieSceneObjectBindingID:
+    """把 binding 转成 MovieSceneObjectBindingID"""
     binding_id = unreal.MovieSceneObjectBindingID()
     binding_id.set_editor_property('Guid', binding.get_id())
     return binding_id
 
 
 def _iter_bindings(sequence):
+    """递归遍历序列全部绑定（含子 Possessable）"""
     stack = list(sequence.get_bindings())
     while stack:
         binding = stack.pop()
@@ -118,6 +125,7 @@ def _iter_bindings(sequence):
 
 
 def _iter_all_tracks(sequence):
+    """遍历根轨道与所有绑定下的轨道"""
     if not sequence:
         return
     for track in sequence.get_tracks():
@@ -128,6 +136,7 @@ def _iter_all_tracks(sequence):
 
 
 def _find_binding_for_object(sequence, obj):
+    """在序列中查找对象对应的绑定"""
     for binding in _iter_bindings(sequence):
         bound_objects = unreal.LevelSequenceEditorBlueprintLibrary.get_bound_objects(_binding_id(binding))
         for bound in bound_objects:
@@ -136,15 +145,18 @@ def _find_binding_for_object(sequence, obj):
     return None
 
 
-def _is_actor(obj):
+def _is_actor(obj) -> bool:
+    """判断是否为 Actor"""
     return isinstance(obj, unreal.Actor)
 
 
-def _is_scene_component(obj):
+def _is_scene_component(obj) -> bool:
+    """判断是否为 SceneComponent"""
     return isinstance(obj, unreal.SceneComponent)
 
 
 def _ensure_binding(sequence, obj):
+    """确保对象已绑定到序列，必要时创建并挂到父绑定"""
     binding = _find_binding_for_object(sequence, obj)
     if binding:
         return binding
@@ -165,6 +177,7 @@ def _ensure_binding(sequence, obj):
 
 
 def _get_or_create_section(track):
+    """取轨道首个 section，没有则新建"""
     sections = track.get_sections()
     if sections:
         return sections[0]
@@ -175,22 +188,26 @@ def _get_or_create_section(track):
     return section
 
 
-def _channel_name(channel):
+def _channel_name(channel) -> str:
+    """读取 ScriptingChannel 的通道名"""
     try:
         return str(channel.get_editor_property('channel_name'))
     except Exception:
         return str(channel.channel_name)
 
 
-def _text(value):
+def _text(value) -> str:
+    """安全转为字符串，None 得到空串"""
     return str(value) if value is not None else ''
 
 
-def _join_path(*parts):
+def _join_path(*parts) -> str:
+    """用 '.' 拼接层级路径，跳过空段"""
     return '.'.join(str(part) for part in parts if part is not None and str(part))
 
 
-def _track_short_name(track):
+def _track_short_name(track) -> str:
+    """轨道短显示名（display name / 属性名 / 类名）"""
     try:
         label = track.get_display_name()
         if label:
@@ -208,12 +225,14 @@ def _track_short_name(track):
     return class_name
 
 
-def _section_track(section):
+def _section_track(section) -> unreal.MovieSceneTrack:
+    """通过 get_outer 取 section 所属轨道"""
     outer = section.get_outer()
     return outer if isinstance(outer, unreal.MovieSceneTrack) else None
 
 
 def _binding_track_map(sequence):
+    """构建 id(track)->binding 映射"""
     mapping = {}
     if not sequence:
         return mapping
@@ -224,14 +243,17 @@ def _binding_track_map(sequence):
 
 
 def _register_channel_loc(section, channel_index, channel):
+    """登记 channel wrapper 的 (section, index) 位置"""
     _channel_gather_loc[id(channel)] = (section, channel_index)
 
 
 def _register_key_loc(section, channel_index, key_index, key):
+    """登记 key wrapper 的 (section, channel_index, key_index)"""
     _key_gather_loc[id(key)] = (section, channel_index, key_index)
 
 
 def _channels_from_section(section):
+    """取出 section 全部通道并登记位置"""
     channels = []
     try:
         raw = section.get_all_channels()
@@ -244,6 +266,7 @@ def _channels_from_section(section):
 
 
 def _keys_from_channel(channel, section=None, channel_index=-1):
+    """取出 channel 全部关键帧并登记位置"""
     if section is None:
         section, channel_index = _channel_gather_loc.get(id(channel), (None, -1))
     keys = []
@@ -258,7 +281,8 @@ def _keys_from_channel(channel, section=None, channel_index=-1):
     return keys
 
 
-def _same_scripting_object(a, b):
+def _same_scripting_object(a, b) -> bool:
+    """比较两个 Scripting 包装对象是否同一实体"""
     if a is b:
         return True
     try:
@@ -268,6 +292,7 @@ def _same_scripting_object(a, b):
 
 
 def _build_label_context(sequence):
+    """一次遍历构建 label 用的层级索引上下文"""
     ctx = SimpleNamespace(
         sequence=sequence,
         track_bindings=_binding_track_map(sequence),
@@ -302,6 +327,7 @@ def _build_label_context(sequence):
 
 
 def _resolve_channel(channel, ctx):
+    """解析 channel 所属 section 与下标"""
     cached = ctx._channel_loc_cache.get(id(channel))
     if cached is not None:
         return cached
@@ -325,6 +351,7 @@ def _resolve_channel(channel, ctx):
 
 
 def _resolve_key(key, ctx):
+    """解析 key 所属 section/channel 下标"""
     cached = ctx._key_loc_cache.get(id(key))
     if cached is not None:
         return cached
@@ -352,7 +379,8 @@ def _resolve_key(key, ctx):
     return None, -1, -1
 
 
-def binding_label(binding):
+def binding_label(binding) -> str:
+    """获取绑定的显示名称"""
     try:
         label = binding.get_display_name()
         if label:
@@ -365,7 +393,8 @@ def binding_label(binding):
         return str(binding)
 
 
-def label_track(track, ctx):
+def label_track(track, ctx) -> str:
+    """生成轨道的层级显示名，如 'Alex.变换'"""
     short = _track_short_name(track)
     binding = ctx.track_bindings.get(id(track))
     if binding:
@@ -373,7 +402,8 @@ def label_track(track, ctx):
     return short
 
 
-def label_section(section, ctx):
+def label_section(section, ctx) -> str:
+    """生成片段的层级显示名；同轨多片段时追加 [index]"""
     track = _section_track(section)
     if not track:
         class_name = section.get_class().get_name()
@@ -390,7 +420,8 @@ def label_section(section, ctx):
     return base
 
 
-def label_channel(channel, ctx):
+def label_channel(channel, ctx) -> str:
+    """生成通道的层级显示名，如 'Alex.变换.Location.X'"""
     section, channel_index = _resolve_channel(channel, ctx)
     if section is not None and channel_index >= 0:
         label = ctx.channel_labels.get((id(section), channel_index))
@@ -399,7 +430,8 @@ def label_channel(channel, ctx):
     return _channel_name(channel)
 
 
-def _format_key_value(value):
+def _format_key_value(value) -> str:
+    """把关键帧值格式化为简短可读字符串"""
     if isinstance(value, bool):
         return str(value)
     if isinstance(value, int) and not isinstance(value, bool):
@@ -414,7 +446,8 @@ def _format_key_value(value):
     return type_name
 
 
-def _format_key_suffix(key):
+def _format_key_suffix(key) -> str:
+    """关帧后缀，格式 '@帧:值'"""
     frame = key.get_time().frame_number.value
     try:
         value = key.get_value()
@@ -423,7 +456,8 @@ def _format_key_suffix(key):
     return f'@{frame}:{_format_key_value(value)}'
 
 
-def label_key(key, ctx):
+def label_key(key, ctx) -> str:
+    """生成关键帧的层级显示名，后缀格式为 '@帧:值'"""
     section, channel_index, key_index = _resolve_key(key, ctx)
     if section is not None and channel_index >= 0 and key_index >= 0:
         label = ctx.key_labels.get((id(section), channel_index, key_index))
@@ -432,15 +466,18 @@ def label_key(key, ctx):
     return _format_key_suffix(key)
 
 
-def sequence_label(sequence):
+def sequence_label(sequence) -> str:
+    """获取序列名称"""
     return sequence.get_name() if sequence else ''
 
 
-def is_binding(obj):
+def is_binding(obj) -> bool:
+    """判断对象是否为 Sequencer 绑定包装器"""
     return hasattr(obj, 'get_tracks') and hasattr(obj, 'get_display_name') and hasattr(obj, 'get_id')
 
 
-def labels_for(objects, sequence=None):
+def labels_for(objects, sequence=None) -> list[str]:
+    """批量为 bindings/tracks/sections/channels/keys 生成层级显示名"""
     if not objects:
         return []
     ctx = _build_label_context(sequence or resolve_sequence())
@@ -461,6 +498,7 @@ def labels_for(objects, sequence=None):
 
 
 def _filter_tracks(tracks, name=None, ctx=None):
+    """按显示名/短名/内部名通配过滤轨道"""
     tracks = list(tracks)
     if not name:
         return tracks
@@ -490,6 +528,7 @@ def _filter_tracks(tracks, name=None, ctx=None):
 
 
 def _filter_sections(sections, name=None, ctx=None):
+    """按层级显示名通配过滤片段"""
     sections = list(sections)
     if not name:
         return sections
@@ -509,6 +548,7 @@ def _filter_sections(sections, name=None, ctx=None):
 
 
 def filter_items(items, name=None):
+    """通用过滤：轨道/片段按显示名，其它对象回退到内部名通配"""
     items = list(items)
     if not items or not name:
         return items
@@ -530,6 +570,7 @@ def filter_items(items, name=None):
 
 
 def _filter_channels(channels, name=None, ctx=None):
+    """按通道名或完整路径通配过滤通道"""
     channels = list(channels)
     if not name:
         return channels
@@ -550,6 +591,7 @@ def _filter_channels(channels, name=None, ctx=None):
 
 
 def _filter_keys(keys, name=None, ctx=None):
+    """按完整路径或后缀通配过滤关帧"""
     keys = list(keys)
     if not name:
         return keys
@@ -572,6 +614,7 @@ def _filter_keys(keys, name=None, ctx=None):
 
 
 def _filter_bindings(bindings, name=None):
+    """按显示名/内部名通配过滤绑定"""
     bindings = list(bindings)
     if not name:
         return bindings
@@ -594,6 +637,7 @@ def _filter_bindings(bindings, name=None):
 
 
 def gather_bindings(source, name=None):
+    """从序列收集绑定，可按显示名过滤"""
     if source is None:
         return []
     if is_binding(source):
@@ -615,6 +659,7 @@ def gather_bindings(source, name=None):
 
 
 def _tracks_from_bindings(bindings):
+    """汇总多个绑定下的全部轨道"""
     tracks = []
     for binding in bindings:
         tracks.extend(binding.get_tracks())
@@ -622,6 +667,7 @@ def _tracks_from_bindings(bindings):
 
 
 def gather_tracks(source, name=None):
+    """从序列/绑定收集轨道，可按显示名过滤"""
     if source is None:
         return []
     if isinstance(source, unreal.MovieSceneTrack):
@@ -647,6 +693,7 @@ def gather_tracks(source, name=None):
 
 
 def gather_sections(source, name=None):
+    """从轨道收集片段，可按显示名过滤"""
     if source is None:
         return []
     if isinstance(source, unreal.MovieSceneSection):
@@ -668,6 +715,7 @@ def gather_sections(source, name=None):
 
 
 def gather_channels(source, name=None):
+    """从片段收集通道，可按显示名过滤"""
     if source is None:
         return []
     if isinstance(source, unreal.MovieSceneScriptingChannel):
@@ -689,6 +737,7 @@ def gather_channels(source, name=None):
 
 
 def gather_keys(source, name=None):
+    """从通道收集关键帧，可按帧号或显示名过滤"""
     if source is None:
         return []
     if isinstance(source, unreal.MovieSceneScriptingKey):
@@ -710,20 +759,24 @@ def gather_keys(source, name=None):
 
 
 def _add_scalar_key(channel, frame, value):
+    """向标量通道添加一帧关键帧"""
     channel.add_key(unreal.FrameNumber(frame), value, 0.0, _TIME_UNIT)
 
 
-def _is_transform_prop(prop):
+def _is_transform_prop(prop) -> bool:
+    """判断属性名是否属于 Transform 相关通道"""
     if prop in _TRANSFORM_PROP_CHANNELS:
         return True
     return prop in _TRANSFORM_CHANNELS
 
 
 def _log_skip(message):
+    """记录 keyframe 跳过原因日志"""
     unreal.log(f'[mc_keyframe] {message}')
 
 
 def _transform_channels_for_prop(prop):
+    """按属性名返回要写入的 Transform 通道列表"""
     if prop in _TRANSFORM_PROP_CHANNELS:
         return _TRANSFORM_PROP_CHANNELS[prop]
     if prop in _TRANSFORM_CHANNELS:
@@ -732,6 +785,7 @@ def _transform_channels_for_prop(prop):
 
 
 def _read_transform_values(obj):
+    """读取对象当前 Location/Rotation/Scale"""
     if _is_actor(obj):
         return obj.get_actor_location(), obj.get_actor_rotation(), obj.get_actor_scale3d()
     if _is_scene_component(obj):
@@ -739,7 +793,8 @@ def _read_transform_values(obj):
     throw(f'无法读取 Transform，obj 类型: {type(obj).__name__}')
 
 
-def _validate_transform_value(prop, value):
+def _validate_transform_value(prop, value) -> bool:
+    """校验 Transform 写入值类型是否匹配属性"""
     if isinstance(value, unreal.Transform):
         return True
 
@@ -776,6 +831,7 @@ def _validate_transform_value(prop, value):
 
 
 def _apply_transform_value(obj, prop, value):
+    """把 Transform 相关值写回对象属性"""
     if isinstance(value, unreal.Transform):
         if _is_actor(obj):
             obj.set_actor_transform(value, False, True)
@@ -837,7 +893,8 @@ def _apply_transform_value(obj, prop, value):
             obj.set_relative_transform(value, False, True)
 
 
-def _transform_scalar(channel_name, loc, rot, scale):
+def _transform_scalar(channel_name, loc, rot, scale) -> float:
+    """从 loc/rot/scale 取出指定通道的标量"""
     mapping = {
         'Location.X': loc.x,
         'Location.Y': loc.y,
@@ -853,6 +910,7 @@ def _transform_scalar(channel_name, loc, rot, scale):
 
 
 def _get_or_create_transform_section(binding):
+    """获取或创建 3DTransform 轨道的 section"""
     tracks = binding.find_tracks_by_exact_type(unreal.MovieScene3DTransformTrack)
     if tracks:
         track = tracks[0]
@@ -861,7 +919,8 @@ def _get_or_create_transform_section(binding):
     return _get_or_create_section(track)
 
 
-def _key_transform(section, frame, loc, rot, scale, prop):
+def _key_transform(section, frame, loc, rot, scale, prop) -> bool:
+    """对 Transform section 指定通道打关键帧"""
     channels = _transform_channels_for_prop(prop)
     if not channels:
         _log_skip(f'未知的 Transform 属性: {prop!r}')
@@ -882,10 +941,12 @@ def _key_transform(section, frame, loc, rot, scale, prop):
 
 
 def _prop_name_and_path(prop):
+    """拆分属性路径，返回末段名与完整路径"""
     return prop.split('.')[-1], prop
 
 
-def _property_exists(obj, prop):
+def _property_exists(obj, prop) -> bool:
+    """检查对象是否暴露该编辑器属性"""
     try:
         obj.get_editor_property(prop)
         return True
@@ -894,10 +955,12 @@ def _property_exists(obj, prop):
 
 
 def _read_property(obj, prop):
+    """读取对象编辑器属性"""
     return obj.get_editor_property(prop)
 
 
-def _try_write_property(obj, prop, value):
+def _try_write_property(obj, prop, value) -> bool:
+    """尝试写入属性，失败则打日志并返回 False"""
     try:
         obj.set_editor_property(prop, value)
         return True
@@ -907,6 +970,7 @@ def _try_write_property(obj, prop, value):
 
 
 def _resolve_value_kind(value):
+    """推断值的 keyframe 类型标签（bool/float/vector3 等）"""
     if isinstance(value, bool):
         return 'bool'
     if isinstance(value, int) and not isinstance(value, bool):
@@ -927,6 +991,7 @@ def _resolve_value_kind(value):
 
 
 def _track_class_for_kind(kind):
+    """按 kind 返回对应 MovieScene*Track 类"""
     mapping = {
         'bool': unreal.MovieSceneBoolTrack,
         'int': unreal.MovieSceneIntegerTrack,
@@ -941,6 +1006,7 @@ def _track_class_for_kind(kind):
 
 
 def _track_kind(track):
+    """从属性轨道推断其值类型 kind"""
     if isinstance(track, unreal.MovieSceneBoolTrack):
         return 'bool'
     if isinstance(track, unreal.MovieSceneIntegerTrack):
@@ -1016,11 +1082,13 @@ def _validate_property_keyframe(obj, binding, prop, value):
     return current, kind
 
 
-def _is_property_track(track):
+def _is_property_track(track) -> bool:
+    """判断是否为属性轨道"""
     return isinstance(track, unreal.MovieScenePropertyTrack)
 
 
 def _find_property_track(binding, prop):
+    """在绑定中查找匹配属性路径的轨道"""
     prop_name, prop_path = _prop_name_and_path(prop)
     for track in binding.get_tracks():
         if not _is_property_track(track):
@@ -1037,6 +1105,7 @@ def _find_property_track(binding, prop):
 
 
 def _get_or_create_property_section(binding, prop, kind):
+    """获取或创建属性轨道及其 section"""
     track = _find_property_track(binding, prop)
     if not track:
         track_class = _track_class_for_kind(kind)
@@ -1052,6 +1121,7 @@ def _get_or_create_property_section(binding, prop, kind):
 
 
 def _channel_values_for_property(value, kind):
+    """把属性值拆成各通道名->标量映射"""
     if kind == 'bool':
         return {None: value}
     if kind == 'int':
@@ -1087,7 +1157,8 @@ def _channel_values_for_property(value, kind):
     return {}
 
 
-def _key_property_channels(section, frame, value, kind):
+def _key_property_channels(section, frame, value, kind) -> bool:
+    """对属性 section 各通道打关帧"""
     values = _channel_values_for_property(value, kind)
     if not values:
         _log_skip(f'内部错误: 未知属性种类 {kind!r}')
@@ -1116,11 +1187,12 @@ def _key_property_channels(section, frame, value, kind):
 
 
 def _refresh_sequencer():
+    """强制刷新当前 Level Sequence 编辑器"""
     unreal.LevelSequenceEditorBlueprintLibrary.force_update()
     unreal.LevelSequenceEditorBlueprintLibrary.refresh_current_level_sequence()
 
 
-def keyframe(obj, prop='', value=None, time=None):
+def keyframe(obj, prop='', value=None, time=None) -> bool:
     """
     为 obj 在 Sequencer 中打关键帧。
 
