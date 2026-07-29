@@ -12,9 +12,11 @@ from mc_mod import iter_mod_modules
 MODS_DIR = Path(__file__).resolve().parent.parent
 
 
-class props(mineprep.PropertyGroup):
+class Props(mineprep.PropertyGroup):
     _unique_ = True
     advanced: bool = False
+
+props = Props()
 
 
 class ModManager(mineprep.Mod):
@@ -120,6 +122,3 @@ class ModManager(mineprep.Mod):
                     sys.modules.pop(key, None)
             mineprep.prints(bilingual(f"已卸载模组: {mod_name}", f"Uninstalled mod: {mod_name}"))
             self.redraw()
-
-
-ModManager.register()

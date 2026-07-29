@@ -1,4 +1,5 @@
 import unreal
+import mcvars
 from contextlib import contextmanager
 
 KernelLanguage = None
@@ -43,7 +44,7 @@ def loctable_col(block=1, lang=None):
         return []
 
 
-def bilingual(chinese, english):
+def bilingual(chinese: str, english: str):
     """双语文本"""
     text = unreal.TextLibrary.find_text_in_live_table_advanced('UObjectDisplayNames', chinese, chinese)
     if not text:
@@ -56,6 +57,23 @@ def bilingual(chinese, english):
         text = unreal.TextLibrary.polyglot_data_to_text(polyglot)
 
     return loctext(chinese)
+
+
+def localize(source: str, *args, **kwargs):
+    """立刻注入本地化翻译, args对应mcvars.Languages的各语言翻译, kwargs可以指定namespace和key  
+    如mineprep.localize(原名, 中文, 英文, 繁体中文，... , namespace='UObjectDisplayNames', key=原名)
+    """
+    namespace = kwargs.get('namespace', 'UObjectDisplayNames')
+    key = kwargs.get('key', source)
+    polyglot = unreal.PolyglotTextData(category = unreal.LocalizedTextSourceCategory.EDITOR,
+                    namespace = namespace,
+                    key = key,
+                    native_string = source,
+                    localized_strings = {lang: arg for lang, arg in zip(mcvars.Languages, args)},
+                    is_minimal_patch = False)
+    if mcvars.DebugMode:
+        unreal.log(f'本地化: namespace={namespace}, key={key}, source_string={source} -> {args}')
+    return unreal.TextLibrary.polyglot_data_to_text(polyglot)
 
 
 class tooltip(str):

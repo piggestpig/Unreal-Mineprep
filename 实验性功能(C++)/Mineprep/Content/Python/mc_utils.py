@@ -251,58 +251,103 @@ def undo(arg: str=None):
 
 
 def reload(*args):
-    """重新加载mineprep及其所有子模块；传入特定模块时，只重新加载这些模块。
-    全量重载时会先 unregister ReloadWithMineprep 的 mod，再 reload 后重新 register。
+    """重新加载 mineprep 及其子模块；传入特定模块时，只重新加载这些模块。
+
+    全量重载流程：
+      1. 注销 ReloadWithMineprep 的 mod
+      2. 从 sys.modules 卸载 mineprep / mc_*（保留 mcvars）/ 相关 mods
+      3. 全新 import mineprep（避免 importlib.reload 造成 Layout/PropertyGroup 多份类对象）
+      4. 把各模块命名空间里仍指向旧 mineprep 的引用改到新模块
+      5. 再 import 并 register 先前启用的 mod
+
+    返回新的 mineprep 模块（控制台里建议: mineprep = mineprep.reload()）。
     """
     import importlib
-    import types
+    import sys
 
     if args:
         for mod in args:
             importlib.reload(mod)
             unreal.log(f'重新加载 {mod.__name__}')
-        return
+        return mod if len(args) == 1 else args
 
     import mc_mod
-    reloadable = mc_mod.reloadable_mods()
-    # importlib.reload 会重置模组源码中的 mod_info，需先记住运行时 EnabledByDefault
+    reloadable = list(mc_mod.reloadable_mods())
+    # 模组对象即将失效，先记下名字与启用状态
     enabled_names = {
         mod.__name__
         for mod in reloadable
         if (getattr(mod, 'mod_info', None) or {}).get('EnabledByDefault')
     }
+    reloadable_names = [mod.__name__ for mod in reloadable]
+
     for mod in reloadable:
         mc_mod.unregister_mod(mod)
 
-    import mineprep
+    import mineprep as old_mineprep
     import mc_widget
-    localization_copy = mineprep.LocalizationCache
+    import mcvars
+    localization_copy = old_mineprep.LocalizationCache
     widgets_copy = mc_widget.WidgetsCache
 
-    for attr in mineprep.__dict__.values():
-        if isinstance(attr, types.ModuleType) and attr.__name__.startswith('mc_'):
-            importlib.reload(attr)
-            unreal.log(f'重新加载 {attr.__name__}')
+    drop = set()
+    for name in list(sys.modules):
+        if name == 'mineprep':
+            drop.add(name)
+        elif name.startswith('mc_') and name != 'mcvars':
+            # mcvars 保留全局状态；其余 mc_* 全部卸掉以便全新绑定
+            drop.add(name)
+        elif name == 'mods':
+            drop.add(name)
+        else:
+            for mod_name in reloadable_names:
+                if name == mod_name or name.startswith(mod_name + '.'):
+                    drop.add(name)
+                    break
 
-    importlib.reload(mineprep)
+    for name in sorted(drop, key=lambda n: n.count('.'), reverse=True):
+        sys.modules.pop(name, None)
+        unreal.log(f'已卸载 {name}')
+
+    mcvars.Props.clear()
+
+    import mineprep as new_mineprep
     unreal.log('重新加载 mineprep')
-    mineprep.LocalizationCache = localization_copy
+    new_mineprep.LocalizationCache = localization_copy
+
+    import mc_widget
     mc_widget.WidgetsCache = widgets_copy
 
+    # 刷新仍持有旧 mineprep 引用的命名空间（含 __main__ / 控制台）
+    rebound = 0
+    for mod in list(sys.modules.values()):
+        if mod is None:
+            continue
+        try:
+            d = getattr(mod, '__dict__', None)
+            if d is not None and d.get('mineprep') is old_mineprep:
+                d['mineprep'] = new_mineprep
+                rebound += 1
+        except Exception:
+            pass
+    if rebound:
+        unreal.log(f'已刷新 {rebound} 处 mineprep 引用')
 
     import mc_mod
-    for mod in reloadable:
+    for mod_name in reloadable_names:
         try:
-            importlib.reload(mod)
-            if mod.__name__ in enabled_names:
+            mod = importlib.import_module(mod_name)
+            if mod_name in enabled_names:
                 info = getattr(mod, 'mod_info', None)
                 if info is None:
                     mod.mod_info = info = {}
                 info['EnabledByDefault'] = True
             mc_mod.register_mod(mod)
-            unreal.log(f'重新加载 {mod.__name__}')
+            unreal.log(f'重新加载 {mod_name}')
         except Exception as e:
-            warn(f'重新加载 {mod.__name__} 时出错: {e}')
+            warn(f'重新加载 {mod_name} 时出错: {e}')
+
+    return new_mineprep
 
 
 def enum(input: type | unreal.EnumBase):
@@ -462,6 +507,16 @@ def get_hotkey_object(reload=False):
 def construct(cls, outer=None):
     """在指定 outer 下构造控件实例（走快捷键蓝图 Construct）"""
     return get_hotkey_object().call_method('Construct', (bpclass(cls), outer))
+
+
+def get_tex_size(tex: unreal.Texture2D) -> tuple[int, int]:
+    """读取贴图像素宽高"""
+    width = tex.blueprint_get_size_x()
+    height = tex.blueprint_get_size_y()
+    return max(int(width), 1), max(int(height), 1)
+
+
+##############################################################################
 
 
 def askopenfilename(title="Select File", filetypes=None) -> str:

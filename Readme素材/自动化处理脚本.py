@@ -87,6 +87,12 @@ for pycache_dir in plugin_dir.rglob("__pycache__"):
         shutil.rmtree(pycache_dir)
         print("已删除 __pycache__ 文件夹：", pycache_dir)
 
+#删除cache文件夹
+for cache_dir in plugin_dir.rglob("cache"):
+    if cache_dir.is_dir():
+        shutil.rmtree(cache_dir)
+        print("已删除 cache 文件夹：", cache_dir)
+
 #删除.vscode文件夹
 for vscode_dir in plugin_dir.rglob(".vscode"):
     if vscode_dir.is_dir():

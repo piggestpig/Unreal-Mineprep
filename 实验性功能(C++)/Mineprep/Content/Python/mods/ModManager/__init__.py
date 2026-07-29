@@ -11,8 +11,11 @@ mod_info = {
 
 def register():
     from . import mod_manager
+    mod_manager.ModManager.register()
 
 def unregister():
+    from . import mod_manager
+    mod_manager.ModManager.unregister()
     import sys
     sys.modules.pop(f'{__name__}.mod_manager', None)
     globals().pop('mod_manager', None)

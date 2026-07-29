@@ -4,7 +4,8 @@ import unreal
 # 在此填写模组相关信息，设置EnabledByDefault=True会在引擎启动时自动加载模组
 mod_info = {
     "Name": mineprep.bilingual("Mod模板", "Mod Template"),
-    "Description": mineprep.bilingual("面向开发者的普通mod模板", "A simple mod template for developers"),
+    "Description": mineprep.bilingual("面向开发者的普通mod模板",
+                    "A simple mod template for developers"),
     "Version": "1.0",
     "CreatedBy": "",
     "EnabledByDefault": False,

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
-import mc_sequencer, mc_widget, mc_mod
+import mc_sequencer, mc_widget, mc_mod, mc_mesh
 import mc_sequencer as mcseq
 from mc_importer import import_block, import_item, resolve_block_json_path
 from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
@@ -18,13 +18,14 @@ from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw,
                       List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
                       askdirectory, asksaveasfilename, startfile)
 from mc_prep import prep_texture, load_mcprep_data, colorize_material
-from mc_localization import (language, KernelLanguage, LocalizationCache,
+from mc_localization import (language, KernelLanguage, LocalizationCache, localize,
                              loctext, nsloctext, loctable_col, bilingual, tooltip)
 from mc_structure import parse_structure, structure_to_tex
 from mc_config import config, paths, wclass
 from mc_sequencer import keyframe
 from mc_widget import Layout, PropertyGroup, add_widget, ui
 from mc_mod import mods, Mod
+from mc_mesh import merge_skm
 
 
 ActorCache = None

@@ -6,7 +6,7 @@ import struct
 
 import unreal
 from mc_prep import prep_texture, colorize_material
-from mc_utils import warn
+from mc_utils import warn, get_tex_size
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tga", ".bmp", ".exr"}
@@ -324,16 +324,9 @@ def _color_list_to_array(color_list):
     return _extract_list(result)
 
 
-def _get_texture_size(texture_asset) -> tuple[int, int]:
-    """读取贴图像素宽高"""
-    width = texture_asset.blueprint_get_size_x()
-    height = texture_asset.blueprint_get_size_y()
-    return max(int(width), 1), max(int(height), 1)
-
-
 def _is_square_texture(texture_asset) -> bool:
     """判断贴图是否为正方形"""
-    width, height = _get_texture_size(texture_asset)
+    width, height = get_tex_size(texture_asset)
     return width == height
 
 
@@ -346,8 +339,8 @@ def _material_instance_path_for_texture(texture_asset) -> str:
 
 def _sample_texture_alpha_mask(texture_asset, alpha_threshold=0.5, max_resolution=32):
     """采样贴图 alpha 生成不透明掩码网格"""
-    orig_width, orig_height = _get_texture_size(texture_asset)
-    
+    orig_width, orig_height = get_tex_size(texture_asset)
+
     # 保持宽高比的情况下，将最大分辨率限制在 max_resolution
     width = orig_width
     height = orig_height

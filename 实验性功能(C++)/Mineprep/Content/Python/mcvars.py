@@ -5,6 +5,8 @@ SafeBroadcast = False
 DebugMode = False
 PythonTooltips = False
 RegisteredMods = {}
+Props = {}
+Languages = ['zh-Hans', 'en', 'zh-Hant']
 
 def help():
     """打印所有cvars"""

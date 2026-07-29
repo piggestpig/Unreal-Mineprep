@@ -2,90 +2,149 @@ import unreal
 import uuid
 import random
 import mcvars
-from mc_utils import construct, uasset, enum, uclass, copy, warn, debug, SafeList, resolve_soft
+from mc_utils import construct, uasset, enum, uclass, copy, debug, SafeList, resolve_soft, get_tex_size
 from mc_config import paths, wclass
-from typing import TypeVar
+from mc_localization import localize
+from typing import TypeVar, Callable
 
 T = TypeVar('T')
 WidgetsCache = {}
-props = {}
 widgets = []
+mcvars.Props = {}  # PropertyGroup 类 → 实例（_unique_ 热重载复用）
 
 
-class MetaProperty(type):
-    #获取属性时, 在props中找到对象并调用get_editor_property
-    def __getattribute__(cls, name):
-        if name.startswith("_"):
-            return super().__getattribute__(name)
-        value = props[cls].get_editor_property(name)
-        if name in super().__getattribute__('_soft_props_'):
-            return resolve_soft(value)
-        return value
+def _get_ue_type_str(t):
+    """将注解类型转为可写入 uproperty(...) 的表达式字符串"""
+    if isinstance(t, str):
+        # from __future__ import annotations / 部分 exec 场景下注解为字符串
+        if t in ('int', 'float', 'bool', 'str', 'bytes'):
+            return t
+        if hasattr(unreal, t):
+            return f'unreal.{t}'
+        return t
 
-    #设置属性时, 在props中找到对象并调用set_editor_property
-    def __setattr__(cls, name, value):
-        if name.startswith("_"):
-            super().__setattr__(name, value)
-            return
-        if name in cls._soft_props_:
-            if isinstance(value, unreal.Object):
-                value = unreal.SoftObjectPath(value.get_path_name())
-            elif isinstance(value, str):
-                value = unreal.SoftObjectPath(value)
-        props[cls].set_editor_property(name, value)
+    origin = getattr(t, '__origin__', None)
+    args = getattr(t, '__args__', None) or ()
+
+    if origin is list:
+        return f'unreal.Array({_get_ue_type_str(args[0])})'
+    if origin is set:
+        return f'unreal.Set({_get_ue_type_str(args[0])})'
+    if origin is dict:
+        return f'unreal.Map({_get_ue_type_str(args[0])}, {_get_ue_type_str(args[1])})'
+
+    tname = type(t).__name__
+    if tname in ('Array', 'FixedArray', 'Set', 'Map'):
+        if tname == 'Map' and len(args) >= 2:
+            return f'unreal.Map({_get_ue_type_str(args[0])}, {_get_ue_type_str(args[1])})'
+        if args:
+            return f'unreal.{tname}({_get_ue_type_str(args[0])})'
+        if tname == 'Map':
+            key = getattr(t, 'key_type', None) or getattr(t, '_key_type', None)
+            val = getattr(t, 'value_type', None) or getattr(t, '_value_type', None)
+            return f'unreal.Map({_get_ue_type_str(key)}, {_get_ue_type_str(val)})'
+        inner = getattr(t, 'type', None) or getattr(t, '_type', None) or getattr(t, 'inner', None)
+        return f'unreal.{tname}({_get_ue_type_str(inner)})'
+
+    name = getattr(t, '__name__', None)
+    if name and hasattr(unreal, name) and getattr(unreal, name) is t:
+        return f'unreal.{name}'
+    if name:
+        return name
+    raise TypeError(f'不支持的属性类型: {t!r}')
 
 
-class PropertyGroup(metaclass=MetaProperty):
+def _is_actor_type(t):
+    if isinstance(t, str):
+        try:
+            t = getattr(unreal, t, None)
+        except Exception:
+            return False
+    return isinstance(t, type) and issubclass(t, unreal.Actor)
+
+
+def resolve_prop_object(data):
+    """layout.prop 用：UObject / PropertyGroup 实例 → UObject。"""
+    if isinstance(data, unreal.Object):
+        return data
+    # duck typing：热重载后 isinstance(PropertyGroup) 可能因类对象更换而失败
+    uobj = getattr(data, 'uobject', None)
+    if uobj is None:
+        uobj = getattr(data, '_uobj', None)
+    if isinstance(uobj, unreal.Object):
+        return uobj
+    if isinstance(data, type) and (
+        data is PropertyGroup
+        or getattr(data, '__name__', None) == 'PropertyGroup'
+        or any(getattr(b, '__name__', None) == 'PropertyGroup' for b in getattr(data, '__mro__', ()))
+    ):
+        raise TypeError(
+            f'{data.__name__} 需要先实例化，例如: Props = {data.__name__}()'
+        )
+    raise TypeError(f'不支持的 prop 数据: {data!r}')
+
+
+class PropertyGroup:
+    """自定义属性集，需要实例化再引用成员变量"""
     _unique_ = False
-    _soft_actor_ = True
+    _softcast_ = True # Actor→SoftObjectPath；取值时解析所有 SoftObjectPath / SoftClassPath
 
     _soft_props_ = {}
+    _soft_path_names_ = frozenset()
+    _prop_names_ = frozenset()
+    _ue_class_ = None
+    _ue_class_name_ = None
+    _schema_ = None  # (properties, defaults, metas, ordered)
+    _instance_ = None  # _unique_ 单例
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         cls._soft_props_ = {}
+        cls._ue_class_ = None
+        cls._schema_ = None
+        cls._instance_ = None
 
+        # _unique_ 热重载：复用同名类已有的 uclass / 实例
         if cls._unique_:
-            for existing_cls, obj in props.items():
-                if existing_cls.__name__ == cls.__name__:
-                    props[cls] = obj
-                    # 仍按新类注解收集软引用字段，供 get/set 转换
-                    if cls._soft_actor_:
-                        for name, t in getattr(cls, '__annotations__', {}).items():
-                            if isinstance(t, type) and issubclass(t, unreal.Actor):
-                                cls._soft_props_[name] = t
-                    unreal.log(f"{cls.__name__}设置了 _unique_ = True, 直接使用已创建的属性集")
-                    return
+            for existing_cls, obj in list(mcvars.Props.items()):
+                if getattr(existing_cls, '__name__', None) != cls.__name__:
+                    continue
+                cls._prop_names_ = getattr(existing_cls, '_prop_names_', frozenset())
+                cls._soft_path_names_ = getattr(existing_cls, '_soft_path_names_', frozenset())
+                cls._soft_props_ = dict(getattr(existing_cls, '_soft_props_', {}))
+                cls._ue_class_ = getattr(existing_cls, '_ue_class_', None)
+                cls._ue_class_name_ = getattr(existing_cls, '_ue_class_name_', None)
+                cls._schema_ = getattr(existing_cls, '_schema_', None)
+                if isinstance(obj, PropertyGroup):
+                    cls._instance_ = obj
+                if cls._softcast_:
+                    for name, t in getattr(cls, '__annotations__', {}).items():
+                        if _is_actor_type(t):
+                            cls._soft_props_[name] = t
+                mcvars.Props[cls] = cls._instance_ or obj
+                unreal.log(f"{cls.__name__}设置了 _unique_ = True, 直接使用已创建的属性集")
+                return
 
         properties = {}
         defaults = {}
         metas = {}
 
-        def get_ue_type_str(t):
-            # 如果在 unreal 模块中能找到这个类型的名字，加上 "unreal." 前缀
-            if hasattr(unreal, t.__name__):
-                return f"unreal.{t.__name__}"
-            return t.__name__  # 否则认为是 int, str 等内建类型
-
         def register_soft_actor(name, t, meta=None):
-            """unreal.Actor 注解 → SoftObjectPath + AllowedClasses"""
             properties[name] = 'unreal.SoftObjectPath'
             cls._soft_props_[name] = t
             m = meta if meta is not None else {'Category': cls.__name__}
             m.setdefault('AllowedClasses', t.static_class().get_path_name())
             metas[name] = m
 
-        # 1. 提取带类型注解的变量
-        if hasattr(cls, "__annotations__"):
+        if hasattr(cls, '__annotations__'):
             for name, t in cls.__annotations__.items():
-                if cls._soft_actor_ and isinstance(t, type) and issubclass(t, unreal.Actor):
+                if cls._softcast_ and _is_actor_type(t):
                     register_soft_actor(name, t)
                 else:
-                    properties[name] = get_ue_type_str(t)
+                    properties[name] = _get_ue_type_str(t)
 
-        # 2. 提取类变量；值为 (default, meta_dict) 时拆出 meta
         for name, val in cls.__dict__.items():
-            if name.startswith("_") or callable(val):
+            if name.startswith('_') or callable(val):
                 continue
             meta = metas.get(name, {'Category': cls.__name__})
             if isinstance(val, tuple):
@@ -93,39 +152,135 @@ class PropertyGroup(metaclass=MetaProperty):
                 meta.update(extra)
             if name not in properties:
                 t = type(val)
-                if cls._soft_actor_ and isinstance(t, type) and issubclass(t, unreal.Actor):
+                if cls._softcast_ and _is_actor_type(t):
                     register_soft_actor(name, t, meta)
+                elif isinstance(val, list) and val:
+                    properties[name] = f'unreal.Array({_get_ue_type_str(type(val[0]))})'
+                    metas[name] = meta
+                elif isinstance(val, set) and val:
+                    properties[name] = f'unreal.Set({_get_ue_type_str(type(next(iter(val))))})'
+                    metas[name] = meta
+                elif isinstance(val, dict) and val:
+                    k, v = next(iter(val.items()))
+                    properties[name] = (
+                        f'unreal.Map({_get_ue_type_str(type(k))}, {_get_ue_type_str(type(v))})'
+                    )
+                    metas[name] = meta
                 else:
-                    properties[name] = get_ue_type_str(t)
+                    properties[name] = _get_ue_type_str(t)
                     metas[name] = meta
             else:
                 metas[name] = meta
             defaults[name] = val
 
-        # 3. 动态构建满足虚幻要求的代码
+        ordered = [n for n in getattr(cls, '__annotations__', {}) if n in properties]
+        ordered += [n for n in cls.__dict__ if n in properties and n not in ordered]
+        ordered += [n for n in properties if n not in ordered]
+        for i, name in enumerate(ordered, 1):
+            metas.setdefault(name, {'Category': cls.__name__}).setdefault('DisplayPriority', i)
+
+        # 预先分配 GUID 类名，供 localize 在实例化前登记
         guid = uuid.uuid4().hex[:8]
-        ue_class_name = f"{cls.__name__}_GUID{guid}"
+        cls._ue_class_name_ = f'{cls.__name__}_GUID{guid}'
+        cls._prop_names_ = frozenset(properties)
+        cls._soft_path_names_ = frozenset(
+            n for n, t in properties.items()
+            if 'SoftObjectPath' in t or 'SoftClassPath' in t
+        )
+        cls._schema_ = (properties, defaults, metas, ordered)
 
+        # 去掉类上的默认值属性，避免遮蔽实例 __getattr__/__setattr__
+        for name in properties:
+            if name in cls.__dict__:
+                try:
+                    delattr(cls, name)
+                except Exception:
+                    pass
+
+    @classmethod
+    def _ensure_ue_class(cls):
+        """首次实例化时注册带 GUID 的 uclass（每 Python 类只注册一次）。"""
+        if cls._ue_class_ is not None:
+            return cls._ue_class_
+        if not cls._schema_:
+            raise RuntimeError(f'{cls.__name__} 无属性 schema，无法注册 uclass')
+
+        properties, defaults, metas, ordered = cls._schema_
+        ue_class_name = cls._ue_class_name_
         code_lines = [
-            "@unreal.uclass()",
-            f"class {ue_class_name}(unreal.Object):"
+            '@unreal.uclass()',
+            f'class {ue_class_name}(unreal.Object):',
         ]
-
-        for prop_name, prop_type in properties.items():
+        for prop_name in ordered:
             meta = metas.get(prop_name, {'Category': cls.__name__})
-            code_lines.append(f"    {prop_name} = unreal.uproperty({prop_type}, meta={meta!r})")
-
-        code_lines.append("")
-
+            meta.setdefault('DisplayName', prop_name)
+            code_lines.append(
+                f'    {prop_name} = unreal.uproperty({properties[prop_name]}, meta={meta!r})'
+            )
+        code_lines.append('')
         for prop_name, default_val in defaults.items():
             if default_val is not None:
-                code_lines.append(f"unreal.get_default_object({ue_class_name}).set_editor_property({repr(prop_name)}, {repr(default_val)})")
+                code_lines.append(
+                    f'unreal.get_default_object({ue_class_name})'
+                    f'.set_editor_property({prop_name!r}, {default_val!r})'
+                )
 
-        exec_code = "\n".join(code_lines)
-
-        unreal.log(f"\n[注册数据对象] >>>\n{exec_code}\n<<< [End]")
+        exec_code = '\n'.join(code_lines)
+        unreal.log(f'\n[注册数据对象] >>>\n{exec_code}\n<<< [End]')
         exec(exec_code, globals())
-        props[cls] = construct(eval(ue_class_name))
+        cls._ue_class_ = eval(ue_class_name, globals())
+        return cls._ue_class_
+
+    def __new__(cls, *args, **kwargs):
+        if cls._unique_ and cls._instance_ is not None:
+            return cls._instance_
+        return super().__new__(cls)
+
+    def __init__(self):
+        if getattr(self, '_uobj', None) is not None:
+            return
+        ue_cls = type(self)._ensure_ue_class()
+        object.__setattr__(self, '_uobj', construct(ue_cls))
+        if type(self)._unique_:
+            type(self)._instance_ = self
+            mcvars.Props[type(self)] = self
+
+    @property
+    def uobject(self):
+        """底层 UObject，供 DetailsView / 外部 API 使用。"""
+        return object.__getattribute__(self, '_uobj')
+
+    def __getattr__(self, name):
+        prop_names = type(self)._prop_names_
+        if name not in prop_names:
+            raise AttributeError(f'{type(self).__name__!r} object has no attribute {name!r}')
+        value = self._uobj.get_editor_property(name)
+        if type(self)._softcast_ and isinstance(
+            value, (unreal.SoftObjectPath, unreal.SoftClassPath)
+        ):
+            return resolve_soft(value)
+        return value
+
+    def __setattr__(self, name, value):
+        if name.startswith('_') or name not in type(self)._prop_names_:
+            object.__setattr__(self, name, value)
+            return
+        if name in type(self)._soft_path_names_:
+            if isinstance(value, unreal.Object):
+                value = unreal.SoftObjectPath(value.get_path_name())
+            elif isinstance(value, str):
+                value = unreal.SoftObjectPath(value)
+        self._uobj.set_editor_property(name, value)
+
+    @classmethod
+    def localize(cls, source: str, *args):
+        """为变量或类别注入本地化翻译（可在实例化前调用）。
+        args 对应 mcvars.Languages 的各语言翻译。
+        """
+        if source in cls._prop_names_ or source in getattr(cls, '__annotations__', {}):
+            localize(source, *args, key=f'{cls._ue_class_name_}:{source}')
+        else:
+            localize(source, *args, namespace='UObjectCategory')
 
 
 def alignment(HVtuple: int | tuple[int, int] =(1,1)):
@@ -140,7 +295,7 @@ def alignment(HVtuple: int | tuple[int, int] =(1,1)):
 
 def add_widget(root, widget: T,
                padding=unreal.Margin(3,1,3,1), align=(1,1), fill=False,
-               clip=False, tooltip='') -> T:
+               clip=False, hidden=False, tooltip='') -> T:
     """添加子控件到根控件"""
     if not isinstance(widget, unreal.Object):
         widget = construct(uclass(widget), root)
@@ -170,6 +325,9 @@ def add_widget(root, widget: T,
     if tooltip:
         widget.set_tool_tip_text(tooltip)
 
+    if hidden:
+        widget.set_visibility(enum(unreal.SlateVisibility)[int(hidden)])
+
     widget.set_clipping(clip if isinstance(clip, unreal.WidgetClipping) else enum(unreal.WidgetClipping)[int(clip)])
     widgets.append(widget)
     return widget
@@ -189,6 +347,8 @@ class Layout():
         是否裁剪超出部分
     tooltip = ''
         鼠标悬停提示文本
+    hidden = False
+        是否隐藏控件, 输入整数转化为SlateVisibility枚举
     """
     target = None
     _public_ = False
@@ -267,34 +427,44 @@ class Layout():
         outer_name = self.outer.get_name()
         return outer_name + '.' + '.'.join(parts)
 
-    def get(self, prop):
+    def get(self, prop: str):
         """获取当前控件的编辑器属性"""
         return self.target.get_editor_property(prop)
 
-    def set(self, prop, value):
+    def set(self, prop: str, value):
         """设置当前控件的编辑器属性"""
         self.target.set_editor_property(prop, value)
 
+    def hide(self, state: int | bool | unreal.SlateVisibility = True):
+        """设置可视性, 隐藏控件"""
+        if isinstance(state, unreal.SlateVisibility):
+            self.target.set_visibility(state)
+        else:
+            self.target.set_visibility(enum(unreal.SlateVisibility)[int(state)])
 
-    def prop(self, data, property: str=None, text: str=None, on_property_changed=None, **kwargs):
-        """添加属性视图；指定 property 为单属性，否则为完整细节面板"""
+    def prop(self, data: unreal.Object | PropertyGroup, property: str=None, text: str=None,
+             on_property_changed: Callable[[str], None]=None, **kwargs):
+        """添加属性视图；指定 property 为单属性，否则为完整细节面板。
+        data 可为 UObject 或已实例化的 PropertyGroup。
+        """
+        obj = resolve_prop_object(data)
         if property:
             viewer = add_widget(self.target, unreal.SinglePropertyView, **kwargs)
-            viewer.set_object(data if isinstance(data, unreal.Object) else props[data])
+            viewer.set_object(obj)
             viewer.set_property_name(property)
             if text:
                 viewer.set_name_override(text)
         else:
             viewer = add_widget(self.target, unreal.DetailsView, **kwargs)
-            viewer.set_object(data if isinstance(data, unreal.Object) else props[data])
+            viewer.set_object(obj)
 
         if on_property_changed:
             viewer.on_property_changed.add_callable(on_property_changed)
         return Layout(viewer, public=self._public_)
 
 
-    def label(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1), **kwargs):
-        """添加文本标签"""
+    def text(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1), **kwargs):
+        """添加文本"""
         text_block = add_widget(self.target, unreal.TextBlock, **kwargs)
         text_block.set_text(text)
         text_block.set_color_and_opacity(unreal.SlateColor(color))
@@ -303,11 +473,9 @@ class Layout():
             size=size))
         return Layout(text_block, public=self._public_)
 
-    def text(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1), **kwargs):
-        return self.label(text, size, color, **kwargs)
-
     def title(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1), align=(2, 1), **kwargs):
-        return self.label(text, size, color, align=align, **kwargs)
+        """添加标题（默认居中的文本）"""
+        return self.text(text, size, color, align=align, **kwargs)
 
 
     def image(self, image, color=unreal.LinearColor(1, 1, 1, 1), size=unreal.Vector2D(64, 64), **kwargs):
@@ -315,12 +483,37 @@ class Layout():
         image_widget = add_widget(self.target, unreal.Image, **kwargs)
         image_widget.set_brush_resource_object(uasset(image))
         image_widget.set_color_and_opacity(color)
+        if isinstance(size, (int, float)):
+            # 高度限定为 size，宽度按比例缩放
+            w,h = get_tex_size(uasset(image))
+            ratio = w/h if h else 1
+            if ratio >= 1:
+                size = unreal.Vector2D(size, size/ratio)
+            else:
+                size = unreal.Vector2D(size*ratio, size)
         image_widget.set_desired_size_override(size)
         return Layout(image_widget, public=self._public_)
 
 
+    def label(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1),
+              icon=None, icon_padding=unreal.Margin(0,0,4,0), **kwargs):
+        """添加标签（可带图片的文本，icon为纹理资产路径），返回水平框"""
+        label_row = self.row(**kwargs)
+        if icon:
+            w,h = get_tex_size(uasset(icon))
+            ratio = w/h if h else 1
+            #高度限定为1.4*size，宽度按比例缩放
+            if ratio >= 1:
+                icon_size = unreal.Vector2D(1.4*size, 1.4*size/ratio)
+            else:
+                icon_size = unreal.Vector2D(1.4*size*ratio, 1.4*size)
+            label_row.image(icon, size=icon_size, padding=icon_padding, align=(1,2))
+        label_text = label_row.text(text, size=size, color=color, padding=0)
+        return label_row
+
+
     def button(self, text='', size=14, text_color=(1,1,1,1), text_padding=2,
-               on_clicked=None, align=(0, 1),**kwargs):
+               on_clicked: Callable[[], None]=None, align=(0, 1),**kwargs):
         """添加按钮，可绑定 on_clicked 回调"""
         button = add_widget(self.target, unreal.EditorUtilityButton, align=align, **kwargs)
         style = button.get_editor_property('widget_style')
@@ -342,11 +535,12 @@ class Layout():
         return button_widget
 
 
-    def operator(self, text='', size=14, on_clicked=None, align=(0, 1), **kwargs):
+    def operator(self, text='', size=14, on_clicked: Callable[[], None]=None, align=(0, 1), **kwargs):
         return self.button(text, size, on_clicked, align=align, **kwargs)
 
 
-    def checkbox(self, text='', size=14, on_check_state_changed=None, align=(0, 1), **kwargs):
+    def checkbox(self, text='', size=14, align=(0, 1),
+                 on_check_state_changed: Callable[[bool], None]=None, **kwargs):
         """添加复选框，可绑定 on_check_state_changed 回调"""
         checkbox = add_widget(self.target, unreal.EditorUtilityCheckBox, align=align, **kwargs)
         style = checkbox.get_editor_property('widget_style')
@@ -375,6 +569,7 @@ class Layout():
         return Layout(add_widget(self.target, unreal.VerticalBox, align=align, **kwargs), public=self._public_)
 
     def col(self, align=(0, 1), **kwargs):
+        """添加垂直布局容器"""
         return self.column(align=align, **kwargs)
 
 
