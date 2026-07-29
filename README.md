@@ -212,7 +212,7 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
 - 之前更新的实验性功能 已支持在骨骼网格体Actor的细节面板中显示头部模型和材质。因此，单独的“头部模型”变量已被移除，同时修复了手持物品方向相反的bug。
 - 修复了植物摇摆错误使用单面材质的bug
 - 修复了UE5.8右键蓝图资产看不到“脚本化资产行为”的bug
-- 修复了快捷键面板，上周由于Mineprep Python API更新而损坏
+- 修复了快捷键面板，上周由于Mineprep Python API更新而损坏。现在mineprep.PropertyGroup必须先实例化再使用，每个Mod可以在__init__中生成独立的属性集，支持同时打开多个面板
 
 #### 26w29a
 - 本周更新了MC资源包，支持26.2版本的最新方块和物品，并重新校对了中文名。开发插件所用的Blender版本提升至5.2，MCprep版本提升至3.6.3
@@ -249,20 +249,21 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
     d: float = (0, {'UIMin': 0, 'UIMax': 10})
     e: str = "Hello, Mineprep!"
     f: unreal.Object
-
-  layout.prop(MyProps, "a", "整数")
-  layout.prop(MyProps, "b", "整数，带默认值")
-  layout.prop(MyProps, "c", "整数，从默认值推断类型")
-  layout.prop(MyProps, "d", "小数，通过 (值,meta字典) 定义元数据")
-  layout.prop(MyProps, "e", "字符串")
-  layout.prop(MyProps, "f", "对象")
+	
+  my_props = MyProps()
+  layout.prop(my_props, "a", "整数")
+  layout.prop(my_props, "b", "整数，带默认值")
+  layout.prop(my_props, "c", "整数，从默认值推断类型")
+  layout.prop(my_props, "d", "小数，通过 (值,meta字典) 定义元数据")
+  layout.prop(my_props, "e", "字符串")
+  layout.prop(my_props, "f", "对象")
 
   layout.button("点击打印字符串", align=(1,1),
-    on_clicked=lambda: mineprep.prints(MyProps.e)
+    on_clicked=lambda: mineprep.prints(my_props.e)
   )
 
   #显示所有属性
-  layout.prop(MyProps)
+  layout.prop(my_props)
   """)
   ```
 - 编写大型程序时，可以使用mineprep.Mod类和其中的self.layout，在创建实例时自动注册UI界面：
