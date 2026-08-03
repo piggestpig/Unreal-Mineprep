@@ -916,32 +916,38 @@ def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0
     return actor
 
 
-def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0) -> list[unreal.Actor]:
-    """生成MC结构, gpu=1是PCG, gpu=2是粒子, cull=1按类型剔除内部实心方块, cull=2整体内部剔除"""
-    map = parse_structure(filepath, cull=cull)
+def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, reload=False) -> list[unreal.Actor]:
+    """生成MC结构, gpu=1是PCG, gpu=2是粒子；
+    cull=1按类型剔除内部实心, cull=2全体实心统一剔除内部, cull=3=2+剔除AABB侧面与底面
+    """
+    # PCG/粒子不需要 Transform，直接打包 pos/quat 数组写 EXR
+    map = parse_structure(filepath, cull=cull, packed=bool(gpu))
     filename = Path(filepath).stem
     inventory = loctable_col(6,2)
 
     actors = []
     meshes = []
-    for name, transforms in map.items():
+    spawn_jobs = []  # (name, mesh, transforms) — 仅 ISM
+
+    for name, payload in map.items():
         path = resolve_block_json_path(name)
         mesh = None
         if path is not None:
-            mesh = import_block(path, asset_name=name)
+            mesh = import_block(path, asset_name=name, reload=reload)
         else:
             candidate = next((n for n in inventory if n.startswith(name)), None)
             path = resolve_block_json_path(candidate) if candidate else None
             if path is not None:
-                mesh = import_block(path, asset_name=name)
+                mesh = import_block(path, asset_name=name, reload=reload)
             else:
                 warn(f'未找到{name}模型')
 
         meshes.append(mesh)
-        if mesh is None:
-            continue
+        if mesh is not None and not gpu:
+            spawn_jobs.append((name, mesh, payload))
 
-        if not gpu:
+    if not gpu:
+        for name, mesh, transforms in spawn_jobs:
             actor = spawn_blocks(mesh, transforms, loc, rot)
             actor.set_folder_path(filename)
             actors.append(actor)

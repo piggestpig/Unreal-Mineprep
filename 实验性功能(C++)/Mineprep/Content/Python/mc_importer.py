@@ -29,8 +29,9 @@ FACE_UV_CORNER_ROLES = {
     "south": ("tr", "tl", "bl", "br"),
     "up": ("tr", "tl", "bl", "br"),
     "down": ("bl", "br", "tr", "tl"),
-    "east": ("tl", "tr", "br", "bl"),
-    "west": ("tl", "tr", "br", "bl"),
+    # west/east：MC Z→UE Y 后水平方向相对 MC 观察反向，需水平翻转 U（仅换左右，不颠倒 V）
+    "east": ("tr", "tl", "bl", "br"),
+    "west": ("tr", "tl", "bl", "br"),
 }
 DOWN_FACE_UV_CORNER_ROLES = ("tl", "tr", "br", "bl")
 FLUID_BLOCK_NAMES = frozenset({
@@ -43,6 +44,11 @@ FLUID_BLOCK_NAMES = frozenset({
 FLUID_MODEL_ALIASES = {
     "flowing_water": "water",
     "flowing_lava": "lava",
+}
+# 旧版方块名 → 现有 models/block 文件名
+BLOCK_MODEL_ALIASES = {
+    "grass_path": "dirt_path",  # 1.17+ 更名
+    "grass": "short_grass",  # 1.20.3+ 短草更名（旧版植物草）
 }
 FLUID_TEXTURE_BY_BLOCK = {
     "water": "block/water_still",
@@ -59,9 +65,13 @@ FLUID_FLOW_TEXTURE_BY_BLOCK = {
     "bubble_column": "block/water_flow",
 }
 FLUID_HORIZONTAL_FACES = frozenset({"up", "down"})
+UVLOCK_FACE_NAMES = frozenset({"up", "down"})
 BASE_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面1_材质实例.LabPBR单面1_材质实例"
 ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面2_材质实例.LabPBR单面2_材质实例"
 BASE_TEXTURE_PARAMETER_NAME = "纹理贴图"
+
+# blockstates 中出现过 uvlock:true 的模型名（不含 .json）缓存
+_UVLOCK_MODEL_NAMES_CACHE = None
 
 if not hasattr(unreal, "mineprep"):
     unreal.mineprep = type("MineprepNamespace", (), {})()
@@ -711,7 +721,7 @@ def _set_uv_corners_on_triangles(mesh, triangle_ids, vertices, uv_corners):
 
 
 def _append_quad_with_uvs(mesh, vertices, uv_corners, material_id=0):
-    """追加四边形并设置 UV"""
+    """追加四边形并设置 UV；返回新三角形 id 列表"""
     existing_triangle_ids = set(_get_all_triangle_ids(mesh))
 
     primitive_options = unreal.GeometryScriptPrimitiveOptions()
@@ -734,6 +744,105 @@ def _append_quad_with_uvs(mesh, vertices, uv_corners, material_id=0):
     _set_uv_corners_on_triangles(mesh, triangle_ids, vertices, uv_corners)
     if int(material_id) > 0:
         _set_material_id_on_triangles(mesh, triangle_ids, material_id)
+    return triangle_ids
+
+
+def _blockstates_dir(models_dir=None) -> Path:
+    """由 models/block 推导同级 blockstates 目录"""
+    if models_dir is None:
+        from mc_config import paths
+        configured = getattr(paths, "blockstates", None)
+        if configured:
+            return Path(configured)
+        models_dir = Path(paths.blocks)
+    models_dir = Path(models_dir)
+    # .../models/block → .../blockstates
+    if models_dir.name == "block" and models_dir.parent.name == "models":
+        return models_dir.parent.parent / "blockstates"
+    return models_dir.parent / "blockstates"
+
+
+def _model_stem_from_blockstate_ref(model_ref) -> str:
+    """minecraft:block/oak_stairs → oak_stairs"""
+    ref = str(model_ref).replace("\\", "/")
+    if ":" in ref:
+        ref = ref.split(":", 1)[1]
+    return Path(ref).name
+
+
+def _collect_uvlock_model_names(blockstates_dir) -> frozenset:
+    """扫描 blockstates：任意变体 uvlock:true 所引用的模型名集合"""
+    names = set()
+    root = Path(blockstates_dir)
+    if not root.is_dir():
+        return frozenset()
+
+    def walk(node):
+        if isinstance(node, dict):
+            if node.get("uvlock") is True and "model" in node:
+                names.add(_model_stem_from_blockstate_ref(node["model"]))
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    for path in root.glob("*.json"):
+        try:
+            with path.open("r", encoding="utf-8-sig") as handle:
+                walk(json.load(handle))
+        except (OSError, json.JSONDecodeError):
+            continue
+    return frozenset(names)
+
+
+def _get_uvlock_model_names() -> frozenset:
+    """懒加载并缓存有 uvlock 的模型名"""
+    global _UVLOCK_MODEL_NAMES_CACHE
+    if _UVLOCK_MODEL_NAMES_CACHE is None:
+        _UVLOCK_MODEL_NAMES_CACHE = _collect_uvlock_model_names(_blockstates_dir())
+        unreal.log(f"uvlock models cached: {len(_UVLOCK_MODEL_NAMES_CACHE)}")
+    return _UVLOCK_MODEL_NAMES_CACHE
+
+
+def _model_uses_uvlock(model_name) -> bool:
+    """该模型是否在任一 blockstate 变体中使用 uvlock"""
+    stem = _sanitize_asset_name(str(model_name).lower().replace("minecraft:", ""))
+    if stem.endswith(".json"):
+        stem = stem[:-5]
+    return stem in _get_uvlock_model_names()
+
+
+def _apply_uvlock_vertex_colors(mesh, triangle_ids):
+    """顶/底面三角形顶点色 Alpha=0（create_color_seam 避免污染侧面）"""
+    if not triangle_ids:
+        return
+
+    # Python 绑定：Selection 为返回值，不能作为第 4 参传入
+    result = unreal.GeometryScript_MeshSelection.convert_index_array_to_mesh_selection(
+        mesh,
+        list(triangle_ids),
+        unreal.GeometryScriptMeshSelectionType.TRIANGLES,
+    )
+    selection = _extract_first_of_type(result, unreal.GeometryScriptMeshSelection)
+    if selection is None:
+        # 部分版本返回 (mesh, selection)
+        if isinstance(result, (tuple, list)) and len(result) >= 2:
+            selection = result[1] if isinstance(result[1], unreal.GeometryScriptMeshSelection) else result[0]
+        else:
+            selection = result
+    if not isinstance(selection, unreal.GeometryScriptMeshSelection):
+        raise RuntimeError(f"Failed to build mesh selection for uvlock colors: {type(result)}")
+
+    # GeometryScriptColorFlags 默认 RGBA 全开；UE Python 属性名不是 b_red
+    # Alpha=0 表示材质需按实例朝向做 uvlock；RGB 保持白
+    unreal.GeometryScript_VertexColors.set_mesh_selection_vertex_color(
+        mesh,
+        selection,
+        unreal.LinearColor(1.0, 1.0, 1.0, 0.0),
+        unreal.GeometryScriptColorFlags(),
+        create_color_seam=True,
+    )
 
 
 def _apply_uv_rect_to_triangles(mesh, triangle_ids, uv_rect, rotation_deg):
@@ -1116,21 +1225,24 @@ def _is_fluid_block_name(name) -> bool:
 
 
 def resolve_block_json_path(block_name, models_dir=None) -> Path:
-    """按方块名解析 models 目录下的 JSON 模型路径，支持流体别名"""
+    """按方块名解析 models 目录下的 JSON 模型路径，支持旧名/流体别名与 pane→玻璃回退"""
     if models_dir is None:
         from mc_config import paths
         models_dir = Path(paths.blocks)
 
     stem = _sanitize_asset_name(str(block_name).lower().replace("minecraft:", ""))
-    direct = Path(models_dir) / f"{stem}.json"
-    if direct.exists():
-        return direct.resolve()
+    candidates = [stem]
+    if stem.endswith("_pane"):
+        candidates.append(stem[:-5])
+    for alias_map in (BLOCK_MODEL_ALIASES, FLUID_MODEL_ALIASES):
+        alias = alias_map.get(stem)
+        if alias:
+            candidates.append(alias)
 
-    alias = FLUID_MODEL_ALIASES.get(stem)
-    if alias:
-        aliased = Path(models_dir) / f"{alias}.json"
-        if aliased.exists():
-            return aliased.resolve()
+    for candidate in candidates:
+        path = Path(models_dir) / f"{candidate}.json"
+        if path.exists():
+            return path.resolve()
     return None
 
 
@@ -1263,6 +1375,8 @@ def _build_block_dynamic_mesh(model_path, destination_path, asset_name, fluid_le
     created_materials = {}
     material_slots = []
     material_slot_index_by_texture = {}
+    apply_uvlock = _model_uses_uvlock(asset_name or model_path.stem)
+    uvlock_triangle_ids = []
 
     def get_material_index(texture_file):
         texture_asset, material_asset = _material_context_for_texture(
@@ -1295,6 +1409,9 @@ def _build_block_dynamic_mesh(model_path, destination_path, asset_name, fluid_le
             texture_ref = face_data.get("texture")
             if not texture_ref:
                 continue
+            # 跳过草地等 #overlay 共面层，避免与 side 闪烁重叠
+            if texture_ref == "#overlay" or texture_ref == "overlay":
+                continue
 
             if texture_ref.startswith("#"):
                 texture_file = _resolve_texture_reference(model_path, textures, texture_ref[1:])
@@ -1316,12 +1433,17 @@ def _build_block_dynamic_mesh(model_path, destination_path, asset_name, fluid_le
                 face_data.get("rotation", 0),
                 use_down_winding=use_down_winding,
             )
-            _append_quad_with_uvs(target_mesh, face_vertices, uv_corners, material_index)
+            triangle_ids = _append_quad_with_uvs(target_mesh, face_vertices, uv_corners, material_index)
+            if apply_uvlock and face_name in UVLOCK_FACE_NAMES:
+                uvlock_triangle_ids.extend(triangle_ids)
 
     if not material_slots:
         _return_dynamic_mesh(target_mesh)
         warn(f"导入方块失败: {model_path} (未产生材质)")
         return None
+
+    if uvlock_triangle_ids:
+        _apply_uvlock_vertex_colors(target_mesh, uvlock_triangle_ids)
 
     return category, target_mesh, material_slots
 
@@ -1461,7 +1583,7 @@ def import_block(
             finally:
                 _return_dynamic_mesh(dynamic_mesh)
         except Exception as exc:
-            warn(f"导入方块失败: {source} ({exc})")
+            warn(f"导入方块失败: {source}", exc)
             return None
 
     if suffix not in MESH_SUFFIXES:
@@ -1488,5 +1610,5 @@ def import_block(
         unreal.log(f"import_block imported: {mesh_asset.get_path_name()}")
         return mesh_asset
     except Exception as exc:
-        warn(f"导入方块失败: {source} ({exc})")
+        warn(f"导入方块失败: {source}", exc)
         return None

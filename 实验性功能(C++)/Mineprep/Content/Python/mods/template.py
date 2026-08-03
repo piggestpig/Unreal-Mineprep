@@ -4,8 +4,7 @@ import unreal
 # 在此填写模组相关信息，设置EnabledByDefault=True会在引擎启动时自动加载模组
 mod_info = {
     "Name": mineprep.bilingual("Mod模板", "Mod Template"),
-    "Description": mineprep.bilingual("面向开发者的普通mod模板",
-                    "A simple mod template for developers"),
+    "Description": mineprep.bilingual("面向开发者的普通mod模板", "A simple mod template for developers"),
     "Version": "1.0",
     "CreatedBy": "",
     "EnabledByDefault": False,
@@ -30,9 +29,4 @@ def register():
 
 # 写成文件夹的大型模组可在此注销子模块，参见ModManager的__init__.py
 def unregister():
-    pass
-
-
-# 单独运行此文件，可以这样写一些调试代码
-if __name__ == "__main__":
     pass

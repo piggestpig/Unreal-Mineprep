@@ -133,6 +133,10 @@
             "Enabled": true
         },
         {
+            "Name": "OpenCV",
+            "Enabled": true
+        },
+        {
             "Name": "nDisplay",
             "Enabled": true,
             "SupportedTargetPlatforms": [

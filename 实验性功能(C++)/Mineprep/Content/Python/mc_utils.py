@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import sys
+import traceback
 import mcvars
 from dataclasses import dataclass, asdict
 from pprint import pformat
@@ -371,9 +372,18 @@ def prints(*args, duration=2.0, color=unreal.LinearColor(0, 0.66, 1, 1)) -> str:
     return text
 
 
+def _format_warn_arg(arg) -> str:
+    """格式化 warn 参数；Exception 展开为完整 traceback"""
+    if isinstance(arg, BaseException):
+        return "".join(traceback.format_exception(type(arg), arg, arg.__traceback__)).rstrip()
+    if isinstance(arg, (str, unreal.Text)):
+        return str(arg)
+    return pformat(arg, sort_dicts=False)
+
+
 def warn(*warnings, duration=5.0, color=unreal.LinearColor(1, 1, 0, 1)):
-    """在屏幕上打印多行警告文本"""
-    text = '\n'.join(str(arg) if isinstance(arg, (str, unreal.Text)) else pformat(arg, sort_dicts=False) for arg in warnings)
+    """在屏幕上打印多行警告文本；可传入 Exception 以输出 traceback"""
+    text = "\n".join(_format_warn_arg(arg) for arg in warnings)
     unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration, print_to_log=False)
     unreal.log_warning(text)
     return warnings
@@ -381,7 +391,7 @@ def warn(*warnings, duration=5.0, color=unreal.LinearColor(1, 1, 0, 1)):
 
 def throw(*errors, duration=5.0, color=unreal.LinearColor(1, 0, 0, 1)):
     """在屏幕上打印多行错误文本并抛出异常"""
-    text = '\n'.join(str(arg) if isinstance(arg, (str, unreal.Text)) else pformat(arg, sort_dicts=False) for arg in errors)
+    text = "\n".join(_format_warn_arg(arg) for arg in errors)
     unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration, print_to_log=False)
     raise RuntimeError(errors)
 

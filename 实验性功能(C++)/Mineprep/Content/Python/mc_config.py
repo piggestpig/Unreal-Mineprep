@@ -18,6 +18,7 @@ class MCpath:
     config: str = mineprep + 'Mineprep_config.txt'
     installer: str = ''
     blocks: str = ''
+    blockstates: str = ''
     cache: str = project + 'cache/'
     mcprep_data: str = mineprep + 'mcprep_data.json'
 
@@ -98,4 +99,6 @@ class config(metaclass=ConfigMeta):
 
 paths = MCpath()
 paths.installer = config['Settings']['installer_dir']
-paths.blocks= paths.installer + '/Blender扩展资源/mc_default/assets/minecraft/models/block'
+_mc_assets = paths.installer + '/Blender扩展资源/mc_default/assets/minecraft'
+paths.blocks = _mc_assets + '/models/block'
+paths.blockstates = _mc_assets + '/blockstates'
