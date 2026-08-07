@@ -65,7 +65,17 @@ FLUID_FLOW_TEXTURE_BY_BLOCK = {
     "bubble_column": "block/water_flow",
 }
 FLUID_HORIZONTAL_FACES = frozenset({"up", "down"})
-UVLOCK_FACE_NAMES = frozenset({"up", "down"})
+# uvlock 顶点色 Alpha：按 UE 轴向标记面（材质据此修正 UV）
+# UE X=东/西, UE Y=南/北(MC Z), UE Z=顶/底(MC Y)
+UVLOCK_FACE_AXIS_ALPHA = {
+    "east": 0.94,
+    "west": 0.94,
+    "north": 0.96,
+    "south": 0.96,
+    "up": 0.98,
+    "down": 0.98,
+}
+_CUBE_FACE_NAMES = frozenset(FACE_NAMES)
 BASE_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面1_材质实例.LabPBR单面1_材质实例"
 ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面2_材质实例.LabPBR单面2_材质实例"
 BASE_TEXTURE_PARAMETER_NAME = "纹理贴图"
@@ -813,12 +823,39 @@ def _model_uses_uvlock(model_name) -> bool:
     return stem in _get_uvlock_model_names()
 
 
-def _apply_uvlock_vertex_colors(mesh, triangle_ids):
-    """顶/底面三角形顶点色 Alpha=0（create_color_seam 避免污染侧面）"""
-    if not triangle_ids:
-        return
+def _is_leaves_model(model_name) -> bool:
+    """树叶方块（正方体但不做 uvlock）"""
+    stem = _sanitize_asset_name(str(model_name).lower().replace("minecraft:", ""))
+    if stem.endswith(".json"):
+        stem = stem[:-5]
+    return stem.endswith("_leaves") or stem == "leaves"
 
-    # Python 绑定：Selection 为返回值，不能作为第 4 参传入
+
+def _element_is_full_cube(element) -> bool:
+    """单个 element 是否为 0–16 且含六面的完整正方体"""
+    frm = element.get("from")
+    to = element.get("to")
+    if not frm or not to or len(frm) != 3 or len(to) != 3:
+        return False
+    try:
+        if any(abs(float(frm[i]) - 0.0) > 1e-6 for i in range(3)):
+            return False
+        if any(abs(float(to[i]) - 16.0) > 1e-6 for i in range(3)):
+            return False
+    except (TypeError, ValueError):
+        return False
+    faces = element.get("faces") or {}
+    return _CUBE_FACE_NAMES.issubset(faces.keys())
+
+
+def _model_data_is_full_cube(model_data) -> bool:
+    """合并 parent 后的模型是否含完整正方体（可有 overlay 等额外 element）"""
+    elements = model_data.get("elements") or []
+    return any(_element_is_full_cube(el) for el in elements)
+
+
+def _mesh_selection_from_triangles(mesh, triangle_ids):
+    """三角形 ID → GeometryScriptMeshSelection"""
     result = unreal.GeometryScript_MeshSelection.convert_index_array_to_mesh_selection(
         mesh,
         list(triangle_ids),
@@ -826,23 +863,30 @@ def _apply_uvlock_vertex_colors(mesh, triangle_ids):
     )
     selection = _extract_first_of_type(result, unreal.GeometryScriptMeshSelection)
     if selection is None:
-        # 部分版本返回 (mesh, selection)
         if isinstance(result, (tuple, list)) and len(result) >= 2:
             selection = result[1] if isinstance(result[1], unreal.GeometryScriptMeshSelection) else result[0]
         else:
             selection = result
     if not isinstance(selection, unreal.GeometryScriptMeshSelection):
         raise RuntimeError(f"Failed to build mesh selection for uvlock colors: {type(result)}")
+    return selection
 
-    # GeometryScriptColorFlags 默认 RGBA 全开；UE Python 属性名不是 b_red
-    # Alpha=0 表示材质需按实例朝向做 uvlock；RGB 保持白
-    unreal.GeometryScript_VertexColors.set_mesh_selection_vertex_color(
-        mesh,
-        selection,
-        unreal.LinearColor(1.0, 1.0, 1.0, 0.0),
-        unreal.GeometryScriptColorFlags(),
-        create_color_seam=True,
-    )
+
+def _apply_uvlock_vertex_colors(mesh, triangles_by_alpha):
+    """按轴向写入顶点色 Alpha（create_color_seam 避免邻面串色）。
+    triangles_by_alpha: {0.94|0.96|0.98: [triangle_id, ...]}
+    """
+    for alpha, triangle_ids in triangles_by_alpha.items():
+        if not triangle_ids:
+            continue
+        selection = _mesh_selection_from_triangles(mesh, triangle_ids)
+        unreal.GeometryScript_VertexColors.set_mesh_selection_vertex_color(
+            mesh,
+            selection,
+            unreal.LinearColor(1.0, 1.0, 1.0, float(alpha)),
+            unreal.GeometryScriptColorFlags(),
+            create_color_seam=True,
+        )
 
 
 def _apply_uv_rect_to_triangles(mesh, triangle_ids, uv_rect, rotation_deg):
@@ -1375,8 +1419,12 @@ def _build_block_dynamic_mesh(model_path, destination_path, asset_name, fluid_le
     created_materials = {}
     material_slots = []
     material_slot_index_by_texture = {}
-    apply_uvlock = _model_uses_uvlock(asset_name or model_path.stem)
-    uvlock_triangle_ids = []
+    model_stem = asset_name or model_path.stem
+    apply_uvlock = (not _is_leaves_model(model_stem)) and (
+        _model_uses_uvlock(model_stem) or _model_data_is_full_cube(model_data)
+    )
+    # Alpha → 三角形列表；默认未写入面保持 Alpha=1
+    uvlock_tris_by_alpha = {0.94: [], 0.96: [], 0.98: []}
 
     def get_material_index(texture_file):
         texture_asset, material_asset = _material_context_for_texture(
@@ -1434,16 +1482,18 @@ def _build_block_dynamic_mesh(model_path, destination_path, asset_name, fluid_le
                 use_down_winding=use_down_winding,
             )
             triangle_ids = _append_quad_with_uvs(target_mesh, face_vertices, uv_corners, material_index)
-            if apply_uvlock and face_name in UVLOCK_FACE_NAMES:
-                uvlock_triangle_ids.extend(triangle_ids)
+            if apply_uvlock:
+                alpha = UVLOCK_FACE_AXIS_ALPHA.get(face_name)
+                if alpha is not None:
+                    uvlock_tris_by_alpha[alpha].extend(triangle_ids)
 
     if not material_slots:
         _return_dynamic_mesh(target_mesh)
         warn(f"导入方块失败: {model_path} (未产生材质)")
         return None
 
-    if uvlock_triangle_ids:
-        _apply_uvlock_vertex_colors(target_mesh, uvlock_triangle_ids)
+    if any(uvlock_tris_by_alpha.values()):
+        _apply_uvlock_vertex_colors(target_mesh, uvlock_tris_by_alpha)
 
     return category, target_mesh, material_slots
 

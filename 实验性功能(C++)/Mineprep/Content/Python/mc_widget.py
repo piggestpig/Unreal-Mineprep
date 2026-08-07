@@ -5,9 +5,11 @@ import mcvars
 from mc_utils import construct, uasset, enum, uclass, copy, debug, SafeList, resolve_soft, get_tex_size
 from mc_config import paths, wclass
 from mc_localization import localize
-from typing import TypeVar, Callable
+from typing import TypeVar, Callable, Any
 
 T = TypeVar('T')
+padding_align_fill_clip_tooltip_hidden = dict
+
 WidgetsCache = {}
 widgets = []
 mcvars.Props = {}  # PropertyGroup 类 → 实例（_unique_ 热重载复用）
@@ -442,8 +444,10 @@ class Layout():
         else:
             self.target.set_visibility(enum(unreal.SlateVisibility)[int(state)])
 
+
     def prop(self, data: unreal.Object | PropertyGroup, property: str=None, text: str=None,
-             on_property_changed: Callable[[str], None]=None, **kwargs):
+             on_property_changed: Callable[[str], Any]=None,
+             **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加属性视图；指定 property 为单属性，否则为完整细节面板。
         data 可为 UObject 或已实例化的 PropertyGroup。
         """
@@ -463,7 +467,8 @@ class Layout():
         return Layout(viewer, public=self._public_)
 
 
-    def text(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1), **kwargs):
+    def text(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1),
+             **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加文本"""
         text_block = add_widget(self.target, unreal.TextBlock, **kwargs)
         text_block.set_text(text)
@@ -473,12 +478,15 @@ class Layout():
             size=size))
         return Layout(text_block, public=self._public_)
 
-    def title(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1), align=(2, 1), **kwargs):
+
+    def title(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1), align=(2, 1),
+              **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加标题（默认居中的文本）"""
         return self.text(text, size, color, align=align, **kwargs)
 
 
-    def image(self, image, color=unreal.LinearColor(1, 1, 1, 1), size=unreal.Vector2D(64, 64), **kwargs):
+    def image(self, image, color=unreal.LinearColor(1, 1, 1, 1), size=unreal.Vector2D(64, 64),
+              **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加图片控件"""
         image_widget = add_widget(self.target, unreal.Image, **kwargs)
         image_widget.set_brush_resource_object(uasset(image))
@@ -496,7 +504,8 @@ class Layout():
 
 
     def label(self, text='', size=14, color=unreal.LinearColor(1, 1, 1, 1),
-              icon=None, icon_padding=unreal.Margin(0,0,4,0), **kwargs):
+              icon=None, icon_padding=unreal.Margin(0,0,4,0),
+              **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加标签（可带图片的文本，icon为纹理资产路径），返回水平框"""
         label_row = self.row(**kwargs)
         if icon:
@@ -513,7 +522,8 @@ class Layout():
 
 
     def button(self, text='', size=14, text_color=(1,1,1,1), text_padding=2,
-               on_clicked: Callable[[], None]=None, align=(0, 1),**kwargs):
+               on_clicked: Callable[[], Any]=None, align=(0, 1),
+               **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加按钮，可绑定 on_clicked 回调"""
         button = add_widget(self.target, unreal.EditorUtilityButton, align=align, **kwargs)
         style = button.get_editor_property('widget_style')
@@ -535,12 +545,14 @@ class Layout():
         return button_widget
 
 
-    def operator(self, text='', size=14, on_clicked: Callable[[], None]=None, align=(0, 1), **kwargs):
+    def operator(self, text='', size=14, on_clicked: Callable[[], Any]=None, align=(0, 1),
+                 **kwargs: padding_align_fill_clip_tooltip_hidden):
         return self.button(text, size, on_clicked, align=align, **kwargs)
 
 
     def checkbox(self, text='', size=14, align=(0, 1),
-                 on_check_state_changed: Callable[[bool], None]=None, **kwargs):
+                 on_check_state_changed: Callable[[bool], Any]=None,
+                 **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加复选框，可绑定 on_check_state_changed 回调"""
         checkbox = add_widget(self.target, unreal.EditorUtilityCheckBox, align=align, **kwargs)
         style = checkbox.get_editor_property('widget_style')
@@ -559,21 +571,23 @@ class Layout():
         return Layout(checkbox, public=self._public_)
 
 
-    def row(self, align=(0, 1), **kwargs):
+    def row(self, align=(0, 1), **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加水平布局容器"""
         return Layout(add_widget(self.target, unreal.HorizontalBox, align=align, **kwargs), public=self._public_)
 
 
-    def column(self, align=(0, 1), **kwargs):
+    def column(self, align=(0, 1), **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加垂直布局容器"""
         return Layout(add_widget(self.target, unreal.VerticalBox, align=align, **kwargs), public=self._public_)
 
-    def col(self, align=(0, 1), **kwargs):
+
+    def col(self, align=(0, 1), **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加垂直布局容器"""
         return self.column(align=align, **kwargs)
 
 
-    def spacer(self, size=unreal.Vector2D(1, 1), align=(0, 1), **kwargs):
+    def spacer(self, size=unreal.Vector2D(1, 1), align=(0, 1),
+               **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加空白占位"""
         spacer = add_widget(self.target, unreal.Spacer, align=align, **kwargs)
         size = (size, size) if isinstance(size, (int, float)) else size
@@ -581,18 +595,21 @@ class Layout():
         return Layout(spacer, public=self._public_)
 
 
-    def overlay(self, padding=0, align=(0, 0), fill=True, **kwargs):
+    def overlay(self, padding=0, align=(0, 0), fill=True,
+                **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加叠加布局容器"""
         return Layout(add_widget(self.target, unreal.Overlay, padding=padding, align=align, fill=fill, **kwargs), public=self._public_)
 
 
-    def switcher(self, animated=False, align=(0, 1), **kwargs):
+    def switcher(self, animated=False, align=(0, 1),
+                 **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加页面切换器；animated=True 使用动画切换"""
         switcher_type = unreal.CommonAnimatedSwitcher if animated else unreal.WidgetSwitcher
         return Layout(add_widget(self.target, switcher_type, align=align, **kwargs), public=self._public_)
 
 
-    def scalebox(self, scale: float=None, padding=0, align=(0, 1), **kwargs):
+    def scalebox(self, scale: float=None, padding=0, align=(0, 1),
+                 **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加缩放容器，可指定scale为固定缩放比例。若要动态调整scale，需设置默认值"""
         scalebox = add_widget(self.target, unreal.ScaleBox, padding=padding, align=align, **kwargs)
         if scale:
@@ -601,7 +618,8 @@ class Layout():
         return Layout(scalebox, public=self._public_)
 
 
-    def scrollbox(self, smooth_scroll=False, horizontal=False, align=(0, 1), **kwargs):
+    def scrollbox(self, smooth_scroll=False, horizontal=False, align=(0, 1),
+                  **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加滚动容器；smooth_scroll 可传速度，horizontal 开启横向滚动"""
         scrollbox = add_widget(self.target, unreal.ScrollBox, align=align, **kwargs)
         if smooth_scroll:
@@ -612,7 +630,35 @@ class Layout():
         return Layout(scrollbox, public=self._public_)
 
 
-    def custom(self, widget, align=(0, 1), **kwargs):
+    def border(self, color=unreal.LinearColor(0,0,0,0), padding=0,
+               on_mouse_button_down: Callable[[unreal.Geometry, unreal.PointerEvent], Any | unreal.EventReply]=None,
+               on_mouse_button_up: Callable[[unreal.Geometry, unreal.PointerEvent], Any | unreal.EventReply]=None,
+               on_mouse_double_click: Callable[[unreal.Geometry, unreal.PointerEvent], Any | unreal.EventReply]=None,
+               on_mouse_move: Callable[[unreal.Geometry, unreal.PointerEvent], Any | unreal.EventReply]=None,
+               **kwargs: padding_align_fill_clip_tooltip_hidden):
+        """添加边框容器，可绑定鼠标事件回调"""
+        border = Layout(add_widget(self.target, unreal.Border, padding=padding, **kwargs), public=self._public_)
+        border.set_brush_color(color)
+
+        def handled(func, geometry, event):
+            result = func(geometry, event)
+            if isinstance(result, unreal.EventReply):
+                return result
+            return unreal.WidgetLibrary.handled()
+
+        if on_mouse_button_down:
+            border.get('on_mouse_button_down_event').bind_callable(lambda x,y : handled(on_mouse_button_down, x, y))
+        if on_mouse_button_up:
+            border.get('on_mouse_button_up_event').bind_callable(lambda x,y : handled(on_mouse_button_up, x, y))
+        if on_mouse_double_click:
+            border.get('on_mouse_double_click_event').bind_callable(lambda x,y : handled(on_mouse_double_click, x, y))
+        if on_mouse_move:
+            border.get('on_mouse_move_event').bind_callable(lambda x,y : handled(on_mouse_move, x, y))
+
+        return border
+
+
+    def custom(self, widget, align=(0, 1), **kwargs: padding_align_fill_clip_tooltip_hidden):
         """添加自定义控件类型或实例"""
         return Layout(add_widget(self.target, widget, align=align, **kwargs), public=self._public_)
 

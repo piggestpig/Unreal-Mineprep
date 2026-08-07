@@ -98,8 +98,29 @@ def _make_opts():
     return from_opts, lod, bone_opts, append_opts
 
 
+def _prepare_vertex_colors_for_skm(dm):
+    """写入骨骼网格前校正顶点色，使材质观感与静态网格一致。
+
+    Geometry Script 写 MeshDescription 时默认 SRGB→Linear（为 StaticMesh 的
+    ToFColor(true) 配对）。SkeletalMesh Build 使用 ToFColor(false)，不再抬回
+    sRGB，导致原 SM 顶点色在材质里偏暗。写入前先 Linear→sRGB，抵消该变换。
+    """
+    try:
+        has = unreal.GeometryScript_MeshQueries.get_has_vertex_colors(dm)
+        if isinstance(has, (list, tuple)):
+            has = has[-1] if has else False
+        if not has:
+            return dm
+    except Exception:
+        pass
+    return _unwrap(
+        unreal.GeometryScript_VertexColors.convert_mesh_vertex_colors_linear_to_srgb(dm)
+    )
+
+
 def _save_skm(body_dm, skeleton, mats, out_path, existing=None):
     """新建或覆写骨骼网格资产。existing 非空时用 copy_mesh_to_skeletal_mesh，不删除。"""
+    body_dm = _prepare_vertex_colors_for_skm(body_dm)
     mat_list = [m for m in mats if m]
 
     if existing:

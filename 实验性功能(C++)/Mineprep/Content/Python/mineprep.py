@@ -916,12 +916,13 @@ def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0
     return actor
 
 
-def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, reload=False) -> list[unreal.Actor]:
+def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0, reload=False) -> list[unreal.Actor]:
     """生成MC结构, gpu=1是PCG, gpu=2是粒子；
-    cull=1按类型剔除内部实心, cull=2全体实心统一剔除内部, cull=3=2+剔除AABB侧面与底面
+    cull=1按类型剔除内部实心, cull=2全体实心统一剔除内部, cull=3=2+剔除AABB侧面与底面；
+    merge=0关, 1长条, 2平面, 3长方体（仅完整正方体；cull 优先于 merge）
     """
-    # PCG/粒子不需要 Transform，直接打包 pos/quat 数组写 EXR
-    map = parse_structure(filepath, cull=cull, packed=bool(gpu))
+    # PCG/粒子不需要 Transform，直接打包 pos/rot/scale 数组写 EXR
+    map = parse_structure(filepath, cull=cull, packed=bool(gpu), merge=merge)
     filename = Path(filepath).stem
     inventory = loctable_col(6,2)
 

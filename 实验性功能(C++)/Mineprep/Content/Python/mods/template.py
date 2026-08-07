@@ -5,7 +5,7 @@ import unreal
 mod_info = {
     "Name": mineprep.bilingual("Mod模板", "Mod Template"),
     "Description": mineprep.bilingual("面向开发者的普通mod模板", "A simple mod template for developers"),
-    "Version": "1.0",
+    "Version": "0.6-pre1",
     "CreatedBy": "",
     "EnabledByDefault": False,
     "ReloadWithMineprep": True,

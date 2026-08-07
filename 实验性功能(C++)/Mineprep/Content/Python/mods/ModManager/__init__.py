@@ -3,7 +3,7 @@ from mineprep import bilingual
 mod_info = {
     "Name": bilingual("模组管理器", "Mod Manager"),
     "Description": bilingual("用于启用/禁用模组", "Used for enabling/disabling mods"),
-    "Version": "1.0",
+    "Version": "0.6-pre1",
     "CreatedBy": "Pig",
     "EnabledByDefault": True,
     "ReloadWithMineprep": True,

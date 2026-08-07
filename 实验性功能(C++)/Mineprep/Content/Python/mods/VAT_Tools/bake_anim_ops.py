@@ -106,6 +106,205 @@ def _create_cache_textures(cache_dir: str, tex_base: str) -> dict[str, unreal.Te
     return out
 
 
+_RATE_SCALE_EPS = 1e-3
+_FPS_EPS = 0.5
+
+
+def _anim_sample_rate(anim: unreal.AnimSequence, fallback: float = 30.0) -> float:
+    """取动画序列源帧率（fps），供 AnimToTexture SampleRate 匹配采样。"""
+    if not anim:
+        return float(fallback)
+    try:
+        model = anim.get_editor_property('data_model_interface')
+        if model is not None:
+            fr = model.get_frame_rate()
+            num = float(getattr(fr, 'numerator', 0) or 0)
+            den = float(getattr(fr, 'denominator', 1) or 1)
+            if num > 0 and den > 0:
+                return num / den
+    except Exception:
+        pass
+    try:
+        fr = anim.get_sampling_frame_rate()
+        num = float(getattr(fr, 'numerator', 0) or 0)
+        den = float(getattr(fr, 'denominator', 1) or 1)
+        if num > 0 and den > 0:
+            return num / den
+    except Exception:
+        pass
+    return float(fallback)
+
+
+def _anim_rate_scale(anim: unreal.AnimSequence) -> float:
+    try:
+        return float(unreal.AnimationLibrary.get_rate_scale(anim) or 1.0)
+    except Exception:
+        try:
+            return float(anim.get_editor_property('rate_scale') or 1.0)
+        except Exception:
+            return 1.0
+
+
+def _delete_asset_path(path: str) -> None:
+    soft = path.split('.')[0] if path and '.' in path else path
+    if soft and unreal.EditorAssetLibrary.does_asset_exist(soft):
+        unreal.EditorAssetLibrary.delete_asset(soft)
+
+
+def _fps_compatible(a: float, b: float) -> bool:
+    """AnimDataController：目标 fps 须为当前的整数倍或因子。"""
+    ia, ib = max(1, int(round(a))), max(1, int(round(b)))
+    return (ia <= ib and ib % ia == 0) or (ib <= ia and ia % ib == 0)
+
+
+def _force_anim_frame_rate(anim: unreal.AnimSequence, fps: float) -> None:
+    """把新建 AnimSequence 帧率设为目标（必要时经 LCM 中转，规避 24↔30）。"""
+    if not anim or fps <= 0:
+        return
+    cur = _anim_sample_rate(anim)
+    if abs(cur - fps) <= _FPS_EPS:
+        return
+    ctrl = getattr(anim, 'controller', None)
+    if ctrl is None:
+        return
+    dst = max(1, int(round(fps)))
+    src = max(1, int(round(cur)))
+    # 先缩到 1 帧，避免中转帧率时出现 subframe 精度警告
+    try:
+        ctrl.set_number_of_frames(1, False)
+    except Exception:
+        pass
+    fr_dst = unreal.FrameRate(dst, 1)
+    if not _fps_compatible(src, dst):
+        import math
+        lcm = src // math.gcd(src, dst) * dst
+        ctrl.set_frame_rate(unreal.FrameRate(lcm, 1), False)
+    ctrl.set_frame_rate(fr_dst, False)
+    u.save(anim)
+
+
+def _prepare_bake_anim(
+    anim: unreal.AnimSequence,
+    skm: unreal.SkeletalMesh,
+    cache_dir: str,
+    *,
+    override_fps: bool = False,
+    target_fps: float = 60.0,
+) -> unreal.AnimSequence:
+    """必要时 Sequencer 重采样到 cache：消化 RateScale，并可选重载目标帧率。
+
+    - RateScale≠1：按墙钟时长重采样（RateScale→1），慢放加密 / 快放抽稀
+    - bOverrideFramerate：以 Framerate 为目标 fps；源已是该帧率则不因帧率单独缓存
+    - 两者同时启用时，RateScale 重采样也使用 Framerate
+    """
+    rs = _anim_rate_scale(anim)
+    if abs(rs) <= 1e-8:
+        u.notify(f'RateScale={rs:g} 无效，按 1 处理')
+        rs = 1.0
+
+    src_fps = _anim_sample_rate(anim, fallback=30.0)
+    bake_fps = float(target_fps) if override_fps else src_fps
+    if bake_fps <= 0:
+        bake_fps = src_fps
+
+    need_rs = abs(rs - 1.0) > _RATE_SCALE_EPS
+    need_fps = override_fps and abs(src_fps - bake_fps) > _FPS_EPS
+    if not need_rs and not need_fps:
+        return anim
+
+    play_len = float(anim.get_play_length() or 0.0)
+    wall_len = play_len / abs(rs)
+    end_frame = max(1, int(round(wall_len * bake_fps)))
+    fr = unreal.FrameRate(max(1, int(round(bake_fps))), 1)
+
+    src_keys = int(unreal.AnimationLibrary.get_num_keys(anim) or 0)
+    out_name = f'{u.display_name(anim)}_Cache'
+    ls_name = f'LS_Cache_{u.display_name(anim)}'
+    reasons = []
+    if need_rs:
+        reasons.append(f'RateScale={rs:g}')
+    if need_fps:
+        reasons.append(f'fps {src_fps:g}→{bake_fps:g}')
+    u.notify(
+        f'缓存重采样 ({", ".join(reasons)}): {src_keys} keys → ~{end_frame + 1} keys '
+        f'({wall_len:.4g}s @ {bake_fps:g}fps) → cache/{out_name}'
+    )
+
+    tools = u.asset_tools()
+    _delete_asset_path(f'{cache_dir}/{ls_name}')
+    _delete_asset_path(f'{cache_dir}/{out_name}')
+
+    ls = tools.create_asset(
+        ls_name, cache_dir, unreal.LevelSequence, unreal.LevelSequenceFactoryNew()
+    )
+    if not ls:
+        raise RuntimeError(f'创建临时 LevelSequence 失败: {cache_dir}/{ls_name}')
+
+    unreal.MovieSceneSequenceExtensions.set_display_rate(ls, fr)
+    unreal.MovieSceneSequenceExtensions.set_playback_start(ls, 0)
+    unreal.MovieSceneSequenceExtensions.set_playback_end(ls, end_frame)
+
+    world = u.world()
+    actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    actor = actor_sub.spawn_actor_from_class(
+        unreal.SkeletalMeshActor, unreal.Vector(0.0, 0.0, -100000.0)
+    )
+    try:
+        actor.skeletal_mesh_component.set_skeletal_mesh_asset(skm)
+        binding = ls.add_possessable(actor)
+        track = unreal.MovieSceneBindingExtensions.add_track(
+            binding, unreal.MovieSceneSkeletalAnimationTrack
+        )
+        section = track.add_section()
+        section.set_range(0, end_frame)
+        params = section.get_editor_property('params')
+        params.set_editor_property('animation', anim)
+        section.set_editor_property('params', params)
+
+        factory = unreal.AnimSequenceFactory()
+        factory.set_editor_property('target_skeleton', skm.skeleton)
+        out_anim = tools.create_asset(
+            out_name, cache_dir, unreal.AnimSequence, factory
+        )
+        if not isinstance(out_anim, unreal.AnimSequence):
+            raise RuntimeError(f'创建重采样动画失败: {cache_dir}/{out_name}')
+
+        # 空序列默认多为 30fps；导出结束时 SetFrameRate 要求倍数/因子关系。
+        # 先对齐目标帧率，再只靠 Sequencer DisplayRate 采样（不用 custom_frame_rate）。
+        _force_anim_frame_rate(out_anim, bake_fps)
+
+        opt = unreal.AnimSeqExportOption()
+        opt.set_editor_property('export_transforms', True)
+        opt.set_editor_property('export_morph_targets', False)
+        opt.set_editor_property('export_attribute_curves', False)
+        opt.set_editor_property('export_material_curves', False)
+        opt.set_editor_property('record_in_world_space', False)
+        opt.set_editor_property('evaluate_all_skeletal_mesh_components', False)
+        opt.set_editor_property('use_custom_frame_rate', False)
+        opt.set_editor_property('transact_recording', False)
+
+        ok = unreal.SequencerTools.export_anim_sequence(
+            world, ls, out_anim, opt, binding, False
+        )
+        if not ok:
+            raise RuntimeError('SequencerTools.export_anim_sequence 失败')
+
+        unreal.AnimationLibrary.set_rate_scale(out_anim, 1.0)
+        u.save(out_anim)
+        got = int(unreal.AnimationLibrary.get_num_keys(out_anim) or 0)
+        u.notify(
+            f'重采样完成: keys={got}, length={out_anim.get_play_length():.4g}s, '
+            f'fps={bake_fps:g}, RateScale=1'
+        )
+        return out_anim
+    finally:
+        try:
+            actor_sub.destroy_actor(actor)
+        except Exception:
+            pass
+        _delete_asset_path(u.package_path(ls) if ls else f'{cache_dir}/{ls_name}')
+
+
 def _configure_temp_da(
     da: unreal.AnimToTextureDataAsset,
     skm: unreal.SkeletalMesh,
@@ -131,9 +330,9 @@ def _configure_temp_da(
     da.set_editor_property('precision', unreal.AnimToTexturePrecision.SIXTEEN_BITS)
     da.set_editor_property('auto_play', True)
     da.set_editor_property(
-        'num_bone_influences', unreal.AnimToTextureNumBoneInfluences.FOUR
+        'num_bone_influences', unreal.AnimToTextureNumBoneInfluences.TWO
     )
-    da.set_editor_property('sample_rate', float(sample_rate or 60.0))
+    da.set_editor_property('sample_rate', float(sample_rate or 30.0))
     da.set_editor_property('bone_position_texture', textures['bpt'])
     da.set_editor_property('bone_rotation_texture', textures['brt'])
     da.set_editor_property('bone_weight_texture', textures['bwt'])
@@ -159,6 +358,7 @@ def _premul_to_directory(
     min_bbox: unreal.LinearColor,
     size_bbox: unreal.LinearColor,
     calc_material: unreal.MaterialInterface,
+    scalars: dict[str, float] | None = None,
 ) -> unreal.Texture2D | None:
     if not source_tex or not calc_material:
         return None
@@ -171,6 +371,8 @@ def _premul_to_directory(
     mid.set_texture_parameter_value('Tex', source_tex)
     mid.set_vector_parameter_value('MinBBox', min_bbox)
     mid.set_vector_parameter_value('SizeBBox', size_bbox)
+    for name, value in (scalars or {}).items():
+        mid.set_scalar_parameter_value(str(name), float(value))
 
     w, h = u.texture_size(source_tex)
     rt = unreal.RenderingLibrary.create_render_target2d(
@@ -232,6 +434,9 @@ def _bake_one_slot(
     tc: unreal.TextureCollection,
     anim: unreal.AnimSequence,
     anim_index: int,
+    *,
+    override_fps: bool = False,
+    target_fps: float = 60.0,
 ) -> bool:
     """对单个动画槽位：cache 单段烘焙 → 预乘 → 写入纹理集合 + MC_VAT。"""
     out_dir = u.package_dir(mc_vat)
@@ -248,8 +453,21 @@ def _bake_one_slot(
         return False
 
     textures = _create_cache_textures(cache_dir, tex_base)
-    sample_rate = float(mc_vat.get_editor_property('sample_rate') or 60.0)
-    _configure_temp_da(temp_da, skm, sm, anim, textures, sample_rate)
+    try:
+        bake_anim = _prepare_bake_anim(
+            anim, skm, cache_dir,
+            override_fps=override_fps,
+            target_fps=target_fps,
+        )
+    except Exception as e:
+        u.notify(f'#{anim_index} 动画缓存重采样失败: {e}')
+        return False
+    fallback_rate = float(mc_vat.get_editor_property('sample_rate') or 30.0)
+    if override_fps and float(target_fps) > 0:
+        sample_rate = float(target_fps)
+    else:
+        sample_rate = _anim_sample_rate(bake_anim, fallback=fallback_rate)
+    _configure_temp_da(temp_da, skm, sm, bake_anim, textures, sample_rate)
 
     if not _bake_temp(temp_da, sm):
         u.notify(f'#{anim_index} AnimationToTexture 失败，注意不同生物需要设置兼容骨架才能共享动画')
@@ -262,8 +480,10 @@ def _bake_one_slot(
     bone_size = u.vec3_to_linear(temp_da.get_editor_property('bone_size_b_box'))
     num_bones = int(temp_da.get_editor_property('num_bones') or 0)
     num_frames = int(temp_da.get_editor_property('num_frames') or 0)
-    u.notify(f'#{anim_index} 烘焙完成: bones={num_bones}, frames={num_frames}')
-
+    u.notify(
+        f'#{anim_index} 烘焙完成: bones={num_bones}, frames={num_frames}, '
+        f'fps={sample_rate:g}, influences=2'
+    )
     mat_bpt = unreal.load_asset(u.MAT_BPT)
     mat_brt = unreal.load_asset(u.MAT_BRT)
     mat_bwt = unreal.load_asset(u.MAT_BWT)
@@ -277,11 +497,16 @@ def _bake_one_slot(
         brt, out_dir, f'{tex_base}_{u.BONE_ROTATION_SUFFIX}{u.PREMUL_SUFFIX}',
         zero, zero, mat_brt,
     )
-    # NumFrames = W.a + 1  ⇒  W.a = frames - 1
-    bwt_size = u.int_xy_to_linear(max(num_frames - 1, 0))
+    # BWT 材质：FPS / NumBones / NumFrames 为独立标量；FPS=烘焙 SampleRate
+    # NumFrames 与旧编码一致：材质侧 NumFrames = W.a + 1 ⇒ 写入 frames - 1
     premul_bwt = _premul_to_directory(
         bwt, out_dir, f'{tex_base}_{u.BONE_WEIGHTS_SUFFIX}{u.PREMUL_SUFFIX}',
-        u.int_xy_to_linear(num_bones), bwt_size, mat_bwt,
+        zero, zero, mat_bwt,
+        scalars={
+            'FPS': sample_rate,
+            'NumBones': float(num_bones),
+            'NumFrames': float(max(num_frames - 1, 0)),
+        },
     )
 
     if not all(isinstance(t, unreal.Texture2D) for t in (premul_bpt, premul_brt, premul_bwt)):
@@ -305,11 +530,18 @@ def bake_animation(
     auto_clean_cache: bool = False,
 ) -> bool:
     """一键烘焙：按 AnimSeq 下标逐段 cache 烘焙 → 预乘 → 写入集合并回写 MC_VAT。"""
+    override_fps = False
+    target_fps = 60.0
     if props is not None:
         if mc_vat is None:
             mc_vat = props.DataAsset
         if anims is None:
             anims = props.AnimSeq
+        override_fps = bool(getattr(props, 'bOverrideFramerate', False))
+        try:
+            target_fps = float(getattr(props, 'Framerate', 60) or 60)
+        except Exception:
+            target_fps = 60.0
 
     mc_vat = u.resolve_mc_vat(mc_vat)
     if not mc_vat:
@@ -349,7 +581,11 @@ def bake_animation(
 
     ok_count = 0
     for anim_index, anim in bake_slots:
-        if _bake_one_slot(mc_vat, skm, sm, tc, anim, anim_index):
+        if _bake_one_slot(
+            mc_vat, skm, sm, tc, anim, anim_index,
+            override_fps=override_fps,
+            target_fps=target_fps,
+        ):
             ok_count += 1
 
     if auto_clean_cache:

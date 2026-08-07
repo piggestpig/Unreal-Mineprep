@@ -253,7 +253,7 @@ UObjectDisplayNames,写入全局碰撞,写入全局碰撞,写入全局碰撞,Wri
 UObjectDisplayNames,分离力/碰撞箱缩放,分离力/碰撞箱缩放,分离力/碰撞箱缩放,Separation Force/Collision Box Scale,分離力/碰撞箱縮放
 UObjectDisplayNames,前/右/上渲染偏移,前/右/上渲染偏移,前/右/上渲染偏移,Front/Right/Up Render Offset,前/右/上渲染偏移
 UObjectDisplayNames,动画偏移场类型,动画偏移场类型,动画偏移场类型,Animation Offset Field Type,動畫偏移場類型
-UObjectDisplayNames,动画帧率/随机偏移,动画帧率/随机偏移,动画帧率/随机偏移,Animation Framerate/Random Offset,動畫幀率/隨機偏移
+UObjectDisplayNames,动画速率/随机偏移,动画速率/随机偏移,动画速率/随机偏移,Animation Rate/Random Offset,動畫速率/隨機偏移
 UObjectDisplayNames,动画过渡时间,动画过渡时间,动画过渡时间,Animation Transition Time,動畫過渡時間
 UObjectDisplayNames,启用Boid模拟,启用Boid模拟,启用Boid模拟,Enable Boid Simulation,啟用Boid模擬
 UObjectDisplayNames,启用Sprite·材质模式,启用Sprite·材质模式,启用Sprite·材质模式,Enable Sprite Material Mode,啟用Sprite·材質模式

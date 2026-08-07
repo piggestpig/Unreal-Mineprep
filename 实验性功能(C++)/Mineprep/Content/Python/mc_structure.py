@@ -594,94 +594,255 @@ def _structure_center_offsets(sparse_dict):
     return half - center_offset_x, half - center_offset_y, -center_offset_z
 
 
-def _euler_to_quat_xyzw(pitch, yaw, roll, cache):
-    """UE Rotator → 四元数 (x,y,z,w)；按欧拉角缓存"""
-    key = (pitch, yaw, roll)
-    hit = cache.get(key)
-    if hit is not None:
-        return hit
-    quat = unreal.MathLibrary.conv_rotator_to_quaternion(
-        unreal.Rotator(pitch=pitch, yaw=yaw, roll=roll)
-    )
-    hit = (float(quat.x), float(quat.y), float(quat.z), float(quat.w))
-    cache[key] = hit
-    return hit
+def _norm_deg_90(deg):
+    """角度规范到 {0, 90, 180, 270}"""
+    a = float(deg) % 360.0
+    if a < 0.0:
+        a += 360.0
+    return float((int(round(a / 90.0)) % 4) * 90)
 
 
-def convert_to_unreal_transforms(sparse_dict, center=False):
-    """将通用稀疏字典转换为 {方块名称: list(unreal.Transform)} 结构"""
-    ue_transform_dict = {}
+# 方块实例离散朝向 → BRT.A 序号；与 HLSL Rotation[8] 一一对应
+# (yaw, roll)；当前管线 pitch 恒为 0
+_BLOCK_ROT_ID = {
+    (0.0, 0.0): 0,
+    (90.0, 0.0): 1,
+    (180.0, 0.0): 2,
+    (270.0, 0.0): 3,
+    (0.0, 180.0): 4,
+    (90.0, 180.0): 5,
+    (180.0, 180.0): 6,
+    (270.0, 180.0): 7,
+}
+
+
+def _euler_to_rot_id(pitch, yaw, roll):
+    """(pitch,yaw,roll) → 0..7；非 90° 倍数或非零 pitch 时回退 0"""
+    if abs(float(pitch)) > 1e-3:
+        return 0
+    key = (_norm_deg_90(yaw), _norm_deg_90(roll))
+    return _BLOCK_ROT_ID.get(key, 0)
+
+
+_ROT_ID_TO_EULER = {
+    0: (0.0, 0.0, 0.0),
+    1: (0.0, 90.0, 0.0),
+    2: (0.0, 180.0, 0.0),
+    3: (0.0, 270.0, 0.0),
+    4: (0.0, 0.0, 180.0),
+    5: (0.0, 90.0, 180.0),
+    6: (0.0, 180.0, 180.0),
+    7: (0.0, 270.0, 180.0),
+}
+
+# rot_id → 将世界 UE 轴向尺寸 (wx,wy,wz) 转为局部 Scale3D
+# yaw 90/270 交换 X/Y；roll 180 不改变轴向尺寸
+_ROT_ID_LOCAL_SCALE = {
+    0: lambda wx, wy, wz: (wx, wy, wz),
+    1: lambda wx, wy, wz: (wy, wx, wz),
+    2: lambda wx, wy, wz: (wx, wy, wz),
+    3: lambda wx, wy, wz: (wy, wx, wz),
+    4: lambda wx, wy, wz: (wx, wy, wz),
+    5: lambda wx, wy, wz: (wy, wx, wz),
+    6: lambda wx, wy, wz: (wx, wy, wz),
+    7: lambda wx, wy, wz: (wy, wx, wz),
+}
+
+
+def _is_leaves_model(model_name) -> bool:
+    """树叶方块（正方体但不做 uvlock / 不合并）"""
+    stem = str(model_name).lower().replace("minecraft:", "")
+    return stem.endswith("_leaves") or stem == "leaves"
+
+
+def _is_mergeable_cube(model_name) -> bool:
+    """仅完整正方体可合并；排除树叶"""
+    return _is_solid_block(model_name) and not _is_leaves_model(model_name)
+
+
+def _greedy_merge_1d(cells):
+    """merge=1：沿 X→Z→Y 贪婪拉长条"""
+    remaining = set(cells)
+    boxes = []
+    for axis in (0, 2, 1):
+        for start in sorted(remaining):
+            if start not in remaining:
+                continue
+            length = 1
+            while True:
+                nxt = [start[0], start[1], start[2]]
+                nxt[axis] += length
+                if tuple(nxt) not in remaining:
+                    break
+                length += 1
+            size = [1, 1, 1]
+            size[axis] = length
+            boxes.append((start[0], start[1], start[2], size[0], size[1], size[2]))
+            for i in range(length):
+                p = [start[0], start[1], start[2]]
+                p[axis] += i
+                remaining.discard(tuple(p))
+    return boxes
+
+
+def _greedy_merge_2d(cells):
+    """merge=2：按 Y 层贪婪矩形（+X 宽，再 +Z 深）"""
+    by_y = {}
+    for x, y, z in cells:
+        by_y.setdefault(y, set()).add((x, z))
+
+    boxes = []
+    for y, xz_set in by_y.items():
+        remaining = set(xz_set)
+        for x, z in sorted(remaining):
+            if (x, z) not in remaining:
+                continue
+            w = 1
+            while (x + w, z) in remaining:
+                w += 1
+            d = 1
+            while all((x + i, z + d) in remaining for i in range(w)):
+                d += 1
+            for i in range(w):
+                for j in range(d):
+                    remaining.discard((x + i, z + j))
+            boxes.append((x, y, z, w, 1, d))
+    return boxes
+
+
+def _greedy_merge_3d(cells):
+    """merge=3：2D 矩形后再沿 +Y 叠成柱体"""
+    rects = _greedy_merge_2d(cells)
+    by_foot = {}
+    for x, y, z, sx, _sy, sz in rects:
+        by_foot.setdefault((x, z, sx, sz), []).append(y)
+
+    boxes = []
+    for (x, z, sx, sz), ys in by_foot.items():
+        ys.sort()
+        i = 0
+        n = len(ys)
+        while i < n:
+            y0 = ys[i]
+            h = 1
+            while i + h < n and ys[i + h] == y0 + h:
+                h += 1
+            boxes.append((x, y0, z, sx, h, sz))
+            i += h
+    return boxes
+
+
+def _merge_cells(cells, merge_mode):
+    """对同一 (model, rot) 的格点集做贪婪合并 → [(x,y,z,sx,sy,sz), ...]"""
+    if not cells:
+        return []
+    mode = int(merge_mode)
+    if mode <= 0:
+        return [(x, y, z, 1, 1, 1) for x, y, z in cells]
+    if mode == 1:
+        return _greedy_merge_1d(cells)
+    if mode == 2:
+        return _greedy_merge_2d(cells)
+    return _greedy_merge_3d(cells)
+
+
+def _collect_merged_boxes(sparse_dict, merge=0):
+    """展开 multipart 后合并：返回 [(model_name, rot_id, x,y,z, sx,sy,sz), ...]
+    坐标为 MC 整数格 (X,Y,Z)。
+    """
+    merge_mode = int(merge)
+    parts_cache = {}
+    mergeable = {}
+    passthrough = []
+
+    for (mx, my, mz), block_info in sparse_dict.items():
+        props = block_info["properties"]
+        raw_name = block_info["name"]
+        cache_key = (raw_name, id(props))
+        parts = parts_cache.get(cache_key)
+        if parts is None:
+            parts = _structure_parts(raw_name, props)
+            parts_cache[cache_key] = parts
+
+        for model_name, pitch, yaw, roll in parts:
+            rot_id = _euler_to_rot_id(pitch, yaw, roll)
+            if merge_mode > 0 and _is_mergeable_cube(model_name):
+                mergeable.setdefault((model_name, rot_id), set()).add((mx, my, mz))
+            else:
+                passthrough.append((model_name, rot_id, mx, my, mz, 1, 1, 1))
+
+    boxes = list(passthrough)
+    for (model_name, rot_id), cells in mergeable.items():
+        for x, y, z, sx, sy, sz in _merge_cells(cells, merge_mode):
+            boxes.append((model_name, rot_id, x, y, z, sx, sy, sz))
+    return boxes
+
+
+def _mc_box_ue_location_scale(x, y, z, sx, sy, sz, rot_id, ox, oy, oz):
+    """MC 轴对齐盒 → UE 位置（底面中心）与局部 Scale3D。
+    网格水平居中、Z 从底面起算（与 _mc_point_to_ue 一致）。
+    rot_id≥4（roll=180）时绕底面翻转，Z 再抬 BLOCK_SIZE，使几何回到本格（楼梯 half=top）。
+    """
+    # UE: (MC_X, MC_Z, MC_Y)；水平取 AABB 中心，竖直取底面
+    loc_x = (x + (sx - 1) * 0.5) * BLOCK_SIZE + ox
+    loc_y = (z + (sz - 1) * 0.5) * BLOCK_SIZE + oy
+    loc_z = y * BLOCK_SIZE + oz
+    if int(rot_id) >= 4:
+        loc_z += BLOCK_SIZE
+    # 世界 UE 轴向尺寸
+    wx, wy, wz = float(sx), float(sz), float(sy)
+    remap = _ROT_ID_LOCAL_SCALE.get(int(rot_id), _ROT_ID_LOCAL_SCALE[0])
+    return (loc_x, loc_y, loc_z), remap(wx, wy, wz)
+
+
+def convert_to_unreal_transforms(sparse_dict, center=False, merge=0):
+    """将稀疏字典转换为 {方块名称: list(unreal.Transform)}；merge>0 时合并完整正方体"""
     ox = oy = BLOCK_SIZE * 0.5
     oz = 0.0
     if center:
         ox, oy, oz = _structure_center_offsets(sparse_dict)
 
-    parts_cache = {}
     rot_cache = {}
-    lists = ue_transform_dict
-
-    for (mx, my, mz), block_info in sparse_dict.items():
-        props = block_info["properties"]
-        raw_name = block_info["name"]
-        ue_loc = unreal.Vector(
-            mx * BLOCK_SIZE + ox,
-            mz * BLOCK_SIZE + oy,
-            my * BLOCK_SIZE + oz,
+    lists = {}
+    for model_name, rot_id, x, y, z, sx, sy, sz in _collect_merged_boxes(sparse_dict, merge=merge):
+        loc, scale = _mc_box_ue_location_scale(x, y, z, sx, sy, sz, rot_id, ox, oy, oz)
+        pitch, yaw, roll = _ROT_ID_TO_EULER.get(int(rot_id), (0.0, 0.0, 0.0))
+        rot_key = (pitch, yaw, roll)
+        ue_rot = rot_cache.get(rot_key)
+        if ue_rot is None:
+            ue_rot = unreal.Rotator(pitch=pitch, yaw=yaw, roll=roll)
+            rot_cache[rot_key] = ue_rot
+        bucket = lists.get(model_name)
+        if bucket is None:
+            bucket = []
+            lists[model_name] = bucket
+        bucket.append(
+            unreal.Transform(
+                location=unreal.Vector(loc[0], loc[1], loc[2]),
+                rotation=ue_rot,
+                scale=unreal.Vector(scale[0], scale[1], scale[2]),
+            )
         )
-
-        cache_key = (raw_name, id(props))
-        parts = parts_cache.get(cache_key)
-        if parts is None:
-            parts = _structure_parts(raw_name, props)
-            parts_cache[cache_key] = parts
-
-        for model_name, pitch, yaw, roll in parts:
-            rot_key = (pitch, yaw, roll)
-            ue_rot = rot_cache.get(rot_key)
-            if ue_rot is None:
-                ue_rot = unreal.Rotator(pitch=pitch, yaw=yaw, roll=roll)
-                rot_cache[rot_key] = ue_rot
-            bucket = lists.get(model_name)
-            if bucket is None:
-                bucket = []
-                lists[model_name] = bucket
-            bucket.append(unreal.Transform(location=ue_loc, rotation=ue_rot))
-
-    return ue_transform_dict
+    return lists
 
 
-def convert_to_packed_arrays(sparse_dict, center=False):
-    """PCG/粒子路径：{model_name: {"pos":[(x,y,z)cm...], "quat":[(x,y,z,w)...]}}，不建 Transform"""
-    packed = {}
+def convert_to_packed_arrays(sparse_dict, center=False, merge=0):
+    """PCG/粒子：{model: {"pos":[...], "rot":[...], "scale":[(sx,sy,sz)...]}}"""
     ox = oy = BLOCK_SIZE * 0.5
     oz = 0.0
     if center:
         ox, oy, oz = _structure_center_offsets(sparse_dict)
 
-    parts_cache = {}
-    quat_cache = {}
-
-    for (mx, my, mz), block_info in sparse_dict.items():
-        props = block_info["properties"]
-        raw_name = block_info["name"]
-        lx = mx * BLOCK_SIZE + ox
-        ly = mz * BLOCK_SIZE + oy
-        lz = my * BLOCK_SIZE + oz
-
-        cache_key = (raw_name, id(props))
-        parts = parts_cache.get(cache_key)
-        if parts is None:
-            parts = _structure_parts(raw_name, props)
-            parts_cache[cache_key] = parts
-
-        for model_name, pitch, yaw, roll in parts:
-            bucket = packed.get(model_name)
-            if bucket is None:
-                bucket = {"pos": [], "quat": []}
-                packed[model_name] = bucket
-            bucket["pos"].append((lx, ly, lz))
-            bucket["quat"].append(_euler_to_quat_xyzw(pitch, yaw, roll, quat_cache))
-
+    packed = {}
+    for model_name, rot_id, x, y, z, sx, sy, sz in _collect_merged_boxes(sparse_dict, merge=merge):
+        loc, scale = _mc_box_ue_location_scale(x, y, z, sx, sy, sz, rot_id, ox, oy, oz)
+        bucket = packed.get(model_name)
+        if bucket is None:
+            bucket = {"pos": [], "rot": [], "scale": []}
+            packed[model_name] = bucket
+        bucket["pos"].append(loc)
+        bucket["rot"].append(int(rot_id))
+        bucket["scale"].append(scale)
     return packed
 
 
@@ -925,12 +1086,13 @@ def _fix_pane_connections(sparse_dict):
 # 4. 主函数 (新增 center 参数)
 # ==========================================
 
-def parse_structure(filepath='', center=True, cull=0, packed=False):
+def parse_structure(filepath='', center=True, cull=0, packed=False, merge=0):
     """解析 .nbt/.schem/.mcstructure。
     packed=False → {方块名: [Transform]}（ISM）
-    packed=True  → {方块名: {"pos":[(x,y,z)...], "quat":[(x,y,z,w)...]}}（PCG/粒子，无 Transform）
+    packed=True  → {方块名: {"pos":[...], "rot":[...], "scale":[...]}}（PCG/粒子）
     cull=1 按类型剔除内部；cull=2 全体实心统一剔除内部；
-    cull=3 在 2 之上再剔除 AABB 侧面与底面（保留顶面）
+    cull=3 在 2 基础上再剔除 AABB 侧面与底面（保留顶面）
+    merge=0 关；1 长条；2 平面；3 长方体（仅完整正方体；cull 优先于 merge）
     """
     if not os.path.exists(filepath):
         unreal.log_error(f"未能找到结构文件: {filepath}")
@@ -977,16 +1139,17 @@ def parse_structure(filepath='', center=True, cull=0, packed=False):
         if cull_mode == 3:
             sparse_dict = _cull_bbox_sides_and_bottom(sparse_dict)
 
+    merge_mode = int(merge)
     if packed:
-        ue_data = convert_to_packed_arrays(sparse_dict, center=center)
+        ue_data = convert_to_packed_arrays(sparse_dict, center=center, merge=merge_mode)
         total = sum(len(v["pos"]) for v in ue_data.values())
     else:
-        ue_data = convert_to_unreal_transforms(sparse_dict, center=center)
+        ue_data = convert_to_unreal_transforms(sparse_dict, center=center, merge=merge_mode)
         total = sum(len(v) for v in ue_data.values())
 
     unreal.log(
         f"结构解析完成: {len(ue_data)} 种方块, {total} 个实例 "
-        f"(文件 {os.path.basename(filepath)}, packed={packed})"
+        f"(文件 {os.path.basename(filepath)}, packed={packed}, cull={cull_mode}, merge={merge_mode})"
     )
     if total <= 200 and not packed:
         unreal.log(pformat(ue_data))
@@ -995,16 +1158,18 @@ def parse_structure(filepath='', center=True, cull=0, packed=False):
 
 
 def _is_packed_structure_data(ue_data) -> bool:
-    """判断是否为 packed 格式 {name: {pos, quat}}"""
+    """判断是否为 packed 格式 {name: {pos, rot, scale?}}"""
     if not ue_data:
         return False
     sample = next(iter(ue_data.values()))
-    return isinstance(sample, dict) and "pos" in sample and "quat" in sample
+    return isinstance(sample, dict) and "pos" in sample and "rot" in sample
 
 
 @lazy_import
 def structure_to_tex(ue_data, name='structure', fp32=True):
-    """将结构数据烘焙为位置/旋转贴图。支持 Transform 列表或 packed 数组。"""
+    """将结构数据烘焙为位置/旋转贴图。支持 Transform 列表或 packed 数组。
+    BRT：RGB=局部缩放 (X,Y,Z)，A=旋转序号 0..7（查 HLSL Rotation[]）。
+    """
     dtype = np.float32  # if fp32 else np.float16
     exr_type = cv2.IMWRITE_EXR_TYPE_FLOAT if fp32 else cv2.IMWRITE_EXR_TYPE_HALF
 
@@ -1029,29 +1194,37 @@ def structure_to_tex(ue_data, name='structure', fp32=True):
     bpt_img = np.zeros((side, side, 4), dtype=dtype)
     bpt_img[:, :, 3] = -1.0
     brt_img = np.zeros((side, side, 4), dtype=dtype)
-    brt_img[:, :, 3] = 1.0
+    brt_img[:, :, 0] = 1.0
+    brt_img[:, :, 1] = 1.0
+    brt_img[:, :, 2] = 1.0
+    brt_img[:, :, 3] = 0.0
 
     if packed:
         i = 0
         for type_idx, payload in enumerate(ue_data.values()):
             pos = np.asarray(payload["pos"], dtype=dtype)
-            quat = np.asarray(payload["quat"], dtype=dtype)
+            rot = np.asarray(payload["rot"], dtype=dtype)
+            scale = payload.get("scale")
+            if scale is None:
+                scale_arr = np.ones((pos.shape[0], 3), dtype=dtype)
+            else:
+                scale_arr = np.asarray(scale, dtype=dtype)
             n = int(pos.shape[0])
             if n == 0:
                 continue
             idx = np.arange(i, i + n)
             rows = idx // side
             cols = idx % side
-            # OpenCV BGRA → EXR RGBA：B=Z/100, G=Y/100, R=X/100, A=type
+            # OpenCV BGRA → EXR：B=Z/100, G=Y/100, R=X/100, A=type
             bpt_img[rows, cols, 0] = pos[:, 2] / 100.0
             bpt_img[rows, cols, 1] = pos[:, 1] / 100.0
             bpt_img[rows, cols, 2] = pos[:, 0] / 100.0
             bpt_img[rows, cols, 3] = float(type_idx)
-            # quat xyzw → B=Z, G=Y, R=X, A=W
-            brt_img[rows, cols, 0] = quat[:, 2]
-            brt_img[rows, cols, 1] = quat[:, 1]
-            brt_img[rows, cols, 2] = quat[:, 0]
-            brt_img[rows, cols, 3] = quat[:, 3]
+            # BRT：B=scale.Z G=scale.Y R=scale.X → UE RGB=(X,Y,Z)；A=rot_id
+            brt_img[rows, cols, 0] = scale_arr[:, 2]
+            brt_img[rows, cols, 1] = scale_arr[:, 1]
+            brt_img[rows, cols, 2] = scale_arr[:, 0]
+            brt_img[rows, cols, 3] = rot
             i += n
     else:
         i = 0
@@ -1064,11 +1237,14 @@ def structure_to_tex(ue_data, name='structure', fp32=True):
                 bpt_img[row, col, 1] = loc.y / 100.0
                 bpt_img[row, col, 2] = loc.x / 100.0
                 bpt_img[row, col, 3] = float(type_idx)
-                quat = transform.rotation
-                brt_img[row, col, 0] = quat.z
-                brt_img[row, col, 1] = quat.y
-                brt_img[row, col, 2] = quat.x
-                brt_img[row, col, 3] = quat.w
+                rot = transform.rotation
+                sc = transform.scale3d
+                brt_img[row, col, 0] = float(sc.z)
+                brt_img[row, col, 1] = float(sc.y)
+                brt_img[row, col, 2] = float(sc.x)
+                brt_img[row, col, 3] = float(
+                    _euler_to_rot_id(rot.pitch, rot.yaw, rot.roll)
+                )
                 i += 1
 
     if not os.path.exists(paths.cache):
@@ -1089,8 +1265,8 @@ def structure_to_tex(ue_data, name='structure', fp32=True):
 
     BPT_Tex = _run_import_task(_make_import_task(bpt_path, paths.game + f'mc/structure'))[0]
     BRT_Tex = _run_import_task(_make_import_task(brt_path, paths.game + f'mc/structure'))[0]
-    prep_texture(BPT_Tex, unreal.TextureCompressionSettings.TC_HDR)
-    prep_texture(BRT_Tex, unreal.TextureCompressionSettings.TC_HDR)
+    prep_texture(BPT_Tex, unreal.TextureCompressionSettings.TC_HDR_F32)
+    prep_texture(BRT_Tex, unreal.TextureCompressionSettings.TC_HDR_F32)
     unreal.EditorAssetLibrary.set_metadata_tag(BPT_Tex, '方块映射', pformat(mapping_data))
     unreal.EditorAssetLibrary.set_metadata_tag(BRT_Tex, '方块映射', pformat(mapping_data))
 

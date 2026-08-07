@@ -207,8 +207,8 @@ namespace
                 }
             }
 
-            IDetailCategoryBuilder& MaterialCategory = DetailLayout.EditCategory(*CategoryName, CategoryLabel, ECategoryPriority::Important);
-            MaterialCategory.InitiallyCollapsed(false);
+            MaterialCategory = &DetailLayout.EditCategory(*CategoryName, CategoryLabel, ECategoryPriority::Important);
+            MaterialCategory->InitiallyCollapsed(false);
 
             for (const FProperty* Property : TFieldRange<FProperty>(UMeshComponent::StaticClass()))
             {
@@ -217,94 +217,51 @@ namespace
                     continue;
                 }
 
-                MaterialCategory.AddExternalObjectProperty(GroupObjects, Property->GetFName(), EPropertyLocation::Advanced);
+                MaterialCategory->AddExternalObjectProperty(GroupObjects, Property->GetFName(), EPropertyLocation::Advanced);
             }
 
-            USkeletalMeshComponent* RepresentativeComponent = GetRepresentativeComponent();
             if (bAnyMaterialsToDisplay)
             {
-                AddBaseMaterialRows(MaterialCategory, DetailLayout, RepresentativeComponent);
-                MaterialCategory.SetCategoryVisibility(true);
+                FMaterialListDelegates MaterialListDelegates;
+                MaterialListDelegates.OnGetMaterials.BindSP(this, &FMineprepComponentMaterialCategory::OnGetMaterialsForView);
+                MaterialListDelegates.OnMaterialChanged.BindSP(this, &FMineprepComponentMaterialCategory::OnMaterialChanged);
+                MaterialListDelegates.OnGenerateCustomMaterialWidgets.BindSP(this, &FMineprepComponentMaterialCategory::OnGenerateWidgetsForMaterial);
+
+                TSharedRef<FMaterialList> MaterialList = MakeShareable(new FMaterialList(DetailLayout, MaterialListDelegates, TArray<FAssetData>()));
+                MaterialCategory->AddCustomBuilder(MaterialList);
+                MaterialCategory->SetCategoryVisibility(true);
             }
             else
             {
-                MaterialCategory.SetCategoryVisibility(false);
+                MaterialCategory->SetCategoryVisibility(false);
             }
         }
 
     private:
-        USkeletalMeshComponent* GetRepresentativeComponent() const
+        void OnGetMaterialsForView(IMaterialListBuilder& MaterialList)
         {
+            bool bAnyMaterialsToDisplay = false;
+
             for (const TWeakObjectPtr<USkeletalMeshComponent>& WeakComponent : SelectedComponents)
             {
-                if (USkeletalMeshComponent* SkeletalMeshComponent = WeakComponent.Get())
+                USkeletalMeshComponent* Component = WeakComponent.Get();
+                if (!Component)
                 {
-                    return SkeletalMeshComponent;
+                    continue;
+                }
+
+                const int32 NumMaterials = Component->GetNumMaterials();
+                for (int32 MaterialIndex = 0; MaterialIndex < NumMaterials; ++MaterialIndex)
+                {
+                    MaterialList.AddMaterial(MaterialIndex, Component->GetMaterial(MaterialIndex), true, Component);
+                    bAnyMaterialsToDisplay = true;
                 }
             }
 
-            return nullptr;
-        }
-
-        void AddBaseMaterialRows(IDetailCategoryBuilder& MaterialCategory, IDetailLayoutBuilder& DetailLayout, USkeletalMeshComponent* RepresentativeComponent)
-        {
-            if (!RepresentativeComponent)
+            if (MaterialCategory)
             {
-                return;
+                MaterialCategory->SetCategoryVisibility(bAnyMaterialsToDisplay);
             }
-
-            const TArray<FName> SlotNames = RepresentativeComponent->GetMaterialSlotNames();
-            const int32 NumMaterials = RepresentativeComponent->GetNumMaterials();
-
-            for (int32 MaterialIndex = 0; MaterialIndex < NumMaterials; ++MaterialIndex)
-            {
-                const FName SlotName = SlotNames.IsValidIndex(MaterialIndex) ? SlotNames[MaterialIndex] : NAME_None;
-                const FText SlotLabel = SlotName != NAME_None
-                    ? FText::FromName(SlotName)
-                    : FText::Format(NSLOCTEXT("Mineprep", "ElementLabel", "Element {0}"), FText::AsNumber(MaterialIndex));
-
-                TSharedRef<FMaterialItemView> MaterialItemView = CreateMaterialItemView(
-                    RepresentativeComponent->GetMaterial(MaterialIndex),
-                    MaterialIndex,
-                    RepresentativeComponent,
-                    SlotLabel,
-                    FOnMaterialChanged::CreateSP(this, &FMineprepComponentMaterialCategory::OnMaterialChanged));
-
-                FDetailWidgetRow& MaterialRow = MaterialCategory.AddCustomRow(SlotLabel);
-                MaterialRow.NameContent()[MaterialItemView->CreateNameContent()];
-                MaterialRow.ValueContent().MinDesiredWidth(250.0f).MaxDesiredWidth(0.0f)
-                [
-                    MaterialItemView->CreateValueContent(DetailLayout, TArray<FAssetData>(), RepresentativeComponent)
-                ];
-            }
-        }
-
-        TSharedRef<FMaterialItemView> CreateMaterialItemView(
-            UMaterialInterface* Material,
-            int32 SlotIndex,
-            UActorComponent* Component,
-            const FText& SlotLabel,
-            FOnMaterialChanged OnMaterialChangedDelegate)
-        {
-            MaterialWidgetLabels.Add(SlotIndex, SlotLabel);
-
-            FOnGenerateWidgetsForMaterial EmptyNameWidgets;
-            FOnGenerateWidgetsForMaterial MaterialWidgets = FOnGenerateWidgetsForMaterial::CreateSP(this, &FMineprepComponentMaterialCategory::OnGenerateWidgetsForMaterial);
-            FOnResetMaterialToDefaultClicked ResetToDefault;
-            FOnGenerateWidgetsForMaterial ExtraBottomWidgets;
-
-            TSharedRef<FMaterialItemView> MaterialItemView = FMaterialItemView::Create(
-                FMaterialListItem(Material, SlotIndex, true, Component),
-                OnMaterialChangedDelegate,
-                EmptyNameWidgets,
-                MaterialWidgets,
-                ResetToDefault,
-                ExtraBottomWidgets,
-                1,
-                true);
-
-            MaterialItemViews.Add(MaterialItemView);
-            return MaterialItemView;
         }
 
         void OnMaterialChanged(UMaterialInterface* NewMaterial, UMaterialInterface* PrevMaterial, int32 SlotIndex, bool bReplaceAll)
@@ -315,7 +272,7 @@ namespace
                 return;
             }
 
-            const FScopedTransaction Transaction(FText::FromString(TEXT("Replace component used material")));
+            const FScopedTransaction Transaction(NSLOCTEXT("Mineprep", "ReplaceComponentUsedMaterial", "Replace component used material"));
 
             for (const TWeakObjectPtr<USkeletalMeshComponent>& WeakComponent : SelectedComponents)
             {
@@ -352,12 +309,22 @@ namespace
 
         FText GetMaterialNameText(int32 MaterialIndex) const
         {
-            if (const FText* SlotLabel = MaterialWidgetLabels.Find(MaterialIndex))
+            for (const TWeakObjectPtr<USkeletalMeshComponent>& WeakComponent : SelectedComponents)
             {
-                return *SlotLabel;
+                USkeletalMeshComponent* Component = WeakComponent.Get();
+                if (!Component)
+                {
+                    continue;
+                }
+
+                const TArray<FName> SlotNames = Component->GetMaterialSlotNames();
+                if (SlotNames.IsValidIndex(MaterialIndex) && SlotNames[MaterialIndex] != NAME_None)
+                {
+                    return FText::FromName(SlotNames[MaterialIndex]);
+                }
             }
 
-            return FText::FromString(FString::Printf(TEXT("Element %d"), MaterialIndex));
+            return FText::Format(NSLOCTEXT("Mineprep", "ElementLabel", "Element {0}"), FText::AsNumber(MaterialIndex));
         }
 
     private:
@@ -365,8 +332,7 @@ namespace
         FText CategoryLabel;
         TArray<UObject*> GroupObjects;
         TArray<TWeakObjectPtr<USkeletalMeshComponent>> SelectedComponents;
-        TArray<TSharedPtr<FMaterialItemView>> MaterialItemViews;
-        TMap<int32, FText> MaterialWidgetLabels;
+        IDetailCategoryBuilder* MaterialCategory = nullptr;
     };
 
     static void CollectAttachedSkeletalMeshes(USceneComponent* RootComponent, TArray<USkeletalMeshComponent*>& OutComponents)

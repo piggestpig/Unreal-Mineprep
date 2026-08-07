@@ -1,6 +1,3 @@
-from operator import call
-
-
 SafeBroadcast = False
 DebugMode = False
 PythonTooltips = False
