@@ -1,13 +1,13 @@
 from mineprep import bilingual
 
 mod_info = {
-    'Name': bilingual('VAT顶点动画工具', 'VAT Tools'),
+    'Name': bilingual('皮肤&表情编辑器', 'Skin & Face Editor'),
     'Description': bilingual(
-        '烘焙顶点动画纹理，用于大型群体粒子',
-        'Bake VAT textures for large crowd particles',
+        '编辑视口选中的骨骼网格体皮肤与头部材质',
+        'Edit skin and head materials from the selected skeletal mesh',
     ),
     'Version': '0.6-pre1',
-    'CreatedBy': 'Pig',
+    'CreatedBy': '',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
 }
@@ -15,13 +15,13 @@ mod_info = {
 
 def register():
     from . import panel
-    panel.VATTools.register()
+    panel.SkinEditor.register()
 
 
 def unregister():
     import sys
     from . import panel
-    panel.VATTools.unregister()
-    for sub in ('panel', 'bake_anim_ops', 'copy_ops', 'init_ops', 'props', 'util'):
+    panel.SkinEditor.unregister()
+    for sub in ('panel', 'ops', 'props', 'util'):
         sys.modules.pop(f'{__name__}.{sub}', None)
         globals().pop(sub, None)

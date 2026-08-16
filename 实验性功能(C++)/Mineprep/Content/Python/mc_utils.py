@@ -404,7 +404,7 @@ def panic(title, message=''):
     message = str(message) + ' \n\n是否继续运行？'
     title = str(title)
     status = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO)
-    if status == unreal.AppReturnType.YES:
+    if status == unreal.AppReturnType.NO:
         throw(f'{title}: {message}')
 
 
