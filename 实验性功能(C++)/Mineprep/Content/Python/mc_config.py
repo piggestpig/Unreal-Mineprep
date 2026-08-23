@@ -93,8 +93,20 @@ class ConfigMeta(type):
 
 
 class config(metaclass=ConfigMeta):
+    """读取和保存Mineprep_config.txt的工具类"""
     def __init__(self):
         prints(self.__class__.config_dict)
+        self.help()
+
+    @classmethod
+    def help(cls):
+        """打印帮助信息"""
+        help_text = """
+        直接使用mineprep.config()会打印所有配置项
+        - 读取配置：value = mineprep.config['Settings']['key']
+        - 写入配置：mineprep.config['Settings']['key'] = value
+        """.strip()
+        prints(help_text)
 
 
 paths = MCpath()

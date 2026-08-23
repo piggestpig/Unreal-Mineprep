@@ -67,6 +67,7 @@ public class Mineprep : ModuleRules
 				"Mover",
 				"Projects",
 				"UMG",
+				"ImageCore",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

@@ -7,7 +7,10 @@ from pathlib import Path
 from pprint import pformat
 from mc_utils import lazy_import
 from mc_config import paths
-from mc_importer import _make_import_task, _run_import_task, _load_mc_model, resolve_block_json_path
+from mc_importer import (
+    _make_import_task, _run_import_task, _load_mc_model,
+    resolve_block_json_path, import_block,
+)
 from mc_prep import prep_texture
 
 if __name__ == "__main__":
@@ -469,6 +472,15 @@ def _structure_parts(raw_name, props):
     return [(_structure_model_name(raw_name, props), pitch, yaw, roll)]
 
 
+def structure_parts(name, properties=None):
+    """MC blockstate → [(model_name, pitch, yaw, roll), ...]。
+
+    与 spawn_structure 同一套展开：楼梯用 facing/shape/half；
+    栅栏/玻璃板用 north/east/south/west（同格 multipart，不是自己摆 side 网格）。
+    """
+    return _structure_parts(name, properties or {})
+
+
 # 原版 stairs blockstate：MC Y 旋转（绕竖直轴）。模型默认 facing=east。
 # 键: (facing, shape) -> y；half=top 时另有 x=180，且部分 shape 的 y 不同。
 _STAIR_Y_BOTTOM = {
@@ -758,7 +770,10 @@ def _collect_merged_boxes(sparse_dict, merge=0):
     for (mx, my, mz), block_info in sparse_dict.items():
         props = block_info["properties"]
         raw_name = block_info["name"]
-        cache_key = (raw_name, id(props))
+        try:
+            cache_key = (raw_name, frozenset((props or {}).items()))
+        except TypeError:
+            cache_key = (raw_name, id(props))
         parts = parts_cache.get(cache_key)
         if parts is None:
             parts = _structure_parts(raw_name, props)
@@ -1082,19 +1097,70 @@ def _fix_pane_connections(sparse_dict):
     return sparse_dict
 
 
-# ==========================================
-# 4. 主函数 (新增 center 参数)
-# ==========================================
+def _is_fence_cell_name(name):
+    raw = str(name).lower().replace("minecraft:", "")
+    return raw.endswith("_fence") and "gate" not in raw
 
-def parse_structure(filepath='', center=True, cull=0, packed=False, merge=0):
-    """解析 .nbt/.schem/.mcstructure。
-    packed=False → {方块名: [Transform]}（ISM）
-    packed=True  → {方块名: {"pos":[...], "rot":[...], "scale":[...]}}（PCG/粒子）
-    cull=1 按类型剔除内部；cull=2 全体实心统一剔除内部；
-    cull=3 在 2 基础上再剔除 AABB 侧面与底面（保留顶面）
-    merge=0 关；1 长条；2 平面；3 长方体（仅完整正方体；cull 优先于 merge）
-    """
-    if not os.path.exists(filepath):
+
+def _is_pane_cell_name(name):
+    raw = str(name).lower().replace("minecraft:", "")
+    return raw.endswith("_pane") or raw == "iron_bars"
+
+
+def _connect_fences_and_panes(sparse_dict):
+    """按邻格重写栅栏/玻璃板 NESW（compose 用；总是覆盖已有连接）。"""
+    if not sparse_dict:
+        return sparse_dict
+    for pos, info in list(sparse_dict.items()):
+        name = info["name"]
+        if _is_fence_cell_name(name):
+            props = dict(info.get("properties") or {})
+            for direction, (dx, dy, dz) in _PANE_CONNECT_DIRS:
+                nbr = sparse_dict.get((pos[0] + dx, pos[1] + dy, pos[2] + dz))
+                props[direction] = "true" if nbr and _is_fence_cell_name(nbr["name"]) else "false"
+            sparse_dict[pos] = {"name": name, "properties": props}
+            continue
+        if str(name).lower().replace("minecraft:", "").endswith("_pane"):
+            props = dict(info.get("properties") or {})
+            for direction, (dx, dy, dz) in _PANE_CONNECT_DIRS:
+                nbr = sparse_dict.get((pos[0] + dx, pos[1] + dy, pos[2] + dz))
+                connected = bool(
+                    nbr and (_is_pane_cell_name(nbr["name"]) or _is_solid_block(nbr["name"]))
+                )
+                props[direction] = "true" if connected else "false"
+            sparse_dict[pos] = {"name": name, "properties": props}
+    return sparse_dict
+
+
+def _stringify_block_prop(value):
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def _copy_sparse_cells(sparse_dict):
+    return {
+        pos: {"name": info["name"], "properties": dict(info.get("properties") or {})}
+        for pos, info in (sparse_dict or {}).items()
+    }
+
+
+def _apply_cull(sparse_dict, cull=0):
+    """cull 标志与 parse_structure / spawn_structure 相同；返回新 dict 或原引用（cull=0）。"""
+    cull_mode = int(cull)
+    if cull_mode == 1:
+        return _cull_internal_blocks_per_type(sparse_dict)
+    if cull_mode in (2, 3):
+        culled = _cull_internal_blocks_unified_solids(sparse_dict)
+        if cull_mode == 3:
+            culled = _cull_bbox_sides_and_bottom(culled)
+        return culled
+    return sparse_dict
+
+
+def _load_structure_sparse(filepath):
+    """文件 → 稀疏格子（含活板门/玻璃板修正）。不做 cull/merge。"""
+    if not filepath or not os.path.exists(filepath):
         unreal.log_error(f"未能找到结构文件: {filepath}")
         return {}
 
@@ -1114,7 +1180,6 @@ def parse_structure(filepath='', center=True, cull=0, packed=False, merge=0):
     if ext == '.nbt':
         sparse_dict = process_java_nbt(nbt_data)
     elif ext == '.schematic':
-        # 经典 MCEdit Alpha：Blocks + Data
         schem = nbt_data.get('Schematic', nbt_data) if isinstance(nbt_data, dict) and 'Schematic' in nbt_data else nbt_data
         unreal.log(
             f"经典 MCEdit schematic "
@@ -1122,23 +1187,32 @@ def parse_structure(filepath='', center=True, cull=0, packed=False, merge=0):
         )
         sparse_dict = process_classic_schematic(schem)
     elif ext == '.schem':
-        # Sponge schematic：Palette + BlockData
         sparse_dict = process_sponge_schematic(nbt_data)
     else:
         sparse_dict = process_bedrock_structure(nbt_data)
 
-    # 部分 schem：开启活板门 facing 错乱；玻璃板缺 NESW — 按邻格修正
     sparse_dict = _fix_open_trapdoor_facings(sparse_dict)
     sparse_dict = _fix_pane_connections(sparse_dict)
+    return sparse_dict
 
-    cull_mode = int(cull)
-    if cull_mode == 1:
-        sparse_dict = _cull_internal_blocks_per_type(sparse_dict)
-    elif cull_mode in (2, 3):
-        sparse_dict = _cull_internal_blocks_unified_solids(sparse_dict)
-        if cull_mode == 3:
-            sparse_dict = _cull_bbox_sides_and_bottom(sparse_dict)
 
+# ==========================================
+# 4. 主函数 (新增 center 参数)
+# ==========================================
+
+def parse_structure(filepath='', center=True, cull=0, packed=False, merge=0):
+    """解析 .nbt/.schem/.mcstructure。
+    packed=False → {方块名: [Transform]}（ISM）
+    packed=True  → {方块名: {"pos":[...], "rot":[...], "scale":[...]}}（PCG/粒子）
+    cull=1 按类型剔除内部；cull=2 全体实心统一剔除内部；
+    cull=3 在 2 基础上再剔除 AABB 侧面与底面（保留顶面）
+    merge=0 关；1 长条；2 平面；3 长方体（仅完整正方体；cull 优先于 merge）
+    """
+    sparse_dict = _load_structure_sparse(filepath)
+    if not sparse_dict:
+        return {}
+
+    sparse_dict = _apply_cull(sparse_dict, cull)
     merge_mode = int(merge)
     if packed:
         ue_data = convert_to_packed_arrays(sparse_dict, center=center, merge=merge_mode)
@@ -1149,12 +1223,79 @@ def parse_structure(filepath='', center=True, cull=0, packed=False, merge=0):
 
     unreal.log(
         f"结构解析完成: {len(ue_data)} 种方块, {total} 个实例 "
-        f"(文件 {os.path.basename(filepath)}, packed={packed}, cull={cull_mode}, merge={merge_mode})"
+        f"(文件 {os.path.basename(filepath)}, packed={packed}, cull={int(cull)}, merge={merge_mode})"
     )
     if total <= 200 and not packed:
         unreal.log(pformat(ue_data))
 
     return ue_data
+
+
+class Blocks:
+    """MC 格子容器：{(x,y,z): {name, properties}}。types() 才展开成 mesh。"""
+
+    def __init__(self, name='structure', cells=None):
+        self.name = name or 'structure'
+        self._cells = _copy_sparse_cells(cells) if cells else {}
+        self._mesh_cache = {}
+
+    def _pos(self, x, y, z):
+        return (int(x), int(y), int(z))
+
+    def add(self, name, x, y, z, **props):
+        clean = {key: _stringify_block_prop(val) for key, val in props.items()}
+        self._cells[self._pos(x, y, z)] = {
+            "name": str(name).lower().replace("minecraft:", ""),
+            "properties": clean,
+        }
+        return self
+
+    def remove(self, x, y, z):
+        return self._cells.pop(self._pos(x, y, z), None) is not None
+
+    def get(self, x, y, z):
+        info = self._cells.get(self._pos(x, y, z))
+        if info is None:
+            return None
+        return info["name"], dict(info.get("properties") or {})
+
+    def connect_fences(self):
+        _connect_fences_and_panes(self._cells)
+        return self
+
+    def copy_cells(self):
+        return _copy_sparse_cells(self._cells)
+
+    def __len__(self):
+        return len(self._cells)
+
+    def __contains__(self, pos):
+        if not isinstance(pos, tuple) or len(pos) != 3:
+            return False
+        return self._pos(*pos) in self._cells
+
+    def __iter__(self):
+        return iter(self._cells)
+
+    @classmethod
+    def from_file(cls, filepath):
+        cells = _load_structure_sparse(filepath)
+        return cls(name=Path(filepath).stem, cells=cells)
+
+    def types(self, merge=0, center=False, reload=False):
+        """展开 structure_parts → 按模型分组，yield (StaticMesh, [Transform])。"""
+        grouped = convert_to_unreal_transforms(self._cells, center=center, merge=merge)
+        for model_name, transforms in grouped.items():
+            mesh = None if reload else self._mesh_cache.get(model_name)
+            if mesh is None:
+                path = resolve_block_json_path(model_name)
+                if path is None:
+                    continue
+                mesh = import_block(path, asset_name=model_name, reload=reload)
+                if mesh is None:
+                    continue
+                self._mesh_cache[model_name] = mesh
+            yield mesh, transforms
 
 
 def _is_packed_structure_data(ue_data) -> bool:

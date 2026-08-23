@@ -128,14 +128,16 @@ class Mod():
     def __new__(cls, context=None):
         """初始化layout, 默认由蓝图调用Mod(widget)"""
         instance = super().__new__(cls)
-        instance.layout = Layout(context.find_child_widget_by_name(cls._root_),
-                                 public=cls._public_) if context else Layout()
+        public = cls._public_ or mcvars.DebugMode
+        root = context.find_child_widget_by_name(cls._root_) if context else None
+        instance.layout = Layout(root, public=public)
+        mcvars.WidgetModMap[instance.layout.outer] = instance
         return instance
 
     def __init__(self, context=None):
         """保存 context 并调用 draw 构建界面"""
-        self.context = context
-        self.draw(context)
+        self.context = context or self.layout.outer
+        self.draw(self.context)
 
     def draw(self, context=None):
         """重载此方法以创建自定义UI"""
@@ -146,6 +148,26 @@ class Mod():
         if self.layout:
             self.layout.clear_children()
         self.draw(self.context)
+
+    def destruct(self):
+        """由蓝图模板传递的析构函数，关闭面板时调用"""
+        pass
+
+    def on_key_down(self, key: unreal.Key):
+        """由蓝图模板传递的按键事件，按下键盘时调用"""
+        pass
+
+    def on_key_up(self, key: unreal.Key):
+        """由蓝图模板传递的按键事件，松开键盘时调用"""
+        pass
+
+    def on_mouse_wheel(self, delta: float):
+        """由蓝图模板传递的鼠标滚轮事件，滚动时调用"""
+        pass
+
+
+    ######################################################################
+
 
     @classmethod
     def bp_script(cls):

@@ -3,6 +3,7 @@ import mineprep
 mod_info = {
     "EnabledByDefault": False,
     "ReloadWithMineprep": True,
+    "Advanced": True,
 }
 
 def register():

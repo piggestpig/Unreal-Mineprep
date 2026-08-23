@@ -46,6 +46,7 @@
 #include "MineprepBPLibrary.generated.h"
 
 class UTextureRenderTarget2D;
+class UWidget;
 
 UENUM(BlueprintType)
 enum class EMineprepPostProcessStage : uint8
@@ -115,9 +116,9 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool ExposeStructVariables(UUserDefinedStruct* Structure); 
 
-	//收集公开的蓝图变量和函数名，返回三个数组：类型、Key、SourceString
+	//收集公开的蓝图变量和函数名，返回三个数组：类型、Key、SourceString。SetEnumKey 为真时按同一规则写入用户枚举的本地化 Namespace/Key
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
-	static void GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& OutTypes, TArray<FString>& OutKeys, TArray<FString>& OutSourceStrings);
+	static void GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& OutTypes, TArray<FString>& OutKeys, TArray<FString>& OutSourceStrings, const bool SetEnumKey = false);
 
 	//为蓝图变量或函数注入DisplayName元数据，已弃用
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)", meta=(DeprecatedFunction))
@@ -180,6 +181,17 @@ class Umineprep : public UBlueprintFunctionLibrary
 	// 将当前编辑器视口在指定后处理阶段的结果绘制到渲染目标
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool DrawPostProcessStageToRenderTarget(UTextureRenderTarget2D* RenderTarget, EMineprepPostProcessStage Stage, bool bAutoResize = true, bool bBlockUntilReady = false);
+
+	/**
+	 * 截取 UMG 控件（或当前顶层编辑器窗口）为 PNG。
+	 * 仅当 GeneratePathToWidgetUnchecked 成功时才调用 TakeScreenshot（避免 Checked 断言闪退）；
+	 * 控件不在可见 Slate 树中时改为离屏绘制。
+	 * @param Widget  要截取的 UMG 控件；为空则截取当前顶层窗口
+	 * @param Path    输出路径。空=Saved/Screenshots/WidgetScreenshot.png；相对路径相对该目录；无后缀则补 .png
+	 * @return        成功：保存的绝对路径（.png）；失败：以 WidgetScreenshot: 开头的错误说明（不是文件路径）
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static FString WidgetScreenshot(UWidget* Widget, const FString& Path = TEXT(""));
 
 
 };

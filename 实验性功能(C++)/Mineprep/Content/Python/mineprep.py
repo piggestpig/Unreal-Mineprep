@@ -11,18 +11,22 @@ from typing import Any
 import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
 import mc_sequencer, mc_widget, mc_mod, mc_mesh
 import mc_sequencer as mcseq
-from mc_importer import import_block, import_item, resolve_block_json_path
+from mc_importer import import_block, import_item, resolve_block_json_path, get_all_blocks
 from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
                       enum, asynctask, askopenfilename, send2trash, set_actor_label, select_actors,
                       lazy_import, undo, get_hotkey_object, construct, uasset, copy,
                       List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
-                      askdirectory, asksaveasfilename, startfile)
+                      askdirectory, asksaveasfilename, startfile, screenshot, update_installer)
 from mc_prep import prep_texture, load_mcprep_data, colorize_material
 from mc_localization import (language, KernelLanguage, LocalizationCache, localize,
                              loctext, nsloctext, loctable_col, bilingual, tooltip)
-from mc_structure import parse_structure, structure_to_tex
+from mc_structure import (
+    parse_structure, structure_to_tex, structure_parts, Blocks,
+    convert_to_unreal_transforms, convert_to_packed_arrays,
+    _apply_cull,
+)
 from mc_config import config, paths, wclass
-from mc_sequencer import keyframe
+from mc_sequencer import keyframe, Rig
 from mc_widget import Layout, PropertyGroup, add_widget, ui
 from mc_mod import mods, Mod
 from mc_mesh import merge_skm
@@ -300,7 +304,7 @@ class panel(MineprepAddonHandle):
         label = name
         target = None
         if not name:
-            id_cls_map = {k:bpclass(v).get_name() for k,v in mc_widget.WidgetsCache.items()}
+            id_cls_map = {k:bpclass(v).get_name() for k,v in mc_widget.WidgetsCache.items() if v}
             prints(tooltip('所有插件面板'), id_cls_map)
             return
 
@@ -409,6 +413,10 @@ class actor(MineprepWorldHandle):
         self.comps = ComponentsHandle
         self.mats = MaterialsHandle
 
+    def rig(self, target=unreal.SkeletalMeshComponent, rig_class=None):
+        """取骨骼网格体上的 Control Rig；先 component(target) 再 .rig(rig_class)"""
+        return self.component(target).rig(rig_class)
+
 
 class actors(MineprepWorldHandle):
     _collection = True
@@ -489,6 +497,13 @@ class component(MineprepWorldHandle):
         if callable(name):
             return next((c for c in comps if name(c)), None)
         return None
+
+    def rig(self, rig_class=None):
+        """当前组件必须是 SkeletalMeshComponent，返回 Rig"""
+        if not isinstance(self.target, unreal.SkeletalMeshComponent):
+            kind = type(self.target).__name__ if self.target else 'None'
+            throw(f'rig() 需要 SkeletalMeshComponent，当前: {kind}')
+        return Rig(self.target, rig_class)
 
 
 class components(MineprepWorldHandle):
@@ -916,68 +931,82 @@ def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0
     return actor
 
 
-def spawn_structure(filepath='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0, reload=False) -> list[unreal.Actor]:
-    """生成MC结构, gpu=1是PCG, gpu=2是粒子；
+def spawn_structure(source='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0,
+                    reload=False, name='', center=None) -> list[unreal.Actor]:
+    """生成MC结构。source 是文件路径或 Blocks；gpu=1 是 PCG，gpu=2 是粒子；
     cull=1按类型剔除内部实心, cull=2全体实心统一剔除内部, cull=3=2+剔除AABB侧面与底面；
     merge=0关, 1长条, 2平面, 3长方体（仅完整正方体；cull 优先于 merge）
     """
-    # PCG/粒子不需要 Transform，直接打包 pos/rot/scale 数组写 EXR
-    map = parse_structure(filepath, cull=cull, packed=bool(gpu), merge=merge)
-    filename = Path(filepath).stem
-    inventory = loctable_col(6,2)
+    if isinstance(source, Blocks):
+        filename = name or source.name or 'structure'
+        use_center = False if center is None else bool(center)
+        cells = source.copy_cells()
+    else:
+        if not source:
+            warn('spawn_structure 需要文件路径或 Blocks')
+            return []
+        loaded = Blocks.from_file(source)
+        if not loaded:
+            return []
+        filename = name or loaded.name or Path(str(source)).stem
+        use_center = True if center is None else bool(center)
+        cells = loaded.copy_cells()
 
+    cells = _apply_cull(cells, cull)
+    packed = bool(gpu)
+    if packed:
+        payload_map = convert_to_packed_arrays(cells, center=use_center, merge=merge)
+    else:
+        payload_map = convert_to_unreal_transforms(cells, center=use_center, merge=merge)
+
+    inventory = loctable_col(6,2)
     actors = []
     meshes = []
-    spawn_jobs = []  # (name, mesh, transforms) — 仅 ISM
+    spawn_jobs = []
 
-    for name, payload in map.items():
-        path = resolve_block_json_path(name)
+    for model_name, payload in payload_map.items():
+        path = resolve_block_json_path(model_name)
         mesh = None
         if path is not None:
-            mesh = import_block(path, asset_name=name, reload=reload)
+            mesh = import_block(path, asset_name=model_name, reload=reload)
         else:
-            candidate = next((n for n in inventory if n.startswith(name)), None)
+            candidate = next((n for n in inventory if n.startswith(model_name)), None)
             path = resolve_block_json_path(candidate) if candidate else None
             if path is not None:
-                mesh = import_block(path, asset_name=name, reload=reload)
+                mesh = import_block(path, asset_name=model_name, reload=reload)
             else:
-                warn(f'未找到{name}模型')
+                warn(f'未找到{model_name}模型')
 
         meshes.append(mesh)
         if mesh is not None and not gpu:
-            spawn_jobs.append((name, mesh, payload))
+            spawn_jobs.append((model_name, mesh, payload))
 
     if not gpu:
-        for name, mesh, transforms in spawn_jobs:
+        for model_name, mesh, transforms in spawn_jobs:
             actor = spawn_blocks(mesh, transforms, loc, rot)
             actor.set_folder_path(filename)
             actors.append(actor)
-            set_actor_label(actor, f'{filename}_{name}')
+            set_actor_label(actor, f'{filename}_{model_name}')
 
     if gpu == 1:
-        BPT_Tex, BRT_Tex, mapping_data = structure_to_tex(map, filename)
+        BPT_Tex, BRT_Tex, mapping_data = structure_to_tex(payload_map, filename)
         loaded_class = uclass('/Game/Mineprep/MC_Blueprint/PCG/PCG实例化方块.PCG实例化方块')
         actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
         actor.set_folder_path('Structures')
         actors.append(actor)
         set_actor_label(actor, f'{filename}')
-
-        # meshes转换为软对象路径数组
         mesh_paths = [unreal.SystemLibrary.get_soft_object_path(mesh) for mesh in meshes]
         actor.set_editor_property('Blocks', mesh_paths)
         actor.set_editor_property('PosTex', BPT_Tex)
         actor.set_editor_property('RotTex', BRT_Tex)
 
     elif gpu == 2:
-        BPT_Tex, BRT_Tex, mapping_data = structure_to_tex(map, filename)
+        BPT_Tex, BRT_Tex, mapping_data = structure_to_tex(payload_map, filename)
         loaded_class = uclass('/Game/Mineprep/MC_Blueprint/Niagara/动态地形粒子/动态结构粒子.动态结构粒子')
         actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
         actor.set_folder_path('Structures')
         actors.append(actor)
         set_actor_label(actor, f'{filename}')
-
-        #重启后方块丢失？
-        #unreal.NiagaraDataInterfaceArrayMesh.set_niagara_array_mesh_sm(actor.root_component, '方块', meshes)
         actor.set_editor_property('方块', meshes)
         actor.root_component.set_variable_texture('方块位置纹理', BPT_Tex)
         actor.root_component.set_variable_texture('方块旋转纹理', BRT_Tex)

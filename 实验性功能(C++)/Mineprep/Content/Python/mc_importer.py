@@ -83,9 +83,6 @@ BASE_TEXTURE_PARAMETER_NAME = "纹理贴图"
 # blockstates 中出现过 uvlock:true 的模型名（不含 .json）缓存
 _UVLOCK_MODEL_NAMES_CACHE = None
 
-if not hasattr(unreal, "mineprep"):
-    unreal.mineprep = type("MineprepNamespace", (), {})()
-
 
 def _get_mesh_pool():
     """获取可复用 DynamicMesh 对象池"""
@@ -1288,6 +1285,19 @@ def resolve_block_json_path(block_name, models_dir=None) -> Path:
         if path.exists():
             return path.resolve()
     return None
+
+
+def get_all_blocks(filter=''):
+    """返回 models/block 下现有 JSON 方块名（无 .json 后缀）。
+
+    filter 为正则，匹配方块名；空字符串返回全部，按字母序。
+    """
+    from mc_config import paths
+    names = sorted(path.stem for path in Path(paths.blocks).glob('*.json'))
+    if filter:
+        pattern = re.compile(filter)
+        names = [name for name in names if pattern.search(name)]
+    return names
 
 
 def _fluid_height_ratio(level) -> float:

@@ -1,5 +1,11 @@
-"""Skeletal-mesh material slot helpers."""
+"""Skeletal-mesh component helpers for Skin Editor."""
+import pathlib
 import unreal
+import mineprep
+
+
+MATERIAL_DETAILS = (
+    '/Mineprep/Python/mods/Skin_Editor/MaterialDetailsView.MaterialDetailsView')
 
 
 def _alive(obj):
@@ -10,67 +16,15 @@ def is_head_comp(comp):
     return 'head' in (comp.get_name() or '').lower()
 
 
-def slot_names(comp):
-    """Material slot names on a mesh component, aligned with get_num_materials()."""
-    n = int(comp.get_num_materials() or 0)
-    names = []
-    try:
-        names = [str(x) for x in (comp.get_material_slot_names() or [])]
-    except Exception:
-        names = []
-    if len(names) < n:
-        mesh = None
-        try:
-            mesh = comp.get_skeletal_mesh_asset()
-        except Exception:
-            mesh = None
-        if mesh:
-            try:
-                skm_mats = list(mesh.get_editor_property('materials') or [])
-                extra = []
-                for entry in skm_mats:
-                    slot = (
-                        entry.get_editor_property('material_slot_name')
-                        or entry.get_editor_property('slot_name')
-                        or ''
-                    )
-                    extra.append(str(slot))
-                if extra:
-                    names = extra
-            except Exception:
-                pass
-    if len(names) < n:
-        names = names + [''] * (n - len(names))
-    return names[:n]
-
-
-def slot_key(index, name):
-    return f'{index}:{name}'
-
-
-def parse_slot_key(key):
-    text = str(key)
-    if ':' not in text:
-        return None
-    idx, _name = text.split(':', 1)
-    try:
-        return int(idx)
-    except ValueError:
-        return None
-
-
-def read_slot_map(comp):
-    """{ 'index:slotName': MaterialInterface } for a skeletal mesh component."""
-    mapping = {}
-    if not _alive(comp):
-        return mapping
-    names = slot_names(comp)
-    for i, name in enumerate(names):
-        mapping[slot_key(i, name)] = comp.get_material(i)
-    return mapping
+def is_mc_comp(comp):
+    return 'MC' in (comp.get_name() or '')
 
 
 def pick_main(skms, actor):
+    if len(skms) >= 3:
+        for comp in skms:
+            if is_mc_comp(comp):
+                return comp
     root = actor.root_component
     if isinstance(root, unreal.SkeletalMeshComponent) and root in skms:
         return root
@@ -94,3 +48,7 @@ def pick_head(skms, main):
         if is_head_comp(comp):
             return comp
     return None
+
+
+def open_mod_script():
+    mineprep.startfile(str(pathlib.Path(__file__).resolve().parent))

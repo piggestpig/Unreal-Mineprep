@@ -7,7 +7,7 @@ mod_info = {
         'Edit skin and head materials from the selected skeletal mesh',
     ),
     'Version': '0.6-pre1',
-    'CreatedBy': '',
+    'CreatedBy': 'Pig',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
 }
@@ -22,6 +22,6 @@ def unregister():
     import sys
     from . import panel
     panel.SkinEditor.unregister()
-    for sub in ('panel', 'ops', 'props', 'util'):
+    for sub in ('panel', 'ops', 'paint', 'props', 'util'):
         sys.modules.pop(f'{__name__}.{sub}', None)
         globals().pop(sub, None)

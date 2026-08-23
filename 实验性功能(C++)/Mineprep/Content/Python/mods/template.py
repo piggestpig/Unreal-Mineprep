@@ -2,13 +2,15 @@ import mineprep
 import unreal
 
 # 在此填写模组相关信息，设置EnabledByDefault=True会在引擎启动时自动加载模组
+# Advanced=True会被模组管理器隐藏到高级选项里，开发普通模组时不用写
 mod_info = {
     "Name": mineprep.bilingual("Mod模板", "Mod Template"),
     "Description": mineprep.bilingual("面向开发者的普通mod模板", "A simple mod template for developers"),
-    "Version": "0.6-pre1",
+    "Version": "1.0",
     "CreatedBy": "",
     "EnabledByDefault": False,
     "ReloadWithMineprep": True,
+    "Advanced": True,
 }
 
 

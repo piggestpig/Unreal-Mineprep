@@ -2,6 +2,7 @@ import sys
 import shutil
 import zipfile
 from pathlib import Path
+from pprint import pformat
 from functools import partial
 
 import unreal
@@ -17,6 +18,22 @@ class Props(mineprep.PropertyGroup):
     advanced: bool = False
 
 props = Props()
+
+
+def _mod_stem(name):
+    return name[5:] if name.startswith('mods.') else name
+
+
+def _info(name, info):
+    desc = str(info.get('Description') or '')
+    text = f'<{_mod_stem(name)}>\n{desc}'
+    if props.advanced:
+        body = {
+            k: v if isinstance(v, (bool, int, float)) or v is None else str(v)
+            for k, v in info.items()
+        }
+        text += f'\n\n{pformat(body, sort_dicts=False)}'
+    return text
 
 
 class ModManager(mineprep.Mod):
@@ -35,11 +52,18 @@ class ModManager(mineprep.Mod):
         if props.advanced:
             header.scalebox(align=2,fill=0.75).text(bilingual("卸载", "Uninstall"), align=2)
 
-        # 跳过自身模组
+        # 跳过自身模组；Advanced 模组排在后面，且仅在勾选高级选项时显示
+        normal, extra = [], []
         for name, mod in iter_mod_modules():
             if self.__class__.__module__ == name or self.__class__.__module__.startswith(name + '.'):
                 continue
+            info = getattr(mod, 'mod_info', None) or {}
+            (extra if info.get('Advanced') else normal).append((name, mod))
+        for name, mod in normal:
             self.add_mod_row(layout, name, mod)
+        if props.advanced:
+            for name, mod in extra:
+                self.add_mod_row(layout, name, mod)
 
         layout.prop(props, "advanced", bilingual("显示高级选项", "Show Advanced Options"),
                     on_property_changed=lambda x: self.redraw(),
@@ -49,14 +73,13 @@ class ModManager(mineprep.Mod):
     def add_mod_row(self, parent: Layout, name, mod):
         info = getattr(mod, "mod_info", None) or {}
         enabled = bool(info.get("EnabledByDefault"))
-        mod_name = info.get("Name", name[5:] if name.startswith("mods.") else name)
-        description = info.get("Description", "")
+        mod_name = info.get("Name", _mod_stem(name))
         version = str(info.get("Version", "-"))
         status = bilingual("已启用", "Enabled") if enabled else bilingual("已禁用", "Disabled")
         color = unreal.LinearColor(1,1,1,1) if enabled else unreal.LinearColor(1,1,1,0.5)
 
         row = parent.row()
-        row.scalebox(align=2,fill=1).text(mod_name, align=2, color=color, tooltip=description)
+        row.scalebox(align=2,fill=1).text(mod_name, align=2, color=color, tooltip=_info(name, info))
         row.scalebox(align=2,fill=1).text(version, align=2, color=color)
         row.scalebox(align=2,fill=1).text(status, align=2, color=color)
         if enabled:

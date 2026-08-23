@@ -4,6 +4,7 @@ import re
 import subprocess
 import sys
 import traceback
+import builtins
 import mcvars
 from dataclasses import dataclass, asdict
 from pprint import pformat
@@ -251,6 +252,46 @@ def undo(arg: str=None):
     return decorator
 
 
+def _adopt_module(dst, src):
+    """把 src 的命名空间拷进 dst，保持 dst 对象身份。
+
+    控制台里的 `mineprep` 仍是旧模块对象；只换 sys.modules 条目的话，
+    `mineprep.reload()` 之后 `mineprep.screenshot` 仍会找不到。
+    """
+    dst_dict = dst.__dict__
+    src_dict = src.__dict__
+    keep = ('__name__', '__doc__', '__package__', '__loader__', '__spec__')
+    for key in list(dst_dict):
+        if key not in src_dict and key not in keep:
+            del dst_dict[key]
+    dst_dict.update(src_dict)
+
+
+def _rebind_mineprep(from_mod, to_mod) -> int:
+    """把各命名空间里的 mineprep 从 from_mod 改到 to_mod（含控制台栈帧）。"""
+    rebound = 0
+    for mod in list(sys.modules.values()):
+        if mod is None:
+            continue
+        try:
+            d = getattr(mod, '__dict__', None)
+            if d is not None and d.get('mineprep') is from_mod:
+                d['mineprep'] = to_mod
+                rebound += 1
+        except Exception:
+            pass
+    try:
+        import inspect
+        for info in inspect.stack():
+            g = info.frame.f_globals
+            if g.get('mineprep') is from_mod:
+                g['mineprep'] = to_mod
+                rebound += 1
+    except Exception:
+        pass
+    return rebound
+
+
 def reload(*args):
     """重新加载 mineprep 及其子模块；传入特定模块时，只重新加载这些模块。
 
@@ -258,10 +299,10 @@ def reload(*args):
       1. 注销 ReloadWithMineprep 的 mod
       2. 从 sys.modules 卸载 mineprep / mc_*（保留 mcvars）/ 相关 mods
       3. 全新 import mineprep（避免 importlib.reload 造成 Layout/PropertyGroup 多份类对象）
-      4. 把各模块命名空间里仍指向旧 mineprep 的引用改到新模块
+      4. 把新模块的命名空间写回旧模块对象（控制台无需 mineprep = mineprep.reload()）
       5. 再 import 并 register 先前启用的 mod
 
-    返回新的 mineprep 模块（控制台里建议: mineprep = mineprep.reload()）。
+    返回同一个 mineprep 模块对象（原地更新）。控制台直接 `mineprep.reload()` 即可。
     """
     import importlib
     import sys
@@ -319,18 +360,10 @@ def reload(*args):
     import mc_widget
     mc_widget.WidgetsCache = widgets_copy
 
-    # 刷新仍持有旧 mineprep 引用的命名空间（含 __main__ / 控制台）
-    rebound = 0
-    for mod in list(sys.modules.values()):
-        if mod is None:
-            continue
-        try:
-            d = getattr(mod, '__dict__', None)
-            if d is not None and d.get('mineprep') is old_mineprep:
-                d['mineprep'] = new_mineprep
-                rebound += 1
-        except Exception:
-            pass
+    # 原地更新：控制台持有的仍是 old_mineprep 这个对象
+    _adopt_module(old_mineprep, new_mineprep)
+    sys.modules['mineprep'] = old_mineprep
+    rebound = _rebind_mineprep(new_mineprep, old_mineprep)
     if rebound:
         unreal.log(f'已刷新 {rebound} 处 mineprep 引用')
 
@@ -348,7 +381,7 @@ def reload(*args):
         except Exception as e:
             warn(f'重新加载 {mod_name} 时出错: {e}')
 
-    return new_mineprep
+    return old_mineprep
 
 
 def enum(input: type | unreal.EnumBase):
@@ -405,7 +438,7 @@ def panic(title, message=''):
     title = str(title)
     status = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO)
     if status == unreal.AppReturnType.NO:
-        throw(f'{title}: {message}')
+        throw(f'{title}: {message} NO.')
 
 
 def dialog(title, message=''):
@@ -425,6 +458,24 @@ def debug(*args):
     if mcvars.DebugMode:
         text = '\n'.join(str(arg) if isinstance(arg, (str, unreal.Text)) else pformat(arg, sort_dicts=False) for arg in args)
         unreal.log(text)
+
+
+def screenshot(size: tuple[int, int]=None, path: str='', pos: unreal.Vector=None, lookat: unreal.Vector=None):
+    """在编辑器中截取高分辨率截图，size默认是视口分辨率，
+    path默认在项目/Saved/Screenshots下，会自动生成后缀名；指定path则覆写图片
+    使用pos和lookat调整摄像机坐标与朝向
+    """
+    size = 0 if size is None else size
+    size = (size, size) if isinstance(size, (int, float)) else size
+
+    if pos or lookat:
+        subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+        current_pos, current_rot = subsystem.get_level_viewport_camera_info()
+        pos = pos or current_pos
+        rot = unreal.MathLibrary.find_look_at_rotation(pos, lookat) if lookat else current_rot
+        subsystem.set_level_viewport_camera_info(pos, rot)
+
+    unreal.AutomationLibrary.take_high_res_screenshot(size[0], size[1], path)
 
 
 def uasset(input):
@@ -751,6 +802,74 @@ def send2trash(path, delete=False) -> str:
     except Exception:
         _purge()
     return path
+
+
+def update_installer():
+    """把工程里的 Mineprep 同步到 git 仓库（installer_dir），再跑自动化处理脚本。
+    出问题会 panic，用户选「是」则继续下一步，「否」则中止。
+    """
+    import runpy
+    import shutil
+    from mc_config import config
+
+    try:
+        installer = str(config['Settings']['installer_dir'] or '').strip()
+        installer = os.path.abspath(installer) if installer else ''
+        assert os.path.isdir(installer), f'安装包路径{installer}不存在'
+    except Exception as exc:
+        panic('安装包路径不存在', exc)
+
+    dest_content = os.path.join(installer, 'Mineprep')
+    dest_plugin = os.path.join(installer, '实验性功能(C++)', 'Mineprep')
+    for label, path in (
+        ('installer_dir/Mineprep', dest_content),
+        ('installer_dir/实验性功能(C++)/Mineprep', dest_plugin),
+    ):
+        if not os.path.isdir(path):
+            panic(f'仓库缺少 {label}', path)
+
+    for path in (dest_content, dest_plugin):
+        try:
+            send2trash(path)
+        except Exception as exc:
+            panic(f'移至回收站失败: {path}', exc)
+        if os.path.exists(path):
+            panic('文件夹仍存在，是否强制删除？', path)
+            if os.path.exists(path):
+                try:
+                    send2trash(path, delete=True)
+                except Exception as exc:
+                    panic(f'强制删除仍失败: {path}', exc)
+
+    src_content = os.path.abspath(os.path.join(unreal.Paths.project_content_dir(), 'Mineprep'))
+    src_plugin = os.path.abspath(os.path.join(unreal.Paths.project_plugins_dir(), 'Mineprep'))
+    copies = (
+        (src_content, dest_content, 'Content/Mineprep'),
+        (src_plugin, dest_plugin, 'Plugins/Mineprep'),
+    )
+    for src, dst, label in copies:
+        if not os.path.isdir(src):
+            panic(f'工程缺少源文件夹: {label}', src)
+            continue
+        try:
+            shutil.copytree(src, dst, dirs_exist_ok=os.path.exists(dst))
+        except Exception as exc:
+            panic(f'复制失败: {label}', exc)
+            continue
+        if not os.path.isdir(dst):
+            panic(f'复制后目标不存在: {label}', dst)
+
+    script = os.path.join(installer, 'Readme素材', '自动化处理脚本.py')
+    if not os.path.isfile(script):
+        panic('找不到自动化处理脚本', script)
+    if os.path.isfile(script):
+        try:
+            runpy.run_path(script, run_name='__main__')
+        except Exception as exc:
+            panic('自动化处理脚本失败', exc)
+
+    prints(f'已更新{installer}')
+    return installer
 
 
 def set_actor_label(actor, label, unique=True, filter_class=unreal.Actor) -> str:

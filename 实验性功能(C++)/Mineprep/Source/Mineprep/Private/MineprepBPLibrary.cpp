@@ -21,6 +21,16 @@
 #include "Slate/SceneViewport.h"
 #include "UnrealClient.h"
 #include "Widgets/SViewport.h"
+#include "Internationalization/Text.h"
+#include "Internationalization/TextNamespaceUtil.h"
+#include "Internationalization/TextPackageNamespaceUtil.h"
+#include "Engine/UserDefinedEnum.h"
+#include "Components/Widget.h"
+#include "ImageUtils.h"
+#include "Slate/WidgetRenderer.h"
+#include "Layout/WidgetPath.h"
+#include "Misc/Paths.h"
+#include "HAL/FileManager.h"
 
 struct FMineprepCaptureSource
 {
@@ -696,6 +706,144 @@ bool Umineprep::DrawPostProcessStageToRenderTarget(UTextureRenderTarget2D* Rende
     return true;
 }
 
+static FString MineprepResolveWidgetScreenshotPath(const FString& Path)
+{
+    FString OutPath = Path;
+    OutPath.TrimStartAndEndInline();
+
+    if (OutPath.IsEmpty())
+    {
+        OutPath = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Screenshots"), TEXT("WidgetScreenshot.png"));
+    }
+    else if (FPaths::IsRelative(OutPath))
+    {
+        OutPath = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Screenshots"), OutPath);
+    }
+
+    OutPath = FPaths::ConvertRelativePathToFull(OutPath);
+    if (FPaths::GetExtension(OutPath).IsEmpty())
+    {
+        OutPath += TEXT(".png");
+    }
+
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(OutPath), true);
+    return OutPath;
+}
+
+static bool MineprepSaveColorBufferToPng(const TArray<FColor>& ColorData, int32 SizeX, int32 SizeY, const FString& FullPath)
+{
+    if (SizeX <= 0 || SizeY <= 0 || ColorData.Num() < SizeX * (int64)SizeY)
+    {
+        return false;
+    }
+
+    const FImageView ImageView(ColorData.GetData(), SizeX, SizeY);
+    return FImageUtils::SaveImageByExtension(*FullPath, ImageView);
+}
+
+static FString MineprepCaptureSlateWidget(const TSharedRef<SWidget>& SlateWidget, TArray<FColor>& OutColorData, FIntVector& OutSize)
+{
+    OutColorData.Reset();
+    OutSize = FIntVector::ZeroValue;
+
+    if (!FSlateApplication::IsInitialized())
+    {
+        return TEXT("WidgetScreenshot: Slate is not initialized");
+    }
+
+    FSlateApplication& SlateApp = FSlateApplication::Get();
+
+    // TakeScreenshot → GeneratePathToWidgetChecked：FindWidgetWindow 为真仍可能 assert。
+    // 只在 Unchecked + Visible 成功时才走屏幕截图。
+    FWidgetPath VisiblePath;
+    if (SlateApp.GeneratePathToWidgetUnchecked(SlateWidget, VisiblePath, EVisibility::Visible))
+    {
+        if (SlateApp.TakeScreenshot(SlateWidget, OutColorData, OutSize))
+        {
+            return FString();
+        }
+    }
+
+    FVector2f DrawSize = SlateWidget->GetTickSpaceGeometry().GetLocalSize();
+    if (DrawSize.X < 1.f || DrawSize.Y < 1.f)
+    {
+        DrawSize = SlateWidget->GetDesiredSize();
+    }
+    if (DrawSize.X < 1.f || DrawSize.Y < 1.f)
+    {
+        DrawSize = FVector2f(800.f, 600.f);
+    }
+
+    const FVector2D DrawSizeD(DrawSize);
+    FWidgetRenderer WidgetRenderer(/* bUseGammaCorrection */ true);
+    WidgetRenderer.SetIsPrepassNeeded(true);
+
+    UTextureRenderTarget2D* RenderTarget = FWidgetRenderer::CreateTargetFor(DrawSizeD, TF_Bilinear, true);
+    if (!RenderTarget)
+    {
+        return TEXT("WidgetScreenshot: widget is not in the visible Slate tree, and offscreen RT create failed");
+    }
+
+    WidgetRenderer.DrawWidget(RenderTarget, SlateWidget, DrawSizeD, 0.f);
+    FlushRenderingCommands();
+
+    FTextureRenderTargetResource* Resource = RenderTarget->GameThread_GetRenderTargetResource();
+    const bool bReadOk = Resource && Resource->ReadPixels(OutColorData);
+    OutSize = FIntVector(RenderTarget->SizeX, RenderTarget->SizeY, 0);
+    RenderTarget->MarkAsGarbage();
+
+    if (bReadOk && OutSize.X > 0 && OutSize.Y > 0 && OutColorData.Num() >= OutSize.X * (int64)OutSize.Y)
+    {
+        return FString();
+    }
+
+    FWidgetPath AnyPath;
+    const bool bInAnyTree = SlateApp.GeneratePathToWidgetUnchecked(SlateWidget, AnyPath, EVisibility::All);
+    return bInAnyTree
+        ? TEXT("WidgetScreenshot: widget is in the Slate tree but not Visible; offscreen draw failed")
+        : TEXT("WidgetScreenshot: widget is not in the Slate tree (closed tab / stale cache); offscreen draw failed");
+}
+
+FString Umineprep::WidgetScreenshot(UWidget* Widget, const FString& Path)
+{
+    TSharedPtr<SWidget> SlateWidget;
+    if (Widget)
+    {
+        SlateWidget = Widget->TakeWidget();
+    }
+    else if (FSlateApplication::IsInitialized())
+    {
+        SlateWidget = FSlateApplication::Get().GetActiveTopLevelWindow();
+    }
+
+    if (!SlateWidget.IsValid())
+    {
+        const FString Error = TEXT("WidgetScreenshot: no widget or window to capture");
+        UE_LOG(LogTemp, Warning, TEXT("%s"), *Error);
+        return Error;
+    }
+
+    TArray<FColor> ColorData;
+    FIntVector Size = FIntVector::ZeroValue;
+    const FString CaptureError = MineprepCaptureSlateWidget(SlateWidget.ToSharedRef(), ColorData, Size);
+    if (!CaptureError.IsEmpty())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("%s"), *CaptureError);
+        return CaptureError;
+    }
+
+    const FString FullPath = MineprepResolveWidgetScreenshotPath(Path);
+    if (!MineprepSaveColorBufferToPng(ColorData, Size.X, Size.Y, FullPath))
+    {
+        const FString Error = FString::Printf(TEXT("WidgetScreenshot: failed to save %s"), *FullPath);
+        UE_LOG(LogTemp, Warning, TEXT("%s"), *Error);
+        return Error;
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("WidgetScreenshot: saved %s (%dx%d)"), *FullPath, Size.X, Size.Y);
+    return FullPath;
+}
+
 void Umineprep::SetTickRunOnAnyThread(UObject* Object, bool bRunOnAnyThread)
 {
     if (!Object) return;
@@ -1215,7 +1363,73 @@ bool Umineprep::ExposeStructVariables(UUserDefinedStruct* Structure)
     return bModified;
 }
 
-void Umineprep::GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& OutTypes, TArray<FString>& OutKeys, TArray<FString>& OutSourceStrings)
+namespace
+{
+	void GetUserEnumLocEntry(const UUserDefinedEnum* UserEnum, int32 Index, FString& OutKey, FString& OutSource)
+	{
+		OutSource = UserEnum->GetDisplayNameTextByIndex(Index).ToString();
+		if (OutSource.IsEmpty())
+		{
+			OutSource = UserEnum->GetNameStringByIndex(Index);
+		}
+		const FString KeyName = OutSource.Replace(TEXT(" "), TEXT(""));
+		OutKey = FString::Printf(TEXT("%s.%s"), *UserEnum->GetName(), *KeyName);
+	}
+
+	void ApplyUserEnumLocKeys(UUserDefinedEnum* UserEnum)
+	{
+		FString PackageNamespace = TextNamespaceUtil::GetPackageNamespace(UserEnum);
+		if (PackageNamespace.IsEmpty())
+		{
+			PackageNamespace = TextNamespaceUtil::EnsurePackageNamespace(UserEnum);
+		}
+		const FString FullNamespace = TextNamespaceUtil::BuildFullNamespace(
+			TEXT("UObjectDisplayNames"), PackageNamespace, true);
+
+		TArray<TPair<FName, FText>> Pending;
+		for (int32 i = 0; i < UserEnum->NumEnums() - 1; ++i)
+		{
+			FString LocKey;
+			FString Source;
+			GetUserEnumLocEntry(UserEnum, i, LocKey, Source);
+
+			const FName EnumEntryName(*UserEnum->GetNameStringByIndex(i));
+			const FText* Existing = UserEnum->DisplayNameMap.Find(EnumEntryName);
+			const FString ExistingNs = Existing ? FTextInspector::GetNamespace(*Existing).Get(FString()) : FString();
+			const FString ExistingKey = Existing ? FTextInspector::GetKey(*Existing).Get(FString()) : FString();
+			if (Existing && ExistingNs == FullNamespace && ExistingKey == LocKey)
+			{
+				continue;
+			}
+
+			FText NewText = FText::AsLocalizable_Advanced(FullNamespace, LocKey, *Source);
+			Pending.Emplace(EnumEntryName, MoveTemp(NewText));
+		}
+
+		if (Pending.Num() == 0)
+		{
+			return;
+		}
+
+		const FScopedTransaction Transaction(NSLOCTEXT("Mineprep", "SetEnumKey", "Set Enum Loc Keys"));
+		UserEnum->Modify();
+
+		for (TPair<FName, FText>& Pair : Pending)
+		{
+			UserEnum->DisplayNameMap.Add(Pair.Key, Pair.Value);
+
+			UE_LOG(LogTemp, Display, TEXT("GatherPropertyNames SetEnumKey %s ns='%s' key='%s'"),
+				*Pair.Key.ToString(),
+				*FTextInspector::GetNamespace(Pair.Value).Get(FString()),
+				*FTextInspector::GetKey(Pair.Value).Get(FString()));
+		}
+
+		UserEnum->MarkPackageDirty();
+		UserEnum->PostEditChange();
+	}
+}
+
+void Umineprep::GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& OutTypes, TArray<FString>& OutKeys, TArray<FString>& OutSourceStrings, const bool SetEnumKey)
 {
     OutTypes.Empty();
     OutKeys.Empty();
@@ -1258,17 +1472,15 @@ void Umineprep::GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& O
     // 处理用户自定义枚举
     else if (UserEnum)
     {
-        FString EnumName = UserEnum->GetName();
-
-        // 遍历所有枚举值
+        if (SetEnumKey)
+        {
+            ApplyUserEnumLocKeys(UserEnum);
+        }
         for (int32 i = 0; i < UserEnum->NumEnums() - 1; ++i)  // NumEnums() - 1 排除隐藏的 _MAX 值
         {
-            FString DisplayName = UserEnum->GetDisplayNameTextByIndex(i).ToString();
-            // 去除空格
-            FString KeyName = DisplayName.Replace(TEXT(" "), TEXT(""));
-
-            // 获取枚举值的本地化Key：枚举资产名称.枚举值名称
-            FString LocalizationKey = FString::Printf(TEXT("%s.%s"), *EnumName, *KeyName);
+            FString LocalizationKey;
+            FString DisplayName;
+            GetUserEnumLocEntry(UserEnum, i, LocalizationKey, DisplayName);
             OutTypes.Add(TEXT("枚举值"));
             OutKeys.Add(LocalizationKey);
             OutSourceStrings.Add(DisplayName);

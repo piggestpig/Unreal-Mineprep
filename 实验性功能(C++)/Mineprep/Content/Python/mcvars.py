@@ -2,6 +2,7 @@ SafeBroadcast = False
 DebugMode = False
 PythonTooltips = False
 RegisteredMods = {}
+WidgetModMap = {}
 Props = {}
 Languages = ['zh-Hans', 'en', 'zh-Hant']
 

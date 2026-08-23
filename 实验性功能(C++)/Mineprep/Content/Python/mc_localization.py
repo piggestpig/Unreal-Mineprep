@@ -71,7 +71,7 @@ def localize(source: str, *args, **kwargs):
                     native_string = source,
                     localized_strings = {lang: arg for lang, arg in zip(mcvars.Languages, args)},
                     is_minimal_patch = False)
-    if mcvars.DebugMode:
+    if int(mcvars.DebugMode) >= 2:
         unreal.log(f'本地化: namespace={namespace}, key={key}, source_string={source} -> {args}')
     return unreal.TextLibrary.polyglot_data_to_text(polyglot)
 
@@ -86,10 +86,10 @@ class tooltip(str):
             '查看输出日志或前往https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API获取更多信息',
             'Check Output Log or go to https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API for more information'),
         '所有插件面板': lambda x: bilingual(
-            '【unreal.mineprep.panel() 可用的对象->类别】',
-            'Available objects -> classes for unreal.mineprep.panel()'),
+            '【mineprep.panel() 可用的对象->类别】',
+            'Available objects -> classes for mineprep.panel()'),
         '未找到面板': lambda x: bilingual(
-            f'未找到"{x}", 运行 unreal.mineprep.panel() 在日志中打印所有控件',
-            f'No widget found for "{x}", run unreal.mineprep.panel() to print all available widgets'),
+            f'未找到"{x}", 运行 mineprep.panel() 在日志中打印所有控件',
+            f'No widget found for "{x}", run mineprep.panel() to print all available widgets'),
         '你可能在寻找': lambda x: bilingual('你可能在寻找:', 'You may be looking for:')
     }

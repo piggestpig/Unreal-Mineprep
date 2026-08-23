@@ -16,7 +16,7 @@ from collections.abc import Iterable
 from types import SimpleNamespace
 
 import unreal
-from mc_utils import throw
+from mc_utils import throw, uclass, world, undo
 
 _TIME_UNIT = unreal.MovieSceneTimeUnit.DISPLAY_RATE
 
@@ -1233,3 +1233,198 @@ def keyframe(obj, prop='', value=None, time=None) -> bool:
 
     _refresh_sequencer()
     return True
+
+
+def _unwrap_target(obj):
+    """解开 mineprep 句柄，得到 Actor / SkeletalMeshComponent"""
+    if hasattr(obj, 'target') and not isinstance(obj, (unreal.Actor, unreal.SkeletalMeshComponent)):
+        obj = obj.target
+    return obj
+
+
+def _resolve_skm(target) -> unreal.SkeletalMeshComponent:
+    """从 Actor 或 SkeletalMeshComponent 得到骨骼网格体"""
+    target = _unwrap_target(target)
+    if isinstance(target, unreal.SkeletalMeshComponent):
+        return target
+    if isinstance(target, unreal.Actor):
+        skm = target.get_component_by_class(unreal.SkeletalMeshComponent)
+        if skm:
+            return skm
+        throw(f'{target.get_actor_label()} 没有 SkeletalMeshComponent')
+    throw(f'target 必须是 Actor 或 SkeletalMeshComponent，当前: {type(target).__name__}')
+
+
+def _resolve_rig_class(rig_class):
+    """None → FKControlRig；路径/蓝图 → Generated Class；类型 → UClass"""
+    if rig_class is None:
+        return unreal.FKControlRig.static_class()
+    if isinstance(rig_class, str) or isinstance(rig_class, unreal.Blueprint):
+        cls = uclass(rig_class)
+        if cls is None:
+            throw(f'无法解析 Control Rig 类: {rig_class}')
+        rig_class = cls
+    if isinstance(rig_class, type) and hasattr(rig_class, 'static_class'):
+        return rig_class.static_class()
+    if isinstance(rig_class, unreal.Class):
+        return rig_class
+    if isinstance(rig_class, unreal.ControlRig):
+        return rig_class.get_class()
+    throw(f'不支持的 rig_class: {type(rig_class).__name__}')
+
+
+def _rig_io(ctype):
+    """按控件类型取 ControlRigSequencerLibrary 的 get/set"""
+    lib = unreal.ControlRigSequencerLibrary
+    T = unreal.RigControlType
+    table = {
+        T.BOOL: (lib.get_local_control_rig_bool, lib.set_local_control_rig_bool),
+        T.FLOAT: (lib.get_local_control_rig_float, lib.set_local_control_rig_float),
+        T.SCALE_FLOAT: (lib.get_local_control_rig_float, lib.set_local_control_rig_float),
+        T.INTEGER: (lib.get_local_control_rig_int, lib.set_local_control_rig_int),
+        T.VECTOR2D: (lib.get_local_control_rig_vector2d, lib.set_local_control_rig_vector2d),
+        T.POSITION: (lib.get_local_control_rig_position, lib.set_local_control_rig_position),
+        T.SCALE: (lib.get_local_control_rig_scale, lib.set_local_control_rig_scale),
+        T.ROTATOR: (lib.get_local_control_rig_rotator, lib.set_local_control_rig_rotator),
+        T.EULER_TRANSFORM: (lib.get_local_control_rig_euler_transform, lib.set_local_control_rig_euler_transform),
+    }
+    pair = table.get(ctype)
+    if not pair:
+        throw(f'不支持的控件类型: {ctype}')
+    return pair
+
+
+class Rig:
+    """Sequencer 上的 Control Rig 句柄。默认 FK；已有轨保持 layered，新建为 layered。"""
+
+    def __init__(self, target, rig_class=None):
+        sequence = _get_active_sequence()
+        skm = _resolve_skm(target)
+        cls = _resolve_rig_class(rig_class)
+        owner = skm.get_owner()
+        if owner:
+            _ensure_binding(sequence, owner)
+        skm_binding = _ensure_binding(sequence, skm)
+
+        lib = unreal.ControlRigSequencerLibrary
+        track = lib.find_or_create_control_rig_track(world(), sequence, cls, skm_binding, True)
+        if not track:
+            throw('无法创建或找到 Control Rig 轨道')
+        _refresh_sequencer()
+
+        control_rig = None
+        for proxy in lib.get_control_rigs(sequence):
+            rig = proxy.control_rig
+            if not rig or rig.get_class() != cls:
+                continue
+            if proxy.track == track or rig.get_hosting_actor() == owner:
+                control_rig = rig
+                break
+        if control_rig is None:
+            throw('找不到 Control Rig 实例')
+
+        self.sequence = sequence
+        self.skm = skm
+        self.track = track
+        self.target = control_rig
+
+    def names(self) -> list[str]:
+        """列出控件全名（含模块前缀，如 Spine/body_ctrl）"""
+        hier = self.target.get_hierarchy()
+        return [str(key.name) for key in hier.get_controls(True)]
+
+    def _resolve_name(self, name: str) -> str:
+        """匹配全名、短名、FK 骨骼名（head → head_CONTROL）；撞名则报错"""
+        name = str(name)
+        aliases = {}
+        for full in self.names():
+            keys = {full, full.rsplit('/', 1)[-1]}
+            short = full.rsplit('/', 1)[-1]
+            if short.endswith('_CURVE_CONTROL'):
+                keys.add(short[:-len('_CURVE_CONTROL')])
+            elif short.endswith('_CONTROL'):
+                keys.add(short[:-len('_CONTROL')])
+            for key in keys:
+                aliases.setdefault(key, []).append(full)
+
+        matches = aliases.get(name)
+        if matches is None:
+            folded = name.casefold()
+            matches = next((v for k, v in aliases.items() if k.casefold() == folded), None)
+        if not matches:
+            throw(f'找不到控件: {name}')
+        unique = list(dict.fromkeys(matches))
+        if len(unique) > 1:
+            throw(f'控件名 {name} 不唯一: {unique}')
+        return unique[0]
+
+    def _frame(self, time) -> unreal.FrameNumber:
+        return unreal.FrameNumber(_resolve_frame(time, self.sequence))
+
+    def _type(self, full_name):
+        hier = self.target.get_hierarchy()
+        key = unreal.RigElementKey(type=unreal.RigElementType.CONTROL, name=full_name)
+        element = hier.find_control(key)
+        if element is None:
+            throw(f'找不到控件: {full_name}')
+        settings = element.get_control_settings() if hasattr(element, 'get_control_settings') else element.settings
+        return settings.control_type
+
+    def _read(self, full_name, frame):
+        getter, _ = _rig_io(self._type(full_name))
+        return getter(self.sequence, self.target, full_name, frame, _TIME_UNIT)
+
+    def _coerce(self, full_name, ctype, value, frame):
+        T = unreal.RigControlType
+        if ctype == T.EULER_TRANSFORM:
+            if isinstance(value, unreal.EulerTransform):
+                return value
+            cur = self._read(full_name, frame)
+            if isinstance(value, unreal.Rotator):
+                return unreal.EulerTransform(location=cur.location, rotation=value, scale=cur.scale)
+            if isinstance(value, unreal.Vector):
+                return unreal.EulerTransform(location=value, rotation=cur.rotation, scale=cur.scale)
+            if isinstance(value, unreal.Transform):
+                return unreal.EulerTransform(
+                    location=value.translation,
+                    rotation=value.rotation.rotator(),
+                    scale=value.scale3d,
+                )
+        if ctype == T.ROTATOR and isinstance(value, unreal.EulerTransform):
+            return value.rotation
+        if ctype == T.POSITION and isinstance(value, unreal.EulerTransform):
+            return value.location
+        return value
+
+    def _write(self, full_name, value, frame, set_key: bool):
+        ctype = self._type(full_name)
+        value = self._coerce(full_name, ctype, value, frame)
+        _, setter = _rig_io(ctype)
+        setter(self.sequence, self.target, full_name, frame, value, _TIME_UNIT, set_key)
+        return value
+
+    def get(self, name, time=None):
+        """读取控件值；time=None 为播放头（int 帧 / float 秒）"""
+        full = self._resolve_name(name)
+        return self._read(full, self._frame(time))
+
+    @undo
+    def set(self, name, value, time=None):
+        """写入控件值但不打帧"""
+        full = self._resolve_name(name)
+        self._write(full, value, self._frame(time), False)
+        _refresh_sequencer()
+        return self
+
+    @undo
+    def key(self, name, value=None, time=None):
+        """打关键帧；value=None 则对当前值打帧"""
+        full = self._resolve_name(name)
+        frame = self._frame(time)
+        if value is None:
+            value = self._read(full, frame)
+        # 刚创建的轨第一次 set_key 只写 Rig 值，先 set 再 key 才会进 Sequencer
+        self._write(full, value, frame, False)
+        self._write(full, value, frame, True)
+        _refresh_sequencer()
+        return self
