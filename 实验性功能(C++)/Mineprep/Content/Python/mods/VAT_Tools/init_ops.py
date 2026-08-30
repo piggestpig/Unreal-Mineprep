@@ -6,18 +6,25 @@ from . import bake_anim_ops
 from . import util as u
 
 
-def default_vat_save_path(skm: unreal.SkeletalMesh | None) -> str:
-    """骨骼网格体旁边的 VAT_{名称} 文件夹。"""
+def default_vat_save_path(
+    skm: unreal.SkeletalMesh | None,
+    is_item: bool = False,
+) -> str:
+    """骨骼网格体旁边的文件夹：物品 VAT_{名称}，否则 DA_VAT_{名称}。"""
     if not isinstance(skm, unreal.SkeletalMesh):
         return ''
-    return f'{u.package_dir(skm)}/VAT_{u.display_name(skm)}'
+    prefix = 'VAT_' if is_item else 'DA_VAT_'
+    return f'{u.package_dir(skm)}/{prefix}{u.display_name(skm)}'
 
 
 def on_init_props_changed(mod, property_name):
-    """SKM 变更时自动更新 SavePath。"""
-    if str(property_name) != 'SKM':
+    """SKM / bIsItem 变更时重设 SavePath。"""
+    if str(property_name) not in ('SKM', 'bIsItem'):
         return
-    path = default_vat_save_path(mod.init_props.SKM)
+    path = default_vat_save_path(
+        mod.init_props.SKM,
+        bool(getattr(mod.init_props, 'bIsItem', False)),
+    )
     if path:
         mod.init_props.SavePath = path
 
@@ -79,16 +86,17 @@ def create_vat_from_skm(mod) -> unreal.Object | None:
     """
     右栏主流程：
     SKM → SM + MC_VAT + 空动画/皮肤纹理集合 + MIC → 填入左栏 DataAsset。
-    资产写到 init_props.SavePath（默认 SKM 旁 VAT_{名称}/）。
+    资产写到 init_props.SavePath（默认 SKM 旁 DA_VAT_{名称}/ 或物品 VAT_{名称}/）。
     """
     skm = mod.init_props.SKM
     if not isinstance(skm, unreal.SkeletalMesh):
         u.notify('请先指定骨骼网格体')
         return None
 
+    is_item = bool(getattr(mod.init_props, 'bIsItem', False))
     save_path = (mod.init_props.SavePath or '').strip()
     if not save_path:
-        save_path = default_vat_save_path(skm)
+        save_path = default_vat_save_path(skm, is_item)
         mod.init_props.SavePath = save_path
     try:
         directory = u.ensure_dir(save_path)
@@ -98,14 +106,16 @@ def create_vat_from_skm(mod) -> unreal.Object | None:
 
     skm_name = u.display_name(skm)
     sm_name = f'SM_{skm_name}'
-    da_name = f'DA_VAT_{skm_name}'
+    da_name = f'VAT_{skm_name}' if is_item else f'DA_VAT_{skm_name}'
     vat_tc_name = f'VAT{skm_name}_纹理集合'
     skin_tc_name = f'皮肤_{skm_name}_纹理集合'
     mic_name = f'VAT_{skm_name}_Inst'
 
     # --- 1) Static Mesh ---
+    overwrite_sm = bool(getattr(mod.init_props, 'bOverwriteModel', False))
     sm_path = f'{directory}/{sm_name}'
-    if unreal.EditorAssetLibrary.does_asset_exist(sm_path):
+    sm_exists = unreal.EditorAssetLibrary.does_asset_exist(sm_path)
+    if sm_exists and not overwrite_sm:
         sm = unreal.load_asset(sm_path)
     else:
         sm = unreal.AnimToTextureBPLibrary.convert_skeletal_mesh_to_static_mesh(
@@ -115,7 +125,10 @@ def create_vat_from_skm(mod) -> unreal.Object | None:
     if not isinstance(sm, unreal.StaticMesh):
         u.notify(f'创建静态网格体失败: {sm_name}')
         return None
-    u.notify(f'静态网格体: {sm.get_name()} @ {directory}')
+    if sm_exists and overwrite_sm:
+        u.notify(f'已覆写静态网格体: {sm.get_name()} @ {directory}')
+    else:
+        u.notify(f'静态网格体: {sm.get_name()} @ {directory}')
 
     # --- 2) MC_VAT ---
     mc_cls = unreal.load_object(None, u.MC_VAT_CLASS_PATH)
@@ -149,10 +162,15 @@ def create_vat_from_skm(mod) -> unreal.Object | None:
                 u.notify(f'默认皮肤 ← {skin_tex.get_name()}')
             else:
                 u.notify('未找到「纹理贴图」，默认皮肤保持模板值')
+            if is_item:
+                unreal.MaterialEditingLibrary.set_material_instance_static_switch_parameter_value(
+                    mic, '物品', True
+                )
             if isinstance(vat_tc, unreal.TextureCollection):
                 _set_mic_texture_collection(mic, '动画纹理集合', vat_tc)
             if isinstance(skin_tc, unreal.TextureCollection):
                 _set_mic_texture_collection(mic, '皮肤纹理集合', skin_tc)
+            unreal.MaterialEditingLibrary.update_material_instance(mic)
             u.save(mic)
             sm.set_material(0, mic)
             u.save(sm)

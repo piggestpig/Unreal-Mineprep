@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
-import mc_sequencer, mc_widget, mc_mod, mc_mesh
+import mc_sequencer, mc_widget, mc_mod, mc_mesh, mc_material
 import mc_sequencer as mcseq
 from mc_importer import import_block, import_item, resolve_block_json_path, get_all_blocks
 from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
@@ -18,6 +18,7 @@ from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw,
                       List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
                       askdirectory, asksaveasfilename, startfile, screenshot, update_installer)
 from mc_prep import prep_texture, load_mcprep_data, colorize_material
+from mc_material import tex_to_color, color_to_tex, ColorList
 from mc_localization import (language, KernelLanguage, LocalizationCache, localize,
                              loctext, nsloctext, loctable_col, bilingual, tooltip)
 from mc_structure import (
@@ -103,6 +104,14 @@ class MineprepAPIHandle:
 
         attr = getattr(target, name)
         return mc_utils.wrap_ue_method(attr) if callable(attr) else attr
+
+    def __call__(self, fn, *args, **kwargs):
+        target = self.target
+        if isinstance(target, List):
+            return target(fn, *args, **kwargs)
+        if target is None:
+            return None
+        return fn(target, *args, **kwargs)
 
     def get(self, prop: str=None):
         """获取属性值，支持泛型"""
@@ -329,17 +338,26 @@ class hotkey(MineprepAddonHandle):
 ###########################################################################
 
 class MineprepWorldHandle(MineprepAPIHandle):
+    @classmethod
+    def _indexed(cls, key):
+        """int/bool 列表视为对 cls() 的花式下标；否则 None。"""
+        if List._take(key) is None:
+            return None
+        return list(cls()[key])
+
     @undo
     def __class_getitem__(cls, key):
-        """类下标：int/slice/[i, default] 取集合元素；其它参数走构造查找"""
+        """类下标：int/slice/numpy 多轴/花式下标取集合元素；其它参数走构造查找"""
         if isinstance(key, (int, slice)):
             return cls()[key]
         if isinstance(key, tuple) and len(key) == 2:
             return cls()[key]
+        if cls._collection and List._take(key) is not None:
+            return cls()[key]
         return cls(key).target
 
     def __getitem__(self, key):
-        """实例下标：集合支持 int/slice/[i, default]；非集合返回自身 target"""
+        """实例下标：集合支持 int/slice/numpy 多轴；非集合返回自身 target"""
         if not self._collection:
             return self.target
         return self.target[key]
@@ -423,20 +441,22 @@ class actors(MineprepWorldHandle):
 
     def __init__(self, name=unreal.Actor):
         """按标签/类型/回调查找多个 Actor，支持批量组件与材质操作"""
-        target = []
-        if isinstance(name, unreal.Actor):
-            target = [name]
-        elif isinstance(name, Iterable) and not isinstance(name, (str, bytes, type)):
-            target = list(name)
-        elif isinstance(name, type):
-            target = unreal.GameplayStatics.get_all_actors_of_class(world(), name)
-        else:
-            actors_list = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
-            if isinstance(name, str):
-                name = f'*{name}*' if '*' not in name else name
-                target = unreal.EditorFilterLibrary.by_actor_label(actors_list, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
-            elif callable(name):
-                target = [a for a in actors_list if name(a)]
+        target = type(self)._indexed(name)
+        if target is None:
+            target = []
+            if isinstance(name, unreal.Actor):
+                target = [name]
+            elif isinstance(name, Iterable) and not isinstance(name, (str, bytes, type)):
+                target = list(name)
+            elif isinstance(name, type):
+                target = unreal.GameplayStatics.get_all_actors_of_class(world(), name)
+            else:
+                actors_list = unreal.GameplayStatics.get_all_actors_of_class(world(), unreal.Actor)
+                if isinstance(name, str):
+                    name = f'*{name}*' if '*' not in name else name
+                    target = unreal.EditorFilterLibrary.by_actor_label(actors_list, name, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD)
+                elif callable(name):
+                    target = [a for a in actors_list if name(a)]
         super().__init__(target, [a.get_actor_label() for a in target])
 
         class ComponentHandle(components):  # 多个 Actor 各取一个组件, 返回的仍是组件数组
@@ -510,7 +530,10 @@ class components(MineprepWorldHandle):
     _collection = True
 
     def __init__(self, target=None):
-        if isinstance(target, unreal.ActorComponent):
+        indexed = type(self)._indexed(target)
+        if indexed is not None:
+            target = indexed
+        elif isinstance(target, unreal.ActorComponent):
             target = [target]
         elif isinstance(target, Iterable) and not isinstance(target, (str, bytes)):
             target = list(target)
@@ -551,7 +574,10 @@ class materials(MineprepWorldHandle):
     _collection = True
 
     def __init__(self, target=None):
-        if isinstance(target, unreal.MaterialInterface):
+        indexed = type(self)._indexed(target)
+        if indexed is not None:
+            target = indexed
+        elif isinstance(target, unreal.MaterialInterface):
             target = [target]
         elif isinstance(target, unreal.MeshComponent):
             target = self.find(target)
@@ -680,7 +706,10 @@ class bindings(MineprepSequencerHandle):
     _collection = True
 
     def __init__(self, target=None):
-        if mcseq.is_binding(target):
+        indexed = type(self)._indexed(target)
+        if indexed is not None:
+            target = indexed
+        elif mcseq.is_binding(target):
             target = [target]
         elif isinstance(target, unreal.LevelSequence):
             target = mcseq.gather_bindings(target)
@@ -716,7 +745,10 @@ class tracks(MineprepSequencerHandle):
     _collection = True
 
     def __init__(self, target=None):
-        if isinstance(target, unreal.MovieSceneTrack):
+        indexed = type(self)._indexed(target)
+        if indexed is not None:
+            target = indexed
+        elif isinstance(target, unreal.MovieSceneTrack):
             target = [target]
         elif isinstance(target, unreal.LevelSequence):
             target = mcseq.gather_tracks(target)
@@ -754,7 +786,10 @@ class sections(MineprepSequencerHandle):
     _collection = True
 
     def __init__(self, target=None):
-        if isinstance(target, unreal.MovieSceneSection):
+        indexed = type(self)._indexed(target)
+        if indexed is not None:
+            target = indexed
+        elif isinstance(target, unreal.MovieSceneSection):
             target = [target]
         elif isinstance(target, unreal.MovieSceneTrack):
             target = mcseq.gather_sections(target)
@@ -790,7 +825,10 @@ class channels(MineprepSequencerHandle):
     _collection = True
 
     def __init__(self, target=None):
-        if isinstance(target, unreal.MovieSceneScriptingChannel):
+        indexed = type(self)._indexed(target)
+        if indexed is not None:
+            target = indexed
+        elif isinstance(target, unreal.MovieSceneScriptingChannel):
             target = [target]
         elif isinstance(target, unreal.MovieSceneSection):
             target = mcseq.gather_channels(target)
@@ -828,7 +866,10 @@ class keys(MineprepSequencerHandle):
     _collection = True
 
     def __init__(self, target=None):
-        if isinstance(target, unreal.MovieSceneScriptingKey):
+        indexed = type(self)._indexed(target)
+        if indexed is not None:
+            target = indexed
+        elif isinstance(target, unreal.MovieSceneScriptingKey):
             target = [target]
         elif isinstance(target, unreal.MovieSceneScriptingChannel):
             target = mcseq.gather_keys(target)

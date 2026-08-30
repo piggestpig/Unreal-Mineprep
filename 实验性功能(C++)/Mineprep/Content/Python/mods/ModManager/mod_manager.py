@@ -15,6 +15,7 @@ MODS_DIR = Path(__file__).resolve().parent.parent
 
 class Props(mineprep.PropertyGroup):
     _unique_ = True
+    _autosave_ = True
     advanced: bool = False
 
 props = Props()
@@ -37,7 +38,7 @@ def _info(name, info):
 
 
 class ModManager(mineprep.Mod):
-    _guid_ = "mod_manager"
+    _unique_ = True
     _label_ = bilingual("模组管理器", "Mod Manager")
 
     def draw(self, context=None):

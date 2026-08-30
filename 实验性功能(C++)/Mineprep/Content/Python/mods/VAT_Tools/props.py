@@ -34,15 +34,20 @@ CopyProps.localize('CopyDeps', '复制所有依赖项', 'Copy All Dependencies',
 class InitSkmProps(mineprep.PropertyGroup):
     """右栏：无数据资产时从骨骼网格体初始化。"""
     SKM: unreal.SkeletalMesh = None
+    bIsItem: bool = False
+    bOverwriteModel: bool = False
     SavePath: str = ''
 
 InitSkmProps.localize('InitSkmProps', '从骨骼创建', 'Create From SKM', '從骨骼創建')
 InitSkmProps.localize('SKM', '骨骼网格体', 'Skeletal Mesh', '骨骼網格體')
+InitSkmProps.localize('bIsItem', '是手持物品', 'Handheld Item', '是手持物品')
+InitSkmProps.localize('bOverwriteModel', '覆写现有模型', 'Overwrite Existing Mesh', '覆寫現有模型')
 InitSkmProps.localize('SavePath', '保存路径', 'Save Path', '保存路徑')
 
 
 class VATToolsOptions(mineprep.PropertyGroup):
     """面板底部选项（不进 Details）"""
+    _autosave_ = True
     AutoCleanCache: bool = False
     HideInitSkm: bool = False
 

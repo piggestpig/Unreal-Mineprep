@@ -120,7 +120,7 @@ class Mod():
     layout: Layout = None
     context = None
     _public_ = False
-    _guid_ = None
+    _unique_ = False  # True → 固定一扇 tab，id = 类名；False → 每次随机 id
     _label_ = None
     _root_ = 'Root'
     _template_ = wclass.mod_panel
@@ -181,8 +181,13 @@ else:
 """
 
     @classmethod
+    def _tab_id(cls):
+        """立即打开面板用的 tab id。_unique_ 时为类名，否则每次随机。"""
+        return cls.__name__ if cls._unique_ else str(random.randint(0, 999999999))
+
+    @classmethod
     def toolbar_script(cls):
-        id = f"'{cls._guid_}'" if cls._guid_ else 'str(random.randint(0, 999999999))'
+        id = repr(cls.__name__) if cls._unique_ else 'str(random.randint(0, 999999999))'
         return f"""
 import unreal
 import random
@@ -211,9 +216,8 @@ subsystem.spawn_and_register_tab_with_id(widget_bp, {id})
         default_widget.set_editor_property("TabDisplayName", cls._label_ or cls.__name__)
 
         if open:
-            id = str(cls._guid_ or random.randint(0, 999999999))
             subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
-            subsystem.spawn_and_register_tab_with_id(widget_bp, id)
+            subsystem.spawn_and_register_tab_with_id(widget_bp, cls._tab_id())
 
         # 在顶部工具栏添加菜单项
         mod_entry = unreal.ToolMenuEntry(

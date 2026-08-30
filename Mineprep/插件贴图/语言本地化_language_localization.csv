@@ -1,4 +1,4 @@
-﻿Mineprep:0.5 | 时间戳1786107337.8546016,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
+﻿Mineprep:0.5 | 时间戳1787638514.8605292,中文,English,繁體中文,,,"② *生成器过滤类型{1:'👤', 2:'🟩' , 3:'🟥', 4:'🟨', 5:'🌊', 6:'📸', 7:'💡', 8:'👪', 9:'✨', 10:'🧱', 11:'𝓕', 12:'🔧'}",<2:放置生物>,<2:Mobs>,<2:放置生物>,,,,③,<3:预设素材>,<3:Preset>,<3:預設素材>,,,④,<4:附加组件>,<4:Attach>,<4:附加組件>,,,⑤,<5:枚举选项>,<5:Enum Options>,<5:枚舉選項>,,,,⑥,<6:放置方块>,<6:Blocks>,<6:放置方塊>,,,,⑦,<7:放置物品>,<7:Items>,<7:放置物品>
 0,准备场景,Prep Scene,準備場景,,,👤,Steve,Steve,Steve,,,,🟥,VFX下界传送门,VFX Nether Portal,VFX地獄傳送門,,,🔧,拴绳,Lead,牽繩(拴繩),,,,"低
 中
 高
@@ -198,7 +198,7 @@ GPU（粒子）",,,,👤🟩,金合欢木门 [顶部右],acacia_door_top_right,�
 25,色度抽样,Color codec,色度抽樣,,,🟥👤,凋灵骷髅 [NPC],Wither Skeleton [NPC],凋零骷髏 [NPC],,,,✨👪🟩,蜘蛛群粒子,Spider Swarm Particles,蜘蛛群粒子,,,,,,,,,,,,,,,,👤🟩,悬挂式金合欢木告示牌 [旋转3],acacia_hanging_sign_rot_3,相思木吊牌 (懸掛式相思木告示牌) [旋轉3],,,,👤🟩,蝙蝠刷怪蛋,bat_spawn_egg,蝙蝠生成蛋 (蝙蝠生怪蛋)
 26,编码质量,Codec Quality,編碼質量,,,🟩,流浪者,Stray,流浪者(流髑),,,,✨👪🟩,虫群粒子(蠹虫),Silverfish Swarm Particles,蟲群粒子(蠹魚),,,,,,,,,,,,,,,,🟩,金合欢树叶,acacia_leaves,相思木樹葉,,,,👤🟩,蜜蜂刷怪蛋,bee_spawn_egg,蜜蜂生成蛋 (蜜蜂生怪蛋)
 27,是HDR视频,HDR video,是HDR視頻,,,🟩👤,流浪者 [NPC],Stray [NPC],流浪者(流髑) [NPC],,,,✨👪🟨,虫群粒子(末影螨),Endermite Swarm Particles,蟲群粒子(終界蟎),,,,,,,,,,,,,,,,🟩,金合欢原木,acacia_log,相思木原木,,,,🟩,生牛肉,beef,生牛肉
-28,更新渲染配置,Update Config,更新渲染配置,,,🟩,沼骸,Bogged,沼骨(沼骸),,,,𝓕,径向力场 (全局扩展),Radial Force (+World Field),徑向力場 (全局擴展),,,,,,,,,,,,,,,,🟩,金合欢原木 [水平],acacia_log_horizontal,相思木原木 [水平],,,,🟩,甜菜根,beetroot,紅菜頭 (甜菜根)
+28,更新渲染配置,Update Config,更新渲染配置,,,🟩,沼骸,Bogged,沼骨(沼骸),,,,𝓕,径向力 (全局扩展),Radial Force (+World Field),徑向力 (全局擴展),,,,,,,,,,,,,,,,🟩,金合欢原木 [水平],acacia_log_horizontal,相思木原木 [水平],,,,🟩,甜菜根,beetroot,紅菜頭 (甜菜根)
 29,附魔,Enchant,附魔,,,🟩👤,沼骸 [NPC],Bogged [NPC],沼骨(沼骸) [NPC],,,,🧱🔧,距离场碰撞箱包裹器,SDF Collision Wrapper,距離場碰撞箱包裹器,,,,,,,,,,,,,,,,👤🟩,金合欢木板,acacia_planks,相思木板 (相思木材),,,,🟩,甜菜种子,beetroot_seeds,紅菜頭種子 (甜菜種子)
 30,祛魔,Disenchant,祛魔,,,🟩,猪,Pig,豬,,,,✨,灰尘粒子,Dust Particles,灰塵粒子,,,,,,,,,,,,,,,,👤🟩,金合欢木压力板,acacia_pressure_plate,相思木壓力板,,,,🟩,甜菜汤,beetroot_soup,紅菜頭湯 (甜菜湯)
 31,时间 (h),Time (h),時間 (h),,,🟩👤,猪 [NPC],Pig [NPC],豬 [NPC],,,,🧱👪🟩,观众人群散布器,Spectator Crowd Scatter,觀衆人群散佈器,,,,,,,,,,,,,,,,👤🟩,金合欢木压力板 [按下],acacia_pressure_plate_down,相思木壓力板 [按下],,,,👤🟩,钟,bell,鐘
@@ -231,8 +231,8 @@ GPU（粒子）",,,,👤🟩,金合欢木门 [顶部右],acacia_door_top_right,�
 58,光程,Light Paths,光程,,,🟩,流浪商人,Wandering Trader,流浪商人,,,,✨👪🟩,观众人群粒子,Spectator Crowd Particles,觀衆人群粒子,,,,,,,,,,,,,,,,👤🟩,激活铁轨 [开启西南抬高],activator_rail_on_raised_sw,觸發路軌 (觸發鐵軌) [開啟西南抬高],,,,👤🟩,书,book,書
 59,反射次数,Reflection,反射次數,,,🟩👤,流浪商人 [NPC],Wandering Trader [NPC],流浪商人 [NPC],,,,✨👪🟩🌊,鱼群粒子,Fish School Particles,魚群粒子,,,,,,,,,,,,,,,,👤🟩,激活铁轨 [东北抬高],activator_rail_raised_ne,觸發路軌 (觸發鐵軌) [東北抬高],,,,👤🟩,波纹边旗帜图案,bordure_indented_banner_pattern,鋸齒邊橫額圖案 (鋸齒框邊旗幟圖案)
 60,折射次数,Refraction,折射次數,,,🟩,豹猫,Ocelot,豹貓(山貓),,,,👤,通用像素物品,Generic Pixel Item,通用像素物品,,,,,,,,,,,,,,,,👤🟩,激活铁轨 [西南抬高],activator_rail_raised_sw,觸發路軌 (觸發鐵軌) [西南抬高],,,,👤🟩,弓,bow,弓
-61,色彩管理,Color management,色彩管理,,,🟩👤,豹猫 [NPC],Ocelot [NPC],豹貓(山貓) [NPC],,,,,,,,,,,,,,,,,,,,,,,🟩,空气,air,空氣,,,,👤🟩,弓 [拉弓0],bow_pulling_0,弓 [拉弓0]
-62,自动曝光,Auto exposure,自動曝光,,,🟩👤,蠹虫 [NPC],Silverfish [NPC],蠹魚 [NPC],,,,,,,,,,,,,,,,,,,,,,,🟩,绒球葱,allium,絨球葱 (紫紅球花),,,,👤🟩,弓 [拉弓1],bow_pulling_1,弓 [拉弓1]
+61,色彩管理,Color management,色彩管理,,,🟩👤,豹猫 [NPC],Ocelot [NPC],豹貓(山貓) [NPC],,,,𝓕,粒子转向场,Particle Steering Field,粒子轉向場,,,,,,,,,,,,,,,,🟩,空气,air,空氣,,,,👤🟩,弓 [拉弓0],bow_pulling_0,弓 [拉弓0]
+62,自动曝光,Auto exposure,自動曝光,,,🟩👤,蠹虫 [NPC],Silverfish [NPC],蠹魚 [NPC],,,,𝓕,线性速度场,Linear Velocity Field,綫性速度場,,,,,,,,,,,,,,,,🟩,绒球葱,allium,絨球葱 (紫紅球花),,,,👤🟩,弓 [拉弓1],bow_pulling_1,弓 [拉弓1]
 63,曝光补偿,Exposure,曝光補償,,,🟨👤,末影螨 [NPC],Endermite [NPC],終界蟎 [NPC],,,,,,,,,,,,,,,,,,,,,,,🟩,紫水晶块,amethyst_block,紫水晶磚 (紫水晶方塊),,,,👤🟩,弓 [拉弓2],bow_pulling_2,弓 [拉弓2]
 64,阴影对比度,Shadow,陰影對比度,,,🟩👤,蜘蛛 [NPC],Spider [NPC],蜘蛛 [NPC],,,,,,,,,,,,,,,,,,,,,,,🟩💡,紫水晶簇,amethyst_cluster,紫水晶簇 (紫水晶晶簇),,,,👤🟩,碗,bowl,碗
 65,高光对比度,Highlight,高光對比度,,,🟩👤,洞穴蜘蛛 [NPC],Cave Spider [NPC],洞穴蜘蛛 [NPC],,,,,,,,,,,,,,,,,,,,,,,🟥,远古残骸,ancient_debris,遠古殘骸 (遠古遺骸),,,,🟩,面包,bread,麪包 (麵包)

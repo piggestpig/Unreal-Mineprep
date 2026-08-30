@@ -7,7 +7,11 @@ from mineprep import bilingual
 
 RT = 64
 DISPLAY = 512
+VIEW_MIN = 64
+VIEW_MAX = 2048
+VIEW_STEP = 32
 SAVE_SUFFIX = '_2'
+BATCH_DIR = '/Game/mc/tex'
 WHITE = '/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture'
 CLEAR = unreal.LinearColor(0, 0, 0, 0)
 MASK = unreal.LinearColor(1, 1, 1, 1)
@@ -17,47 +21,6 @@ NEAREST = unreal.TextureFilter.TF_NEAREST
 OPAQUE = unreal.BlendMode.BLEND_OPAQUE
 TRANSLUCENT = unreal.BlendMode.BLEND_TRANSLUCENT
 FORMAT = unreal.TextureRenderTargetFormat.RTF_RGBA8_SRGB
-
-# 64x64 Steve/Alex arm UV. Squeeze/stretch matches 811Alex/MCSkinConverter.
-ARM_SHIFT = (
-    (55, 16, 1, 32),
-    (51, 16, 1, 4),
-    (51, 32, 1, 4),
-    (47, 16, 8, 32),
-    (63, 48, 1, 16),
-    (59, 48, 1, 4),
-    (55, 48, 8, 16),
-    (47, 48, 1, 16),
-    (43, 48, 1, 4),
-    (39, 48, 8, 16),
-)
-ARM_EDGE = (
-    (40, 20, 16, 12),
-    (40, 36, 16, 12),
-    (32, 52, 16, 12),
-    (48, 52, 16, 12),
-    (44, 16, 8, 4),
-    (44, 32, 8, 4),
-    (36, 48, 8, 4),
-    (52, 48, 8, 4),
-)
-# 1.8+ 64x64: inner (head/body/limbs) vs outer (hat/jacket/sleeves/pants).
-INNER_BOXES = (
-    (0, 0, 32, 16),
-    (0, 16, 16, 16),
-    (16, 16, 24, 16),
-    (40, 16, 16, 16),
-    (16, 48, 16, 16),
-    (32, 48, 16, 16),
-)
-OUTER_BOXES = (
-    (32, 0, 32, 16),
-    (0, 32, 16, 16),
-    (16, 32, 24, 16),
-    (40, 32, 16, 16),
-    (0, 48, 16, 16),
-    (48, 48, 16, 16),
-)
 
 
 def tex_size(tex):
@@ -123,6 +86,13 @@ def force_update(tex):
     unreal.LandmassBlueprintFunctionLibrary.force_update_texture(tex)
 
 
+def srgb_to_linear(c):
+    """read_render_target_pixel returns sRGB FColor; the Color picker stores LinearColor."""
+    linear = unreal.LinearColor()
+    linear.set_from_srgb(c)
+    return linear
+
+
 class Pad:
     def __init__(self, tools):
         self.tools = tools
@@ -144,6 +114,9 @@ class Pad:
         self.hint = None
         self.sample_color = False
         self.hint_xy = None
+        self.hover = None
+        self._overlay_src = None
+        self._overlay_colors = None
 
     def make_rt(self, w, h):
         rt = unreal.RenderingLibrary.create_render_target2d(
@@ -265,13 +238,14 @@ class Pad:
         except Exception:
             return
         if color is None:
-            hint.target.set_text(f'{x},{y}')
+            hint.target.set_text(f'{y},{x}')
             hint.target.set_color_and_opacity(unreal.SlateColor(HINT_WHITE))
             return
         r, g, b, a = (int(color.r), int(color.g), int(color.b), int(color.a))
-        hint.target.set_text(f'{x},{y}  #{r:02X}{g:02X}{b:02X} {a:02X}')
+        hint.target.set_text(f'{y},{x}  #{r:02X}{g:02X}{b:02X} {a:02X}')
+        linear = srgb_to_linear(color)
         hint.target.set_color_and_opacity(unreal.SlateColor(
-            unreal.LinearColor(r / 255.0, g / 255.0, b / 255.0, 1.0)))
+            unreal.LinearColor(linear.r, linear.g, linear.b, 1.0)))
 
     def update_hint(self, w):
         x, y = self.pixel(w)
@@ -304,6 +278,42 @@ class Pad:
     def up(self, w):
         self.drawing = False
         return True
+
+    def bind_hover(self, hover):
+        self.hover = hover
+
+    def overlay_colors(self):
+        ov = self.tools.Overlay
+        if not isinstance(ov, unreal.Texture2D):
+            return None
+        if ov is self._overlay_src:
+            return self._overlay_colors
+        colors = mineprep.tex_to_color(ov)
+        if not colors:
+            return None
+        self._overlay_src = ov
+        self._overlay_colors = colors
+        return colors
+
+    def pick_color(self):
+        hover = self.hover
+        if hover and getattr(hover, 'target', None):
+            try:
+                if unreal.SystemLibrary.is_valid(hover.target):
+                    uv = hover.get_mouse_uv()
+                    if 0.0 <= uv.x <= 1.0 and 0.0 <= uv.y <= 1.0:
+                        x, y = self.pixel(hover)
+                        self.hint_xy = (x, y)
+            except Exception:
+                pass
+        if not self.hint_xy:
+            return
+        x, y = self.hint_xy
+        c = unreal.RenderingLibrary.read_render_target_pixel(
+            self.world, self.rt, x, y)
+        self.tools.Color = srgb_to_linear(c)
+        if self.sample_color:
+            self.show_hint(x, y, c)
 
     def bind_image(self, img):
         self.img = img
@@ -379,166 +389,32 @@ def on_tools_changed(mod, name):
         mod._pad.load(tex)
     elif name == 'ViewSize':
         mod._pad.sync_image()
+    elif name == 'Advanced':
+        col = getattr(mod, '_batch', None)
+        if col:
+            col.hide(not mod.paint_tools.Advanced)
+
+
+def nudge_view(mod, delta):
+    if not delta:
+        return
+    view = float(mod.paint_tools.ViewSize or DISPLAY)
+    view = view + (VIEW_STEP if delta > 0 else -VIEW_STEP)
+    view = min(VIEW_MAX, max(VIEW_MIN, view))
+    if view == float(mod.paint_tools.ViewSize or DISPLAY):
+        return
+    mod.paint_tools.ViewSize = view
+    mod._pad.sync_image()
 
 
 def restore(mod):
     mod._pad.load(mod.paint_tools.Texture)
 
 
-def _skin_scale(pad):
-    w, h = pad.width, pad.height
-    if w != h or w < RT or w % RT:
-        return 0
-    return w // RT
-
-
-def _scaled(boxes, ratio):
-    return tuple(tuple(int(v) * ratio for v in box) for box in boxes)
-
-
-def _shift_rect(pad, x, y, w, h, dx, copy=False):
-    pad.copy_rt(pad.rt, pad.base)
-    tw = float(pad.width)
-    th = float(pad.height)
-    canvas, _, ctx = pad.canvas_on(pad.rt)
-    if not copy:
-        canvas.draw_texture(
-            pad.white, unreal.Vector2D(x, y), unreal.Vector2D(w, h),
-            unreal.Vector2D(0, 0), unreal.Vector2D(1, 1), CLEAR, OPAQUE)
-    canvas.draw_texture(
-        pad.base,
-        unreal.Vector2D(x + dx, y), unreal.Vector2D(w, h),
-        unreal.Vector2D(x / tw, y / th),
-        unreal.Vector2D(w / tw, h / th),
-        MASK, OPAQUE)
-    unreal.RenderingLibrary.end_draw_canvas_to_render_target(pad.world, ctx)
-
-
-def _shift_arms(pad, dx, dw, move, copy=False, reverse=False):
-    boxes = _scaled(ARM_SHIFT, pad.width // RT)
-    seq = reversed(boxes) if reverse else boxes
-    for x, y, w, h in seq:
-        _shift_rect(pad, x + dx, y, w + dw, h, move, copy)
-
-
-def is_wide(pad):
-    ratio = _skin_scale(pad)
-    if not ratio:
-        return False
-    samples = unreal.RenderingLibrary.read_render_target(pad.world, pad.rt)
-    if not samples:
-        return False
-    width = pad.width
-    for x, y, w, h in _scaled(ARM_EDGE, ratio):
-        left = x + w - ratio
-        for yy in range(y, y + h):
-            row = yy * width
-            for xx in range(left, x + w):
-                if int(samples[row + xx].a) > 0:
-                    return True
-    return False
-
-
-def convert_arms(mod, slim):
-    pad = mod._pad
-    pad.drawing = False
-    ratio = _skin_scale(pad)
-    if not ratio:
-        mineprep.warn(bilingual(
-            '手臂转换需要正方形皮肤（64 的倍数）',
-            'Arm convert needs a square skin (multiple of 64)'))
-        return
-    wide = is_wide(pad)
-    if slim and not wide:
-        mineprep.warn(bilingual('已经是细手臂', 'Already slim arms'))
-        return
-    if not slim and wide:
-        mineprep.warn(bilingual('已经是宽手臂', 'Already wide arms'))
-        return
-    if slim:
-        _shift_arms(pad, 0, 0, -ratio)
-    else:
-        _shift_arms(pad, -2 * ratio, ratio, ratio, copy=True, reverse=True)
-    pad.sync_image()
-    mineprep.prints(bilingual(
-        '已转为细手臂' if slim else '已转为宽手臂',
-        'Converted to slim arms' if slim else 'Converted to wide arms'))
-
-
-def wide_arms(mod):
-    convert_arms(mod, False)
-
-
-def slim_arms(mod):
-    convert_arms(mod, True)
-
-
-def _tex_scale(tex):
-    w, h = tex_size(tex)
-    if w != h or w < RT or w % RT:
-        return 0
-    return w // RT
-
-
-def keep_layer(mod, outer=False):
-    tex = mod.paint_tools.Texture
-    if not isinstance(tex, unreal.Texture2D):
-        mineprep.warn(bilingual('请先指定皮肤纹理', 'Set a skin texture first'))
-        return
-    ratio = _tex_scale(tex)
-    if not ratio:
-        mineprep.warn(bilingual(
-            '分层需要正方形皮肤（64 的倍数）',
-            'Layers need a square skin (multiple of 64)'))
-        return
-    pad = mod._pad
-    pad.drawing = False
-    force_update(tex)
-    w, h = tex_size(tex)
-    pad.resize(w, h)
-    pad.clear()
-    tw = float(w)
-    th = float(h)
-    boxes = OUTER_BOXES if outer else INNER_BOXES
-    canvas, _, ctx = pad.canvas_on(pad.rt)
-    for x, y, bw, bh in _scaled(boxes, ratio):
-        canvas.draw_texture(
-            tex,
-            unreal.Vector2D(x, y), unreal.Vector2D(bw, bh),
-            unreal.Vector2D(x / tw, y / th),
-            unreal.Vector2D(bw / tw, bh / th),
-            MASK, OPAQUE)
-    unreal.RenderingLibrary.end_draw_canvas_to_render_target(pad.world, ctx)
-    pad.sync_image()
-    mineprep.prints(bilingual(
-        '已保留外层' if outer else '已保留内层',
-        'Kept outer layer' if outer else 'Kept inner layer'))
-
-
-def keep_inner(mod):
-    keep_layer(mod, False)
-
-
-def keep_outer(mod):
-    keep_layer(mod, True)
-
-
-def apply_overlay(mod):
-    ov = mod.paint_tools.Overlay
-    if not isinstance(ov, unreal.Texture2D):
-        mineprep.warn(bilingual('请先指定叠加纹理', 'Set an overlay texture first'))
-        return
-    pad = mod._pad
-    pad.drawing = False
-    force_update(ov)
-    canvas, size, ctx = pad.canvas_on(pad.rt)
-    canvas.draw_texture(
-        ov, unreal.Vector2D(0, 0), size,
-        unreal.Vector2D(0, 0), unreal.Vector2D(1, 1),
-        MASK, TRANSLUCENT)
-    unreal.RenderingLibrary.end_draw_canvas_to_render_target(pad.world, ctx)
-    pad.sync_image()
-    mineprep.prints(bilingual('已叠加纹理', 'Overlay applied'))
+def use_snippet(mod, name):
+    from . import snippets
+    mod.code_tools.Code = snippets.source(name)
+    run_code(mod)
 
 
 def export_png(mod):
@@ -591,3 +467,174 @@ def save(mod):
     mineprep.prep_texture(out)
     unreal.EditorAssetLibrary.save_loaded_asset(out)
     mineprep.prints(bilingual(f'已保存 {full}', f'Saved {full}'))
+
+
+def _compile_main(mod):
+    code = (mod.code_tools.Code or '').strip()
+    if not code:
+        mineprep.warn(bilingual('请先填写代码', 'Write a script first'))
+        return None
+    ns = {
+        'unreal': unreal, 'mineprep': mineprep, 'ColorList': mineprep.ColorList,
+        '__name__': 'skin_code',
+    }
+    try:
+        exec(code, ns)
+    except Exception as e:
+        mineprep.warn(bilingual(f'编译失败: ', f'Compile failed: '), e)
+        return None
+    main = ns.get('main')
+    if not callable(main):
+        mineprep.warn(bilingual(
+            '代码需要 def main(tex, overlay)',
+            'Script needs def main(tex, overlay)'))
+        return None
+    return main
+
+
+def _eval_main(main, tex, overlay):
+    result = main(tex, overlay)
+    if result is None:
+        result = tex
+    return mineprep.ColorList(result)
+
+
+def run_code(mod):
+    pad = getattr(mod, '_pad', None)
+    if not pad or not pad.rt:
+        mineprep.warn(bilingual('画布未就绪', 'Canvas is not ready'))
+        return
+    tex = mineprep.tex_to_color(pad.rt)
+    if not tex:
+        return
+    overlay = pad.overlay_colors()
+    main = _compile_main(mod)
+    if not main:
+        return
+    try:
+        result = _eval_main(main, tex, overlay)
+    except Exception as e:
+        mineprep.warn(bilingual(f'运行失败: ', f'Script failed: '), e)
+        return
+    out = mineprep.color_to_tex(result)
+    if not out:
+        return
+    pad.load(out)
+
+
+def run_batch(mod):
+    sources = list(mod.batch_tools.Textures or [])
+    if not any(isinstance(t, unreal.Texture2D) for t in sources):
+        mineprep.warn(bilingual(
+            '请先在批量处理中指定纹理',
+            'Set textures in Batch Process first'))
+        return
+    main = _compile_main(mod)
+    if not main:
+        return
+    pad = getattr(mod, '_pad', None)
+    overlay = pad.overlay_colors() if pad else None
+    outs = []
+    ok = 0
+    for i, src in enumerate(sources):
+        if not isinstance(src, unreal.Texture2D):
+            outs.append(None)
+            continue
+        tex = mineprep.tex_to_color(src)
+        if not tex:
+            mineprep.warn(bilingual(
+                f'第 {i + 1} 张读取失败',
+                f'Texture {i + 1} failed to read'))
+            outs.append(None)
+            continue
+        try:
+            result = _eval_main(main, tex, overlay)
+        except Exception as e:
+            mineprep.warn(bilingual(
+                f'第 {i + 1} 张运行失败: ',
+                f'Texture {i + 1} failed: '), e)
+            outs.append(None)
+            continue
+        out = mineprep.color_to_tex(result)
+        if not out:
+            outs.append(None)
+            continue
+        outs.append(out)
+        ok += 1
+    mod.batch_tools.NewTextures = outs
+    mineprep.prints(bilingual(
+        f'已处理 {ok}/{len(sources)} 张',
+        f'Processed {ok}/{len(sources)}'))
+
+
+def _copy_tex_to_asset(src, directory, name, template=None):
+    if not unreal.EditorAssetLibrary.does_directory_exist(directory):
+        unreal.EditorAssetLibrary.make_directory(directory)
+    full = f'{directory}/{name}'
+    dest = None
+    if unreal.EditorAssetLibrary.does_asset_exist(full):
+        dest = unreal.load_asset(full)
+    else:
+        seed = template if isinstance(template, unreal.Texture2D) else src
+        dest = unreal.AssetToolsHelpers.get_asset_tools().duplicate_asset(
+            name, directory, seed)
+    if not isinstance(dest, unreal.Texture2D):
+        return None
+    ctx = mineprep.world()
+    w, h = tex_size(src)
+    rt = unreal.RenderingLibrary.create_render_target2d(ctx, w, h, FORMAT, CLEAR)
+    canvas, size, draw = unreal.RenderingLibrary.begin_draw_canvas_to_render_target(
+        ctx, rt)
+    if size.x < 1 or size.y < 1:
+        size = unreal.Vector2D(float(w), float(h))
+    canvas.draw_texture(
+        src, unreal.Vector2D(0, 0), size,
+        unreal.Vector2D(0, 0), unreal.Vector2D(1, 1), MASK, OPAQUE)
+    unreal.RenderingLibrary.end_draw_canvas_to_render_target(ctx, draw)
+    unreal.RenderingLibrary.convert_render_target_to_texture2d_editor_only(
+        ctx, rt, dest)
+    unreal.RenderingLibrary.release_render_target2d(rt)
+    mineprep.prep_texture(dest)
+    unreal.EditorAssetLibrary.save_loaded_asset(dest)
+    return dest
+
+
+def save_batch(mod):
+    originals = list(mod.batch_tools.Textures or [])
+    news = list(mod.batch_tools.NewTextures or [])
+    if not news:
+        mineprep.warn(bilingual('没有可保存的新纹理', 'No new textures to save'))
+        return
+    beside = bool(mod.batch_tools.BesideOriginal)
+    saved = []
+    ok = 0
+    for i, out in enumerate(news):
+        if not isinstance(out, unreal.Texture2D):
+            saved.append(None)
+            continue
+        src = originals[i] if i < len(originals) else None
+        if isinstance(src, unreal.Texture2D):
+            path = package_path(src)
+            orig_dir, base = path.rsplit('/', 1) if '/' in path else (BATCH_DIR, src.get_name())
+            directory = orig_dir if beside else BATCH_DIR
+        else:
+            directory, base = BATCH_DIR, 'skin'
+        name = f'{base}_{i + 1}'
+        dest = _copy_tex_to_asset(
+            out, directory, name,
+            src if isinstance(src, unreal.Texture2D) else out)
+        if not dest:
+            mineprep.warn(bilingual(
+                f'第 {i + 1} 张保存失败',
+                f'Texture {i + 1} failed to save'))
+            saved.append(None)
+            continue
+        saved.append(dest)
+        ok += 1
+        mineprep.prints(bilingual(
+            f'已保存 {directory}/{name}',
+            f'Saved {directory}/{name}'))
+    mod.batch_tools.NewTextures = saved
+    mineprep.prints(bilingual(
+        f'已保存 {ok}/{len(news)} 张',
+        f'Saved {ok}/{len(news)}'))

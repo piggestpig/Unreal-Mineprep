@@ -1,6 +1,7 @@
 import unreal
 import os
 import re
+import math
 import subprocess
 import sys
 import traceback
@@ -10,6 +11,7 @@ from dataclasses import dataclass, asdict
 from pprint import pformat
 from functools import lru_cache, wraps
 from typing import Iterable
+import operator
 
 HotkeyObjCache = None
 
@@ -120,64 +122,192 @@ def asynctask(func):
     return wrapper
 
 
+def iscollection(obj):
+    """判断对象是否为集合类型（list, tuple, set, dict等），排除字符串"""
+    return isinstance(obj, Iterable) and not isinstance(obj, (str, bytes))
+
+
 class List(list):
     """改进版list：
     1. 支持 List(1, 2, 3) 变长参数构造，也支持 List([1, 2, 3]) 迭代器构造
     2. 调用不存在的属性或函数时, 尝试转发到内部元素，返回结果数组
-    3. 支持 [index, default] 越界安全取值
+    3. 下标模仿 numpy：a[i, j]、切片、a[[1, 2]]、a[[True, False]]、a[a > 2]（与标量比较得 mask）；两个 List 比较仍是 True/False
+    4. float 下标当 0~1 比例（UV）：floor((u % 1) * n)；[:0.5] 前半，[0.5:] 后半。
+       int -1 仍是末项，-1.0 会 wrap 到 0
+    5. a(fn, *args) 对每个元素调用 fn(item, *args)，嵌套 List 再进一层
     """
 
     def __new__(cls, *args):
-        # 必须重写 __new__，统一返回一个空的子类实例，以此绕过内置 list() 的单参数限制
         return super().__new__(cls)
 
     def __init__(self, *args):
         if len(args) == 1:
-            arg = args[0]
-            # 判断是否为可迭代对象，同时排除字符串和字节流
-            if isinstance(arg, Iterable) and not isinstance(arg, (str, bytes)):
-                super().__init__(arg)
-            else:
-                super().__init__([arg])
-        elif len(args) > 1:
-            # 传入多个参数时，打包成的 tuple 已经是可迭代对象，直接初始化
-            super().__init__(args)
+            super().__init__(args[0] if iscollection(args[0]) else [args[0]])
         else:
-            super().__init__()
+            super().__init__(args)
+
+    @staticmethod
+    def _key(tail):
+        return tail[0] if len(tail) == 1 else tail
+
+    @staticmethod
+    def _take(index):
+        if not isinstance(index, list):
+            return None
+        if not index:
+            return []
+        if isinstance(index[0], bool):
+            return [i for i, m in enumerate(index) if m]
+        if isinstance(index[0], int):
+            return list(index)
+        return None
+
+    @staticmethod
+    def _uv_index(u, n):
+        if n <= 0:
+            return 0
+        return int(math.floor((u % 1.0) * n))
+
+    def _resolve(self, index):
+        n = len(self)
+        if isinstance(index, float):
+            return self._uv_index(index, n)
+        if isinstance(index, slice):
+            start, stop, step = index.start, index.stop, index.step
+            if isinstance(step, float):
+                raise TypeError('slice step must be an integer')
+            if isinstance(start, float):
+                start = self._uv_index(start, n)
+            if isinstance(stop, float):
+                stop = self._uv_index(stop, n)
+            if start is index.start and stop is index.stop:
+                return index
+            return slice(start, stop, step)
+        if isinstance(index, tuple) and index:
+            head = self._resolve(index[0])
+            if head is index[0]:
+                return index
+            return (head,) + index[1:]
+        return index
 
     def __getitem__(self, index):
-        # 检测 [index, default] 双参数形式
-        if isinstance(index, tuple) and len(index) == 2:
-            real_idx, default = index
-            try:
-                return super().__getitem__(real_idx)
-            except IndexError:
-                return default
-
+        index = self._resolve(index)
+        idxs = self._take(index)
+        if idxs is not None:
+            return type(self)(self[i] for i in idxs)
+        if isinstance(index, tuple):
+            if not index:
+                return self
+            head, tail = index[0], index[1:]
+            rows = self._take(head)
+            if rows is not None:
+                taken = type(self)(self[i] for i in rows)
+                return taken if not tail else type(self)(
+                    row[self._key(tail)] for row in taken)
+            item = super().__getitem__(head)
+            if not tail:
+                return type(self)(item) if isinstance(head, slice) else item
+            key = self._key(tail)
+            if isinstance(head, slice):
+                return type(self)(row[key] for row in item)
+            return item[key]
         res = super().__getitem__(index)
-        if isinstance(index, slice):
-            return type(self)(res)
-        return res
+        return type(self)(res) if isinstance(index, slice) else res
+
+    def __setitem__(self, index, value):
+        index = self._resolve(index)
+        idxs = self._take(index)
+        if idxs is not None:
+            if not iscollection(value):
+                for i in idxs:
+                    self[i] = value
+            else:
+                for i, v in zip(idxs, value):
+                    self[i] = v
+            return
+        if isinstance(index, tuple):
+            if not index:
+                raise TypeError('empty index')
+            head, tail = index[0], index[1:]
+            if not tail:
+                self[head] = value
+                return
+            key = self._key(tail)
+            scalar = not iscollection(value)
+            rows = self._take(head)
+            if rows is not None:
+                for n, i in enumerate(rows):
+                    self[i][key] = value if scalar else value[n]
+                return
+            if isinstance(head, slice):
+                for i, row in enumerate(super().__getitem__(head)):
+                    row[key] = value if scalar else value[i]
+                return
+            super().__getitem__(head)[key] = value
+            return
+        if isinstance(index, slice) and not iscollection(value):
+            start, stop, step = index.indices(len(self))
+            super().__setitem__(index, [value] * len(range(start, stop, step)))
+            return
+        super().__setitem__(index, value)
+
+    _LIST_CMP = {
+        operator.eq: list.__eq__,
+        operator.ne: list.__ne__,
+        operator.gt: list.__gt__,
+        operator.ge: list.__ge__,
+        operator.lt: list.__lt__,
+        operator.le: list.__le__,
+    }
+
+    def _cmp(self, other, op):
+        if iscollection(other):
+            return self._LIST_CMP[op](self, other)
+        return List(self._cmp_elem(a, other, op) for a in self)
+
+
+    @staticmethod
+    def _cmp_elem(a, b, op):
+        if isinstance(a, List):
+            return a._cmp(b, op)
+        return op(a, b)
+
+    def __gt__(self, other):
+        return self._cmp(other, operator.gt)
+
+    def __ge__(self, other):
+        return self._cmp(other, operator.ge)
+
+    def __lt__(self, other):
+        return self._cmp(other, operator.lt)
+
+    def __le__(self, other):
+        return self._cmp(other, operator.le)
+
+    def __eq__(self, other):
+        return self._cmp(other, operator.eq)
+
+    def __ne__(self, other):
+        return self._cmp(other, operator.ne)
 
     def __getattr__(self, name):
         if not self:
             return self
-
         cls = type(self)
         try:
             first_attr = getattr(self[0], name)
         except AttributeError as e:
             raise AttributeError(f"'{cls.__name__}' 及其元素均无属性 '{name}'") from e
-
         if callable(first_attr):
-            return lambda *args, **kwargs: cls(getattr(item, name)(*args, **kwargs) for item in self)
-        else:
-            return cls(getattr(item, name) for item in self)
+            return lambda *a, **k: cls(getattr(item, name)(*a, **k) for item in self)
+        return cls(getattr(item, name) for item in self)
 
-    def __call__(self, *args, **kwargs):
-        if not self:
-            return type(self)()
-        raise TypeError(f"'{type(self).__name__}' object is not callable")
+    def __call__(self, fn, *args, **kwargs):
+        return List(
+            item(fn, *args, **kwargs) if isinstance(item, List)
+            else fn(item, *args, **kwargs)
+            for item in self
+        )
 
 
 class SafeList(List):
@@ -186,12 +316,6 @@ class SafeList(List):
     # SafeList 无需重写 __new__ 和 __init__，它们会完美继承父类 List 的新构造函数
 
     def __getitem__(self, index):
-        if isinstance(index, slice):
-            return super().__getitem__(index)
-        
-        if isinstance(index, tuple) and len(index) == 2:
-            return super().__getitem__(index)
-        
         try:
             return super().__getitem__(index)
         except IndexError:
@@ -220,15 +344,9 @@ class SafeList(List):
         return cls(getattr(item, name) if hasattr(item, name) else None for item in self)
 
 
-
 def WrapList(*args):
     """按 SafeBroadcast 构造 List 或 SafeList"""
     return (SafeList if mcvars.SafeBroadcast else List)(*args)
-
-
-def iscollection(obj):
-    """判断对象是否为集合类型（list, tuple, set, dict等），排除字符串"""
-    return isinstance(obj, Iterable) and not isinstance(obj, (str, bytes))
 
 
 def undo(arg: str=None):

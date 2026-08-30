@@ -1,7 +1,10 @@
+import json
+import inspect
 import unreal
 import uuid
 import random
 import mcvars
+from pathlib import Path
 from mc_utils import (construct, uasset, enum, uclass, copy, debug, SafeList,
                       resolve_soft, get_tex_size, get_hotkey_object)
 from mc_config import paths, wclass
@@ -87,9 +90,60 @@ def resolve_prop_object(data):
     raise TypeError(f'不支持的 prop 数据: {data!r}')
 
 
+def _to_jsonable(value):
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, unreal.Object):
+        return value.get_path_name() if value else None
+    tname = type(value).__name__
+    if isinstance(value, (list, set, tuple)) or tname in ('Array', 'FixedArray', 'Set'):
+        return [_to_jsonable(v) for v in value]
+    if hasattr(value, 'export_text'):
+        return value.export_text()
+    raise TypeError(tname)
+
+
+def _from_jsonable(group, name, raw, hint=None):
+    if raw is None or isinstance(raw, (bool, int, float)):
+        return raw
+    if isinstance(raw, list):
+        cur = hint if hint is not None else group._uobj.get_editor_property(name)
+        out = []
+        for i, item in enumerate(raw):
+            elem = None
+            try:
+                elem = cur[i]
+            except Exception:
+                pass
+            out.append(_from_jsonable(group, name, item, elem))
+        return out
+    if not isinstance(raw, str):
+        return raw
+    if hint is None:
+        try:
+            hint = group._uobj.get_editor_property(name)
+        except Exception:
+            pass
+    if name in type(group)._soft_path_names_:
+        sp = unreal.SoftObjectPath()
+        if raw:
+            sp.import_text(raw)
+        return sp
+    if raw.startswith('/') and not isinstance(hint, str):
+        obj = unreal.load_asset(raw) or unreal.find_object(None, raw)
+        if obj:
+            return obj
+    if hint is not None and hasattr(hint, 'import_text') and not isinstance(hint, unreal.Object):
+        inst = type(hint)()
+        inst.import_text(raw)
+        return inst
+    return raw
+
+
 class PropertyGroup:
     """自定义属性集，需要实例化再引用成员变量"""
     _unique_ = False
+    _autosave_ = False  # True → 实例化 load 默认 json；setattr / Details 改值时 save
     _softcast_ = True # Actor→SoftObjectPath；取值时解析所有 SoftObjectPath / SoftClassPath
 
     _soft_props_ = {}
@@ -245,6 +299,8 @@ class PropertyGroup:
         if type(self)._unique_:
             type(self)._instance_ = self
             mcvars.Props[type(self)] = self
+        if type(self)._autosave_:
+            self.load()
 
     @property
     def uobject(self):
@@ -272,6 +328,60 @@ class PropertyGroup:
             elif isinstance(value, str):
                 value = unreal.SoftObjectPath(value)
         self._uobj.set_editor_property(name, value)
+        if type(self)._autosave_:
+            self.save()
+
+    def _json_path(self, path=''):
+        if path:
+            return Path(path)
+        try:
+            py = inspect.getfile(type(self))
+        except TypeError:
+            return None
+        if not py or py.startswith('<'):
+            return None
+        return Path(py).resolve().parent / '__pycache__' / f'{type(self).__name__}.json'
+
+    def save(self, path=''):
+        """把字段写到 JSON。path 为空则用定义类的 .py 旁 __pycache__/{类名}.json；无源文件则跳过。"""
+        dest = self._json_path(path)
+        if not dest:
+            return
+        cls_name = type(self).__name__
+        data = {}
+        for name in type(self)._prop_names_:
+            try:
+                data[name] = _to_jsonable(self._uobj.get_editor_property(name))
+            except Exception as exc:
+                debug(f'{cls_name}.{name}: {exc}')
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+        except Exception as exc:
+            debug(f'{cls_name}.save: {exc}')
+
+    def load(self, path=''):
+        """从 JSON 读字段。缺文件或单项失败只 debug，不打断。"""
+        src = self._json_path(path)
+        if not src:
+            return
+        cls_name = type(self).__name__
+        if not src.is_file():
+            debug(f'{cls_name}.load: missing {src}')
+            return
+        try:
+            data = json.loads(src.read_text(encoding='utf-8'))
+        except Exception as exc:
+            debug(f'{cls_name}.load: {exc}')
+            return
+        names = type(self)._prop_names_
+        for name, raw in data.items():
+            if name not in names:
+                continue
+            try:
+                self._uobj.set_editor_property(name, _from_jsonable(self, name, raw))
+            except Exception as exc:
+                debug(f'{cls_name}.{name}: {exc}')
 
     @classmethod
     def localize(cls, source: str, *args):
@@ -493,7 +603,11 @@ class Layout():
             viewer = add_widget(self.target, unreal.DetailsView, **kwargs)
             viewer.set_object(obj)
 
-        if on_property_changed:
+        if getattr(data, '_autosave_', False):
+            pg, user = data, on_property_changed
+            viewer.on_property_changed.add_callable(
+                lambda n=None: (pg.save(), user(n) if user else None))
+        elif on_property_changed:
             viewer.on_property_changed.add_callable(on_property_changed)
         return Layout(viewer, public=self._public_)
 

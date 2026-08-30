@@ -4,7 +4,7 @@ import mineprep
 from functools import partial
 from mineprep import bilingual
 from . import ops, paint, util
-from .props import SkinEditorOptions, SkinPaintTools
+from .props import SkinEditorOptions, SkinPaintTools, SkinCodeTools, SkinBatchTools
 from .util import MATERIAL_DETAILS
 
 PAGES = (
@@ -20,6 +20,8 @@ class SkinEditor(mineprep.Mod):
     def __init__(self, context=None):
         self.options = SkinEditorOptions()
         self.paint_tools = SkinPaintTools()
+        self.code_tools = SkinCodeTools()
+        self.batch_tools = SkinBatchTools()
         self._sel_hook = None
         self._syncing = False
         self._tabs = []
@@ -32,6 +34,7 @@ class SkinEditor(mineprep.Mod):
         self._head_view = None
         self._actor_spin = None
         self._pad = None
+        self._batch = None
         super().__init__(context)
 
     def draw(self, context=None):
@@ -105,10 +108,15 @@ class SkinEditor(mineprep.Mod):
         self._pad = paint.Pad(self.paint_tools)
 
         row = layout.row(align=(0, 0), fill=1)
-        left = row.col(fill=1, padding=3)
+        left = row.col(align=(0, 0), fill=1, padding=3)
+        mid = row.col(padding=3, align=(0, 0))
         right = row.col(padding=3, align=(0, 0))
 
-        border = left.border(
+        box = left.scalebox(align=(2, 2), fill=1)
+        box.target.set_editor_property('Stretch', unreal.Stretch.SCALE_TO_FIT)
+        box.target.set_editor_property(
+            'StretchDirection', unreal.StretchDirection.DOWN_ONLY)
+        border = box.border(
             color=paint.FRAME,
             padding=2,
             align=(2, 2),
@@ -124,16 +132,28 @@ class SkinEditor(mineprep.Mod):
         )
         img.hide(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)
         self._pad.bind_image(img)
+        self._pad.bind_hover(border)
         if self.paint_tools.Texture:
             paint.on_tools_changed(self, 'Texture')
         else:
             self.paint_tools.ExportPath = paint.png_path_from_tex(None)
 
-        right.prop(
+        footer = left.row(align=(1, 3), padding=3)
+        footer.checkbox(
+            '', size=10, align=(1, 3),
+            tooltip=bilingual('读取鼠标下的像素颜色（性能低）', 'Read color under mouse (low performance)'),
+            on_check_state_changed=self._pad.set_sample_color,
+        )
+        hint = footer.text(
+            '', size=10, align=(1, 3), clip=True,
+            color=paint.HINT_WHITE)
+        self._pad.bind_hint(hint)
+
+        mid.prop(
             self.paint_tools, align=(0, 1),
             on_property_changed=lambda n: paint.on_tools_changed(self, n),
         )
-        actions = right.row(align=(0, 1), padding=(0, 3))
+        actions = mid.row(align=(0, 1), padding=(0, 3))
         actions.button(
             bilingual('还原', 'Restore'),
             on_clicked=lambda: paint.restore(self),
@@ -141,65 +161,103 @@ class SkinEditor(mineprep.Mod):
         )
         actions.button(
             bilingual('宽手臂', 'Wide Arm'),
-            on_clicked=lambda: paint.wide_arms(self),
+            on_clicked=lambda: paint.use_snippet(self, 'wide_arms'),
             padding=(3,3,3,0), size=12, align=(0, 1), fill=1
         )
         actions.button(
             bilingual('细手臂', 'Slim Arm'),
-            on_clicked=lambda: paint.slim_arms(self),
+            on_clicked=lambda: paint.use_snippet(self, 'slim_arms'),
             padding=(3,3,3,0), size=12, align=(0, 1), fill=1
         )
-        layers = right.row(align=(0, 1), padding=(0, 3))
+        layers = mid.row(align=(0, 1), padding=(0, 3))
         layers.button(
             bilingual('内层', 'Inner'),
-            on_clicked=lambda: paint.keep_inner(self),
+            on_clicked=lambda: paint.use_snippet(self, 'keep_inner'),
             padding=(3,0,3,3), size=12, align=(0, 1), fill=1
         )
         layers.button(
             bilingual('外层', 'Outer'),
-            on_clicked=lambda: paint.keep_outer(self),
+            on_clicked=lambda: paint.use_snippet(self, 'keep_outer'),
             padding=(3,0,3,3), size=12, align=(0, 1), fill=1
         )
         layers.button(
             bilingual('叠加', 'Overlay'),
-            on_clicked=lambda: paint.apply_overlay(self),
+            on_clicked=lambda: paint.use_snippet(self, 'apply_overlay'),
             padding=(3,0,3,3), size=12, align=(0, 1), fill=1
         )
-        right.button(
+        mid.button(
             bilingual('保存皮肤纹理', 'Save Skin Texture'),
             on_clicked=lambda: paint.save(self),
             padding=(3,0,3,3), size=12
         )
-        right.button(
+        mid.button(
             bilingual('导出.png', 'Export .png'),
             on_clicked=lambda: paint.export_png(self),
             padding=3, size=12
         )
-        footer = right.row(align=(3, 3), fill=1, padding=3)
-        hint = footer.text(
-            '', size=10, align=(3, 3), clip=True,
-            color=paint.HINT_WHITE)
-        footer.checkbox(
-            '', size=10, align=(3, 3),
-            tooltip=bilingual('读取鼠标下的像素颜色（性能低）', 'Read color under mouse (low performance)'),
-            on_check_state_changed=self._pad.set_sample_color,
-        )
-        self._pad.bind_hint(hint)
 
-    def _peek_key(self, key):
-        peek = self.paint_tools.PeekKey
-        return bool(peek) and unreal.InputLibrary.equal_equal_key_key(key, peek)
+
+        right.prop(self.code_tools, align=(0, 1), padding = (0, 3))
+        right.button(
+            bilingual('运行Python代码', 'Run Python Script'),
+            on_clicked=lambda: paint.run_code(self),
+            padding=3, size=12,
+        )
+        right.button(
+            bilingual('批量处理', 'Batch Process'),
+            on_clicked=lambda: paint.run_batch(self),
+            padding=3, size=12,
+        )
+        right.button(
+            bilingual('保存所有新纹理', 'Save All New Textures'),
+            on_clicked=lambda: paint.save_batch(self),
+            padding=3, size=12,
+        )
+        right.spacer()
+        right.prop(self.batch_tools, align=(0, 1))
+        self._batch = right
+        right.hide(not self.paint_tools.Advanced)
+
+    def _is_key(self, bound, key):
+        return bool(bound) and unreal.InputLibrary.equal_equal_key_key(key, bound)
 
     def destruct(self):
         ops.unbind_selection(self)
 
     def on_key_down(self, key):
-        if self._pad and self._peek_key(key):
+        if not self._pad:
+            return
+        if self._is_key(self.paint_tools.PickKey, key):
+            self._pad.pick_color()
+        if self._is_key(self.paint_tools.PeekKey, key):
             self._pad.show_source(True)
 
     def on_key_up(self, key):
-        if self._pad and self._peek_key(key):
+        if self._pad and self._is_key(self.paint_tools.PeekKey, key):
             self._pad.show_source(False)
+
+    def on_mouse_wheel(self, delta):
+        if not self._pad or not self._pages:
+            return
+        if int(self._pages.get_active_widget_index()) != 1:
+            return
+        state = unreal.InputLibrary.get_modifier_keys_state()
+        if not unreal.InputLibrary.modifier_keys_state_is_control_down(state):
+            self.layout.set_consume_mouse_wheel(unreal.ConsumeMouseWheel.WHEN_SCROLLING_POSSIBLE)
+            return
+        self.layout.set_consume_mouse_wheel(unreal.ConsumeMouseWheel.NEVER)
+        hover = self._pad.hover
+        if not hover or not getattr(hover, 'target', None):
+            return
+        try:
+            if not unreal.SystemLibrary.is_valid(hover.target):
+                return
+            uv = hover.get_mouse_uv()
+        except Exception:
+            return
+        if uv.x < 0.0 or uv.x > 1.0 or uv.y < 0.0 or uv.y > 1.0:
+            return
+        paint.nudge_view(self, delta)
 
 
 def _material_prop(layout, obj):

@@ -22,6 +22,6 @@ def unregister():
     import sys
     from . import panel
     panel.SkinEditor.unregister()
-    for sub in ('panel', 'ops', 'paint', 'props', 'util'):
+    for sub in ('panel', 'ops', 'paint', 'props', 'util', 'snippets'):
         sys.modules.pop(f'{__name__}.{sub}', None)
         globals().pop(sub, None)

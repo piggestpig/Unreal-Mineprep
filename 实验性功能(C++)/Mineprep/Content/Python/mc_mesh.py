@@ -80,6 +80,55 @@ def _append(target_dm, mats, append_dm, append_mats, xf, append_opts, compact):
     )
 
 
+def _mat_remap(target_mats, append_mats, compact):
+    """与 Geometry Script AppendMaterials 相同：compact 只对照追加前的 target 列表。"""
+    remap = []
+    out = list(target_mats)
+    for m in append_mats:
+        hit = None
+        if compact:
+            for i, t in enumerate(target_mats):
+                if t == m:
+                    hit = i
+                    break
+        if hit is None:
+            hit = len(out)
+            out.append(m)
+        remap.append(hit)
+    return remap
+
+
+def _remap_ids(dm, remap):
+    """把追加网格本地材质 ID 改到已有全局槽（两遍，避免 ID 互相覆盖）。"""
+    if not remap:
+        return dm
+    gs = unreal.GeometryScript_Materials
+    tmp = 1 << 16
+    for src, dst in enumerate(remap):
+        dm = _unwrap(gs.remap_material_i_ds(dm, int(src), int(tmp + dst)))
+    for dst in remap:
+        dm = _unwrap(gs.remap_material_i_ds(dm, int(tmp + dst), int(dst)))
+    return dm
+
+
+def _append_child(target_dm, mats, append_dm, append_mats, xf, append_opts,
+                  compact, cache, mesh):
+    """同一 SKM/SM 资产的后续实例复用首次材质槽，不再追加。"""
+    key = mesh.get_path_name() if mesh else None
+    if key and key in cache:
+        append_dm = _remap_ids(append_dm, cache[key])
+        return unreal.GeometryScript_MeshEdits.append_mesh(
+            target_dm, append_dm, xf, False, append_opts
+        ), mats
+    remap = _mat_remap(mats, append_mats, compact)
+    target_dm, mats = _append(
+        target_dm, mats, append_dm, append_mats, xf, append_opts, compact
+    )
+    if key:
+        cache[key] = remap
+    return target_dm, mats
+
+
 def _make_opts():
     from_opts = unreal.GeometryScriptCopyMeshFromAssetOptions()
     lod = unreal.GeometryScriptMeshReadLOD()
@@ -169,7 +218,8 @@ def merge_skm(root: unreal.SkeletalMeshComponent, save_path: str = None,
     overwrite=False 且目标已存在时 warn 并返回 None；
     overwrite=True 时用 copy_mesh_to_skeletal_mesh 直接覆写几何与材质（不先删除）。
     merge_mat=True 时，子 SKM 前 N 个槽使用根材质（N=共有槽数），多余槽追加；
-    静态网格材质槽始终追加在后（不与已有槽合并）。
+    相同子网格（同一 SKM/SM 资产）共用首次材质槽，与 merge_mat 无关。
+    静态网格材质槽首次追加在后（不与已有槽 compact）。
     """
     if not skm and not sm:
         warn('merge_skm: both skm=False and sm=False, nothing to merge')
@@ -221,6 +271,8 @@ def merge_skm(root: unreal.SkeletalMeshComponent, save_path: str = None,
     if not sm:
         sm_kids = []
 
+    slot_cache = {}
+
     for child in skm_kids:
         cmesh = child.get_skeletal_mesh_asset()
         child_mats = _mats_from_skm(cmesh)
@@ -240,9 +292,9 @@ def merge_skm(root: unreal.SkeletalMeshComponent, save_path: str = None,
             append_mats = list(root_mats[:shared]) + list(child_mats[shared:])
         else:
             append_mats = list(child_mats)
-        body_dm, mats = _append(
+        body_dm, mats = _append_child(
             body_dm, mats, dm, append_mats, _xf_to_root(root, child),
-            append_opts, compact=True,
+            append_opts, True, slot_cache, cmesh,
         )
 
     for child in sm_kids:
@@ -255,9 +307,9 @@ def merge_skm(root: unreal.SkeletalMeshComponent, save_path: str = None,
         if sock:
             dm = _paint_bone(dm, sock, body_dm, bone_opts)
         dm = _enable_mats(dm)
-        body_dm, mats = _append(
+        body_dm, mats = _append_child(
             body_dm, mats, dm, _mats_from_sm_comp(child),
-            _xf_to_root(root, child), append_opts, compact=False,
+            _xf_to_root(root, child), append_opts, False, slot_cache, sm_asset,
         )
 
     if body_dm.get_triangle_count() <= 0:
