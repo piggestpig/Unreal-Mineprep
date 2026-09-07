@@ -441,7 +441,7 @@ def reload(*args):
     }
     reloadable_names = [mod.__name__ for mod in reloadable]
 
-    for mod in reloadable:
+    for mod in reversed(reloadable):
         mc_mod.unregister_mod(mod)
 
     import mineprep as old_mineprep
@@ -920,74 +920,6 @@ def send2trash(path, delete=False) -> str:
     except Exception:
         _purge()
     return path
-
-
-def update_installer():
-    """把工程里的 Mineprep 同步到 git 仓库（installer_dir），再跑自动化处理脚本。
-    出问题会 panic，用户选「是」则继续下一步，「否」则中止。
-    """
-    import runpy
-    import shutil
-    from mc_config import config
-
-    try:
-        installer = str(config['Settings']['installer_dir'] or '').strip()
-        installer = os.path.abspath(installer) if installer else ''
-        assert os.path.isdir(installer), f'安装包路径{installer}不存在'
-    except Exception as exc:
-        panic('安装包路径不存在', exc)
-
-    dest_content = os.path.join(installer, 'Mineprep')
-    dest_plugin = os.path.join(installer, '实验性功能(C++)', 'Mineprep')
-    for label, path in (
-        ('installer_dir/Mineprep', dest_content),
-        ('installer_dir/实验性功能(C++)/Mineprep', dest_plugin),
-    ):
-        if not os.path.isdir(path):
-            panic(f'仓库缺少 {label}', path)
-
-    for path in (dest_content, dest_plugin):
-        try:
-            send2trash(path)
-        except Exception as exc:
-            panic(f'移至回收站失败: {path}', exc)
-        if os.path.exists(path):
-            panic('文件夹仍存在，是否强制删除？', path)
-            if os.path.exists(path):
-                try:
-                    send2trash(path, delete=True)
-                except Exception as exc:
-                    panic(f'强制删除仍失败: {path}', exc)
-
-    src_content = os.path.abspath(os.path.join(unreal.Paths.project_content_dir(), 'Mineprep'))
-    src_plugin = os.path.abspath(os.path.join(unreal.Paths.project_plugins_dir(), 'Mineprep'))
-    copies = (
-        (src_content, dest_content, 'Content/Mineprep'),
-        (src_plugin, dest_plugin, 'Plugins/Mineprep'),
-    )
-    for src, dst, label in copies:
-        if not os.path.isdir(src):
-            panic(f'工程缺少源文件夹: {label}', src)
-            continue
-        try:
-            shutil.copytree(src, dst, dirs_exist_ok=os.path.exists(dst))
-        except Exception as exc:
-            panic(f'复制失败: {label}', exc)
-            continue
-        if not os.path.isdir(dst):
-            panic(f'复制后目标不存在: {label}', dst)
-
-    script = os.path.join(installer, 'Readme素材', '自动化处理脚本.py')
-    if not os.path.isfile(script):
-        panic('找不到自动化处理脚本', script)
-    if os.path.isfile(script):
-        try:
-            runpy.run_path(script, run_name='__main__')
-        except Exception as exc:
-            panic('自动化处理脚本失败', exc)
-
-    prints(f'已更新{installer}')
-    return installer
 
 
 def set_actor_label(actor, label, unique=True, filter_class=unreal.Actor) -> str:

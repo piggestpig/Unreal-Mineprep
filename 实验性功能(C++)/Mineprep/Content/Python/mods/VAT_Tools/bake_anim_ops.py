@@ -427,6 +427,35 @@ def _write_texture_collection(
     u.save(tc)
 
 
+def _recompile_sm_mics(sm: unreal.StaticMesh):
+    """烘焙后刷新静态网格上的材质实例（贴图集合参数才生效）。"""
+    mats = []
+    try:
+        for entry in (sm.get_editor_property('static_materials') or []):
+            mat = entry.get_editor_property('material_interface')
+            if mat and mat not in mats:
+                mats.append(mat)
+    except Exception:
+        pass
+    if not mats:
+        for i in range(8):
+            try:
+                mat = sm.get_material(i)
+            except Exception:
+                break
+            if mat and mat not in mats:
+                mats.append(mat)
+    n = 0
+    for mat in mats:
+        if not isinstance(mat, unreal.MaterialInstanceConstant):
+            continue
+        unreal.MaterialEditingLibrary.update_material_instance(mat)
+        u.save(mat)
+        n += 1
+    if n:
+        u.notify(f'已重新编译静态网格上的 {n} 个材质实例')
+
+
 def _bake_one_slot(
     mc_vat: unreal.AnimToTextureDataAsset,
     skm: unreal.SkeletalMesh,
@@ -580,13 +609,33 @@ def bake_animation(
         )
 
     ok_count = 0
+    reuse = {}
     for anim_index, anim in bake_slots:
+        key = anim.get_path_name()
+        src = reuse.get(key)
+        if src is not None:
+            slots = list(tc.get_editor_property('textures') or [])
+            base = int(src) * 3
+            bpt = slots[base] if len(slots) > base else None
+            brt = slots[base + 1] if len(slots) > base + 1 else None
+            bwt = slots[base + 2] if len(slots) > base + 2 else None
+            _write_texture_collection(tc, anim_index, bpt, brt, bwt)
+            _set_mc_vat_anim_at(mc_vat, anim_index, anim)
+            u.notify(
+                f'#{anim_index} 与 #{src} 为同一动画序列，复用纹理槽 '
+                f'{anim_index * 3}-{anim_index * 3 + 2}'
+            )
+            ok_count += 1
+            continue
         if _bake_one_slot(
             mc_vat, skm, sm, tc, anim, anim_index,
             override_fps=override_fps,
             target_fps=target_fps,
         ):
+            reuse[key] = anim_index
             ok_count += 1
+
+    _recompile_sm_mics(sm)
 
     if auto_clean_cache:
         cache_dir = f'{u.package_dir(mc_vat)}/cache'

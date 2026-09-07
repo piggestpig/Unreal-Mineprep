@@ -47,12 +47,13 @@ def loctable_col(block=1, lang=None):
 def bilingual(chinese: str, english: str):
     """双语文本"""
     text = unreal.TextLibrary.find_text_in_live_table_advanced('UObjectDisplayNames', chinese, chinese)
-    if not text:
+    if not text or mcvars.DebugMode:
+        lang = unreal.InternationalizationLibrary.get_current_language()
         polyglot = unreal.PolyglotTextData(category = unreal.LocalizedTextSourceCategory.EDITOR,
                                    namespace = 'UObjectDisplayNames',
                                    key = chinese,
                                    native_string = chinese,
-                                   localized_strings = {'zh-Hans': chinese, 'en': english},
+                                   localized_strings = {'en': english, lang:english, 'zh-Hans': chinese},
                                    is_minimal_patch = False)
         text = unreal.TextLibrary.polyglot_data_to_text(polyglot)
 
@@ -60,16 +61,18 @@ def bilingual(chinese: str, english: str):
 
 
 def localize(source: str, *args, **kwargs):
-    """立刻注入本地化翻译, args对应mcvars.Languages的各语言翻译, kwargs可以指定namespace和key  
+    """立刻注入本地化翻译, args对应mcvars.Languages的各语言翻译, kwargs可以指定namespace, key和自定义语言  
     如mineprep.localize(原名, 中文, 英文, 繁体中文，... , namespace='UObjectDisplayNames', key=原名)
     """
     namespace = kwargs.get('namespace', 'UObjectDisplayNames')
     key = kwargs.get('key', source)
+    localizations = {lang: arg for lang, arg in zip(mcvars.Languages, args)}
+    localizations.update({k: v for k, v in kwargs.items() if k not in ['namespace', 'key']})
     polyglot = unreal.PolyglotTextData(category = unreal.LocalizedTextSourceCategory.EDITOR,
                     namespace = namespace,
                     key = key,
                     native_string = source,
-                    localized_strings = {lang: arg for lang, arg in zip(mcvars.Languages, args)},
+                    localized_strings = localizations,
                     is_minimal_patch = False)
     if int(mcvars.DebugMode) >= 2:
         unreal.log(f'本地化: namespace={namespace}, key={key}, source_string={source} -> {args}')

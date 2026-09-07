@@ -1,7 +1,7 @@
 {
     "Settings": {
         "init": "false",
-        "ue_language": "zh-Hans",
+        "ue_language": "de",
         "b_viewport_selected": "true",
         "b_asset_folder": "false",
         "asset_folder": "/Game/mc/import",

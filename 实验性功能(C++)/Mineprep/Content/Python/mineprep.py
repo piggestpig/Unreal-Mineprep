@@ -16,7 +16,7 @@ from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw,
                       enum, asynctask, askopenfilename, send2trash, set_actor_label, select_actors,
                       lazy_import, undo, get_hotkey_object, construct, uasset, copy,
                       List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
-                      askdirectory, asksaveasfilename, startfile, screenshot, update_installer)
+                      askdirectory, asksaveasfilename, startfile, screenshot)
 from mc_prep import prep_texture, load_mcprep_data, colorize_material
 from mc_material import tex_to_color, color_to_tex, ColorList
 from mc_localization import (language, KernelLanguage, LocalizationCache, localize,

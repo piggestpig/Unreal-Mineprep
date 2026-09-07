@@ -1294,6 +1294,28 @@ def _rig_io(ctype):
     return pair
 
 
+def _find_sequencer_control_rig(sequence, track, cls, skm, skm_binding):
+    """按 SKM 轨道取 Control Rig。同一 Actor 可有多套 FK，不能用 hosting actor。"""
+    lib = unreal.ControlRigSequencerLibrary
+    skm_id = skm_binding.get_id() if skm_binding else None
+    bound_match = None
+    for proxy in lib.get_control_rigs(sequence):
+        rig = proxy.control_rig
+        if not rig or rig.get_class() != cls:
+            continue
+        if proxy.track == track:
+            return rig
+        binding = proxy.proxy
+        if binding and skm_id is not None and binding.get_id() == skm_id:
+            return rig
+        if bound_match is None and binding:
+            for bound in unreal.LevelSequenceEditorBlueprintLibrary.get_bound_objects(_binding_id(binding)):
+                if bound == skm:
+                    bound_match = rig
+                    break
+    return bound_match
+
+
 class Rig:
     """Sequencer 上的 Control Rig 句柄。默认 FK；已有轨保持 layered，新建为 layered。"""
 
@@ -1312,14 +1334,7 @@ class Rig:
             throw('无法创建或找到 Control Rig 轨道')
         _refresh_sequencer()
 
-        control_rig = None
-        for proxy in lib.get_control_rigs(sequence):
-            rig = proxy.control_rig
-            if not rig or rig.get_class() != cls:
-                continue
-            if proxy.track == track or rig.get_hosting_actor() == owner:
-                control_rig = rig
-                break
+        control_rig = _find_sequencer_control_rig(sequence, track, cls, skm, skm_binding)
         if control_rig is None:
             throw('找不到 Control Rig 实例')
 
@@ -1403,7 +1418,6 @@ class Rig:
         setter(self.sequence, self.target, full_name, frame, value, _TIME_UNIT, set_key)
         return value
 
-    def get(self, name, time=None):
         """读取控件值；time=None 为播放头（int 帧 / float 秒）"""
         full = self._resolve_name(name)
         return self._read(full, self._frame(time))

@@ -129,6 +129,15 @@ def _from_jsonable(group, name, raw, hint=None):
         if raw:
             sp.import_text(raw)
         return sp
+    hint_name = type(hint).__name__ if hint is not None else ''
+    if hint_name in ('FilePath', 'DirectoryPath'):
+        inst = type(hint)()
+        if raw and not raw.lstrip().startswith('('):
+            prop = 'file_path' if hint_name == 'FilePath' else 'path'
+            inst.set_editor_property(prop, raw)
+            return inst
+        inst.import_text(raw)
+        return inst
     if raw.startswith('/') and not isinstance(hint, str):
         obj = unreal.load_asset(raw) or unreal.find_object(None, raw)
         if obj:
@@ -384,14 +393,15 @@ class PropertyGroup:
                 debug(f'{cls_name}.{name}: {exc}')
 
     @classmethod
-    def localize(cls, source: str, *args):
+    def localize(cls, source: str, *args, **kwargs):
         """为变量或类别注入本地化翻译（可在实例化前调用）。
         args 对应 mcvars.Languages 的各语言翻译。
+        kwargs 可传入自定义语言代码的翻译。
         """
         if source in cls._prop_names_ or source in getattr(cls, '__annotations__', {}):
-            localize(source, *args, key=f'{cls._ue_class_name_}:{source}')
+            localize(source, *args, key=f'{cls._ue_class_name_}:{source}', **kwargs)
         else:
-            localize(source, *args, namespace='UObjectCategory')
+            localize(source, *args, namespace='UObjectCategory', **kwargs)
 
 
 def alignment(HVtuple: int | tuple[int, int] =(1,1)):
@@ -603,12 +613,14 @@ class Layout():
             viewer = add_widget(self.target, unreal.DetailsView, **kwargs)
             viewer.set_object(obj)
 
-        if getattr(data, '_autosave_', False):
+        if on_property_changed or getattr(data, '_autosave_', False):
             pg, user = data, on_property_changed
             viewer.on_property_changed.add_callable(
-                lambda n=None: (pg.save(), user(n) if user else None))
-        elif on_property_changed:
-            viewer.on_property_changed.add_callable(on_property_changed)
+                lambda n=None: (
+                    pg.save() if getattr(pg, '_autosave_', False) else None,
+                    user(str(n) if n else '') if user else None,
+                )
+            )
         return Layout(viewer, public=self._public_)
 
 

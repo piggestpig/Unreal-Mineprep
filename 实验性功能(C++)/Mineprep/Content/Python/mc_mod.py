@@ -23,15 +23,28 @@ def _iter_mod_names():
             yield f'mods.{entry.name}'
 
 
-def iter_mod_modules(*, loaded_only=False):
-    """迭代 mod 模块。loaded_only=True 时只返回已在 sys.modules 中的。"""
+def _mod_priority(mod):
+    """mod_info.Priority，缺省或非法时为 0。越大越先加载。"""
+    info = getattr(mod, 'mod_info', None) or {}
+    try:
+        return int(info.get('Priority', 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def iter_mod_modules(*, loaded_only=False, reverse=False):
+    """迭代 mod 模块。默认按 Priority 降序（越大越先）。reverse=True 为加载的相反顺序。
+    loaded_only=True 时只返回已在 sys.modules 中的。"""
+    modules = []
     for name in _iter_mod_names():
         if loaded_only and name not in sys.modules:
             continue
         try:
-            yield name, importlib.import_module(name)
+            modules.append((name, importlib.import_module(name)))
         except Exception as e:
             unreal.log_warning(f'导入 mod 失败: {name}: {e}')
+    modules.sort(key=lambda item: (-_mod_priority(item[1]), item[0]), reverse=reverse)
+    yield from modules
 
 
 def register_mod(mod, *, force=False):
@@ -72,14 +85,14 @@ def unregister_mod(mod):
 
 
 def register_all():
-    """扫描 mods/ 并注册 EnabledByDefault 的 mod"""
+    """扫描 mods/，按 Priority 降序注册 EnabledByDefault 的 mod（越大越先）"""
     for _name, mod in iter_mod_modules():
         register_mod(mod)
 
 
 def unregister_all(*, loaded_only=True):
-    """注销 mod；默认只处理已加载的模块"""
-    for _name, mod in iter_mod_modules(loaded_only=loaded_only):
+    """注销 mod；顺序与加载相反（Priority 小的先卸）。默认只处理已加载的模块"""
+    for _name, mod in iter_mod_modules(loaded_only=loaded_only, reverse=True):
         unregister_mod(mod)
 
 
@@ -106,12 +119,12 @@ class mods():
 
     @staticmethod
     def register_all():
-        """扫描 mods/ 目录并注册 EnabledByDefault 的 mod"""
+        """扫描 mods/ 目录，按 Priority 降序注册 EnabledByDefault 的 mod"""
         register_all()
 
     @staticmethod
     def unregister_all():
-        """注销已加载的 mod"""
+        """按加载的相反顺序注销已加载的 mod"""
         unregister_all()
 
 
