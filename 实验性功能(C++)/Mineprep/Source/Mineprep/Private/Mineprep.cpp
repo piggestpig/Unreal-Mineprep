@@ -78,48 +78,10 @@ void FMineprepModule::StartupModule()
 
     Mineprep::AddKeyframes::Register();
     Mineprep::CustomDetailsPanel::Register();
-    
-    // 延迟绑定快捷键，直到引擎完全初始化  还有插件
-    PostEngineInitDelegateHandle = FCoreDelegates::OnAllModuleLoadingPhasesComplete.AddLambda([]() 
-    {
-        if (!GEditor)
-        {
-            UE_LOG(LogTemp, Error, TEXT("无法绑定快捷键：GEditor不可用"));
-            return;
-        }
-
-        // 获取Mineprep子系统
-        UMineprepSubsystem* MineprepSubsystem = GEditor->GetEditorSubsystem<UMineprepSubsystem>();
-        if (MineprepSubsystem)
-        {
-            // 先初始化快捷键对象，然后再从中加载快捷键
-            UObject* HotkeyObject = MineprepSubsystem->GetHotkeyObject();
-            if (!HotkeyObject)
-            {
-                UE_LOG(LogTemp, Error, TEXT("无法创建快捷键对象，无法加载快捷键"));
-                return;
-            }
-            
-            // 从蓝图对象加载快捷键
-            MineprepSubsystem->LoadHotkeysFromFile();
-            UE_LOG(LogTemp, Display, TEXT("Mineprep快捷键注册完成"));
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("无法获取MineprepSubsystem，快捷键将不可用"));
-        }
-    });
 }
 
 void FMineprepModule::ShutdownModule()
 {
-    // 移除PostEngineInit委托
-    if (PostEngineInitDelegateHandle.IsValid())
-    {
-        FCoreDelegates::OnAllModuleLoadingPhasesComplete.Remove(PostEngineInitDelegateHandle);
-        PostEngineInitDelegateHandle.Reset();
-    }
-
     Mineprep::AddKeyframes::Unregister();
     Mineprep::CustomDetailsPanel::Unregister();
 

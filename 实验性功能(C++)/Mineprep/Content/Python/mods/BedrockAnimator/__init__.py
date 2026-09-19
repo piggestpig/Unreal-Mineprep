@@ -4,9 +4,9 @@ mod_info = {
     'Name': bilingual('基岩版动画转换器', 'Bedrock Animation Converter'),
     'Description': bilingual(
         '把基岩版 animation.json 转换为动画序列',
-        'Convert Bedrock animation.json to an animation sequence',
+        'Convert Bedrock animation.json to an anim sequence',
     ),
-    'Version': '1.8',
+    'Version': '1.0',
     'CreatedBy': '',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
@@ -15,7 +15,7 @@ mod_info = {
 
 def register():
     from . import panel
-    panel.BedrockAnimator.register()
+    panel.BedrockAnimator.register(True)
 
 
 def unregister():

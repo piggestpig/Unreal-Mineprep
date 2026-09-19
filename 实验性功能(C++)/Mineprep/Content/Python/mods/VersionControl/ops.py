@@ -1,5 +1,4 @@
 """把当前工程的 Mineprep 同步到安装包仓库，或迁移到另一个 UE 工程。"""
-import configparser
 import os
 import re
 import runpy
@@ -19,6 +18,7 @@ _TREES = (
     'Plugins/InlineMaterialInstance',
     'Plugins/MoviePipelineMaskRenderPass',
 )
+_PIP_LIB = 'Intermediate/PipInstall/Lib/site-packages'
 _REQUIRED = frozenset({'Content/Mineprep', 'Plugins/Mineprep'})
 _FILTER_FIELDS = (
     ('FilterNew', 'NewFiles'),
@@ -26,6 +26,19 @@ _FILTER_FIELDS = (
     ('FilterOlder', 'OlderFiles'),
 )
 _MAP_FIELDS = frozenset(field for _, field in _FILTER_FIELDS)
+
+
+def _filter_entry_defaults(filter_props):
+    """LightingChannels 0/1/2 → 新增/变新/变旧 字典条目默认勾选。"""
+    ch = getattr(filter_props, 'EntryDefault', None)
+    if isinstance(ch, bool):
+        v = bool(ch)
+        return {'FilterNew': v, 'FilterNewer': v, 'FilterOlder': v}
+    return {
+        'FilterNew': bool(getattr(ch, 'channel0', True)),
+        'FilterNewer': bool(getattr(ch, 'channel1', True)),
+        'FilterOlder': bool(getattr(ch, 'channel2', True)),
+    }
 
 
 def installer_dir():
@@ -269,6 +282,63 @@ def extra_to_remove(extra_props):
     return [key for key, on in _map_items(extra_props.ExtraFiles).items() if on]
 
 
+def copy_stats(props, filter_props, extra_props=None, skip_fn=None):
+    """按实际复制语义统计：新增/变新/变旧/相同、脚本跳过、多余文件。"""
+    installer = bool(getattr(props, 'UpdateInstaller', False))
+    clear = bool(getattr(props, 'ClearDest', False))
+    skip_keys = set() if clear else skipped_relpaths(filter_props)
+    dest_root = target_dir(props)
+    project = _project_root()
+    added_c = added_s = newer_c = newer_s = older_c = older_s = same_c = same_s = 0
+    script_s = 0
+    for src_root, _rel in _source_trees():
+        for src in _iter_files(src_root, installer=installer):
+            key = _rel_key(src, project)
+            if _script_skips(skip_fn, key):
+                script_s += 1
+                continue
+            dst = dest_abs(key, dest_root, installer=installer) if dest_root else ''
+            skipped = key in skip_keys
+            if not dest_root or not os.path.isfile(dst):
+                if skipped:
+                    added_s += 1
+                else:
+                    added_c += 1
+                continue
+            src_mtime = os.path.getmtime(src)
+            dst_mtime = os.path.getmtime(dst)
+            if src_mtime > dst_mtime:
+                if skipped:
+                    newer_s += 1
+                else:
+                    newer_c += 1
+            elif src_mtime < dst_mtime:
+                if skipped:
+                    older_s += 1
+                else:
+                    older_c += 1
+            elif skipped or not clear:
+                same_s += 1
+            else:
+                same_c += 1
+    extra_n = extra_rm = 0
+    if not clear:
+        extra_n = len(extra_relpaths(props, installer=installer, skip_fn=skip_fn))
+        extra_rm = len(extra_to_remove(extra_props))
+    copy_n = added_c + newer_c + older_c + same_c
+    skip_n = added_s + newer_s + older_s + same_s + script_s
+    return {
+        'clear': clear,
+        'added_c': added_c, 'added_s': added_s,
+        'newer_c': newer_c, 'newer_s': newer_s,
+        'older_c': older_c, 'older_s': older_s,
+        'same_c': same_c, 'same_s': same_s,
+        'script_s': script_s,
+        'extra_n': extra_n, 'extra_rm': extra_rm,
+        'copy_n': copy_n, 'skip_n': skip_n,
+    }
+
+
 def refresh_filters(filter_props, props, name=None, skip_fn=None):
     if not filter_props:
         return
@@ -294,8 +364,9 @@ def refresh_filters(filter_props, props, name=None, skip_fn=None):
 
     added, newer, older = classify_files(props, installer=bool(props.UpdateInstaller), skip_fn=skip_fn)
     bucket = {'FilterNew': added, 'FilterNewer': newer, 'FilterOlder': older}
+    defaults = _filter_entry_defaults(filter_props)
     for flag, field in need:
-        default = bool(filter_props.EntryDefault)
+        default = defaults[flag]
         setattr(filter_props, field, {key: default for key in sorted(bucket[flag])})
 
 
@@ -318,34 +389,48 @@ def refresh_extras(extra_props, props, name=None, skip_fn=None):
     extra_props.ExtraFiles = {key: bool(extra_props.EntryDefault) for key in sorted(extras)}
 
 
-def confirm_copy(props, filter_props, extra_props=None):
-    if getattr(props, 'ClearDest', False):
-        message = mineprep.bilingual(
-            '将清空目标路径再全量复制。是否继续？',
-            'This will clear the destination then copy everything. Continue?',
-        )
-        return mineprep.dialog(
-            str(mineprep.bilingual('确认复制', 'Confirm copy')),
-            str(message),
-        )
-
-    enabled, selected, skipped = filter_counts(filter_props)
+def confirm_copy(props, filter_props, extra_props=None, skip_fn=None):
+    stats = copy_stats(props, filter_props, extra_props, skip_fn=skip_fn)
     lines = []
-    if not enabled:
+    if stats['clear']:
         lines.append(str(mineprep.bilingual(
-            '未启用过滤，将覆盖复制全部源文件。',
-            'No filters enabled; source files will overlay the destination.',
+            '将清空目标路径再复制。',
+            'Destination trees will be cleared then copied.',
         )))
-    else:
+    lines.append(str(mineprep.bilingual(
+        f"新增：复制 {stats['added_c']}，跳过 {stats['added_s']}",
+        f"New: copy {stats['added_c']}, skip {stats['added_s']}",
+    )))
+    lines.append(str(mineprep.bilingual(
+        f"变新：复制 {stats['newer_c']}，跳过 {stats['newer_s']}",
+        f"Newer: copy {stats['newer_c']}, skip {stats['newer_s']}",
+    )))
+    lines.append(str(mineprep.bilingual(
+        f"变旧：复制 {stats['older_c']}，跳过 {stats['older_s']}",
+        f"Older: copy {stats['older_c']}, skip {stats['older_s']}",
+    )))
+    lines.append(str(mineprep.bilingual(
+        f"相同文件：{stats['same_s']}",
+        f"Unchanged: {stats['same_s']}",
+    )))
+    if stats['script_s']:
         lines.append(str(mineprep.bilingual(
-            f'变动文件：复制 {selected}，跳过 {skipped}。未列出的文件将照常复制。',
-            f'Changed files: copy {selected}, skip {skipped}. Unlisted files still copy.',
+            f"脚本跳过：{stats['script_s']}\n",
+            f"Skipped by script: {stats['script_s']}\n",
         )))
-    if extra_props and extra_props.RemoveExtra:
-        remove_n = len(extra_to_remove(extra_props))
+    lines.append(str(mineprep.bilingual(
+        f"共计复制 {stats['copy_n']}",
+        f"Total copy {stats['copy_n']}",
+    )))
+    if not stats['clear']:
         lines.append(str(mineprep.bilingual(
-            f'将移除 {remove_n} 个多余文件。',
-            f'{remove_n} extra file(s) will be removed.',
+            f"目标路径有多余文件 {stats['extra_n']}，将移除 {stats['extra_rm']}。",
+            f"Destination has extra files {stats['extra_n']}, remove {stats['extra_rm']}.",
+        )))
+    if not getattr(props, 'UpdateInstaller', False) and getattr(props, 'CopyPythonLib', False):
+        lines.append(str(mineprep.bilingual(
+            '将复制 Python 库（Intermediate/PipInstall/Lib/site-packages）。',
+            'Python libraries will be copied (Intermediate/PipInstall/Lib/site-packages).',
         )))
     lines.append(str(mineprep.bilingual('是否继续？', 'Continue?')))
     return mineprep.dialog(
@@ -354,7 +439,7 @@ def confirm_copy(props, filter_props, extra_props=None):
     )
 
 
-def _copy_ignore_with_skip(project_root, skip, *, installer=False, skip_fn=None):
+def _copy_ignore_with_skip(project_root, skip, *, installer=False, skip_fn=None, src_root=None, dst_root=None):
     skip = skip or set()
 
     def ignore(directory, names):
@@ -374,6 +459,15 @@ def _copy_ignore_with_skip(project_root, skip, *, installer=False, skip_fn=None)
                 continue
             if key in skip:
                 ignored.append(name)
+                continue
+            if src_root and dst_root:
+                dest_file = os.path.join(dst_root, os.path.relpath(full, src_root))
+                if os.path.isfile(dest_file):
+                    try:
+                        if os.path.getmtime(full) == os.path.getmtime(dest_file):
+                            ignored.append(name)
+                    except OSError:
+                        pass
         return ignored
 
     return ignore
@@ -385,6 +479,7 @@ def _copy_tree(src, dst, label, skip=None, project_root=None, installer=False, s
         return False
     ignore = _copy_ignore_with_skip(
         project_root or _project_root(), skip, installer=installer, skip_fn=skip_fn,
+        src_root=src, dst_root=dst,
     )
     try:
         shutil.copytree(src, dst, dirs_exist_ok=True, ignore=ignore)
@@ -479,11 +574,91 @@ def path_warnings(props, *, require_uproject=False):
     return '\n'.join(str(note) for note in notes)
 
 
-def _find_or_create(file_path):
+_UE_INI_COMMANDS = '+-!.@*^'
+_UE_INI_SECTION = re.compile(r'^\s*\[(.+)\]\s*$')
+_UE_INI_KV = re.compile(rf'^(\s*)([{re.escape(_UE_INI_COMMANDS)}])?(.+?)(\s*=\s*)(.*)$')
+
+
+def _ue_ini_map(sections):
+    out = {}
+    for section, opts in (sections or {}).items():
+        bucket = out.setdefault(section.casefold(), {'name': section, 'keys': {}})
+        items = opts.items() if isinstance(opts, dict) else ((key, None) for key in opts)
+        for key, value in items:
+            bucket['keys'][key.casefold()] = (key, value)
+    return out
+
+
+def _patch_ue_ini_text(text, sets=None, removes=None):
+    want, drop = _ue_ini_map(sets), _ue_ini_map(removes)
+    nl = '\r\n' if '\r\n' in text else '\n'
+    ended = text.endswith('\n') or text.endswith('\r\n')
+    lines, out, i, seen = text.splitlines(), [], 0, set()
+
+    def append_remaining(sec_cf):
+        bucket = want.get(sec_cf)
+        if not bucket:
+            return
+        for orig_key, value in bucket['keys'].values():
+            if value is not None:
+                out.append(f'{orig_key}={value}')
+        bucket['keys'].clear()
+
+    while i < len(lines):
+        line = lines[i]
+        header = _UE_INI_SECTION.match(line)
+        if not header:
+            out.append(line)
+            i += 1
+            continue
+        name = header.group(1)
+        sec_cf = name.casefold()
+        seen.add(sec_cf)
+        out.append(line)
+        i += 1
+        while i < len(lines) and not _UE_INI_SECTION.match(lines[i]):
+            line = lines[i]
+            parsed = None
+            if line.strip() and not line.lstrip().startswith(';'):
+                parsed = _UE_INI_KV.match(line)
+            if parsed is None:
+                out.append(line)
+                i += 1
+                continue
+            indent, cmd, key, eq, value = parsed.groups()
+            cmd, key = cmd or '', key.rstrip()
+            key_cf = key.casefold()
+            if key_cf in drop.get(sec_cf, {}).get('keys', {}):
+                i += 1
+                continue
+            bucket = want.get(sec_cf)
+            if bucket and not cmd and key_cf in bucket['keys']:
+                _, new_value = bucket['keys'].pop(key_cf)
+                out.append(f'{indent}{cmd}{key}{eq}{new_value}')
+                i += 1
+                continue
+            out.append(line)
+            i += 1
+        append_remaining(sec_cf)
+
+    missing = [want[k] for k in want if k not in seen and want[k]['keys']]
+    if missing:
+        if out and out[-1].strip():
+            out.append('')
+        for bucket in missing:
+            out.append(f'[{bucket["name"]}]')
+            append_remaining(bucket['name'].casefold())
+    body = nl.join(out)
+    if ended or text == '' or missing:
+        return body + nl
+    return body
+
+
+def _patch_ini(file_path, sections, removes=None):
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        path.touch()
+    text = path.read_text(encoding='utf-8') if path.exists() else ''
+    path.write_text(_patch_ue_ini_text(text, sections, removes), encoding='utf-8')
     return path
 
 
@@ -493,20 +668,6 @@ def _setting(key, default=''):
         return default if value is None else value
     except Exception:
         return default
-
-
-def _patch_ini(file_path, sections):
-    path = _find_or_create(file_path)
-    parser = configparser.ConfigParser(allow_no_value=True, strict=False, interpolation=None)
-    parser.optionxform = str
-    parser.read(path, encoding='utf-8')
-    for section, options in sections.items():
-        if not parser.has_section(section):
-            parser.add_section(section)
-        for key, value in options.items():
-            parser.set(section, key, value)
-    with open(path, 'w', encoding='utf-8') as file:
-        parser.write(file)
 
 
 def _write_project_ini(dest_root):
@@ -551,8 +712,14 @@ def _write_project_ini(dest_root):
             'ShallowWaterSimParameters': '(WorldGridSize=5000,ResolutionMaxAxis=768)',
         },
         '/Script/DLSS.DLSSSettings': {
-            'bEnableDLSSInEditorViewport': 'True',
+            'bEnableDLSSInEditorViewports': 'True',
+            'bEnableDLSSInPlayInEditorViewports': 'True',
         },
+        '/Script/PythonScriptPlugin.PythonScriptPluginSettings': {
+            'bRemoteExecution': 'True',
+        },
+    }, removes={
+        '/Script/DLSS.DLSSSettings': ['bEnableDLSSInEditorViewport'],
     })
     _patch_ini(os.path.join(dest_root, 'Config', 'DefaultInput.ini'), {
         '/Script/EnhancedInput.EnhancedInputDeveloperSettings': {
@@ -562,6 +729,19 @@ def _write_project_ini(dest_root):
     _patch_ini(os.path.join(dest_root, 'Config', 'DefaultEditor.ini'), {
         '/Script/UnrealEd.BlueprintEditorProjectSettings': {
             'bAllowImpureToPureNodeConversion': 'True',
+        },
+    })
+    _patch_ini(os.path.join(dest_root, 'Config', 'DefaultEditorSettings.ini'), {
+        '/Script/UnrealEd.EditorPerformanceSettings': {
+            'bShowFrameRateAndMemory': 'True',
+        },
+    })
+    _patch_ini(os.path.join(dest_root, 'Config', 'DefaultEditorPerProjectUserSettings.ini'), {
+        '/Script/UnrealEd.EditorLoadingSavingSettings': {
+            'LoadLevelAtStartup': 'LastOpened',
+        },
+        '/Script/AvalancheEditor.AvaEditorSettings': {
+            'bAutoActivateMotionDesignViewport': 'False',
         },
     })
     _patch_ini(os.path.join(dest_root, 'Config', 'Windows', 'WindowsEngine.ini'), {
@@ -600,17 +780,32 @@ def update_installer(props, filter_props=None, extra_props=None, script_props=No
         if not os.path.isdir(path):
             mineprep.panic(f'仓库缺少 {label}', path)
 
-    if not confirm_copy(props, filter_props, extra_props):
+    skip_fn = load_skip_fn(script_props)
+    if not confirm_copy(props, filter_props, extra_props, skip_fn=skip_fn):
         return ''
 
     _sync_trees(
         props, filter_props, extra_props, installer,
-        installer=True, skip_fn=load_skip_fn(script_props),
+        installer=True, skip_fn=skip_fn,
     )
     if getattr(props, 'RunScript', True):
         _run_installer_script(installer)
     mineprep.prints(f'已更新{installer}')
     return installer
+
+
+def _copy_python_libs(dest):
+    src = os.path.join(_project_root(), *_PIP_LIB.split('/'))
+    dst = os.path.join(dest, *_PIP_LIB.split('/'))
+    if not os.path.isdir(src):
+        mineprep.panic('找不到 Python 库', src)
+        return False
+    try:
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+    except Exception as extra:
+        mineprep.panic('复制 Python 库失败', extra)
+        return False
+    return True
 
 
 def migrate_plugin(props, filter_props=None, extra_props=None, script_props=None):
@@ -637,13 +832,17 @@ def migrate_plugin(props, filter_props=None, extra_props=None, script_props=None
         )
         return ''
 
-    if not confirm_copy(props, filter_props, extra_props):
+    skip_fn = load_skip_fn(script_props)
+    if not confirm_copy(props, filter_props, extra_props, skip_fn=skip_fn):
         return ''
 
     _sync_trees(
         props, filter_props, extra_props, dest,
-        installer=False, skip_fn=load_skip_fn(script_props),
+        installer=False, skip_fn=skip_fn,
     )
+    if getattr(props, 'CopyPythonLib', False):
+        _copy_python_libs(dest)
     _write_project_ini(dest)
-    mineprep.prints(mineprep.bilingual(f'已迁移到 {dest}', f'Migrated to {dest}'))
+    mineprep.prints(mineprep.bilingual(f'已迁移到 {dest}，务必要先关闭当前工程，再打开新工程文件',
+                    f'Migrated to {dest}. Close the current project first and then open the new project.'))
     return dest

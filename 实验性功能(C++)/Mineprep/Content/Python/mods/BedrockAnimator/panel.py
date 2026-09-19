@@ -12,16 +12,13 @@ class BedrockAnimator(mineprep.Mod):
 
     def __init__(self, context=None):
         self.props = Props()
-        if not (self.props.SequenceName or '').strip():
-            util.sync_seq_name(self.props)
+        if not (self.props.LevelSequenceName or '').strip() or not (self.props.AnimSequenceName or '').strip():
+            util.sync_asset_names(self.props)
         super().__init__(context)
 
     def draw(self, context=None):
         layout = self.layout
-        layout.prop(
-            self.props, align=(0, 1),
-            on_property_changed=self.on_props,
-        )
+        layout.prop(self.props, on_property_changed=self.on_props)
         layout.button(
             bilingual('生成动画至Sequencer', 'Key to Sequencer'),
             on_clicked=lambda: ops.apply(self),
@@ -33,4 +30,4 @@ class BedrockAnimator(mineprep.Mod):
 
     def on_props(self, name):
         if name in ('Actor', 'JsonPath', 'FilePath'):
-            util.sync_seq_name(self.props)
+            util.sync_asset_names(self.props)

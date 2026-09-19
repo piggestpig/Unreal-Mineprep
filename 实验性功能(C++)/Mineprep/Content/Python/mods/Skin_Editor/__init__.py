@@ -6,7 +6,7 @@ mod_info = {
         '编辑视口选中的骨骼网格体皮肤与头部材质',
         'Edit skin and head materials from the selected skeletal mesh',
     ),
-    'Version': '0.6-pre1',
+    'Version': '1.0',
     'CreatedBy': 'Pig',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
@@ -15,7 +15,7 @@ mod_info = {
 
 def register():
     from . import panel
-    panel.SkinEditor.register()
+    panel.SkinEditor.register(True)
 
 
 def unregister():

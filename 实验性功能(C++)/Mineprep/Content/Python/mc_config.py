@@ -4,6 +4,17 @@ from dataclasses import dataclass, asdict
 
 from mc_utils import prints, uclass
 
+
+class _LazyUClass:
+    def __init__(self, path):
+        self.path = path
+        self._value = None
+
+    def __get__(self, obj, owner=None):
+        if self._value is None:
+            self._value = uclass(self.path)
+        return self._value
+
 @dataclass
 class MCpath:
     """各种路径"""
@@ -23,21 +34,19 @@ class MCpath:
     mcprep_data: str = mineprep + 'mcprep_data.json'
 
 
-@dataclass
 class wclass:
     """各种控件类"""
-    button: type = unreal.Button
-    MCbutton: type = uclass('/Game/Mineprep/插件贴图/小控件/可右键按钮.可右键按钮')
-    MCtext: type = uclass('/Game/Mineprep/插件贴图/小控件/可双击文本.可双击文本')
-    MCimage: type = uclass('/Game/Mineprep/插件贴图/小控件/可点击图片.可点击图片')
-    checkbox: type = unreal.CheckBox
-    slider: type = unreal.SpinBox
-    option: type = unreal.ComboBoxString
-    textbox: type = unreal.EditableTextBox
-    MCsection: type = uclass('/Game/Mineprep/插件贴图/小控件/折叠框.折叠框')
-    prop: type = unreal.SinglePropertyView
-
-    mod_panel = uclass('/Game/Mineprep/插件贴图/小控件/MOD自定义面板.MOD自定义面板')
+    button = unreal.Button
+    checkbox = unreal.CheckBox
+    slider = unreal.SpinBox
+    option = unreal.ComboBoxString
+    textbox = unreal.EditableTextBox
+    prop = unreal.SinglePropertyView
+    MCbutton = _LazyUClass('/Game/Mineprep/插件贴图/小控件/可右键按钮.可右键按钮')
+    MCtext = _LazyUClass('/Game/Mineprep/插件贴图/小控件/可双击文本.可双击文本')
+    MCimage = _LazyUClass('/Game/Mineprep/插件贴图/小控件/可点击图片.可点击图片')
+    MCsection = _LazyUClass('/Game/Mineprep/插件贴图/小控件/折叠框.折叠框')
+    mod_panel = _LazyUClass('/Game/Mineprep/插件贴图/小控件/MOD自定义面板.MOD自定义面板')
 
 
 class ConfigNode:

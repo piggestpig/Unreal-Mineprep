@@ -70,7 +70,7 @@ class SkinEditor(mineprep.Mod):
         main = util.pick_main(skms, actor) if actor and skms else None
         head = util.pick_head(skms, main) if actor and skms else None
 
-        row = layout.row(align=(0, 1))
+        row = layout.row()
         self._left = row.col(fill=1, padding=3)
         self._right = row.col(fill=1, padding=3)
 
@@ -150,40 +150,40 @@ class SkinEditor(mineprep.Mod):
         self._pad.bind_hint(hint)
 
         mid.prop(
-            self.paint_tools, align=(0, 1),
+            self.paint_tools,
             on_property_changed=lambda n: paint.on_tools_changed(self, n),
         )
-        actions = mid.row(align=(0, 1), padding=(0, 3))
+        actions = mid.row(padding=(0, 3))
         actions.button(
             bilingual('还原', 'Restore'),
             on_clicked=lambda: paint.restore(self),
-            padding=(3,3,3,0), size=12, align=(0, 1), fill=1
+            padding=(3,3,3,0), size=12, fill=1
         )
         actions.button(
             bilingual('宽手臂', 'Wide Arm'),
             on_clicked=lambda: paint.use_snippet(self, 'wide_arms'),
-            padding=(3,3,3,0), size=12, align=(0, 1), fill=1
+            padding=(3,3,3,0), size=12, fill=1
         )
         actions.button(
             bilingual('细手臂', 'Slim Arm'),
             on_clicked=lambda: paint.use_snippet(self, 'slim_arms'),
-            padding=(3,3,3,0), size=12, align=(0, 1), fill=1
+            padding=(3,3,3,0), size=12, fill=1
         )
-        layers = mid.row(align=(0, 1), padding=(0, 3))
+        layers = mid.row(padding=(0, 3))
         layers.button(
             bilingual('内层', 'Inner'),
             on_clicked=lambda: paint.use_snippet(self, 'keep_inner'),
-            padding=(3,0,3,3), size=12, align=(0, 1), fill=1
+            padding=(3,0,3,3), size=12, fill=1
         )
         layers.button(
             bilingual('外层', 'Outer'),
             on_clicked=lambda: paint.use_snippet(self, 'keep_outer'),
-            padding=(3,0,3,3), size=12, align=(0, 1), fill=1
+            padding=(3,0,3,3), size=12, fill=1
         )
         layers.button(
             bilingual('叠加', 'Overlay'),
             on_clicked=lambda: paint.use_snippet(self, 'apply_overlay'),
-            padding=(3,0,3,3), size=12, align=(0, 1), fill=1
+            padding=(3,0,3,3), size=12, fill=1
         )
         mid.button(
             bilingual('保存皮肤纹理', 'Save Skin Texture'),
@@ -197,7 +197,7 @@ class SkinEditor(mineprep.Mod):
         )
 
 
-        right.prop(self.code_tools, align=(0, 1), padding = (0, 3))
+        right.prop(self.code_tools, padding = (0, 3))
         right.button(
             bilingual('运行Python代码', 'Run Python Script'),
             on_clicked=lambda: paint.run_code(self),
@@ -214,7 +214,7 @@ class SkinEditor(mineprep.Mod):
             padding=3, size=12,
         )
         right.spacer()
-        right.prop(self.batch_tools, align=(0, 1))
+        right.prop(self.batch_tools)
         self._batch = right
         right.hide(not self.paint_tools.Advanced)
 
@@ -225,6 +225,7 @@ class SkinEditor(mineprep.Mod):
         ops.unbind_selection(self)
 
     def on_key_down(self, key):
+        super().on_key_down(key)
         if not self._pad:
             return
         if self._is_key(self.paint_tools.PickKey, key):
@@ -261,7 +262,7 @@ class SkinEditor(mineprep.Mod):
 
 
 def _material_prop(layout, obj):
-    kwargs = dict(subclass=MATERIAL_DETAILS, align=(0, 1), fill=1)
+    kwargs = dict(subclass=MATERIAL_DETAILS, fill=1)
     if obj:
         return layout.prop(obj, **kwargs)
     return layout.custom(unreal.DetailsView, **kwargs)

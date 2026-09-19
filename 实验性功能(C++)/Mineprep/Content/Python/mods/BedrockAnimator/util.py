@@ -85,7 +85,7 @@ def resolve_actor(props):
     return first
 
 
-def suggested_seq_name(props):
+def suggested_anim_name(props):
     actor = props.Actor if isinstance(props.Actor, unreal.Actor) else None
     skm = skm_asset_name(actor)
     js = json_stem(json_file(props))
@@ -94,10 +94,15 @@ def suggested_seq_name(props):
     return sanitize_asset(skm or js)
 
 
-def sync_seq_name(props):
-    name = suggested_seq_name(props)
-    if name and (props.SequenceName or '') != name:
-        props.SequenceName = name
+def sync_asset_names(props):
+    anim = suggested_anim_name(props)
+    if not anim:
+        return
+    ls = ls_name(anim)
+    if (props.AnimSequenceName or '') != anim:
+        props.AnimSequenceName = anim
+    if (props.LevelSequenceName or '') != ls:
+        props.LevelSequenceName = ls
 
 
 def ensure_seq_dir():
@@ -258,6 +263,15 @@ def parse_bone_map(text):
         parse_axes(scl)
         out[str(raw).casefold().replace(' ', '')] = (ue, pos, rot, scl)
     return out
+
+
+def resolve_bone_spec(raw_bone, bone_map):
+    """Dict hit → (ue_bone, pos, rot, scale). Missing key → same name, native xyz axes."""
+    name = str(raw_bone)
+    spec = bone_map.get(name.casefold().replace(' ', ''))
+    if spec:
+        return spec
+    return (name, 'xyz', 'xyz', 'xyz')
 
 
 def has_ctrl(rig, name):

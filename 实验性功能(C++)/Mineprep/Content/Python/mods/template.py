@@ -32,7 +32,7 @@ class mod_template(mineprep.Mod):
         layout.button(mineprep.bilingual("打开Python文件", "Open Python File"),
                       on_clicked=lambda: mineprep.startfile(__file__))
 
-    # 其他可重载函数
+    # 其他可重载函数。on_key_down 请调用 super()，以保留 Pause/Break 打开模组目录
     # def destruct(self):
     # def on_key_down(self, key: unreal.Key):
     # def on_key_up(self, key: unreal.Key):

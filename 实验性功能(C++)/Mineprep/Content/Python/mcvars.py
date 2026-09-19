@@ -1,10 +1,16 @@
 SafeBroadcast = False
 DebugMode = False
 PythonTooltips = False
+ModsInitialized = False
 RegisteredMods = {}
 WidgetModMap = {}
 Props = {}
 Languages = ['zh-Hans', 'en', 'zh-Hant']
+
+ActorCache = None
+SpawnIDCache = None
+SpawnNameCache = None
+LocalizationCache = None
 
 def help():
     """打印所有cvars"""

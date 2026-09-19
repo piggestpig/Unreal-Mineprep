@@ -42,86 +42,6 @@ def lazy_import(func):
     return wrapper
 
 
-_active_async_runners = set()
-
-
-def asynctask(func):
-    """函数装饰器，可在内部使用 yield（秒数）延迟执行"""
-    def wrapper(*args, **kwargs):
-        # 1. 执行原函数，获取生成器对象 (Generator)
-        gen = func(*args, **kwargs)
-        
-        # 容错处理：如果函数内部没有 yield 关键字，它就是一个普通函数，直接返回结果即可
-        if not hasattr(gen, '__next__'):
-            return gen
-
-        # 2. 内部定义高精度的帧驱动类
-        class SlateCoroutineRunner:
-            def __init__(self, generator_instance):
-                self.gen = generator_instance
-                self.target_wait_time = 0.0
-                self.elapsed_time = 0.0
-                self.callback_handle = None
-
-            def start(self):
-                # 注册到虚幻主循环
-                self.callback_handle = unreal.register_slate_post_tick_callback(self._tick)
-                # 放入全局集合，确保在异步等待期间，这个对象绝对不会别销毁
-                _active_async_runners.add(self)
-                # 立即驱动第一步
-                self._advance()
-
-            def _tick(self, delta_time):
-                """每帧累加等待时间，到期后推进协程"""
-                # 时间轮询检查
-                if self.target_wait_time > 0.0:
-                    self.elapsed_time += delta_time
-                    if self.elapsed_time < self.target_wait_time:
-                        return  # 时间没到，继续把控制权还给虚幻
-
-                # 时间到了，重置计时器，迈出下一步
-                self.elapsed_time = 0.0
-                self.target_wait_time = 0.0
-                self._advance()
-
-            def _advance(self):
-                """推进 generator；若 yield 数字则进入秒级等待"""
-                try:
-                    # 关键点：接收 yield 后面的返回值
-                    result = next(self.gen)
-                    
-                    # 识别 yield 出来的数字（支持整型和浮点型）
-                    if isinstance(result, (int, float)):
-                        self.target_wait_time = float(result)
-                    else:
-                        self.target_wait_time = 0.0  # 纯 yield 则代表只等待一帧
-                        
-                except StopIteration:
-                    # 逻辑全部走完，安全退出
-                    self.destroy()
-                except Exception as e:
-                    unreal.log_error(f"异步任务【{func.__name__}】运行时崩溃: {e}")
-                    self.destroy()
-
-            def destroy(self):
-                # 注销 Tick，斩断 C++ 的引用
-                if self.callback_handle:
-                    unreal.unregister_slate_post_tick_callback(self.callback_handle)
-                    self.callback_handle = None
-                # 从全局集合移出，彻底释放内存
-                if self in _active_async_runners:
-                    _active_async_runners.remove(self)
-
-        # 3. 实例化驱动器并立刻启动
-        runner = SlateCoroutineRunner(gen)
-        runner.start()
-        
-        # 返回 runner 实例（如果外部想手动取消任务可以留存，不留存也会在全局集合里活得很好）
-        return runner
-
-    return wrapper
-
-
 def iscollection(obj):
     """判断对象是否为集合类型（list, tuple, set, dict等），排除字符串"""
     return isinstance(obj, Iterable) and not isinstance(obj, (str, bytes))
@@ -432,6 +352,8 @@ def reload(*args):
         return mod if len(args) == 1 else args
 
     import mc_mod
+    import mcvars
+    mcvars.ModsInitialized = False
     reloadable = list(mc_mod.reloadable_mods())
     # 模组对象即将失效，先记下名字与启用状态
     enabled_names = {
@@ -446,8 +368,6 @@ def reload(*args):
 
     import mineprep as old_mineprep
     import mc_widget
-    import mcvars
-    localization_copy = old_mineprep.LocalizationCache
     widgets_copy = mc_widget.WidgetsCache
 
     drop = set()
@@ -473,7 +393,6 @@ def reload(*args):
 
     import mineprep as new_mineprep
     unreal.log('重新加载 mineprep')
-    new_mineprep.LocalizationCache = localization_copy
 
     import mc_widget
     mc_widget.WidgetsCache = widgets_copy
@@ -499,6 +418,7 @@ def reload(*args):
         except Exception as e:
             warn(f'重新加载 {mod_name} 时出错: {e}')
 
+    mcvars.ModsInitialized = True
     return old_mineprep
 
 
@@ -533,7 +453,7 @@ def _format_warn_arg(arg) -> str:
 
 
 def warn(*warnings, duration=5.0, color=unreal.LinearColor(1, 1, 0, 1)):
-    """在屏幕上打印多行警告文本；可传入 Exception 以输出 traceback"""
+    """在屏幕上打印多行警告文本，传入Exception将自动进行traceback"""
     text = "\n".join(_format_warn_arg(arg) for arg in warnings)
     unreal.SystemLibrary.print_string(None, text, text_color=color, duration=duration, print_to_log=False)
     unreal.log_warning(text)
@@ -556,7 +476,7 @@ def panic(title, message=''):
     title = str(title)
     status = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO)
     if status == unreal.AppReturnType.NO:
-        throw(f'{title}: {message} NO.')
+        throw(f'{title}: {message} NO.\n')
 
 
 def dialog(title, message=''):
@@ -684,7 +604,7 @@ def get_hotkey_object(reload=False):
 
 
 def construct(cls, outer=None):
-    """在指定 outer 下构造控件实例（走快捷键蓝图 Construct）"""
+    """构造对象实例（调用蓝图的Construct方法，垃圾回收更安全）"""
     return get_hotkey_object().call_method('Construct', (bpclass(cls), outer))
 
 

@@ -6,7 +6,7 @@ mod_info = {
         '烘焙顶点动画纹理，用于大型群体粒子',
         'Bake VAT textures for large crowd particles',
     ),
-    'Version': '0.6-pre1',
+    'Version': '1.0',
     'CreatedBy': 'Pig',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
@@ -15,7 +15,7 @@ mod_info = {
 
 def register():
     from . import panel
-    panel.VATTools.register()
+    panel.VATTools.register(True)
 
 
 def unregister():

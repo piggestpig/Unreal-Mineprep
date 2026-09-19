@@ -6,8 +6,10 @@ import mcvars
 from pathlib import Path
 from mc_config import wclass
 from mc_widget import Layout, copy
-from mc_utils import uclass
+from mc_utils import uclass, startfile
 
+PAUSE_BREAK = unreal.Key()
+PAUSE_BREAK.import_text('Pause')
 
 def _iter_mod_names():
     """扫描 mods/ 目录，产出模块名（如 mods.template）"""
@@ -88,12 +90,14 @@ def register_all():
     """扫描 mods/，按 Priority 降序注册 EnabledByDefault 的 mod（越大越先）"""
     for _name, mod in iter_mod_modules():
         register_mod(mod)
+    mcvars.ModsInitialized = True
 
 
 def unregister_all(*, loaded_only=True):
     """注销 mod；顺序与加载相反（Priority 小的先卸）。默认只处理已加载的模块"""
     for _name, mod in iter_mod_modules(loaded_only=loaded_only, reverse=True):
         unregister_mod(mod)
+    mcvars.ModsInitialized = False
 
 
 def reloadable_mods():
@@ -133,13 +137,14 @@ class Mod():
     layout: Layout = None
     context = None
     _public_ = False
-    _unique_ = False  # True → 固定一扇 tab，id = 类名；False → 每次随机 id
+    _unique_ = False  # True → 固定一个 tab，id = 类名；False → 每次随机 id
     _label_ = None
     _root_ = 'Root'
-    _template_ = wclass.mod_panel
+    _template_ = None
 
     def __new__(cls, context=None):
         """初始化layout, 默认由蓝图调用Mod(widget)"""
+        cls._template_ = cls._template_ or wclass.mod_panel
         instance = super().__new__(cls)
         public = cls._public_ or mcvars.DebugMode
         root = context.find_child_widget_by_name(cls._root_) if context else None
@@ -167,8 +172,11 @@ class Mod():
         pass
 
     def on_key_down(self, key: unreal.Key):
-        """由蓝图模板传递的按键事件，按下键盘时调用"""
-        pass
+        """由蓝图模板传递的按键事件，按下键盘时调用。默认示例：按PauseBreak打开模组文件夹"""
+        if unreal.InputLibrary.equal_equal_key_key(key, PAUSE_BREAK):
+            path = getattr(sys.modules.get(type(self).__module__), '__file__', None)
+            if path:
+                startfile(str(Path(path).resolve().parent))
 
     def on_key_up(self, key: unreal.Key):
         """由蓝图模板传递的按键事件，松开键盘时调用"""
@@ -212,13 +220,14 @@ subsystem.spawn_and_register_tab_with_id(widget_bp, {id})
 
     @classmethod
     def register(cls, open=False):
-        """注册mod并创建/更新控件蓝图；open=True 时立即打开面板"""
+        """注册mod并创建/更新控件蓝图；在模组初始化后注册时，open=True立即打开面板"""
         mod_path = f'{cls.__module__}.{cls.__name__}'
         mcvars.RegisteredMods[mod_path] = cls
+        open = open and (mcvars.ModsInitialized or int(open) >= 2)
 
         widget_path = f"/Game/mc/mods/{cls.__name__}"
         if not unreal.EditorAssetLibrary.does_asset_exist(widget_path):
-            copy(cls._template_, widget_path)
+            copy(cls._template_ or wclass.mod_panel, widget_path)
             unreal.log(f"已创建自定义控件蓝图: {widget_path}")
         else:
             unreal.log(f"自定义控件蓝图已存在, 更新 {widget_path}")

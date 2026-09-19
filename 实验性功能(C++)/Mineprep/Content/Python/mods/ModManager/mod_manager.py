@@ -130,19 +130,21 @@ class ModManager(mineprep.Mod):
 
 
     def uninstall_mod(self, name, mod):
-        mod_name = name[5:] if name.startswith("mods.") else name
-        if dialog(bilingual(f'卸载 {mod_name}', f'Uninstall {mod_name}'),
-                  bilingual(f'你确定要删除这个模组吗？\n"{mod_name}"将会消失很久！（真的很久！）',
-                            f'Are you sure you want to delete this mod?\n"{mod_name}" will be lost forever! (A long time!)')):
+        info = getattr(mod, "mod_info", None) or {}
+        stem = _mod_stem(name)
+        display = str(info.get("Name") or stem)
+        if dialog(bilingual(f'卸载 {display}', f'Uninstall {display}'),
+                  bilingual(f'你确定要删除这个模组吗？\n"{stem}"将会消失很久！（真的很久！）',
+                            f'Are you sure you want to delete this mod?\n"{stem}" will be lost forever! (A long time!)')):
 
             mineprep.mods.unregister(mod)
-            target = MODS_DIR / f"{mod_name}.py"
+            target = MODS_DIR / f"{stem}.py"
             if not target.exists():
-                target = MODS_DIR / mod_name
+                target = MODS_DIR / stem
             send2trash(target)
 
             for key in list(sys.modules):
                 if key == name or key.startswith(name + '.'):
                     sys.modules.pop(key, None)
-            mineprep.prints(bilingual(f"已卸载模组: {mod_name}", f"Uninstalled mod: {mod_name}"))
+            mineprep.prints(bilingual(f"已卸载模组: {stem}", f"Uninstalled mod: {stem}"))
             self.redraw()

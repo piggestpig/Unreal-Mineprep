@@ -1,7 +1,7 @@
 ﻿Namespace,Key,Source String,zh-Hans,en,zh-Hant
-UObjectDisplayNames,MC导播台_C:旧_画质预设,旧_画质预设,旧_画质预设,Old_Graphics Preset,舊_畫質預設
-UObjectDisplayNames,MC导播台_C:旧_DLSS/FSR,旧_DLSS/FSR,旧_DLSS/FSR,Old_DLSS/FSR,舊_DLSS/FSR
-UObjectDisplayNames,MC导播台_C:旧_随机种子,旧_随机种子,旧_随机种子,Old_Random Seed,舊_隨機種子
+UObjectDisplayNames,MC导播台_C:旧_画质预设,旧 画质预设,旧_画质预设,Old_Graphics Preset,舊_畫質預設
+UObjectDisplayNames,MC导播台_C:旧_DLSS/FSR,旧 DLSS/FSR,旧_DLSS/FSR,Old_DLSS/FSR,舊_DLSS/FSR
+UObjectDisplayNames,MC导播台_C:旧_随机种子,旧 随机种子,旧_随机种子,Old_Random Seed,舊_隨機種子
 UObjectDisplayNames,MC导播台_C:摄像机后期优先级,摄像机后期优先级,摄像机后期优先级,Camera Post Process Priority,攝像機後期優先級
 UObjectDisplayNames,MC导播台_C:自定义按键映射,自定义按键映射,自定义按键映射,Custom Key Mapping,自訂按鍵映射
 UObjectDisplayNames,MC导播台_C:DLSS/FSR,DLSS/FSR,DLSS/FSR,DLSS/FSR,DLSS/FSR
@@ -28,11 +28,11 @@ UObjectDisplayNames,MC导播台_C:GPU力场精度,GPU力场精度,GPU力场精�
 UObjectDisplayNames,MC导播台_C:GPU力场距离,GPU力场距离,GPU力场距离,GPU Force Field Distance,GPU力場距離
 UObjectDisplayNames,MC导播台_C:材质遮罩场类型,材质遮罩场类型,材质遮罩场类型,Material Mask Field Type,材質遮罩場類型
 UObjectDisplayNames,MC导播台_C:语言本地化缓存,语言本地化缓存,语言本地化缓存,Language Localization Cache,語言本地化快取
-UObjectDisplayNames,MC导播台_C:↧ -Z,↧ -Z,↧ -Z,↧ -Z,↧ -Z
-UObjectDisplayNames,MC导播台_C:⬅️X,⬅️X,⬅️X,⬅️X,⬅️X
-UObjectDisplayNames,MC导播台_C:➡️-X,➡️-X,➡️-X,➡️-X,➡️-X
-UObjectDisplayNames,MC导播台_C:⬆️Y,⬆️Y,⬆️Y,⬆️Y,⬆️Y
-UObjectDisplayNames,MC导播台_C:⬇️-Y,⬇️-Y,⬇️-Y,⬇️-Y,⬇️-Y
+UObjectDisplayNames,MC导播台_C:↧ -Z,↧ - Z,↧ -Z,↧ -Z,↧ -Z
+UObjectDisplayNames,MC导播台_C:⬅️X,⬅️ X,⬅️X,⬅️X,⬅️X
+UObjectDisplayNames,MC导播台_C:➡️-X,➡️- X,➡️-X,➡️-X,➡️-X
+UObjectDisplayNames,MC导播台_C:⬆️Y,⬆️ Y,⬆️Y,⬆️Y,⬆️Y
+UObjectDisplayNames,MC导播台_C:⬇️-Y,⬇️- Y,⬇️-Y,⬇️-Y,⬇️-Y
 UObjectDisplayNames,MC导播台_C:◆批量冲击,◆批量冲击,◆批量冲击,◆Batch Impulse,◆批量衝擊
 UObjectDisplayNames,MC导播台_C:◆批量瘫痪,◆批量瘫痪,◆批量瘫痪,◆Batch Paralyze,◆批量癱瘓
 UObjectDisplayNames,MC导播台_C:◆批量跳跃,◆批量跳跃,◆批量跳跃,◆Batch Jump,◆批量跳躍
@@ -127,7 +127,7 @@ UObjectDisplayNames,动态网格体管理器_C:生成灯光的位置偏移,生�
 UObjectDisplayNames,动态网格体管理器_C:↻生成灯光💡,↻生成灯光💡,↻生成灯光💡,↻Generate Light💡,↻生成燈光💡
 UObjectDisplayNames,动态网格体管理器_C:💡全选灯光,💡全选灯光,💡全选灯光,💡Select All Lights,💡全選燈光
 UObjectDisplayNames,动态网格体管理器_C:同步材质,同步材质,同步材质,Sync Material,同步材質
-UObjectDisplayNames,动态网格体管理器_C:独立Actors,独立Actors,独立Actors,Independent Actors,獨立Actors
+UObjectDisplayNames,动态网格体管理器_C:独立Actors,独立 Actors,独立Actors,Independent Actors,獨立Actors
 UObjectDisplayNames,动态网格体管理器_C:还原模型,还原模型,还原模型,Restore Model,還原模型
 UObjectDisplayNames,动态网格体管理器_C:💡应用参数,💡应用参数,💡应用参数,💡Apply Parameters,💡應用參數
 UObjectDisplayNames,可破坏方块_C:网格体,网格体,网格体,Mesh,網格體
@@ -150,7 +150,7 @@ UObjectDisplayNames,可破坏方块_C:材质参数浮点2,材质参数浮点 2,�
 UObjectDisplayNames,可破坏方块_C:材质参数颜色2,材质参数颜色 2,材质参数颜色2,Material Param Color 2,材質參數顏色2
 UObjectDisplayNames,可破坏方块_C:◆破坏,◆破坏,◆破坏,◆Destroy,◆破壞
 UObjectDisplayNames,可破坏方块_C:Set破碎程度,Set破碎程度,Set破碎程度,Set Fracture Level,Set破碎程度
-UObjectDisplayNames,可破坏方块_C:SetJson缓存,SetJson缓存,SetJson缓存,Set Json Cache,SetJson快取
+UObjectDisplayNames,可破坏方块_C:SetJson缓存,Set Json缓存,SetJson缓存,Set Json Cache,SetJson快取
 UObjectDisplayNames,可破坏方块_C:Set按索引设置材质参数,Set按索引设置材质参数,Set按索引设置材质参数,Set Material Param by Index,Set按索引設定材質參數
 UObjectDisplayNames,可破坏方块_C:◆物理模拟(瘫痪),◆物理模拟(瘫痪),◆物理模拟(瘫痪),◆Physics Simulation (Paralyzed),◆物理模擬(癱瘓)
 UObjectDisplayNames,可破坏方块_C:◆全局粒子事件,◆全局粒子事件,◆全局粒子事件,◆Global Particle Event,◆全域粒子事件
@@ -279,14 +279,14 @@ UObjectDisplayNames,画质预设类别.→Megalights质量,→ Megalights质量,
 UObjectDisplayNames,手持物品_C:网格体,网格体,网格体,Mesh,網格體
 UObjectDisplayNames,手持物品_C:初速度,初速度,初速度,Initial Velocity,初速度
 UObjectDisplayNames,手持物品_C:Json缓存,Json缓存,Json缓存,Json Cache,Json快取
-UObjectDisplayNames,手持物品_C:SetJson缓存,SetJson缓存,SetJson缓存,Set Json Cache,SetJson快取
+UObjectDisplayNames,手持物品_C:SetJson缓存,Set Json缓存,SetJson缓存,Set Json Cache,SetJson快取
 UObjectDisplayNames,批量播片控制器_C:半径,半径,半径,Radius,半徑
 UObjectDisplayNames,批量播片控制器_C:传播速度,传播速度,传播速度,Propagation Speed,傳播速度
 UObjectDisplayNames,批量播片控制器_C:播片间隔,播片间隔,播片间隔,Sequence Interval,播片間隔
 UObjectDisplayNames,批量播片控制器_C:播片参数,播片参数,播片参数,Sequence Params,播片參數
 UObjectDisplayNames,批量播片控制器_C:动画序列,动画序列,动画序列,Anim Sequence,動畫序列
 UObjectDisplayNames,批量播片控制器_C:As关卡序列,As关卡序列,As关卡序列,As Level Sequence,As關卡序列
-UObjectDisplayNames,批量播片控制器_C:关卡序列绑定ID,关卡序列绑定ID,关卡序列绑定ID,Level Sequence Binding ID,關卡序列綁定ID
+UObjectDisplayNames,批量播片控制器_C:关卡序列绑定ID,关卡序列绑定 ID,关卡序列绑定ID,Level Sequence Binding ID,關卡序列綁定ID
 UObjectDisplayNames,批量播片控制器_C:As模板序列,As模板序列,As模板序列,As Template Sequence,As模板序列
 UObjectDisplayNames,批量播片控制器_C:有效,有效,有效,Valid,有效
 UObjectDisplayNames,批量播片控制器_C:每次播放的actors,每次播放的actors,每次播放的actors,Actors Per Play,每次播放的Actors
@@ -325,16 +325,16 @@ UObjectDisplayNames,NPC动画模式.动作捕捉,动作捕捉,动作捕捉,Motio
 UObjectDisplayNames,NPC行为结构体:运动模式_38_1BC7489946499A12911141AA306085F1,运动模式,运动模式,Movement Mode,運動模式
 UObjectDisplayNames,NPC行为结构体:平滑移动旋转阈值_116_423661174FA44CCCE8B9CF9AECDD68F2,平滑移动旋转阈值,平滑移动旋转阈值,Smooth Move Rotate Threshold,平滑移動旋轉閾值
 UObjectDisplayNames,NPC行为结构体:旋转速度_99_05A8A99040199B9091C8C18AEB1C9BBD,旋转速度,旋转速度,Rotation Speed,旋轉速度
-UObjectDisplayNames,NPC行为结构体:跳跃速度最大连跳长按时间_109_85EE37754EE36586D367B7821C300F05,跳跃速度/最大连跳/长按时间,跳跃速度/最大连跳/长按时间,Jump Speed/Max Chain Jump/Hold Time,跳躍速度/最大連跳/長按時間
+UObjectDisplayNames,NPC行为结构体:跳跃速度最大连跳长按时间_109_85EE37754EE36586D367B7821C300F05,跳跃速度最大连跳长按时间,跳跃速度/最大连跳/长按时间,Jump Speed/Max Chain Jump/Hold Time,跳躍速度/最大連跳/長按時間
 UObjectDisplayNames,NPC行为结构体:重力方向XYZ-倍率W_106_D8D928B0475C501428EC2799314D74C2,重力方向XYZ-倍率W,重力方向XYZ-倍率W,Gravity Direction XYZ-Multiplier W,重力方向XYZ-倍率W
-UObjectDisplayNames,NPC行为结构体:自动跳跃攀爬避障模式_113_86408228477D4C9661AB66B2EA20E4A3,"自动跳跃,攀爬,避障模式","自动跳跃,攀爬,避障模式","Auto Jump, Climb, Obstacle Avoidance Mode","自動跳躍,攀爬,避障模式"
-UObjectDisplayNames,NPC行为结构体:待机概率时长±随机数_45_FF4B7C4F49513960A961A9AABAA258D0,待机概率(%)/时长±随机数,待机概率(%)/时长±随机数,Idle Probability (%)/Duration ± Random,待機機率(%)/時長±隨機數
+UObjectDisplayNames,NPC行为结构体:自动跳跃攀爬避障模式_113_86408228477D4C9661AB66B2EA20E4A3,自动跳跃攀爬避障模式,"自动跳跃,攀爬,避障模式","Auto Jump, Climb, Obstacle Avoidance Mode","自動跳躍,攀爬,避障模式"
+UObjectDisplayNames,NPC行为结构体:待机概率时长±随机数_45_FF4B7C4F49513960A961A9AABAA258D0,待机概率时长±随机数,待机概率(%)/时长±随机数,Idle Probability (%)/Duration ± Random,待機機率(%)/時長±隨機數
 UObjectDisplayNames,NPC行为结构体:待机随机播放动画索引_96_815393EE4BB1C83D33680880B94032E8,待机随机播放动画索引,待机随机播放动画索引,Idle Random Play Anim Index,待機隨機播放動畫索引
-UObjectDisplayNames,NPC行为结构体:跑步游荡跟随躲避_20_B5AED23649E617B7835BBD9B68B2B2D2,跑步游荡/跟随/躲避,跑步游荡/跟随/躲避,Run Wander/Follow/Avoid,跑步遊蕩/跟隨/躲避
+UObjectDisplayNames,NPC行为结构体:跑步游荡跟随躲避_20_B5AED23649E617B7835BBD9B68B2B2D2,跑步游荡跟随躲避,跑步游荡/跟随/躲避,Run Wander/Follow/Avoid,跑步遊蕩/跟隨/躲避
 UObjectDisplayNames,NPC行为结构体:到达半径_12_DEF111A3465A4CB5AA5DA9B61B3286AE,到达半径,到达半径,Arrival Radius,到達半徑
-UObjectDisplayNames,NPC行为结构体:游荡距离偏转角俯仰角_119_C399159D4F8D91F12D344CBF49D83255,游荡距离/偏转角/俯仰角,游荡距离/偏转角/俯仰角,Wander Distance/Yaw/Pitch,遊蕩距離/偏轉角/俯仰角
+UObjectDisplayNames,NPC行为结构体:游荡距离偏转角俯仰角_119_C399159D4F8D91F12D344CBF49D83255,游荡距离偏转角俯仰角,游荡距离/偏转角/俯仰角,Wander Distance/Yaw/Pitch,遊蕩距離/偏轉角/俯仰角
 UObjectDisplayNames,NPC行为结构体:游荡时间±随机数_27_148CFC70422B734068B9F78DE9994D06,游荡时间±随机数,游荡时间±随机数,Wander Time ± Random,遊蕩時間±隨機數
-UObjectDisplayNames,NPC行为结构体:视觉听觉触觉感知_84_9CA620BE49DA3727011695AC52723CF0,视觉/听觉/触觉感知,视觉/听觉/触觉感知,Visual/Auditory/Tactile Perception,視覺/聽覺/觸覺感知
+UObjectDisplayNames,NPC行为结构体:视觉听觉触觉感知_84_9CA620BE49DA3727011695AC52723CF0,视觉听觉触觉感知,视觉/听觉/触觉感知,Visual/Auditory/Tactile Perception,視覺/聽覺/觸覺感知
 UObjectDisplayNames,NPC行为结构体:跟随目标类->tag_75_AE53A1C6491D909A6B4AD9829EBFB8F1,跟随目标类->tag,跟随目标类->tag,Follow Target Class->Tag,跟隨目標類->Tag
 UObjectDisplayNames,NPC行为结构体:攻击随机播放动画索引_103_5CE62B33487A2F7D37B948A53C78D090,攻击随机播放动画索引,攻击随机播放动画索引,Attack Random Play Anim Index,攻擊隨機播放動畫索引
 UObjectDisplayNames,NPC行为结构体:离开视线前保持跟随_97_FAF7DF0A4B39F5442A76559B9637BCD4,离开视线前保持跟随,离开视线前保持跟随,Keep Following Before Leaving Sight,離開視線前保持跟隨
@@ -466,12 +466,12 @@ UObjectDisplayNames,物理破碎结构体:自定义切割位置+法向量_42_948
 UObjectDisplayNames,物理破碎结构体:自定义切割材质_28_A3181C4D4AAB05AAF454598FF8CBCD39,自定义切割材质,自定义切割材质,Custom Cut Material,自訂切割材質
 UObjectDisplayNames,状态机一组动画结构体:动画类型_26_3EF1914E4269695509BFB6AA84AFBA1F,动画类型,动画类型,Anim Type,動畫類型
 UObjectDisplayNames,状态机一组动画结构体:随机挑选额外权重_66_E56EC628425D565597E3D0B130ABABAC,随机挑选额外权重,随机挑选额外权重,Random Pick Extra Weight,隨機挑選額外權重
-UObjectDisplayNames,状态机一组动画结构体:0静止待机_61_BD5D0486415C5C1DB410338DB60C2A3B,0(静止/待机),0(静止/待机),0 (Idle/Stand),0(靜止/待機)
-UObjectDisplayNames,状态机一组动画结构体:1慢速走路_60_7770D6404976F5873BF11BBF198C8800,1(慢速/走路),1(慢速/走路),1 (Slow/Walk),1(慢速/走路)
-UObjectDisplayNames,状态机一组动画结构体:2中速跑步_59_606CDE664A6CB5E8579568B26A14D047,2(中速/跑步),2(中速/跑步),2 (Medium/Run),2(中速/跑步)
-UObjectDisplayNames,状态机一组动画结构体:3快速冲刺_58_13C78C4B49322609632EF587453031B0,3(快速/冲刺),3(快速/冲刺),3 (Fast/Sprint),3(快速/衝刺)
-UObjectDisplayNames,状态机一组动画结构体:03播放速度_57_719BB810493E0130DC2D468C00745EBE,0~3播放速度,0~3播放速度,0~3 Play Speed,0~3播放速度
-UObjectDisplayNames,状态机一组动画结构体:移动速度->动画索引03_62_ADACD75D43F59F6E1FFDA5BA180F9428,移动速度->动画索引0~3,移动速度->动画索引0~3,Movement Speed->Anim Index 0~3,移動速度->動畫索引0~3
+UObjectDisplayNames,状态机一组动画结构体:0静止待机_61_BD5D0486415C5C1DB410338DB60C2A3B,0静止待机,0(静止/待机),0 (Idle/Stand),0(靜止/待機)
+UObjectDisplayNames,状态机一组动画结构体:1慢速走路_60_7770D6404976F5873BF11BBF198C8800,1慢速走路,1(慢速/走路),1 (Slow/Walk),1(慢速/走路)
+UObjectDisplayNames,状态机一组动画结构体:2中速跑步_59_606CDE664A6CB5E8579568B26A14D047,2中速跑步,2(中速/跑步),2 (Medium/Run),2(中速/跑步)
+UObjectDisplayNames,状态机一组动画结构体:3快速冲刺_58_13C78C4B49322609632EF587453031B0,3快速冲刺,3(快速/冲刺),3 (Fast/Sprint),3(快速/衝刺)
+UObjectDisplayNames,状态机一组动画结构体:03播放速度_57_719BB810493E0130DC2D468C00745EBE,03播放速度,0~3播放速度,0~3 Play Speed,0~3播放速度
+UObjectDisplayNames,状态机一组动画结构体:移动速度->动画索引03_62_ADACD75D43F59F6E1FFDA5BA180F9428,移动速度->动画索引03,移动速度->动画索引0~3,Movement Speed->Anim Index 0~3,移動速度->動畫索引0~3
 UObjectDisplayNames,状态机动画数组结构体:动画数组_26_2DB51BEC407CADD361583E8343B0496C,动画数组,动画数组,Anim Array,動畫陣列
 UObjectDisplayNames,画面尺寸:长宽比_16_519A4070447D08B9F2DC1B93A1237016,长宽比,长宽比,Aspect Ratio,長寬比
 UObjectDisplayNames,画面尺寸:遮幅_17_01202A7F4E3C6A7FB7D5EA8EDC24EC44,遮幅,遮幅,Matte,遮幅
@@ -527,16 +527,16 @@ UObjectDisplayNames,空物体_C:平滑移动/旋转,平滑移动/旋转,平滑�
 UObjectDisplayNames,空物体_C:调试缓动,调试缓动,调试缓动,Debug Easing,偵錯緩動
 UObjectDisplayNames,空物体_C:⇄影响子项,⇄影响子项,⇄影响子项,⇄Affect Children,⇄影響子項
 UObjectDisplayNames,自定义函数_C:摄像机更新转场,摄像机更新转场,摄像机更新转场,Camera Update Transition,攝像機更新轉場
-UObjectDisplayNames,自定义函数_C:设置Vector4通道,设置Vector4通道,设置Vector4通道,Set Vector4 Channel,設定Vector4通道
+UObjectDisplayNames,自定义函数_C:设置Vector4通道,设置 Vector 4通道,设置Vector4通道,Set Vector4 Channel,設定Vector4通道
 UObjectDisplayNames,自定义函数_C:设置颜色通道,设置颜色通道,设置颜色通道,Set Color Channel,設定顏色通道
 UObjectDisplayNames,自定义函数_C:json获取ini自定义按键,Json获取ini自定义按键,Json获取ini自定义按键,Get Custom Keys from JSON/INI,Json取得ini自訂按鍵
 UObjectDisplayNames,自定义函数_C:json获取设置ini,Json获取设置ini,Json获取设置ini,Get Settings from JSON/INI,Json取得設定ini
 UObjectDisplayNames,自定义函数_C:父材质(实例),父材质(实例),父材质(实例),Parent Material (Instance),父材質(實例)
 UObjectDisplayNames,摇晃弹跳振动section_C:自定义曲线,自定义曲线,自定义曲线,Custom Curve,自訂曲線
 UObjectDisplayNames,摇晃弹跳振动section_C:整体速度/强度/增量/缓动,整体速度/强度/增量/缓动,整体速度/强度/增量/缓动,Overall Speed/Intensity/Increment/Easing,整體速度/強度/增量/緩動
-UObjectDisplayNames,摇晃弹跳振动section_C:位置XYZ强度,位置XYZ强度,位置XYZ强度,Position XYZ Intensity,位置XYZ強度
-UObjectDisplayNames,摇晃弹跳振动section_C:旋转XYZ强度,旋转XYZ强度,旋转XYZ强度,Rotation XYZ Intensity,旋轉XYZ強度
-UObjectDisplayNames,摇晃弹跳振动section_C:缩放XYZ强度,缩放XYZ强度,缩放XYZ强度,Scale XYZ Intensity,縮放XYZ強度
+UObjectDisplayNames,摇晃弹跳振动section_C:位置XYZ强度,位置 XYZ强度,位置XYZ强度,Position XYZ Intensity,位置XYZ強度
+UObjectDisplayNames,摇晃弹跳振动section_C:旋转XYZ强度,旋转 XYZ强度,旋转XYZ强度,Rotation XYZ Intensity,旋轉XYZ強度
+UObjectDisplayNames,摇晃弹跳振动section_C:缩放XYZ强度,缩放 XYZ强度,缩放XYZ强度,Scale XYZ Intensity,縮放XYZ強度
 UObjectDisplayNames,摇晃弹跳振动section_C:三分量时间偏移,三分量时间偏移,三分量时间偏移,Tri-Component Time Offset,三分量時間偏移
 UObjectDisplayNames,摇晃弹跳振动section_C:循环时长,循环时长,循环时长,Loop Duration,循環時長
 UObjectDisplayNames,摇晃弹跳振动section_C:结尾复原,结尾复原,结尾复原,End Restore,結尾還原
@@ -554,14 +554,14 @@ UObjectDisplayNames,摇晃弹跳振动section_C:脉冲按压,脉冲按压,脉冲
 UObjectDisplayNames,摇晃弹跳振动section_C:跳跃,跳跃,跳跃,Jump,跳躍
 UObjectDisplayNames,路标（触发器）_C:触发python脚本,触发python脚本,触发python脚本,Trigger Python Script,觸發Python腳本
 UObjectDisplayNames,路标（触发器）_C:触发计数,触发计数,触发计数,Trigger Count,觸發計數
-UObjectDisplayNames,路标（触发器）_C:debug,debug,debug,Debug,偵錯
+UObjectDisplayNames,路标（触发器）_C:debug,Debug,debug,Debug,偵錯
 UObjectDisplayNames,附魔组件_C:刷新附魔材质,刷新附魔材质,刷新附魔材质,Refresh Enchant Material,刷新附魔材質
 UObjectDisplayNames,MC_SoftBody_C:皮肤,皮肤,皮肤,Skin,皮膚
-UObjectDisplayNames,MC_SoftBody_C:ParentSpaceControlData,ParentSpaceControlData,父空间控制数据,Parent Space Control Data,父空間控制資料
+UObjectDisplayNames,MC_SoftBody_C:ParentSpaceControlData,Parent Space Control Data,父空间控制数据,Parent Space Control Data,父空間控制資料
 UObjectDisplayNames,MC_SoftBody_C:Body Modifier Data,Body Modifier Data,身体修改器数据,Body Modifier Data,身體修改器資料
 UObjectDisplayNames,MC_SoftBody_C:Physics Movement Type,Physics Movement Type,物理运动类型,Physics Movement Type,物理運動類型
-UObjectDisplayNames,MC_SoftBody_C:ConstraintProfile,ConstraintProfile,约束配置文件,Constraint Profile,約束配置文件
-UObjectDisplayNames,MC_SoftBody_C:WorldSpaceControlData,WorldSpaceControlData,世界空间控制数据,World Space Control Data,世界空間控制資料
+UObjectDisplayNames,MC_SoftBody_C:ConstraintProfile,Constraint Profile,约束配置文件,Constraint Profile,約束配置文件
+UObjectDisplayNames,MC_SoftBody_C:WorldSpaceControlData,World Space Control Data,世界空间控制数据,World Space Control Data,世界空間控制資料
 UObjectDisplayNames,MC第一人称摄像机_C:左手物品,左手物品,左手物品,Left Hand Item,左手物品
 UObjectDisplayNames,MC第一人称摄像机_C:右手物品,右手物品,右手物品,Right Hand Item,右手物品
 UObjectDisplayNames,MC第一人称摄像机_C:全身动画参数,全身动画参数,全身动画参数,Full Body Anim Params,全身動畫參數
@@ -887,11 +887,11 @@ UObjectDisplayNames,堆放方块_C:方块模型,方块模型,方块模型,Block 
 UObjectDisplayNames,堆放方块_C:方块模型2,方块模型 2,方块模型2,Block Mesh 2,方塊模型2
 UObjectDisplayNames,堆放方块_C:偏移,偏移,偏移,Offset,偏移
 UObjectDisplayNames,堆放方块_C:随机旋转,随机旋转,随机旋转,Random Rotation,隨機旋轉
-UObjectDisplayNames,堆放方块_C:location,location,位置,Location,位置
+UObjectDisplayNames,堆放方块_C:location,Location,位置,Location,位置
 UObjectDisplayNames,堆放方块_C:Mesh,Mesh,模型,Mesh,模型
-UObjectDisplayNames,堆放方块_C:grid,grid,网格,Grid,網格
-UObjectDisplayNames,堆放方块_C:stackup,stackup,堆叠,Stack Up,堆疊
-UObjectDisplayNames,堆放方块_C:Mesh2,Mesh2,模型2,Mesh2,模型2
+UObjectDisplayNames,堆放方块_C:grid,Grid,网格,Grid,網格
+UObjectDisplayNames,堆放方块_C:stackup,Stackup,堆叠,Stack Up,堆疊
+UObjectDisplayNames,堆放方块_C:Mesh2,Mesh 2,模型2,Mesh2,模型2
 UObjectDisplayNames,媒体抠像散布器_C:纹理贴图,纹理贴图,纹理贴图,Texture Map,紋理貼圖
 UObjectDisplayNames,媒体抠像散布器_C:是像素贴图,是像素贴图,是像素贴图,Is Pixel Map,是像素貼圖
 UObjectDisplayNames,媒体抠像散布器_C:指定纵轴分辨率,指定纵轴分辨率,指定纵轴分辨率,Specify Vertical Resolution,指定縱軸解析度
@@ -912,24 +912,24 @@ UObjectDisplayNames,媒体抠像散布器_C:导入视频,导入视频,导入视�
 UObjectDisplayNames,媒体抠像散布器_C:边缘光,边缘光,边缘光,Rim Light,邊緣光
 UObjectDisplayNames,背景生物散布器_C:密度(%),密度(%),密度(%),Density (%),密度(%)
 UObjectDisplayNames,背景生物散布器_C:最小间距,最小间距,最小间距,Min Spacing,最小間距
-UObjectDisplayNames,背景生物散布器_C:生物1,生物1,生物1,Mob 1,生物1
-UObjectDisplayNames,背景生物散布器_C:生物2,生物2,生物2,Mob 2,生物2
-UObjectDisplayNames,背景生物散布器_C:生物3,生物3,生物3,Mob 3,生物3
-UObjectDisplayNames,背景生物散布器_C:生物4,生物4,生物4,Mob 4,生物4
+UObjectDisplayNames,背景生物散布器_C:生物1,生物 1,生物1,Mob 1,生物1
+UObjectDisplayNames,背景生物散布器_C:生物2,生物 2,生物2,Mob 2,生物2
+UObjectDisplayNames,背景生物散布器_C:生物3,生物 3,生物3,Mob 3,生物3
+UObjectDisplayNames,背景生物散布器_C:生物4,生物 4,生物4,Mob 4,生物4
 UObjectDisplayNames,背景生物散布器_C:偏移,偏移,偏移,Offset,偏移
 UObjectDisplayNames,背景生物散布器_C:随机偏移,随机偏移,随机偏移,Random Offset,隨機偏移
 UObjectDisplayNames,背景生物散布器_C:旋转,旋转,旋转,Rotation,旋轉
 UObjectDisplayNames,背景生物散布器_C:随机旋转,随机旋转,随机旋转,Random Rotation,隨機旋轉
-UObjectDisplayNames,背景生物散布器_C:mob1,mob1,生物1,Mob1,生物1
-UObjectDisplayNames,背景生物散布器_C:mob2,mob2,生物2,Mob2,生物2
-UObjectDisplayNames,背景生物散布器_C:mob3,mob3,生物3,Mob3,生物3
-UObjectDisplayNames,背景生物散布器_C:mob4,mob4,生物4,Mob4,生物4
-UObjectDisplayNames,背景生物散布器_C:density1,density1,密度1,Density1,密度1
-UObjectDisplayNames,背景生物散布器_C:density2,density2,密度2,Density2,密度2
-UObjectDisplayNames,背景生物散布器_C:density3,density3,密度3,Density3,密度3
-UObjectDisplayNames,背景生物散布器_C:density4,density4,密度4,Density4,密度4
-UObjectDisplayNames,背景生物散布器_C:offset,offset,偏移,Offset,偏移
-UObjectDisplayNames,背景生物散布器_C:location,location,位置,Location,位置
+UObjectDisplayNames,背景生物散布器_C:mob1,Mob 1,生物1,Mob1,生物1
+UObjectDisplayNames,背景生物散布器_C:mob2,Mob 2,生物2,Mob2,生物2
+UObjectDisplayNames,背景生物散布器_C:mob3,Mob 3,生物3,Mob3,生物3
+UObjectDisplayNames,背景生物散布器_C:mob4,Mob 4,生物4,Mob4,生物4
+UObjectDisplayNames,背景生物散布器_C:density1,Density 1,密度1,Density1,密度1
+UObjectDisplayNames,背景生物散布器_C:density2,Density 2,密度2,Density2,密度2
+UObjectDisplayNames,背景生物散布器_C:density3,Density 3,密度3,Density3,密度3
+UObjectDisplayNames,背景生物散布器_C:density4,Density 4,密度4,Density4,密度4
+UObjectDisplayNames,背景生物散布器_C:offset,Offset,偏移,Offset,偏移
+UObjectDisplayNames,背景生物散布器_C:location,Location,位置,Location,位置
 UObjectDisplayNames,背景生物散布器_C:缩放-随机缩放,缩放-随机缩放,缩放-随机缩放,Scale-Random Scale,縮放-隨機縮放
 UObjectDisplayNames,背景生物散布器_C:启用碰撞,启用碰撞,启用碰撞,Enable Collision,啟用碰撞
 UObjectDisplayNames,背景生物散布器_C:启用物理交互,启用物理交互,启用物理交互,Enable Physics Interaction,啟用物理互動
@@ -939,7 +939,7 @@ UObjectDisplayNames,背景生物散布器_C:全选,全选,全选,Select All,全�
 UObjectDisplayNames,背景生物散布器_C:刷新,刷新,刷新,Refresh,刷新
 UObjectDisplayNames,观众人群散布器_C:面向目标,面向目标,面向目标,Face Target,面向目標
 UObjectDisplayNames,观众人群散布器_C:朝向轴,朝向轴,朝向轴,Orientation Axis,朝向軸
-UObjectDisplayNames,观众人群散布器_C:仅旋转Z轴,仅旋转Z轴,仅旋转Z轴,Rotate Z Axis Only,僅旋轉Z軸
+UObjectDisplayNames,观众人群散布器_C:仅旋转Z轴,仅旋转 Z轴,仅旋转Z轴,Rotate Z Axis Only,僅旋轉Z軸
 UObjectDisplayNames,观众人群散布器_C:重载随机皮肤->权重,重载随机皮肤->权重,重载随机皮肤->权重,Override Random Skin->Weight,重載隨機皮膚->權重
 UObjectDisplayNames,观众人群散布器_C:重载随机初始动画->权重/速度/偏移,重载随机初始动画->权重/速度/偏移,重载随机初始动画->权重/速度/偏移,Override Random Init Anim->Weight/Speed/Offset,重載隨機初始動畫->權重/速度/偏移
 UObjectDisplayNames,观众人群散布器_C:整齐,整齐,整齐,Neat,整齊
@@ -977,7 +977,7 @@ UObjectDisplayNames,UI文本组件_C:导入字幕,导入字幕,导入字幕,Impo
 UObjectDisplayNames,UI界面编辑器_C:颜色-不透明度,颜色-不透明度,颜色-不透明度,Color-Opacity,顏色-不透明度
 UObjectDisplayNames,UI界面编辑器_C:全局缩放,全局缩放,全局缩放,Global Scale,全域縮放
 UObjectDisplayNames,UI界面编辑器_C:随分辨率自动缩放,随分辨率自动缩放,随分辨率自动缩放,Auto Scale with Resolution,隨解析度自動縮放
-UObjectDisplayNames,UI界面编辑器_C:编辑器中叠加UI,编辑器中叠加UI,编辑器中叠加UI,Overlay UI in Editor,編輯器中疊加UI
+UObjectDisplayNames,UI界面编辑器_C:编辑器中叠加UI,编辑器中叠加 UI,编辑器中叠加UI,Overlay UI in Editor,編輯器中疊加UI
 UObjectDisplayNames,UI界面编辑器_C:仅在边界内显示,仅在边界内显示,仅在边界内显示,Display Only Within Bounds,僅在邊界內顯示
 UObjectDisplayNames,UI界面编辑器_C:UI控件,UI控件,UI控件,UI Controls,UI控件
 UObjectDisplayNames,UI界面编辑器_C:画面尺寸,画面尺寸,画面尺寸,Screen Size,畫面尺寸
@@ -1000,7 +1000,7 @@ UObjectDisplayNames,简单跟随路径控制器_C:重复模式,重复模式,重�
 UObjectDisplayNames,简单跟随路径控制器_C:旋转对齐,旋转对齐,旋转对齐,Rotation Alignment,旋轉對齊
 UObjectDisplayNames,简单跟随路径控制器_C:运动时长,运动时长,运动时长,Movement Duration,運動時長
 UObjectDisplayNames,简单跟随路径控制器_C:曲线采样跨度,曲线采样跨度,曲线采样跨度,Curve Sampling Span,曲線採樣跨度
-UObjectDisplayNames,简单跟随路径控制器_C:曲线终点距离(m),曲线终点距离(m),曲线终点距离(m),Curve Endpoint Distance (m),曲線終點距離(m)
+UObjectDisplayNames,简单跟随路径控制器_C:曲线终点距离(m),曲线终点距离(M),曲线终点距离(m),Curve Endpoint Distance (m),曲線終點距離(m)
 UObjectDisplayNames,简单跟随路径控制器_C:控制对象,控制对象,控制对象,Controlled Objects,控制物件
 UObjectDisplayNames,简单跟随路径控制器_C:缓存对象,缓存对象,缓存对象,Cached Objects,快取物件
 UObjectDisplayNames,简单跟随路径控制器_C:更新全场,更新全场,更新全场,Update All,更新全場
@@ -1051,7 +1051,7 @@ UObjectDisplayNames,覆层贴图,覆层贴图,覆层贴图,Overlay Map,覆層貼
 UObjectDisplayNames,纹理,纹理,纹理,Texture,紋理
 UObjectDisplayNames,纹理渲染目标,纹理渲染目标,纹理渲染目标,Texture Render Target,紋理渲染目標
 UObjectDisplayNames,监控摄像机_C:重新初始化,重新初始化,重新初始化,Reinitialize,重新初始化
-UObjectDisplayNames,监控摄像机_C:同步Mineprep后期处理体积,同步Mineprep后期处理体积,同步Mineprep后期处理体积,Sync Mineprep Post Process Volume,同步Mineprep後期處理體積
+UObjectDisplayNames,监控摄像机_C:同步Mineprep后期处理体积,同步 Mineprep后期处理体积,同步Mineprep后期处理体积,Sync Mineprep Post Process Volume,同步Mineprep後期處理體積
 UObjectDisplayNames,监控摄像机_C:重载运行分辨率(%),重载运行分辨率(%),重载运行分辨率(%),Override Runtime Resolution (%),重載運行解析度(%)
 UObjectDisplayNames,监控摄像机_C:画面尺寸,画面尺寸,画面尺寸,Screen Size,畫面尺寸
 UObjectDisplayNames,监控摄像机_C:背景透明,背景透明,背景透明,Background Transparent,背景透明
@@ -1220,7 +1220,7 @@ UObjectDisplayNames,NormalAndHeight,NormalAndHeight,法线与高度,Normal and H
 UObjectDisplayNames,Velocity,Velocity,速度,Velocity,速度
 UObjectDisplayNames,RiverFlowmapDiffuse,RiverFlowmapDiffuse,河流流向图漫反射,River Flowmap Diffuse,河流流向圖漫反射
 UObjectDisplayNames,RiverFlowmapNormal,RiverFlowmapNormal,河流流向图法线,River Flowmap Normal,河流流向圖法線
-UObjectDisplayNames,滚动方块_C:切换XY轴方向,切换XY轴方向,切换XY轴方向,Switch XY Axis Direction,切換XY軸方向
+UObjectDisplayNames,滚动方块_C:切换XY轴方向,切换 XY轴方向,切换XY轴方向,Switch XY Axis Direction,切換XY軸方向
 UObjectDisplayNames,滚动方块_C:重力,重力,重力,Gravity,重力
 UObjectDisplayNames,滚动方块_C:速度（包含正负方向）,速度（包含正负方向）,速度（包含正负方向）,Speed (Including Positive/Negative Direction),速度（包含正負方向）
 UObjectDisplayNames,体积光,体积光,体积光,Volumetric Light,體積光
@@ -1247,29 +1247,29 @@ UObjectDisplayNames,场景捕获,场景捕获,场景捕获,Scene Capture,場景�
 UObjectDisplayNames,ABP_SandboxCharacter_C:起身过渡,起身过渡,起身过渡,Get Up Transition,起身過渡
 UObjectDisplayNames,ABP_SandboxCharacter_C:混合时间,混合时间,混合时间,Blend Time,混合時間
 UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:Looping,Looping,循环,Looping,循環
-UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:StartAt0,StartAt0,从0开始,Start At 0,從0開始
-UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:LeftFootTrack,LeftFootTrack,左脚轨道,Left Foot Track,左腳軌道
-UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:RightFootTrack,RightFootTrack,右脚轨道,Right Foot Track,右腳軌道
-UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:LeftPhaseTransform,LeftPhaseTransform,左相位变换,Left Phase Transform,左相位變換
-UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:RightPhaseTransform,RightPhaseTransform,右相位变换,Right Phase Transform,右相位變換
-UObjectDisplayNames,AM_OrientationWarpingAlpha_C:SamplesPerSecond,SamplesPerSecond,每秒采样,Samples Per Second,每秒採樣
-UObjectDisplayNames,AM_OrientationWarpingAlpha_C:CurveName,CurveName,曲线名称,Curve Name,曲線名稱
-UObjectDisplayNames,AM_OrientationWarpingAlpha_C:bDeleteCurveOnRevert,bDeleteCurveOnRevert,还原时删除曲线,Delete Curve On Revert,還原時刪除曲線
-UObjectDisplayNames,AM_OrientationWarpingAlpha_C:BlendInTime,BlendInTime,混合进入时间,Blend In Time,混合進入時間
-UObjectDisplayNames,AM_OrientationWarpingAlpha_C:RotationAngleThreshold,RotationAngleThreshold,旋转角度阈值,Rotation Angle Threshold,旋轉角度閾值
-UObjectDisplayNames,AM_OrientationWarpingAlpha_C:TranslationAngleThreshold,TranslationAngleThreshold,平移角度阈值,Translation Angle Threshold,平移角度閾值
-UObjectDisplayNames,AM_OrientationWarpingAlpha_C:bInvert,bInvert,反转,Invert,反轉
+UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:StartAt0,Start at 0,从0开始,Start At 0,從0開始
+UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:LeftFootTrack,Left Foot Track,左脚轨道,Left Foot Track,左腳軌道
+UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:RightFootTrack,Right Foot Track,右脚轨道,Right Foot Track,右腳軌道
+UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:LeftPhaseTransform,Left Phase Transform,左相位变换,Left Phase Transform,左相位變換
+UObjectDisplayNames,AM_BakePhaseCurveFromFootstepNotifies_C:RightPhaseTransform,Right Phase Transform,右相位变换,Right Phase Transform,右相位變換
+UObjectDisplayNames,AM_OrientationWarpingAlpha_C:SamplesPerSecond,Samples Per Second,每秒采样,Samples Per Second,每秒採樣
+UObjectDisplayNames,AM_OrientationWarpingAlpha_C:CurveName,Curve Name,曲线名称,Curve Name,曲線名稱
+UObjectDisplayNames,AM_OrientationWarpingAlpha_C:bDeleteCurveOnRevert,B Delete Curve on Revert,还原时删除曲线,Delete Curve On Revert,還原時刪除曲線
+UObjectDisplayNames,AM_OrientationWarpingAlpha_C:BlendInTime,Blend in Time,混合进入时间,Blend In Time,混合進入時間
+UObjectDisplayNames,AM_OrientationWarpingAlpha_C:RotationAngleThreshold,Rotation Angle Threshold,旋转角度阈值,Rotation Angle Threshold,旋轉角度閾值
+UObjectDisplayNames,AM_OrientationWarpingAlpha_C:TranslationAngleThreshold,Translation Angle Threshold,平移角度阈值,Translation Angle Threshold,平移角度閾值
+UObjectDisplayNames,AM_OrientationWarpingAlpha_C:bInvert,B Invert,反转,Invert,反轉
 UObjectDisplayNames,BP_AnimNotify_FoleyEvent_C:Event,Event,事件,Event,事件
 UObjectDisplayNames,BP_AnimNotify_FoleyEvent_C:Side,Side,侧边,Side,側邊
-UObjectDisplayNames,BP_AnimNotify_FoleyEvent_C:VolumeMultiplier,VolumeMultiplier,音量倍率,Volume Multiplier,音量倍率
-UObjectDisplayNames,BP_AnimNotify_FoleyEvent_C:PitchMultiplier,PitchMultiplier,音高倍率,Pitch Multiplier,音高倍率
+UObjectDisplayNames,BP_AnimNotify_FoleyEvent_C:VolumeMultiplier,Volume Multiplier,音量倍率,Volume Multiplier,音量倍率
+UObjectDisplayNames,BP_AnimNotify_FoleyEvent_C:PitchMultiplier,Pitch Multiplier,音高倍率,Pitch Multiplier,音高倍率
 UObjectDisplayNames,BP_AnimNotify_FoleyEvent_C:MC脚步声音效,MC脚步声音效,MC脚步声音效,MC Footstep Sound Effect,MC腳步聲音效
-UObjectDisplayNames,BP_NotifyState_EarlyTransition_C:TransitionDestination,TransitionDestination,过渡目的地,Transition Destination,過渡目的地
-UObjectDisplayNames,BP_NotifyState_EarlyTransition_C:TransitionCondition,TransitionCondition,过渡条件,Transition Condition,過渡條件
-UObjectDisplayNames,BP_NotifyState_EarlyTransition_C:GaitNotEqual,GaitNotEqual,步态不相等,Gait Not Equal,步態不相等
-UObjectDisplayNames,BP_NotifyState_MontageBlendOut_C:BlendOutCondition,BlendOutCondition,混合退出条件,Blend Out Condition,混合退出條件
-UObjectDisplayNames,BP_NotifyState_MontageBlendOut_C:BlendOutTime,BlendOutTime,混合退出时间,Blend Out Time,混合退出時間
-UObjectDisplayNames,BP_NotifyState_MontageBlendOut_C:BlendProfile,BlendProfile,混合配置文件,Blend Profile,混合配置文件
+UObjectDisplayNames,BP_NotifyState_EarlyTransition_C:TransitionDestination,Transition Destination,过渡目的地,Transition Destination,過渡目的地
+UObjectDisplayNames,BP_NotifyState_EarlyTransition_C:TransitionCondition,Transition Condition,过渡条件,Transition Condition,過渡條件
+UObjectDisplayNames,BP_NotifyState_EarlyTransition_C:GaitNotEqual,Gait Not Equal,步态不相等,Gait Not Equal,步態不相等
+UObjectDisplayNames,BP_NotifyState_MontageBlendOut_C:BlendOutCondition,Blend Out Condition,混合退出条件,Blend Out Condition,混合退出條件
+UObjectDisplayNames,BP_NotifyState_MontageBlendOut_C:BlendOutTime,Blend Out Time,混合退出时间,Blend Out Time,混合退出時間
+UObjectDisplayNames,BP_NotifyState_MontageBlendOut_C:BlendProfile,Blend Profile,混合配置文件,Blend Profile,混合配置文件
 UObjectDisplayNames,E_EarlyTransition_Condition.始终,始终,始终,Always,始終
 UObjectDisplayNames,E_EarlyTransition_Condition.步态不相等,步态不相等,步态不相等,Gait Not Equal,步態不相等
 UObjectDisplayNames,E_EarlyTransition_Destination.重新转场,重新转场,重新转场,Retransition,重新轉場
@@ -1289,11 +1289,11 @@ UObjectDisplayNames,E_CameraStyle.近距,近距,近距,Close,近距
 UObjectDisplayNames,S_CharacterPropertiesForCamera:CameraStyle_9_3AB8E4E240527073591DBC8A5CC26A59,CameraStyle,摄像机风格,Camera Style,攝像機風格
 UObjectDisplayNames,S_CharacterPropertiesForCamera:CameraMode_6_A59B5561435DC3553D7444B49C47015A,CameraMode,摄像机模式,Camera Mode,攝像機模式
 UObjectDisplayNames,S_CharacterPropertiesForCamera:Stance_10_65A83BF64BE8EDFA2FA9FC817B1ECD53,Stance,姿态,Stance,姿勢
-UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:CameraStyle,CameraStyle,摄像机风格,Camera Style,攝像機風格
-UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:WalkSpeeds,WalkSpeeds,走路速度,Walk Speeds,走路速度
-UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:RunSpeeds,RunSpeeds,跑步速度,Run Speeds,跑步速度
-UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:SprintSpeeds,SprintSpeeds,冲刺速度,Sprint Speeds,衝刺速度
-UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:CrouchSpeeds,CrouchSpeeds,蹲伏速度,Crouch Speeds,蹲伏速度
+UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:CameraStyle,Camera Style,摄像机风格,Camera Style,攝像機風格
+UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:WalkSpeeds,Walk Speeds,走路速度,Walk Speeds,走路速度
+UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:RunSpeeds,Run Speeds,跑步速度,Run Speeds,跑步速度
+UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:SprintSpeeds,Sprint Speeds,冲刺速度,Sprint Speeds,衝刺速度
+UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:CrouchSpeeds,Crouch Speeds,蹲伏速度,Crouch Speeds,蹲伏速度
 UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:头部模型,头部模型,头部模型,Head Mesh,頭部模型
 UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:身体模型,身体模型,身体模型,Body Mesh,身體模型
 UObjectDisplayNames,CBP_Sandbox第三人称运动匹配角色_C:右手物品,右手物品,右手物品,Right Hand Item,右手物品
@@ -1403,29 +1403,29 @@ UObjectDisplayNames,S_LevelStyle:FogDensity_22_21D76EA447CB464F8ECFC6B3D18938E0,
 UObjectDisplayNames,S_LevelStyle:DecalColor_12_1498C751435B031639098A8BF277CF4D,DecalColor,贴花颜色,Decal Color,貼花顏色
 UObjectDisplayNames,S_LevelStyle:BlockColors_19_BD7B5F9248A47F4BA4AEE2BCADEEA20F,BlockColors,方块颜色,Block Colors,方塊顏色
 UObjectDisplayNames,LevelBlock_C:Randomize Button,Randomize Button,随机化按钮,Randomize Button,隨機化按鈕
-UObjectDisplayNames,LevelBlock_C:MinTransformOffset,MinTransformOffset,最小变换偏移,Min Transform Offset,最小變換偏移
-UObjectDisplayNames,LevelBlock_C:MaxTransformOffset,MaxTransformOffset,最大变换偏移,Max Transform Offset,最大變換偏移
+UObjectDisplayNames,LevelBlock_C:MinTransformOffset,Min Transform Offset,最小变换偏移,Min Transform Offset,最小變換偏移
+UObjectDisplayNames,LevelBlock_C:MaxTransformOffset,Max Transform Offset,最大变换偏移,Max Transform Offset,最大變換偏移
 UObjectDisplayNames,LevelBlock_C:Name,Name,名称,Name,名稱
-UObjectDisplayNames,LevelBlock_C:AutoNameFromHeight,AutoNameFromHeight,从高度自动命名,Auto Name From Height,從高度自動命名
-UObjectDisplayNames,LevelBlock_C:UseLevelVisualsColor,UseLevelVisualsColor,使用关卡视觉颜色,Use Level Visuals Color,使用關卡視覺顏色
-UObjectDisplayNames,LevelBlock_C:ColorGroup,ColorGroup,颜色组,Color Group,顏色組
-UObjectDisplayNames,LevelBlock_C:MaterialParams,MaterialParams,材质参数,Material Params,材質參數
-UObjectDisplayNames,LevelBlock_C:BaseMaterial,BaseMaterial,基础材质,Base Material,基礎材質
-UObjectDisplayNames,LevelButton_C:ButtonName,ButtonName,按钮名称,Button Name,按鈕名稱
-UObjectDisplayNames,LevelButton_C:ExecuteConsoleCommand,ExecuteConsoleCommand,执行控制台命令,Execute Console Command,執行控制台命令
-UObjectDisplayNames,LevelButton_C:ConsoleCommand,ConsoleCommand,控制台命令,Console Command,控制台命令
+UObjectDisplayNames,LevelBlock_C:AutoNameFromHeight,Auto Name from Height,从高度自动命名,Auto Name From Height,從高度自動命名
+UObjectDisplayNames,LevelBlock_C:UseLevelVisualsColor,Use Level Visuals Color,使用关卡视觉颜色,Use Level Visuals Color,使用關卡視覺顏色
+UObjectDisplayNames,LevelBlock_C:ColorGroup,Color Group,颜色组,Color Group,顏色組
+UObjectDisplayNames,LevelBlock_C:MaterialParams,Material Params,材质参数,Material Params,材質參數
+UObjectDisplayNames,LevelBlock_C:BaseMaterial,Base Material,基础材质,Base Material,基礎材質
+UObjectDisplayNames,LevelButton_C:ButtonName,Button Name,按钮名称,Button Name,按鈕名稱
+UObjectDisplayNames,LevelButton_C:ExecuteConsoleCommand,Execute Console Command,执行控制台命令,Execute Console Command,執行控制台命令
+UObjectDisplayNames,LevelButton_C:ConsoleCommand,Console Command,控制台命令,Console Command,控制台命令
 UObjectDisplayNames,LevelButton_C:Color,Color,颜色,Color,顏色
-UObjectDisplayNames,LevelButton_C:TextColor,TextColor,文本颜色,Text Color,文字顏色
-UObjectDisplayNames,LevelButton_C:PlateScale,PlateScale,平板缩放,Plate Scale,平板縮放
-UObjectDisplayNames,LevelVisuals_C:StyleIndex,StyleIndex,风格索引,Style Index,風格索引
-UObjectDisplayNames,LevelVisuals_C:LevelStyles,LevelStyles,关卡风格,Level Styles,關卡風格
+UObjectDisplayNames,LevelButton_C:TextColor,Text Color,文本颜色,Text Color,文字顏色
+UObjectDisplayNames,LevelButton_C:PlateScale,Plate Scale,平板缩放,Plate Scale,平板縮放
+UObjectDisplayNames,LevelVisuals_C:StyleIndex,Style Index,风格索引,Style Index,風格索引
+UObjectDisplayNames,LevelVisuals_C:LevelStyles,Level Styles,关卡风格,Level Styles,關卡風格
 UObjectDisplayNames,LevelVisuals_C:Landscape,Landscape,地形,Landscape,地形
 UObjectDisplayNames,Metallic,Metallic,金属度,Metallic,金屬度
 UObjectDisplayNames,Roughness,Roughness,粗糙度,Roughness,粗糙度
 UObjectDisplayNames,Base Color,Base Color,基础颜色,Base Color,基礎顏色
-UObjectDisplayNames,Teleporter_Destination_C:DestinationName,DestinationName,目的地名称,Destination Name,目的地名稱
+UObjectDisplayNames,Teleporter_Destination_C:DestinationName,Destination Name,目的地名称,Destination Name,目的地名稱
 UObjectDisplayNames,Teleporter_Destination_C:Color,Color,颜色,Color,顏色
-UObjectDisplayNames,Teleporter_Destination_C:PlateScale,PlateScale,平板缩放,Plate Scale,平板縮放
+UObjectDisplayNames,Teleporter_Destination_C:PlateScale,Plate Scale,平板缩放,Plate Scale,平板縮放
 UObjectDisplayNames,Teleporter_Sender_C:Destination,Destination,目的地,Destination,目的地
 UObjectDisplayNames,飞行摄像机（Do_a_barrel_roll）_C:键盘灵敏度,键盘灵敏度,键盘灵敏度,Keyboard Sensitivity,鍵盤靈敏度
 UObjectDisplayNames,飞行摄像机（Do_a_barrel_roll）_C:鼠标灵敏度,鼠标灵敏度,鼠标灵敏度,Mouse Sensitivity,滑鼠靈敏度
@@ -1433,7 +1433,7 @@ UObjectDisplayNames,飞行摄像机（Do_a_barrel_roll）_C:空气阻力减速,�
 UObjectDisplayNames,飞行摄像机（Do_a_barrel_roll）_C:最大速度,最大速度,最大速度,Max Speed,最大速度
 UObjectDisplayNames,飞行摄像机（Do_a_barrel_roll）_C:横滚带动偏航转向速率,横滚带动偏航转向速率,横滚带动偏航转向速率,Roll Driven Yaw Turn Rate,橫滾帶動偏航轉向速率
 UObjectDisplayNames,飞行摄像机（Do_a_barrel_roll）_C:摄像机焦距,摄像机焦距,摄像机焦距,Camera Focal Length,攝像機焦距
-UObjectDisplayNames,飞行摄像机（Do_a_barrel_roll）_C:反转鼠标Y轴,反转鼠标Y轴,反转鼠标Y轴,Invert Mouse Y Axis,反轉滑鼠Y軸
+UObjectDisplayNames,飞行摄像机（Do_a_barrel_roll）_C:反转鼠标Y轴,反转鼠标 Y轴,反转鼠标Y轴,Invert Mouse Y Axis,反轉滑鼠Y軸
 UObjectDisplayNames,飞行摄像机（Do_a_barrel_roll）_C:硬切,硬切,硬切,Hard Cut,硬切
 UObjectDisplayNames,Mineprep_C:优化材质,优化材质,优化材质,Optimize Material,優化材質
 UObjectDisplayNames,Mineprep_C:导入纹理,导入纹理,导入纹理,Import Texture,匯入紋理
@@ -1464,14 +1464,14 @@ UObjectDisplayNames,MC场景编辑器属性集_C:选中方块序号,选中方块
 UObjectDisplayNames,MC场景编辑器属性集_C:物品栏缩放,物品栏缩放,物品栏缩放,Inventory Scale,物品欄縮放
 UObjectDisplayNames,MC场景编辑器属性集_C:保存方块路径,保存方块路径,保存方块路径,Save Block Path,儲存方塊路徑
 UObjectDisplayNames,MC场景编辑器属性集_C:运行时破坏方块时间,运行时破坏方块时间,运行时破坏方块时间,Runtime Destroy Block Time,運行時破壞方塊時間
-UObjectDisplayNames,MC场景编辑器属性集_C:放置/破坏距离(m),放置/破坏距离(m),放置/破坏距离(m),Place/Destroy Distance(m),放置/破壞距離(m)
-UObjectDisplayNames,MC场景编辑器属性集_C:长按触发间隔(s),长按触发间隔(s),长按触发间隔(s),Long Press Trigger Interval(s),長按觸發間隔(s)
+UObjectDisplayNames,MC场景编辑器属性集_C:放置/破坏距离(m),放置/破坏距离(M),放置/破坏距离(m),Place/Destroy Distance(m),放置/破壞距離(m)
+UObjectDisplayNames,MC场景编辑器属性集_C:长按触发间隔(s),长按触发间隔(S),长按触发间隔(s),Long Press Trigger Interval(s),長按觸發間隔(s)
 UObjectDisplayNames,其他功能子面板_C:生成后期处理体积,生成后期处理体积,生成后期处理体积,Generate Post Process Volume,生成後期處理體積
-UObjectDisplayNames,其他功能子面板_C:销毁类的所有Actor,销毁类的所有Actor,销毁类的所有Actor,Destroy All Actors of Class,銷毀類的所有Actor
+UObjectDisplayNames,其他功能子面板_C:销毁类的所有Actor,销毁类的所有 Actor,销毁类的所有Actor,Destroy All Actors of Class,銷毀類的所有Actor
 UObjectDisplayNames,其他功能子面板_C:重载所有材质,重载所有材质,重载所有材质,Reload All Materials,重新載入所有材質
 UObjectDisplayNames,其他功能子面板_C:整理录制的动画,整理录制的动画,整理录制的动画,Organize Recorded Animations,整理錄製的動畫
 UObjectDisplayNames,其他功能子面板_C:LOD&Nanite函数,LOD&Nanite函数,LOD&Nanite函数,LOD & Nanite Functions,LOD&Nanite函數
-UObjectDisplayNames,其他功能子面板_C:绑定EV100可视性,绑定EV100可视性,绑定EV100可视性,Bind EV100 Visibility,綁定EV100可見性
+UObjectDisplayNames,其他功能子面板_C:绑定EV100可视性,绑定 EV100可视性,绑定EV100可视性,Bind EV100 Visibility,綁定EV100可見性
 UObjectDisplayNames,右键Actor函数_C:简单描边,简单描边,简单描边,Simple Outline,簡單描邊
 UObjectDisplayNames,右键Actor函数_C:用作遮罩层,用作遮罩层,用作遮罩层,Use as Mask Layer,用作遮罩層
 UObjectDisplayNames,右键Actor函数_C:随机初始动画时间,随机初始动画时间,随机初始动画时间,Random Initial Anim Time,隨機初始動畫時間
@@ -1493,7 +1493,7 @@ UObjectDisplayNames,可右键按钮_C:边距,边距,边距,Margin,邊距
 UObjectDisplayNames,可右键按钮_C:缩放方式,缩放方式,缩放方式,Scaling Mode,縮放方式
 UObjectDisplayNames,可右键按钮_C:按钮样式,按钮样式,按钮样式,Button Style,按鈕樣式
 UObjectDisplayNames,可点击图片_C:纹理贴图,纹理贴图,纹理贴图,Texture Map,紋理貼圖
-UObjectDisplayNames,可点击图片_C:纹理尺寸XY/缩放XY,纹理尺寸XY/缩放XY,纹理尺寸XY/缩放XY,Texture Size XY/Scale XY,紋理尺寸XY/縮放XY
+UObjectDisplayNames,可点击图片_C:纹理尺寸XY/缩放XY,纹理尺寸 XY/缩放XY,纹理尺寸XY/缩放XY,Texture Size XY/Scale XY,紋理尺寸XY/縮放XY
 UObjectDisplayNames,可点击图片_C:图片边框填充,图片边框填充,图片边框填充,Image Border Fill,圖片邊框填充
 UObjectDisplayNames,可点击图片_C:初始颜色,初始颜色,初始颜色,Initial Color,初始顏色
 UObjectDisplayNames,可点击图片_C:序号,序号,序号,Index,序號
@@ -1516,20 +1516,20 @@ UObjectDisplayNames,材质参数栏_C:默认值/下限/上限,默认值/下限/�
 UObjectDisplayNames,材质参数栏_C:解锁后下限/上限,解锁后下限/上限,解锁后下限/上限,Unlocked Min/Max,解鎖後下限/上限
 UObjectDisplayNames,材质参数栏_C:滑条移动差量,滑条移动差量,滑条移动差量,Slider Move Delta,滑條移動差量
 UObjectDisplayNames,材质参数栏_C:映射到颜色参数,映射到颜色参数,映射到颜色参数,Map to Color Parameter,映射到顏色參數
-UObjectDisplayNames,材质参数栏_C:映射通道0~3,映射通道0~3,映射通道0~3,Map Channels 0~3,映射通道0~3
+UObjectDisplayNames,材质参数栏_C:映射通道0~3,映射通道 0~3,映射通道0~3,Map Channels 0~3,映射通道0~3
 UObjectDisplayNames,材质参数栏_C:颜色参数序号,颜色参数序号,颜色参数序号,Color Parameter Index,顏色參數序號
-UObjectDisplayNames,材质参数栏_C:颜色0,颜色0,颜色0,Color0,顏色0
-UObjectDisplayNames,材质参数栏_C:颜色1,颜色1,颜色1,Color1,顏色1
-UObjectDisplayNames,材质参数栏_C:颜色2,颜色2,颜色2,Color2,顏色2
+UObjectDisplayNames,材质参数栏_C:颜色0,颜色 0,颜色0,Color0,顏色0
+UObjectDisplayNames,材质参数栏_C:颜色1,颜色 1,颜色1,Color1,顏色1
+UObjectDisplayNames,材质参数栏_C:颜色2,颜色 2,颜色2,Color2,顏色2
 UObjectDisplayNames,材质参数栏_C:缩写显示名,缩写显示名,缩写显示名,Abbreviated Display Name,縮寫顯示名
-UObjectDisplayNames,材质参数栏_C:OnMouseMove_🔲实时同步,OnMouseMove_🔲实时同步,OnMouseMove_🔲实时同步,OnMouseMove_🔲Real-time Sync,OnMouseMove_🔲即時同步
-UObjectDisplayNames,材质参数栏_C:OnMouseMove_🔲启用,OnMouseMove_🔲启用,OnMouseMove_🔲启用,OnMouseMove_🔲Enable,OnMouseMove_🔲啟用
-UObjectDisplayNames,材质参数栏_C:OnMouseMove_🔲滑条范围,OnMouseMove_🔲滑条范围,OnMouseMove_🔲滑条范围,OnMouseMove_🔲Slider Range,OnMouseMove_🔲滑條範圍
+UObjectDisplayNames,材质参数栏_C:OnMouseMove_🔲实时同步,On Mouse Move 🔲实时同步,OnMouseMove_🔲实时同步,OnMouseMove_🔲Real-time Sync,OnMouseMove_🔲即時同步
+UObjectDisplayNames,材质参数栏_C:OnMouseMove_🔲启用,On Mouse Move 🔲启用,OnMouseMove_🔲启用,OnMouseMove_🔲Enable,OnMouseMove_🔲啟用
+UObjectDisplayNames,材质参数栏_C:OnMouseMove_🔲滑条范围,On Mouse Move 🔲滑条范围,OnMouseMove_🔲滑条范围,OnMouseMove_🔲Slider Range,OnMouseMove_🔲滑條範圍
 UObjectDisplayNames,物品栏方格_C:序号,序号,序号,Index,序號
 UObjectDisplayNames,自定义控件总类_C:Script,Script,脚本,Script,腳本
 UObjectDisplayNames,录制子面板_C:更新镜头试拍录制器,更新镜头试拍录制器,更新镜头试拍录制器,Update Take Recorder,更新鏡頭試拍錄製器
 UObjectDisplayNames,插件函数库_C:获取设置ini,获取设置ini,获取设置ini,Get Settings Ini,獲取設定ini
-UObjectDisplayNames,插件函数库_C:最后选定的Actor,最后选定的Actor,最后选定的Actor,Last Selected Actor,最後選定的Actor
+UObjectDisplayNames,插件函数库_C:最后选定的Actor,最后选定的 Actor,最后选定的Actor,Last Selected Actor,最後選定的Actor
 UObjectDisplayNames,插件函数库_C:写入设置ini,写入设置ini,写入设置ini,Write Settings Ini,寫入設定ini
 UObjectDisplayNames,插件函数库_C:读取段落某格文本,读取段落某格文本,读取段落某格文本,Read Section Cell Text,讀取段落某格文本
 UObjectDisplayNames,插件函数库_C:读取段落某格文本+注释,读取段落某格文本+注释,读取段落某格文本+注释,Read Section Cell Text + Comment,讀取段落某格文本+註釋
@@ -1537,7 +1537,7 @@ UObjectDisplayNames,插件函数库_C:读取某格注释,读取某格注释,读�
 UObjectDisplayNames,插件函数库_C:刷新状态,刷新状态,刷新状态,Refresh Status,刷新狀態
 UObjectDisplayNames,插件函数库_C:放置模型并选中,放置模型并选中,放置模型并选中,Place Model and Select,放置模型並選中
 UObjectDisplayNames,插件函数库_C:从类放置模型并选中,从类放置模型并选中,从类放置模型并选中,Place Model from Class and Select,從類放置模型並選中
-UObjectDisplayNames,插件函数库_C:设置Actor标签+后缀,设置Actor标签+后缀,设置Actor标签+后缀,Set Actor Tag + Suffix,設定Actor標籤+後綴
+UObjectDisplayNames,插件函数库_C:设置Actor标签+后缀,设置 Actor标签+后缀,设置Actor标签+后缀,Set Actor Tag + Suffix,設定Actor標籤+後綴
 UObjectDisplayNames,插件函数库_C:覆盖设置ini,覆盖设置ini,覆盖设置ini,Overwrite Settings Ini,覆蓋設定ini
 UObjectDisplayNames,插件函数库_C:插件面板,插件面板,插件面板,Plugin Panel,插件面板
 UObjectDisplayNames,插件函数库_C:获取处理对象,获取处理对象,获取处理对象,Get Processing Object,獲取處理物件
@@ -1546,7 +1546,7 @@ UObjectDisplayNames,插件函数库_C:限制小数位数,限制小数位数,限�
 UObjectDisplayNames,插件函数库_C:段内搜索名称所在行,段内搜索名称所在行,段内搜索名称所在行,Search Name Row in Section,段內搜尋名稱所在行
 UObjectDisplayNames,插件函数库_C:全语言搜索列,全语言搜索列,全语言搜索列,Search Column in All Languages,全語言搜尋列
 UObjectDisplayNames,插件函数库_C:刷新枚举选项,刷新枚举选项,刷新枚举选项,Refresh Enum Options,刷新枚舉選項
-UObjectDisplayNames,插件函数库_C:销毁类的所有Actor,销毁类的所有Actor,销毁类的所有Actor,Destroy All Actors of Class,銷毀類的所有Actor
+UObjectDisplayNames,插件函数库_C:销毁类的所有Actor,销毁类的所有 Actor,销毁类的所有Actor,Destroy All Actors of Class,銷毀類的所有Actor
 UObjectDisplayNames,插件函数库_C:检测实验性功能,检测实验性功能,检测实验性功能,Detect Experimental Features,檢測實驗性功能
 UObjectDisplayNames,插件函数库_C:更新本地化文本,更新本地化文本,更新本地化文本,Update Localized Text,更新本地化文本
 UObjectDisplayNames,插件函数库_C:添加tag,添加tag,添加tag,Add Tag,添加tag
@@ -1556,7 +1556,7 @@ UObjectDisplayNames,插件函数库_C:编辑器视口线条追踪,编辑器视�
 UObjectDisplayNames,插件函数库_C:递归搜索材质节点,递归搜索材质节点,递归搜索材质节点,Recursive Search Material Nodes,遞歸搜尋材質節點
 UObjectDisplayNames,插件函数库_C:导入模型,导入模型,导入模型,Import Model,匯入模型
 UObjectDisplayNames,插件函数库_C:是黑白图像,是黑白图像,是黑白图像,Is Black and White Image,是黑白圖像
-UObjectDisplayNames,插件函数库_C:添加选中Actor,添加选中Actor,添加选中Actor,Add Selected Actor,添加選中Actor
+UObjectDisplayNames,插件函数库_C:添加选中Actor,添加选中 Actor,添加选中Actor,Add Selected Actor,添加選中Actor
 UObjectDisplayNames,插件设置子面板_C:加载材质实例,加载材质实例,加载材质实例,Load Material Instance,載入材質實例
 UObjectDisplayNames,插件设置子面板_C:内存预加载对象,内存预加载对象,内存预加载对象,Memory Preload Objects,記憶體預載入物件
 UObjectDisplayNames,插件设置子面板_C:加载刷新对象,加载刷新对象,加载刷新对象,Load Refresh Objects,載入刷新物件
@@ -1566,7 +1566,7 @@ UObjectDisplayNames,渲染输出子面板_C:单独渲染原图,单独渲染原�
 UObjectDisplayNames,渲染输出子面板_C:单独渲染其他Actor,单独渲染其他 Actor,单独渲染其他Actor,Render Other Actors,單獨渲染其他Actor
 UObjectDisplayNames,渲染输出子面板_C:开放世界数据层,开放世界数据层,开放世界数据层,Open-World Data Layers,開放世界數據層
 UObjectDisplayNames,渲染输出子面板_C:加载渲染预设,加载渲染预设,加载渲染预设,Load Render Preset,載入渲染預設
-UObjectDisplayNames,渲染输出子面板_C:获取GPU型号,获取GPU型号,获取GPU型号,Get GPU Model,獲取GPU型號
+UObjectDisplayNames,渲染输出子面板_C:获取GPU型号,获取 GPU型号,获取GPU型号,Get GPU Model,獲取GPU型號
 UObjectDisplayNames,生成器子面板_C:附加粒子（模型/骨骼）,附加粒子（模型/骨骼）,附加粒子（模型/骨骼）,Attach Particles (Model/Skeleton),附加粒子（模型/骨骼）
 UObjectDisplayNames,生成器子面板_C:优化材质,优化材质,优化材质,Optimize Material,優化材質
 UObjectDisplayNames,生成器子面板_C:简单碰撞+准备材质,简单碰撞+准备材质,简单碰撞+准备材质,Simple Collision + Prepare Material,簡單碰撞+準備材質
@@ -1588,7 +1588,7 @@ UObjectDisplayNames,媒体抠像播放器_C:拉伸图像,拉伸图像,拉伸图�
 UObjectDisplayNames,媒体抠像播放器_C:保持原色(无光照),保持原色(无光照),保持原色(无光照),Preserve Original Color (No Lighting),保持原色(無光照)
 UObjectDisplayNames,媒体抠像播放器_C:启用辅助碰撞箱,启用辅助碰撞箱,启用辅助碰撞箱,Enable Auxiliary Collision Box,啟用輔助碰撞箱
 UObjectDisplayNames,媒体抠像播放器_C:PCGactor,PCGactor,PCG Actor,PCG Actor,PCG Actor
-UObjectDisplayNames,媒体抠像播放器_C:随机种子Seed,随机种子Seed,随机种子Seed,Random Seed,隨機種子
+UObjectDisplayNames,媒体抠像播放器_C:随机种子Seed,随机种子 Seed,随机种子Seed,Random Seed,隨機種子
 UObjectDisplayNames,媒体抠像播放器_C:-还原,-还原,-还原,-Restore,-還原
 UObjectDisplayNames,媒体抠像播放器_C:阴影,阴影,阴影,Shadows,陰影
 UObjectDisplayNames,媒体抠像播放器_C:高光,高光,高光,Specular,高光
@@ -1886,26 +1886,17 @@ UObjectDisplayNames,MC运动匹配动画蓝图_C:起身过渡,起身过渡,起�
 UObjectDisplayNames,MC运动匹配动画蓝图_C:混合时间,混合时间,混合时间,Blend Time,混合時間
 UObjectDisplayNames,随机观众模型_C:随机初始动画->权重/速度/偏移,随机初始动画->权重/速度/偏移,随机初始动画->权重/速度/偏移,Random Initial Animation->Weight/Speed/Offset,隨機初始動畫->權重/速度/偏移
 UObjectDisplayNames,随机观众模型_C:随机皮肤->权重,随机皮肤->权重,随机皮肤->权重,Random Skin->Weight,隨機皮膚->權重
-,,,,,
-,,,,,
 UObjectDisplayNames,Stencil遮罩,Stencil遮罩,Stencil遮罩,Stencil Mask,Stencil遮罩
 UObjectDisplayNames,次表面颜色+透射,次表面颜色+透射,次表面颜色+透射,SSS Color + Transmit,次表面顔色+透射
-UObjectDisplayNames,不透明度,不透明度,不透明度,Opacity,不透明度
 UObjectDisplayNames,动画速度,动画速度,动画速度,Anim Speed,動畫速度
 UObjectDisplayNames,动画渐变,动画渐变,动画渐变,Gradient Anim,動畫漸變
 UObjectDisplayNames,附魔缩放,附魔缩放,附魔缩放,Enchant Scale,附魔縮放
 UObjectDisplayNames,附魔速度,附魔速度,附魔速度,Enchant Speed,附魔速度
 UObjectDisplayNames,附魔对比度,附魔对比度,附魔对比度,Enchant Contrast,附魔對比度
-UObjectDisplayNames,折射率,折射率,折射率,Refraction IOR,折射率
-UObjectDisplayNames,模糊,模糊,模糊,Blur,模糊
 UObjectDisplayNames,自定义,自定义,自定义,Custom,自定義
-UObjectDisplayNames,覆层颜色,覆层颜色,覆层颜色,Overlay Color,覆層顔色
-UObjectDisplayNames,Stencil覆层贴图遮罩,Stencil覆层贴图遮罩,覆层贴图遮罩,Overlay Mask,覆層貼圖遮罩
 UObjectDisplayNames,覆层遮罩,覆层遮罩,覆层遮罩,Overlay Mask,覆層遮罩
 UObjectDisplayNames,创建当前材质的副本,创建当前材质的副本,创建当前材质的副本,Create a copy,創建當前材質的副本
 UObjectDisplayNames,孔隙率,孔隙率,孔隙率,Porosity,孔隙率
-,,,,,
-,,,,,
 UObjectCategory,🚩时间线 - 创建事件关键帧,🚩时间线 - 创建事件关键帧,🚩时间线 - 创建事件关键帧,🚩Timeline - Create Event Keys,🚩時間綫-創建事件關鍵幀
 UObjectCategory,Mineprep编辑器快捷键绑定,Mineprep编辑器快捷键绑定,Mineprep编辑器快捷键绑定,Mineprep Editor Shortcut Bindings,Mineprep編輯器快捷鍵綁定
 UObjectCategory,"分层渲染（输出多个文件, 每层背景透明）","分层渲染（输出多个文件, 每层背景透明）","分层渲染（输出多个文件, 每层背景透明）","Render Layers (Multiple output, transparent background)",分層渲染（輸出多個文件，每層背景透明）
@@ -1913,9 +1904,6 @@ UObjectCategory,Default|GPU材质场,Default|GPU材质场,GPU材质场,GPU Mater
 UObjectDisplayNames,粒子生成,粒子生成,粒子生成,Particle Spawn,粒子生成
 UObjectDisplayNames,力场,力场,力场,Force Field,力場
 UObjectDisplayNames,子粒子,子粒子,子粒子,Sub-Particles,子粒子
-UObjectDisplayNames,植物种类基础密度(%),植物种类基础密度(%),植物种类基础密度(%),Base Density for Plant Type (%),植物種類基礎密度(%)
-UObjectDisplayNames,环境碰撞,环境碰撞,环境碰撞,Environmental Collision,環境碰撞
-UObjectDisplayNames,涡旋力/中心吸引,涡旋力/中心吸引,涡旋力/中心吸引,Vortex Force / Attraction,渦旋力/中心吸引
 UObjectDisplayNames,无,无,无,None,無
 UObjectDisplayNames,线性力,线性力,线性力,Linear Force,線性力
 UObjectDisplayNames,线性速度,线性速度,线性速度,Linear Velocity,線性速度
@@ -1932,8 +1920,6 @@ UObjectDisplayNames,角扭矩+角速度,角扭矩+角速度,角扭矩+角速度,
 UObjectDisplayNames,角扭矩+角速度+线性力,角扭矩+角速度+线性力,角扭矩+角速度+线性力,Angular Torque + Angular Velocity + Linear Force,角扭矩+角速度+線性力
 UObjectDisplayNames,角扭矩+角速度+线性速度,角扭矩+角速度+线性速度,角扭矩+角速度+线性速度,Angular Torque + Angular Velocity + Linear Velocity,角扭矩+角速度+線性速度
 UObjectDisplayNames,角扭矩+角速度+线性速度+线性力,角扭矩+角速度+线性速度+线性力,角扭矩+角速度+线性速度+线性力,Angular Torque + Angular Velocity + Linear Velocity + Linear Force,角扭矩+角速度+線性速度+線性力
-,,,,,
-,,,,,
 UObjectDisplayNames,渲染图像,渲染图像,渲染图像,Render Image,渲染圖像
 UObjectDisplayNames,渲染动画,渲染动画,渲染动画,Render Animation,渲染動畫
 UObjectDisplayNames,打开输出文件夹,打开输出文件夹,打开输出文件夹,Open Output Folder,打開輸出文件夾
@@ -1945,10 +1931,6 @@ UObjectDisplayNames,① 保存渲染设置并切换空关卡,① 保存渲染设
 UObjectDisplayNames,② 从空关卡渲染动画(节约显存),② 从空关卡渲染动画(节约显存),② 从空关卡渲染动画(节约显存),② Then render animation (save VRAM),② 從空關卡渲染動畫(節省顯存)
 UObjectDisplayNames,添加批量播片模板,添加批量播片模板,添加批量播片模板,Add Batch Playing Sequence Template,添加批量播片模板
 UObjectDisplayNames,🎬 渲染带HDR增益图的jpg,🎬 渲染带HDR增益图的jpg,🎬 渲染带HDR增益图的jpg,🎬 Render jpg with HDR Gainmap,🎬 渲染帶HDR增益圖的jpg
-,,,,,
-,,,,,
-,,,,,
-,,,,,
 NiagaraOpInfo,Abs Name,Abs,绝对值 abs,Abs,絕對值 abs
 NiagaraOpInfo,Negate Name,Negate,取反 -,Negate,取反 -
 NiagaraOpInfo,Exp Name,Exp,exp (e^x),Exp,exp (e^x)
@@ -1974,7 +1956,6 @@ NiagaraOpInfo,Max Name,Max,最大值 max,Max,最大值 max
 NiagaraOpInfo,Min Name,Min,最小值 min,Min,最小值 min
 NiagaraOpInfo,Distance Name,Distance,距离 distance,Distance,距離 distance
 NiagaraSchema,NiagaraStaticSwitchMenuDesc,Static Switch,静态开关switch,Static Switch,靜態開關switch
-,,,,,
 UObjectDisplayNames,批量冲击,批量冲击,批量冲击,Batch Impulse,批量衝擊
 UObjectDisplayNames,批量瘫痪,批量瘫痪,批量瘫痪,Batch Paralyze,批量癱瘓
 UObjectDisplayNames,批量跳跃,批量跳跃,批量跳跃,Batch Jump,批量跳躍
@@ -2002,12 +1983,89 @@ UObjectDisplayNames,NPC事件,NPC事件,NPC事件,NPC Event,NPC事件
 UObjectDisplayNames,播片,播片,播片,Play Sequence,播片
 UObjectDisplayNames,破坏,破坏,破坏,Destroy,破壞
 UObjectDisplayNames,物理模拟(瘫痪),物理模拟(瘫痪),物理模拟(瘫痪),Physics Simulation (Paralyzed),物理模擬(癱瘓)
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
 NiagaraOverviewStack,SetVariablesPrefix,Set:,设置:,Set:,設置:
 MoviePipelinePIEExecutor,UnsavedMapFailureDialog,"One or more jobs in the queue have an unsaved map as their target map. Maps must be saved at least once before rendering, and then the job must be manually updated to point to the newly saved map.",地图未保存，请保存后再渲染,"One or more jobs in the queue have an unsaved map as their target map. Maps must be saved at least once before rendering, and then the job must be manually updated to point to the newly saved map.",地圖尚未儲存，請先儲存後再進行渲染
 MovieSceneAudioSection,PitchText,Pitch,音高,Pitch,音高
 PCGCustomHLSLElement,NodeTitle,Custom HLSL,Custom HLSL,Custom HLSL,Custom HLSL
+UObjectDisplayNames,眨眼时长,眨眼时长,眨眼时长,Blink Duration,眨眼時長
+UObjectDisplayNames,眨眼间隔,眨眼间隔,眨眼间隔,Blink Interval,眨眼間隔
+UObjectDisplayNames,纹理宽度,纹理宽度,纹理宽度,Texture Width,紋理寬度
+UObjectDisplayNames,随机颜色,随机颜色,随机颜色,Random Color,隨機顏色
+UObjectDisplayNames,随机区域亮度阈值,随机区域亮度阈值,随机区域亮度阈值,Random Area Brightness Threshold,隨機區域亮度閾值
+UObjectDisplayNames,随机动画索引下限,随机动画索引下限,随机动画索引下限,Random Anim Index Min,隨機動畫索引下限
+UObjectDisplayNames,随机动画索引上限,随机动画索引上限,随机动画索引上限,Random Anim Index Max,隨機動畫索引上限
+UObjectDisplayNames,随机动画偏移,随机动画偏移,随机动画偏移,Random Anim Offset,隨機動畫偏移
+UObjectDisplayNames,MC导播台_C:后期处理体积框作遮罩场,后期处理体积框作遮罩场,后期处理体积框作遮罩场,Post Process Volume Box as Mask Field,後期處理體積框作遮罩場
+UObjectDisplayNames,实例化方块_C:自定义脚本,自定义脚本,自定义脚本,Custom Script,自訂腳本
+UObjectDisplayNames,实例化方块_C:生成,生成,生成,Generate,生成
+UObjectDisplayNames,自动跳跃攀爬避障.避障,避障,避障,Avoidance,避障
+UObjectDisplayNames,在地面上生成-距离,在地面上生成-距离,在地面上生成-距离,Spawn on Ground-Distance,在地面上生成-距離
+UObjectDisplayNames,待机/走路/跑步/交互动画挑选范围,待机/走路/跑步/交互动画挑选范围,待机/走路/跑步/交互动画挑选范围,Idle/Walk/Run/Interact Anim Selection Range,待機/走路/跑步/交互動畫挑選範圍
+UObjectDisplayNames,装备指定索引,装备指定索引,装备指定索引,Equipment Specified Index,裝備指定索引
+UObjectDisplayNames,粒子交互场_C:提示,提示,提示,Tooltip,提示
+UObjectDisplayNames,E_EarlyTransition_Condition.Always,Always,始终,Always,始終
+UObjectDisplayNames,E_EarlyTransition_Condition.GaitNotEqual,GaitNotEqual,步态不相等,Gait Not Equal,步態不相等
+UObjectDisplayNames,E_EarlyTransition_Destination.Re-Transition,Re-Transition,重新转场,Re-Transition,重新轉場
+UObjectDisplayNames,E_EarlyTransition_Destination.TransitionToLoop,Transition To Loop,过渡到循环,Transition to Loop,過渡到循環
+UObjectDisplayNames,E_FoleyEventSide.None,None,无,None,無
+UObjectDisplayNames,E_FoleyEventSide.Left,Left,左,Left,左
+UObjectDisplayNames,E_FoleyEventSide.Right,Right,右,Right,右
+UObjectDisplayNames,E_TraversalBlendOutCondition.ForceBlendOut,Force Blend Out,强制混合退出,Force Blend Out,強制混合退出
+UObjectDisplayNames,E_TraversalBlendOutCondition.WithMovementInput,With Movement Input,有移动输入,With Movement Input,有移動輸入
+UObjectDisplayNames,E_TraversalBlendOutCondition.IfFalling,If Falling,下落时,If Falling,下落時
+UObjectDisplayNames,E_CameraMode.FreeCam,FreeCam,自由摄像机,FreeCam,自由攝像機
+UObjectDisplayNames,E_CameraMode.Strafe,Strafe,侧移,Strafe,側移
+UObjectDisplayNames,E_CameraMode.Aim,Aim,瞄准,Aim,瞄準
+UObjectDisplayNames,E_CameraStyle.Far,Far,远距,Far,遠距
+UObjectDisplayNames,E_CameraStyle.Balanced,Balanced,平衡,Balanced,平衡
+UObjectDisplayNames,E_CameraStyle.Close,Close,近距,Close,近距
+UObjectDisplayNames,E_AnalogStickBehavior.FixedSpeed-SingleGait,Fixed Speed - Single Gait,固定速度 - 单步态,Fixed Speed - Single Gait,固定速度 - 單步態
+UObjectDisplayNames,E_AnalogStickBehavior.FixedSpeed-Walk/Run,Fixed Speed - Walk / Run,固定速度 - 走/跑,Fixed Speed - Walk / Run,固定速度 - 走/跑
+UObjectDisplayNames,E_AnalogStickBehavior.VariableSpeed-SingleGait,Variable Speed - Single Gait,可变速度 - 单步态,Variable Speed - Single Gait,可變速度 - 單步態
+UObjectDisplayNames,E_AnalogStickBehavior.VariableSpeed-Walk/Run,Variable Speed - Walk / Run,可变速度 - 走/跑,Variable Speed - Walk / Run,可變速度 - 走/跑
+UObjectDisplayNames,E_ExperimentalStateMachineState.IdleLoop,Idle Loop,待机循环,Idle Loop,待機循環
+UObjectDisplayNames,E_ExperimentalStateMachineState.TransitiontoIdleLoop,Transition to Idle Loop,过渡到待机循环,Transition to Idle Loop,過渡到待機循環
+UObjectDisplayNames,E_ExperimentalStateMachineState.LocomotionLoop,Locomotion Loop,移动循环,Locomotion Loop,移動循環
+UObjectDisplayNames,E_ExperimentalStateMachineState.TransitiontoLocomotionLoop,Transition to Locomotion Loop,过渡到移动循环,Transition to Locomotion Loop,過渡到移動循環
+UObjectDisplayNames,E_ExperimentalStateMachineState.InAirLoop,In Air Loop,空中循环,In Air Loop,空中循環
+UObjectDisplayNames,E_ExperimentalStateMachineState.TransitiontoInAirLoop,Transition to In Air Loop,过渡到空中循环,Transition to In Air Loop,過渡到空中循環
+UObjectDisplayNames,E_ExperimentalStateMachineState.IdleBreak,Idle Break,待机小动作,Idle Break,待機小動作
+UObjectDisplayNames,E_Gait.Walk,Walk,走,Walk,走
+UObjectDisplayNames,E_Gait.Run,Run,跑,Run,跑
+UObjectDisplayNames,E_Gait.Sprint,Sprint,冲刺,Sprint,衝刺
+UObjectDisplayNames,E_MovementDirection.F,F,前,F,前
+UObjectDisplayNames,E_MovementDirection.B,B,后,B,後
+UObjectDisplayNames,E_MovementDirection.LL,LL,左左,LL,左左
+UObjectDisplayNames,E_MovementDirection.LR,LR,左右,LR,左右
+UObjectDisplayNames,E_MovementDirection.RL,RL,右左,RL,右左
+UObjectDisplayNames,E_MovementDirection.RR,RR,右右,RR,右右
+UObjectDisplayNames,E_MovementDirectionBias.LeftFootForward,LeftFootForward,左脚在前,Left Foot Forward,左腳在前
+UObjectDisplayNames,E_MovementDirectionBias.RightFootForward,RightFootForward,右脚在前,Right Foot Forward,右腳在前
+UObjectDisplayNames,E_MovementMode.OnGround,OnGround,地面,On Ground,地面
+UObjectDisplayNames,E_MovementMode.InAir,InAir,空中,In Air,空中
+UObjectDisplayNames,E_MovementState.Idle,Idle,待机,Idle,待機
+UObjectDisplayNames,E_MovementState.Moving,Moving,移动,Moving,移動
+UObjectDisplayNames,E_RotationMode.OrientToMovement,OrientToMovement,朝向移动,Orient to Movement,朝向移動
+UObjectDisplayNames,E_RotationMode.Strafe,Strafe,侧移,Strafe,側移
+UObjectDisplayNames,E_Stance.Stand,Stand,站立,Stand,站立
+UObjectDisplayNames,E_Stance.Crouch,Crouch,蹲伏,Crouch,蹲伏
+UObjectDisplayNames,E_TraversalActionType.None,None,无,None,無
+UObjectDisplayNames,E_TraversalActionType.Hurdle,Hurdle,跨越,Hurdle,跨越
+UObjectDisplayNames,E_TraversalActionType.Vault,Vault,翻越,Vault,翻越
+UObjectDisplayNames,E_TraversalActionType.Mantle,Mantle,攀上,Mantle,攀上
+UObjectDisplayNames,侧面水波,侧面水波,侧面水波,Side Waves,側面水波
+UObjectDisplayNames,热带鱼_NPC_C:指定皮肤,指定皮肤,指定皮肤,Specify Skin,指定皮膚
+UObjectDisplayNames,热带鱼_NPC_C:皮肤数组,皮肤数组,皮肤数组,Skin Array,皮膚陣列
+UObjectDisplayNames,热带鱼_NPC_C:幼崽皮肤数组,幼崽皮肤数组,幼崽皮肤数组,Baby Skin Array,幼崽皮膚陣列
+UObjectDisplayNames,热带鱼_NPC_C:指定颜色,指定颜色,指定颜色,Specify Color,指定顏色
+UObjectDisplayNames,热带鱼_NPC_C:颜色数组,颜色数组,颜色数组,Color Array,顏色陣列
+UObjectDisplayNames,热带鱼_NPC_C:指定幼崽,指定幼崽,指定幼崽,Specify Baby,指定幼崽
+UObjectDisplayNames,模型与权重结构体:Mesh_6_5BAA1D4E414FA3B8521003AEF08B2D7C,Mesh,模型,Mesh,模型
+UObjectDisplayNames,模型与权重结构体:Weight_7_97BA5C654E2D60195794968115EC8066,Weight,权重,Weight,權重
+UObjectDisplayNames,堆放方块_C:间隔,间隔,间隔,Interval,間隔
+UObjectDisplayNames,堆放方块_C:重叠剔除半径,重叠剔除半径,重叠剔除半径,Overlap Cull Radius,重疊剔除半徑
+UObjectDisplayNames,堆放方块_C:Blocks,Blocks,方块,Blocks,方塊
+UObjectDisplayNames,堆放方块_C:随机偏移,随机偏移,随机偏移,Random Offset,隨機偏移
+UObjectDisplayNames,堆放方块_C:旋转,旋转,旋转,Rotation,旋轉
+UObjectDisplayNames,堆放方块_C:缩放,缩放,缩放,Scale,縮放
+UObjectDisplayNames,堆放方块_C:随机缩放范围,随机缩放范围,随机缩放范围,Random Scale Range,隨機縮放範圍

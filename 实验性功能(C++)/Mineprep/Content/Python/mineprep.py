@@ -9,33 +9,33 @@ from pathlib import Path
 from typing import Any
 
 import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
-import mc_sequencer, mc_widget, mc_mod, mc_mesh, mc_material
+import mc_sequencer, mc_widget, mc_mod, mc_mesh, mc_material, mc_parallel
 import mc_sequencer as mcseq
 from mc_importer import import_block, import_item, resolve_block_json_path, get_all_blocks
 from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
-                      enum, asynctask, askopenfilename, send2trash, set_actor_label, select_actors,
+                      enum, askopenfilename, send2trash, set_actor_label, select_actors,
                       lazy_import, undo, get_hotkey_object, construct, uasset, copy,
                       List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
                       askdirectory, asksaveasfilename, startfile, screenshot)
+from mc_parallel import (
+    delay, tick, asynctask, thread, asyncthread,
+    DelayRunner, TickRunner, AsyncTaskRunner, ThreadRunner,
+)
 from mc_prep import prep_texture, load_mcprep_data, colorize_material
 from mc_material import tex_to_color, color_to_tex, ColorList
-from mc_localization import (language, KernelLanguage, LocalizationCache, localize,
-                             loctext, nsloctext, loctable_col, bilingual, tooltip)
+from mc_localization import (localize, loctext, nsloctext, loctable_col, bilingual, tooltip)
 from mc_structure import (
     parse_structure, structure_to_tex, structure_parts, Blocks,
     convert_to_unreal_transforms, convert_to_packed_arrays,
     _apply_cull,
 )
+import mcvars
 from mc_config import config, paths, wclass
 from mc_sequencer import keyframe, Rig
-from mc_widget import Layout, PropertyGroup, add_widget, ui
+from mc_widget import Layout, PropertyGroup, add_widget, ui, make_combo_text
 from mc_mod import mods, Mod
 from mc_mesh import merge_skm
 
-
-ActorCache = None
-SpawnIDCache = None
-SpawnNameCache = None
 
 ####################################################################################
 
@@ -908,18 +908,17 @@ class keys(MineprepSequencerHandle):
 
 def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None) -> unreal.Actor:
     """通过生成器面板放置 Actor，可指定位置/旋转/缩放"""
-    global SpawnIDCache, SpawnNameCache, ActorCache
-    SpawnIDCache = id if id else target if isinstance(target, int) else None
-    SpawnNameCache = target if isinstance(target, str) else None
-    ActorCache = None
+    mcvars.SpawnIDCache = id if id else target if isinstance(target, int) else None
+    mcvars.SpawnNameCache = target if isinstance(target, str) else None
+    mcvars.ActorCache = None
 
     panel(f'生成器子面板.{button}选项').set_string(target)
     panel(f'生成器子面板.{button}_可右键').click(0)
-    SpawnIDCache = None
-    SpawnNameCache = None
-    actor = ActorCache
+    mcvars.SpawnIDCache = None
+    mcvars.SpawnNameCache = None
+    actor = mcvars.ActorCache
 
-    if not ActorCache:
+    if not actor:
         warn(f'{button}: {target} 不存在')
         return None
     if loc:

@@ -2,25 +2,6 @@ import unreal
 import mcvars
 from contextlib import contextmanager
 
-KernelLanguage = None
-LocalizationCache = None
-
-@contextmanager
-def language(lang=None):
-    """切换内部语言"""
-    global KernelLanguage
-    map = {['zh-Hans','zh-CN','zh',1]: 1,
-           ['en','English',2]: 2,
-           ['zh-Hant','zh-TW','zh-HK',3]: 3}
-    for key, value in map.items():
-        if lang.lower() in key.lower():
-            KernelLanguage = value
-            break
-
-    yield
-    KernelLanguage = None
-
-
 
 def loctext(key='', source_string=''):
     """获取本地化文本"""
@@ -35,11 +16,10 @@ def nsloctext(namespace='UObjectDisplayNames', key='', source_string=''):
 
 def loctable_col(block=1, lang=None):
     """获取本地化缓存中的列"""
-    global LocalizationCache
     try:
-        lang = lang or int(LocalizationCache[0][0].split(',')[0])
-        col_index = int(LocalizationCache[0][0].split(',')[block])
-        return LocalizationCache[lang+col_index]
+        lang = lang or int(mcvars.LocalizationCache[0][0].split(',')[0])
+        col_index = int(mcvars.LocalizationCache[0][0].split(',')[block])
+        return mcvars.LocalizationCache[lang+col_index]
     except:
         return []
 

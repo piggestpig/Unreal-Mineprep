@@ -32,7 +32,8 @@ class Props(mineprep.PropertyGroup):
         {'FilePathFilter': 'json'},
     )
     CreateNewSequence: bool = True
-    SequenceName: str = ''
+    LevelSequenceName: str = ''
+    AnimSequenceName: str = ''
     StartAtPlayhead: bool = False
     TimeScale: float = 1.0
     BoneMap: str = (DEFAULT_BONE_MAP_TEXT, {'MultiLine': True})
@@ -41,7 +42,8 @@ Props.localize('Props', '属性', 'Properties', '屬性')
 Props.localize('Actor', '目标角色', 'Actor', '目標角色')
 Props.localize('JsonPath', 'json动画文件', 'json anim file', 'json 動畫文件')
 Props.localize('CreateNewSequence', '创建新关卡序列', 'Create new Level Sequence', '建立新關卡序列')
-Props.localize('SequenceName', '序列名称', 'Sequence name', '序列名稱')
+Props.localize('LevelSequenceName', '关卡序列名称', 'Level Sequence name', '關卡序列名稱')
+Props.localize('AnimSequenceName', '动画序列名称', 'Anim Sequence name', '動畫序列名稱')
 Props.localize('StartAtPlayhead', '从播放头开始', 'Start at playhead', '從播放頭開始')
 Props.localize('TimeScale', '时间缩放', 'Time scale', '時間縮放')
 Props.localize('BoneMap', '骨骼重定向', 'Retarget', '骨骼重定向')

@@ -22,17 +22,17 @@ def apply(mod):
     had_actor = isinstance(props.Actor, unreal.Actor)
     target = util.resolve_actor(props)
     if not had_actor:
-        util.sync_seq_name(props)
+        util.sync_asset_names(props)
     ah = mineprep.actor(target)
     if not ah.target:
         mineprep.throw('找不到角色')
     create_new = bool(props.CreateNewSequence)
     if create_new:
-        if not (props.SequenceName or '').strip():
-            util.sync_seq_name(props)
-        seq_name = util.ls_name(props.SequenceName)
+        if not (props.LevelSequenceName or '').strip():
+            util.sync_asset_names(props)
+        seq_name = util.ls_name(props.LevelSequenceName)
         if not seq_name:
-            mineprep.throw('序列名称为空')
+            mineprep.throw('关卡序列名称为空')
         seq = util.open_or_create_sequence(seq_name)
         t0 = 0.0
     else:
@@ -51,10 +51,7 @@ def apply(mod):
         with unreal.ScopedEditorTransaction('Bedrock anim ' + anim_name):
             util.clear_track(body)
             for raw_bone, chans in bones.items():
-                spec = bone_map.get(str(raw_bone).casefold().replace(' ', ''))
-                if not spec:
-                    skipped.append(str(raw_bone))
-                    continue
+                spec = util.resolve_bone_spec(raw_bone, bone_map)
                 ctrl, pos_spec, rot_spec, scl_spec = spec
                 if not util.has_ctrl(body, ctrl):
                     skipped.append(str(raw_bone) + '->' + ctrl)
@@ -113,17 +110,17 @@ def bake(mod):
     had_actor = isinstance(props.Actor, unreal.Actor)
     target = util.resolve_actor(props)
     if not had_actor:
-        util.sync_seq_name(props)
+        util.sync_asset_names(props)
     skm = util.body_skm(target)
     mesh = skm.get_skeletal_mesh_asset() if skm else None
     skeleton = mesh.skeleton if mesh else None
     if not skeleton:
         mineprep.throw('角色没有骨骼网格体')
-    if not (props.SequenceName or '').strip():
-        util.sync_seq_name(props)
-    anim_name = util.sanitize_asset(props.SequenceName)
+    if not (props.AnimSequenceName or '').strip():
+        util.sync_asset_names(props)
+    anim_name = util.sanitize_asset(props.AnimSequenceName)
     if not anim_name:
-        mineprep.throw('序列名称为空')
+        mineprep.throw('动画序列名称为空')
     seq = _sequence_for_bake(props)
     binding = mc_sequencer._ensure_binding(seq, skm)
     anim = util.open_or_create_anim(anim_name, skeleton)
@@ -141,9 +138,9 @@ def bake(mod):
 
 def _sequence_for_bake(props):
     if bool(props.CreateNewSequence):
-        seq_name = util.ls_name(props.SequenceName)
+        seq_name = util.ls_name(props.LevelSequenceName)
         if not seq_name:
-            mineprep.throw('序列名称为空')
+            mineprep.throw('关卡序列名称为空')
         path = util.SEQ_DIR + '/' + seq_name
         if not unreal.EditorAssetLibrary.does_asset_exist(path):
             mineprep.throw('找不到关卡序列: ' + path)

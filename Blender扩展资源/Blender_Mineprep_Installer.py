@@ -9,7 +9,6 @@ from os.path import join
 import re
 import shutil
 import zipfile
-import configparser
 import json
 import subprocess
 from sys import platform
@@ -24,7 +23,7 @@ class MineprepProperties(bpy.types.PropertyGroup):
     exp_material: bpy.props.BoolProperty(default=True)
     exp_vr3d: bpy.props.BoolProperty()
     ini_ffmpeg: bpy.props.BoolProperty()
-    ini_memory: bpy.props.BoolProperty(default=True)
+    ini_memory: bpy.props.BoolProperty(default=False)
     blendable_gbuffer: bpy.props.BoolProperty()
     install_mode: bpy.props.IntProperty()
     lite_version: bpy.props.BoolProperty()
@@ -58,7 +57,7 @@ resource_pack_path = join(file_dir, 'Blender扩展资源', 'mc_default')
 localization = {
     'zh_CN': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5 安装向导---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
+        2: "---Mineprep v0.6-pre1 安装向导---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "欢迎使用Mineprep！",
         4: "· 当前版本适用于 UE5.7 (Windows/Mac/Linux)",
         5: "· 非实验性功能也许能兼容高版本UE",
@@ -98,7 +97,7 @@ localization = {
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5 Installer---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
+        2: "---Mineprep v0.6-pre1 Installer---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "Welcome to Mineprep!",
         4: "· The experimental features are exclusive to UE5.7 (Windows/Mac/Linux)",
         5: "· Non-experimental features may be compatible with Mac and higher engine version",
@@ -138,7 +137,7 @@ localization = {
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.5 安裝嚮導---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
+        2: "---Mineprep v0.6-pre1 安裝嚮導---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "歡迎使用Mineprep！",
         4: "· 實驗性功能適用於 UE5.7 (Windows/Mac/Linux)",
         5: "· 非實驗性功能也許能兼容高版本UE",
@@ -222,12 +221,89 @@ print(f"\n{lang}\n{gather_loctext()}\n")
 
 #############################################################################
 
-#查找或创建文件
-def find_or_create(file_path):
-    path = Path(file_path)
+# UE ini：按行改标量，保留 +/- 数组和其它原文（对齐 FSinglePropertyConfigHelper）
+_UE_INI_COMMANDS = '+-!.@*^'
+_UE_INI_SECTION = re.compile(r'^\s*\[(.+)\]\s*$')
+_UE_INI_KV = re.compile(rf'^(\s*)([{re.escape(_UE_INI_COMMANDS)}])?(.+?)(\s*=\s*)(.*)$')
+
+def _ue_ini_map(sections):
+    out = {}
+    for section, opts in (sections or {}).items():
+        bucket = out.setdefault(section.casefold(), {'name': section, 'keys': {}})
+        items = opts.items() if isinstance(opts, dict) else ((key, None) for key in opts)
+        for key, value in items:
+            bucket['keys'][key.casefold()] = (key, value)
+    return out
+
+def patch_ue_ini_text(text, sets=None, removes=None):
+    want, drop = _ue_ini_map(sets), _ue_ini_map(removes)
+    nl = '\r\n' if '\r\n' in text else '\n'
+    ended = text.endswith('\n') or text.endswith('\r\n')
+    lines, out, i, seen = text.splitlines(), [], 0, set()
+
+    def append_remaining(sec_cf):
+        bucket = want.get(sec_cf)
+        if not bucket:
+            return
+        for orig_key, value in bucket['keys'].values():
+            if value is not None:
+                out.append(f'{orig_key}={value}')
+        bucket['keys'].clear()
+
+    while i < len(lines):
+        line = lines[i]
+        header = _UE_INI_SECTION.match(line)
+        if not header:
+            out.append(line)
+            i += 1
+            continue
+        name = header.group(1)
+        sec_cf = name.casefold()
+        seen.add(sec_cf)
+        out.append(line)
+        i += 1
+        while i < len(lines) and not _UE_INI_SECTION.match(lines[i]):
+            line = lines[i]
+            parsed = None
+            if line.strip() and not line.lstrip().startswith(';'):
+                parsed = _UE_INI_KV.match(line)
+            if parsed is None:
+                out.append(line)
+                i += 1
+                continue
+            indent, cmd, key, eq, value = parsed.groups()
+            cmd, key = cmd or '', key.rstrip()
+            key_cf = key.casefold()
+            if key_cf in drop.get(sec_cf, {}).get('keys', {}):
+                i += 1
+                continue
+            bucket = want.get(sec_cf)
+            if bucket and not cmd and key_cf in bucket['keys']:
+                _, new_value = bucket['keys'].pop(key_cf)
+                out.append(f'{indent}{cmd}{key}{eq}{new_value}')
+                i += 1
+                continue
+            out.append(line)
+            i += 1
+        append_remaining(sec_cf)
+
+    missing = [want[k] for k in want if k not in seen and want[k]['keys']]
+    if missing:
+        if out and out[-1].strip():
+            out.append('')
+        for bucket in missing:
+            out.append(f'[{bucket["name"]}]')
+            append_remaining(bucket['name'].casefold())
+    body = nl.join(out)
+    if ended or text == '' or missing:
+        return body + nl
+    return body
+
+def patch_ue_ini(path, sets=None, removes=None):
+    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        path.touch()
+    text = path.read_text(encoding='utf-8') if path.exists() else ''
+    path.write_text(patch_ue_ini_text(text, sets, removes), encoding='utf-8')
     return path
 
 def get_abs_path(path):
@@ -481,104 +557,85 @@ def install():
         json.dump(config, file, ensure_ascii=False, indent=4)
 
     #修改项目配置文件
-    DefaultEngine_ini = find_or_create(join(install_path, 'Config', 'DefaultEngine.ini'))
-    config = configparser.ConfigParser(allow_no_value=True, strict=False)
-    config.read(DefaultEngine_ini, encoding='utf-8')
-
-    CLI = '/Script/MovieRenderPipelineCore.MoviePipelineCommandLineEncoderSettings'
-    if not config.has_section(CLI):
-        config.add_section(CLI)
+    cfg = join(install_path, 'Config')
     ExecutablePath = f'"{os.path.normpath(mc.ffmpeg_path)}"' if mc.ini_ffmpeg else f'"{ffmpeg_default}"'
-    config.set(CLI, 'ExecutablePath', ExecutablePath)
-    config.set(CLI, 'VideoCodec', 'libx265')
-    config.set(CLI, 'AudioCodec', 'aac')
-    config.set(CLI, 'OutputFileExtension', 'mp4')
-    config.set(CLI, 'CommandLineFormat', r'"-hide_banner -y -loglevel error {AdditionalLocalArgs}"')
-
-    RENDER = '/Script/Engine.RendererSettings'
-    if not config.has_section(RENDER):
-        config.add_section(RENDER)
-    config.set(RENDER, 'r.DefaultFeature.AutoExposure', 'False')
-    config.set(RENDER, 'r.RayTracing', 'True')
-    config.set(RENDER, 'r.RayTracing.Shadows', 'True')
-    config.set(RENDER, 'r.Lumen.HardwareRayTracing', 'True')
-    config.set(RENDER, 'r.AllowStaticLighting', 'False')
-    config.set(RENDER, 'r.CustomDepth', '3')
-    config.set(RENDER, 'r.PostProcessing.PropagateAlpha', 'True')
-    config.set(RENDER, 'r.Deferred.SupportPrimitiveAlphaHoldout', 'True')
-    config.set(RENDER, 'r.SkinCache.SceneMemoryLimitInMB', '1024.0')
-    config.set(RENDER, 'rhi.Bindless.Resources', 'Enabled')
-    config.set(RENDER, 'rhi.Bindless.Samplers', 'Enabled')
-    config.set(RENDER, 'rhi.Bindless', 'Enabled')
-    config.set(RENDER, 'r.Translucency.HeterogeneousVolumes', 'True')
-    config.set(RENDER, 'r.Substrate', 'True')
-    config.set(RENDER, 'r.Substrate.ProjectGBufferFormat', '0' if mc.blendable_gbuffer else '1')
-    config.set(RENDER, 'r.Substrate.OpaqueMaterialRoughRefraction', 'True')
-    config.set(RENDER, 'r.GenerateMeshDistanceFields', 'True')
-
-    GC = '/Script/Engine.GarbageCollectionSettings'
-    if not config.has_section(GC):
-        config.add_section(GC)
-    config.set(GC, 'gc.AssetClustreringEnabled', 'True')
-    config.set(GC, 'gc.ActorClusteringEnabled', 'True')
-
-    ENGINE = '/Script/Engine.Engine'
-    if not config.has_section(ENGINE):
-        config.add_section(ENGINE)
-    config.set(ENGINE, 'GenerateDefaultTimecodeFrameRate', '(Numerator=60,Denominator=1)')
-
-    WATER = '/Script/WaterAdvanced.ShallowWaterSettings'
-    if not config.has_section(WATER):
-        config.add_section(WATER)
-    config.set(WATER, 'UseDefaultShallowWaterSubsystem', 'True')
-    config.set(WATER, 'ShallowWaterSimParameters', '(WorldGridSize=5000,ResolutionMaxAxis=768)')
-
-    DLSS = '/Script/DLSS.DLSSSettings'
-    if not config.has_section(DLSS):
-        config.add_section(DLSS)
-    config.set(DLSS, 'bEnableDLSSInEditorViewport', 'True')
-
-    with open(DefaultEngine_ini, 'w', encoding='utf-8') as f:
-        config.write(f)
-
-    #修改输入配置文件
-    DefaultInput_ini = find_or_create(join(install_path, 'Config', 'DefaultInput.ini'))
-    config = configparser.ConfigParser(allow_no_value=True, strict=False)
-    config.read(DefaultInput_ini, encoding='utf-8')
-
-    INPUT = '/Script/EnhancedInput.EnhancedInputDeveloperSettings'
-    if not config.has_section(INPUT):
-        config.add_section(INPUT)
-    config.set(INPUT, 'bEnableUserSettings', 'True')
-
-    with open(DefaultInput_ini, 'w', encoding='utf-8') as f:
-        config.write(f)
-
-    # 修改编辑器配置文件
-    DefaultEditor_ini = find_or_create(join(install_path, 'Config', 'DefaultEditor.ini'))
-    config = configparser.ConfigParser(allow_no_value=True, strict=False)
-    config.read(DefaultEditor_ini, encoding='utf-8')
-
-    EDITOR = '/Script/UnrealEd.BlueprintEditorProjectSettings'
-    if not config.has_section(EDITOR):
-        config.add_section(EDITOR)
-    config.set(EDITOR, 'bAllowImpureToPureNodeConversion', 'True')
-
-    with open(DefaultEditor_ini, 'w', encoding='utf-8') as f:
-        config.write(f)
-
+    patch_ue_ini(join(cfg, 'DefaultEngine.ini'), {
+        '/Script/MovieRenderPipelineCore.MoviePipelineCommandLineEncoderSettings': {
+            'ExecutablePath': ExecutablePath,
+            'VideoCodec': 'libx265',
+            'AudioCodec': 'aac',
+            'OutputFileExtension': 'mp4',
+            'CommandLineFormat': r'"-hide_banner -y -loglevel error {AdditionalLocalArgs}"',
+        },
+        '/Script/Engine.RendererSettings': {
+            'r.DefaultFeature.AutoExposure': 'False',
+            'r.RayTracing': 'True',
+            'r.RayTracing.Shadows': 'True',
+            'r.Lumen.HardwareRayTracing': 'True',
+            'r.AllowStaticLighting': 'False',
+            'r.CustomDepth': '3',
+            'r.PostProcessing.PropagateAlpha': 'True',
+            'r.Deferred.SupportPrimitiveAlphaHoldout': 'True',
+            'r.SkinCache.SceneMemoryLimitInMB': '1024.0',
+            'rhi.Bindless.Resources': 'Enabled',
+            'rhi.Bindless.Samplers': 'Enabled',
+            'rhi.Bindless': 'Enabled',
+            'r.Translucency.HeterogeneousVolumes': 'True',
+            'r.Substrate': 'True',
+            'r.Substrate.ProjectGBufferFormat': '0' if mc.blendable_gbuffer else '1',
+            'r.Substrate.OpaqueMaterialRoughRefraction': 'True',
+            'r.GenerateMeshDistanceFields': 'True',
+        },
+        '/Script/Engine.GarbageCollectionSettings': {
+            'gc.AssetClustreringEnabled': 'True',
+            'gc.ActorClusteringEnabled': 'True',
+        },
+        '/Script/Engine.Engine': {
+            'GenerateDefaultTimecodeFrameRate': '(Numerator=60,Denominator=1)',
+        },
+        '/Script/WaterAdvanced.ShallowWaterSettings': {
+            'UseDefaultShallowWaterSubsystem': 'True',
+            'ShallowWaterSimParameters': '(WorldGridSize=5000,ResolutionMaxAxis=768)',
+        },
+        '/Script/DLSS.DLSSSettings': {
+            'bEnableDLSSInEditorViewports': 'True',
+            'bEnableDLSSInPlayInEditorViewports': 'True',
+        },
+        '/Script/PythonScriptPlugin.PythonScriptPluginSettings': {
+            'bRemoteExecution': 'True',
+        },
+    }, removes={
+        '/Script/DLSS.DLSSSettings': ['bEnableDLSSInEditorViewport'],
+    })
+    patch_ue_ini(join(cfg, 'DefaultInput.ini'), {
+        '/Script/EnhancedInput.EnhancedInputDeveloperSettings': {
+            'bEnableUserSettings': 'True',
+        },
+    })
+    patch_ue_ini(join(cfg, 'DefaultEditor.ini'), {
+        '/Script/UnrealEd.BlueprintEditorProjectSettings': {
+            'bAllowImpureToPureNodeConversion': 'True',
+        },
+    })
+    patch_ue_ini(join(cfg, 'DefaultEditorSettings.ini'), {
+        '/Script/UnrealEd.EditorPerformanceSettings': {
+            'bShowFrameRateAndMemory': 'True',
+        },
+    })
+    patch_ue_ini(join(cfg, 'DefaultEditorPerProjectUserSettings.ini'), {
+        '/Script/UnrealEd.EditorLoadingSavingSettings': {
+            'LoadLevelAtStartup': 'LastOpened',
+        },
+        '/Script/AvalancheEditor.AvaEditorSettings': {
+            'bAutoActivateMotionDesignViewport': 'False',
+        },
+    })
     #为UE5.7启用无绑定渲染，目前All会导致DLSS闪退
-    WindowsEngine_ini = find_or_create(join(install_path, 'Config', 'Windows', 'WindowsEngine.ini'))
-    config = configparser.ConfigParser(allow_no_value=True, strict=False)
-    config.read(WindowsEngine_ini, encoding='utf-8')
-
-    BINDLESS = 'ShaderPlatformConfig PCD3D_SM6'
-    if not config.has_section(BINDLESS):
-        config.add_section(BINDLESS)
-
-    config.set(BINDLESS, 'BindlessConfiguration', 'Minimal')
-    with open(WindowsEngine_ini, 'w', encoding='utf-8') as f:
-        config.write(f)
+    patch_ue_ini(join(cfg, 'Windows', 'WindowsEngine.ini'), {
+        'ShaderPlatformConfig PCD3D_SM6': {
+            'BindlessConfiguration': 'Minimal',
+        },
+    })
 
 
 class CustomButton(bpy.types.Operator):

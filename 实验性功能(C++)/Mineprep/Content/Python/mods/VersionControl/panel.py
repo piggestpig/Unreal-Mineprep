@@ -23,10 +23,10 @@ class VersionControl(mineprep.Mod):
 
     def draw(self, context=None):
         layout = self.layout
-        row = layout.row(align=(0, 1))
+        row = layout.row()
 
         left = row.col(fill=0.7, padding=3)
-        left.prop(self.props, align=(0, 1), on_property_changed=self.on_props)
+        left.prop(self.props, on_property_changed=self.on_props)
         self._hint = left.text('', size=10, color=_HINT_YELLOW, padding=(6, 2))
         self._btn_update = left.button(
             bilingual('更新安装包', 'Update Installer'),
@@ -49,9 +49,9 @@ class VersionControl(mineprep.Mod):
         )
 
         self._right = row.col(fill=1, padding=3)
-        self._right.prop(self.script, align=(0, 1), on_property_changed=self.on_script)
-        self._right.prop(self.filters, align=(0, 1), on_property_changed=self.on_filters)
-        self._right.prop(self.extras, align=(0, 1), on_property_changed=self.on_extras)
+        self._right.prop(self.script, on_property_changed=self.on_script)
+        self._right.prop(self.filters, on_property_changed=self.on_filters)
+        self._right.prop(self.extras, on_property_changed=self.on_extras)
 
         self._sync_buttons()
         self._sync_hint()

@@ -29,7 +29,7 @@ class VATTools(mineprep.Mod):
             align=3, size=12,
         )
 
-        row = layout.row(align=(0, 1))
+        row = layout.row()
 
         left = row.col(fill=1, padding=3)
         left.text(
@@ -47,7 +47,6 @@ class VATTools(mineprep.Mod):
         left.prop(
             self.bake_props,
             on_property_changed=lambda name: bake_anim_ops.on_bake_props_changed(self, name),
-            align=(0, 1),
         )
         left.text(
             bilingual('0:待机, 1:常规移动/行走, 2:快速移动/奔跑', '0: Idle, 1: Walk, 2: Run'),
@@ -61,7 +60,7 @@ class VATTools(mineprep.Mod):
             on_clicked=lambda: copy_ops.copy_data_asset(self),
             padding=3,
         )
-        left.prop(self.copy_props, align=(0, 1))
+        left.prop(self.copy_props)
 
         right = row.col(fill=1, padding=3)
         right.text(
@@ -76,7 +75,6 @@ class VATTools(mineprep.Mod):
         right.prop(
             self.init_props,
             on_property_changed=lambda name: init_ops.on_init_props_changed(self, name),
-            align=(0, 1),
         )
 
         layout.prop(

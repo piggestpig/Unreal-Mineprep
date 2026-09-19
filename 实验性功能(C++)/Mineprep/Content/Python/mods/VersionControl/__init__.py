@@ -6,9 +6,9 @@ mod_info = {
         '把工程里的 Mineprep 同步到安装包仓库',
         'Sync project Mineprep into the installer repo',
     ),
-    'Version': '0.6-pre1',
+    'Version': '1.0',
     'CreatedBy': 'Pig',
-    'EnabledByDefault': True,
+    'EnabledByDefault': False,
     'ReloadWithMineprep': True,
     'Advanced': True,
     'Priority': 99,
@@ -17,7 +17,7 @@ mod_info = {
 
 def register():
     from . import panel
-    panel.VersionControl.register()
+    panel.VersionControl.register(True)
 
 
 def unregister():
