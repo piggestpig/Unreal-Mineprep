@@ -4,34 +4,71 @@
 
 ✨这是一个正在开发中的UE5插件，继承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的实用功能，并加入一些新的资产，为制作MC动画带来便利
 
-![image](Readme素材/0.5封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
-![image](Readme素材/插件展示.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/%E6%8F%92%E4%BB%B6%E5%B1%95%E7%A4%BA.jpg)
 
 · 本插件与Minecraft、MCprep官方没有直接联系，在其建议下插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆（0.3及之前的版本已经归档，就不做修改了）。
 
 在v1.0正式发布前，插件主要供内部使用，可能存在兼容性问题和潜在的 ~~bug~~ 特性。之后会逐步修复并写一些[ 使用教程（点击查看）](https://github.com/piggestpig/Unreal-Mineprep/wiki)
 
-[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite)是此插件的精简版。它的体积更小，下载更快，以GPLv3协议开源，保留了95%的核心功能，压缩包仅250MB左右
+[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite)是此插件的精简版。它的体积更小，下载更快，以GPLv3协议开源，保留了95%的核心功能
 
-## 安装方法
+## 下载与安装
 
-### ① 使用安装包（推荐，适用于0.4+版本）
-1、前提条件：安装 [虚幻引擎](https://www.unrealengine.com/zh-CN/download) 和 [Blender](https://www.blender.org/download/)
-> MacOS用户还需安装 [Xcode](https://developer.apple.com/xcode/) 才能启动虚幻引擎
+> 使用Mineprep前，你需要安装 [虚幻引擎](https://www.unrealengine.com/zh-CN/download)，MacOS用户还需安装 [Xcode](https://developer.apple.com/xcode/) 才能启动引擎
 
-2、下载Mineprep，建议保存在纯英文路径下
-> 你可以前往 [Releases](https://github.com/piggestpig/Unreal-Mineprep/releases) -> Assets -> Source code
-(zip) 下载较为稳定的大版本  
-> 或者点击上面的绿色 Code 按钮 -> Download ZIP，下载最新快照版本。
+① 下载Mineprep，建议保存在纯英文路径下
+- 你可以前往 [Releases](https://github.com/piggestpig/Unreal-Mineprep/releases) -> Assets -> Source code
+(zip) 下载较为稳定的大版本
+- 或者点击上面的绿色 Code 按钮 -> Download ZIP，下载最新快照版本
+- 新手入门/网速较慢时，可下载[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite)精简版，压缩包仅250MB左右
 
-3、解压插件安装包，使用Blender打开里面的“Mineprep_installer.blend”文件
+② 选择任意一种安装方法；根据你所启用的功能，安装所需空间在80MB~2GB之间：
 
-4、点击▶️运行脚本，会弹出菜单和安装引导，目前支持“创建新的工程文件”或“安装至现有工程”
-> 你可以选择实验性功能、修改插件设置，安装所需空间在80MB~2GB之间
+<details>
+<summary> 1. 使用Blender安装包 (适用于0.4+版本) </summary>
 
-### ② 手动安装
+- 前提条件：你已经拥有[Blender](https://www.blender.org/download/)
+- 解压插件安装包后，使用Blender打开里面的[Mineprep_installer.blend文件](./Mineprep_installer.blend)
+- 点击▶️运行脚本，会弹出菜单和安装引导，目前支持“创建新的工程文件”或“安装至现有工程”
+- 你可以在UI界面中选择实验性功能、修改插件设置
+
+</details>
+
+<details>
+<summary> 2. 使用Python安装脚本 (适用于0.6+版本) </summary>
+
+- 前提条件：你已经拥有[Python](https://www.python.org/downloads/)运行环境
+- 在命令行中运行[Mineprep_installer.py](./Mineprep_installer.py)脚本
+- 以下是推荐示例，这会安装性能优化后的精简版插件：  
+```
+Mineprep_installer.py new [目标文件夹] [--name 工程文件名] --experimental 12 --lite 1 --optimize --gbuffer 0 --open
+```
+- 使用`--dry-run`打印将要安装的内容并估算所需空间；各种参数的用法都写在脚本开头了
+
+</details>
+
+<details>
+<summary> 3. 从现有工程迁移插件 (适用于0.6+版本) </summary>
+
+- 前提条件：你已经有了一个装好Mineprep的工程文件
+- 打开 顶部菜单栏 → MC → 模组管理器，勾选左下角的“显示高级选项”，启用`插件更新与迁移工具`模组
+- 你可以在UI界面中选择目标路径、挑选要迁移的内容
+> 迁移插件能保留你自己修改或添加的文件，还可迁移模组偏好设置
+
+</details>
+
+
+<details>
+<summary> 4. 手动安装 </summary>
+
 需要复制Mineprep内容文件夹+修改项目设置，稍后会更新详细步骤
+
+</details>
+<br>
+
+如果你经常更新快照版本，建议使用git克隆仓库，这样只需拉取最新的提交，不必反复下载整个压缩包！喜欢UI界面的用户可以用[Github Desktop](https://desktop.github.com/download/)
 
 <details>
 <summary> 查看安装时修改的文件 </summary>
@@ -59,11 +96,11 @@
 </details>
 
 <details>
-<summary> [推荐] 安装DLSS </summary>
+<summary> [推荐] 安装DLSS等第三方超分辨率插件 </summary>
 
 非常建议N卡用户安装DLSS，能提升性能、提高画质、节约显存
 
-1、前往[https://developer.nvidia.com/rtx/dlss#getstarted](https://developer.nvidia.com/rtx/dlss#getstarted)，在“DLSS 4 Plugin for Unreal Engine”板块下载对应的插件版本
+1、前往[https://developer.nvidia.com/rtx/dlss](https://developer.nvidia.com/rtx/dlss)，在“DLSS 4.5 Plugin for Unreal Engine”板块下载对应的插件版本
 
 2、解压后，复制Plugins文件夹里的子文件夹 到虚幻引擎插件目录的Marketplace文件夹中，如下所示:
 
@@ -101,7 +138,7 @@ Super Resolution/Ray Reconstruction/DLAA`和`Movie Render Queue DLSS/DLAA Suppor
 
 
 ## 系统要求
-Mineprep 0.5 使用 Windows + UE5.7 开发，建议在此环境下使用。其他平台或引擎版本将会有一些功能不可用。
+Mineprep 0.6-pre1 使用 Windows + UE5.7 开发，建议在此环境下使用。其他平台或引擎版本将会有一些功能不可用。
 
 除了[虚幻引擎官方文档](https://dev.epicgames.com/documentation/zh-cn/unreal-engine/hardware-and-software-specifications-for-unreal-engine)中的最低要求之外，渲染动画还需要更高的配置和更多的显存：
 
@@ -113,27 +150,35 @@ Mineprep 0.5 使用 Windows + UE5.7 开发，建议在此环境下使用。其�
 [2] NVIDIA 20系，AMD 6000系，Intel Arc 或 Apple M3 及以上 </sup>
 
 
-### 平台兼容性
+### 历史版本与平台兼容性
 
-| *Mineprep 0.5* | 安装包(Blender) | UE5.7 | 高版本引擎(5.8+) | 低版本引擎(5.6-) |
+Mineprep的绝大部分功能都用蓝图和Python编写，旨在支持不同的平台和更高的引擎版本。实验性功能是C++代码，通常只为Windows编译。
+
+| Mineprep 版本 | Python API 版本 | 引擎版本 | Windows 实验性功能 | Mac/Linux 实验性功能 |
 | :---: | :---: | :---: | :---: | :---: |
-| Windows | ✅ | ✅ | ⚠️ | ❌ |
-|   Mac   | ✅ | ✅* | ⚠️ | ❌ |
-|  Linux  | ✅ | ✅* | ⚠️ | ❌ |
-
-
-✅：兼容，已经过测试，能够正常使用  
-ℹ️：尚未测试，理论上应该可用  
-⚠️：**实验性功能不可用**，非实验性功能应该可用  
-❌：不兼容，无法使用
+| 0.6-pre1 | 1.0 | 5.7 | ✅ | ⚠️ |
+| 0.5 | 0.1 | 5.7 | ✅ | ✅ |
+|  |  |  |  |  |
+| 0.5-pre3 | - | 5.6 | ✅ | - |
+| 0.5-pre2 | - | 5.6 | ✅ | - |
+| 0.5-pre1 | - | 5.5 | ✅ | - |
+| 0.4 | - | 5.4 | ✅ | - |
+| 0.4-pre2 | - | 5.4 | ✅ | - |
+| 0.4-pre1 | - | 5.4 | ✅ | - |
+| 0.3 | - | 5.4 | - | - |
+| 0.3-pre1 | - | 5.4 | - | - |
+| 0.2 | - | 5.3 | - | - |
+| 0.1 | - | - | - | - |
 
 > [!WARNING]  
 > 请勿在不兼容的环境（比如高版本引擎）勾选实验性功能，否则工程文件打都打不开，一上来就报错！！
 
+Mineprep 0.6-pre1 只在 Windows 上编译了最新的实验性功能。Mac和Linux用户可以尝试安装0.5旧版本，但不保证能正常运行
+
 <details>
 <summary> *展开细节 </summary>
 
-<img src="Readme素材/Mac&Linux合影留念.jpg" alt="Mac&Linux合影留念">
+<img src="https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/Mac%26Linux%E5%90%88%E5%BD%B1%E7%95%99%E5%BF%B5.jpg" alt="Mac&Linux合影留念">
 <sup><i> ↑ Mineprep 0.5 在 MacOS 和 Linux 运行的纪念照 </i></sup>
 
 - 安装包是写在Blender里的python脚本，理论上是跨平台的，但是有一些细节比如os.startfile()只在Windows上可用，我们尝试用命令行替代这些功能
@@ -179,15 +224,16 @@ Mineprep 0.5 使用 Windows + UE5.7 开发，建议在此环境下使用。其�
 - Mineprep提供了MC原版生物模型，可以通过生成器面板放置
 - 目前主要有骨骼网格体和自动化NPC两种类型，部分生物制作了顶点动画实例模型，用于大型群体粒子。所有生物都可以更换材质，两脚生物可以尝试添加IK绑定
 - 当前版本支持：Steve/Alex玩家、猪、牛、羊、马（驴、骡、僵尸马、骷髅马）、僵尸、尸壳、溺尸、骷髅、凋灵骷髅、流浪者、沼骸、猪灵、猪灵蛮兵、掠夺者、卫道士、铁傀儡、蠹虫、末影螨、蜘蛛（洞穴蜘蛛）、村民、烈焰人、凋灵、疣猪兽、雪傀儡、狼、猫、悦灵、流浪商人、豹猫、恶魂、小恶魂、快乐恶魂、苦力怕、鹦鹉、骆驼、骆驼尸壳、焦骸、鳕鱼、鲑鱼、热带鱼
+- 通过`MC原版生物加载器`模组，可以从Blockbench的CEM Template Loader下载最新的生物模型，导入为骨骼网格体
 - 更多内容正在更新中
 
 ## 语言本地化
 Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体中文
 - **安装包**会根据Blender的偏好设置选择语言。本地化内容以字典的形式写在代码中，参见[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
 - **插件面板**上方有选择语言的按钮，在启动时会根据UE的偏好设置选择语言。本地化内容保存在[语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv) 和 [变量显示名_VariableDisplayNames.csv](./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)中。
-- 只有安装了第一个实验性功能 `(Mineprep C++ 拓展模块)` 才能翻译粒子参数  
+- 只有安装了第一个实验性功能 `(Mineprep C++ 拓展模块)` 才能翻译粒子参数。  
 - 只有安装了第二个实验性功能 `(为材质参数面板添加关键帧按钮和本地化翻译)` 才能翻译材质参数
-- 第一个实验性功能还提供了自定义快捷键，可以按`insert`尝试翻译鼠标下的文本。如果在变量显示名的csv文件中找到匹配条目，就替换文本
+- 第一个实验性功能还提供了自定义快捷键，可以按`insert`尝试翻译鼠标下的文本；如果在变量显示名的csv文件中找到匹配条目，就替换文本。有了实验性功能后，还能通过`本地化翻译控制板`模组收集最新的变量显示名
 
 更多内容正在更新中
 
@@ -200,6 +246,10 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
 
 ## 版本更新
 
+### 0.6-pre1
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
+
+
 #### 26w35a
 - Mineprep 0.6-pre1即将发布，这里记录了最后的更新内容
 - 新增鳕鱼、鲑鱼、热带鱼的NPC生物。马、鹦鹉、热带鱼现在统一采用随机挑选数组皮肤的方法
@@ -209,11 +259,19 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
 - 改进了“堆放方块”素材，现在能设置任意方块类型和权重，调整间距，随机修改位置、旋转、缩放，剔除重叠模型，极大拓展了功能。不仅适用于方块，还能放置观众人群
 - MC导播台新增`后期处理体积框作遮罩场`参数，勾选后将高精度长方体区域作为遮罩场
 - 半透明水材质支持遮罩层了
-- 粒子系统现在会将角扭矩用于面向目标的旋转速度，将线性速度用于目标速度插值
+- 粒子系统现在会重新解释“线性速度”和“角扭矩”这两个力场，增强了实用性
+  - 将自身速度插值到目标线性速度
+  - 将自身旋转插值到角扭矩向量所指方向
+- 更新了粒子交互场的用法，用整数部分表示粒子事件
+  - 个位：交互动画
+  - 十位：生成一次子粒子
+  - 百位：持续生成子粒子
+  - 负数：杀死粒子
 - 基于方形、曲线和图像的全局粒子生成区域能投射到地面上了
 - 头身分离绑定基础生物模型在烘焙骨骼网格体时会自动合并相同模型的材质插槽了
 - 礼花粒子改用长方形飘带
 - 猪灵头部使用和身体一致的皮肤
+- 略微移动了村民的腿，避免在烘焙VAT模型时共用顶点
 - 修复了部分四足NPC生物的头身朝向问题
 - 修复了烈焰人动画循环首尾帧不一致的问题
 - 修复了中键点击放置生物按钮，未能添加烈焰人粒子的bug
@@ -533,7 +591,7 @@ Mineprep 0.6的主题已确定为“水域更新”！
 - 每周快照都会更新一部分Mineprep Wiki的内容
 
 ### 0.5 : 荒野更新
-![image](Readme素材/0.5封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 Mineprep 0.5 正式发布了！这是首个支持Windows、MacOS和Linux的跨平台版本，实验性功能适用于UE5.7
 
@@ -707,7 +765,7 @@ Mineprep 0.5 正式发布了！这是首个支持Windows、MacOS和Linux的跨�
 - 可能是我更新了显卡驱动，ffmpeg的hevc_vulkan和prores_ks_vulkan视频编码修好了，只剩下av1_vulkan卡住无法播放
 
 #### 0.5-RC2
-![image](Readme素材/Mac&Linux合影留念.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/Mac%26Linux%E5%90%88%E5%BD%B1%E7%95%99%E5%BF%B5.jpg)
 <sup><i> 历史性时刻：Mineprep在 MacOS 和 Linux 上运行！ </i></sup>
 
 - 本周我们租用云电脑，在Mac和Linux实机测试安装包与插件，编译了所有实验性功能，并修复大量兼容性问题。正巧这周破万粉了，或许可以把Mineprep 0.5作为万粉礼物发布呢ヾ(≧▽≦*)o
@@ -908,7 +966,7 @@ Mineprep 0.5 正式发布了！这是首个支持Windows、MacOS和Linux的跨�
 </details>
 
 #### 0.5-pre3
-![image](Readme素材/0.5-pre3封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre3%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 <sup><i> 这是一张带 HDR增益图的 jpg封面！使用 HDR显示器或下载到手机上即可查看高动态范围效果 <br>
 地图来自https://www.curseforge.com/minecraft/worlds/rtx-aio-map </i></sup>
 
@@ -1219,7 +1277,7 @@ MC即将迎来新的版本编号方法，下一次大更新不是1.22，不是2.
 </details>
 
 #### 0.5-pre2
-![image](Readme素材/0.5-pre2封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre2%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 Mineprep 0.5-pre2带来了生物模型大改的阶段性成果，同时也新增了许多媒体播放和后期合成的素材，我们用其制作了猫meme《捡到一只快乐小恶魂》
 > 需要注意的是，这个版本由于升级到UE5.6的产生了新的bug（例如MC像素文字损坏、第三人称运动匹配角色开启物理交互后闪退），目前通过禁用部分设置来避免问题，最终的修复需要等Mineprep 0.5正式版发布
@@ -1354,7 +1412,7 @@ Mineprep 0.5-pre2带来了生物模型大改的阶段性成果，同时也新增
 </details>
 
 #### 0.5-pre1
-![image](Readme素材/0.5-pre1封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》现已发布！
 > 这可能是最后一个支持UE5.5的版本——我们将在不久后升级引擎，非实验性功能已适配UE5.6。
 - 虫群粒子新增全局粒子间碰撞功能，有“写入”和“读取”两个选项，会消耗更多的显卡性能和显存
@@ -1477,12 +1535,12 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 </details>
 
 ### 0.4 : 足迹与故事
-![image](Readme素材/0.4封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 0.4版本正式发布了！这是一个重大更新，包含了许多新功能和改进，也是最后一个支持UE5.4的版本。
 快来看看有哪些新功能吧
 
-![image](Readme素材/0.4更新汇总1.jpg)
-![image](Readme素材/0.4更新汇总2.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4%E6%9B%B4%E6%96%B0%E6%B1%87%E6%80%BB1.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4%E6%9B%B4%E6%96%B0%E6%B1%87%E6%80%BB2.jpg)
 - 以上是精彩集锦，更多内容参见下方的快照。
 - 从这个版本起，我们不在Releases中发布内容示例场景，而是打包当前库，下载解压后能看到安装包和各种资源。（之后考虑在其他地方发布内容示例和精简版插件）
 
@@ -1685,7 +1743,7 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 </details>
 
 #### 0.4-pre2
-![image](Readme素材/0.4-pre2封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4-pre2%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 - 新的里程碑！我们将这几个月的成果投入实际生产，制作了动画视频《史诗级动作优化2》，并带来了许多细节优化和bug修复
 - 新增`MC导播台`，与Mineprep后期处理体积一起生成，作为场景的基础模块
   - 在细节面板中，可以分别控制预览画质、预览帧率上限和渲染画质，优化性能或提升质量（所有渲染预设已不再使用过场动画质量设置，转而由MC导播台控制）。预览画质默认为“3+ 极高”，渲染画质默认为“4 影视级”。如果电脑性能较弱，建议把预览画质改为“2 高（快速lumen）”；如果想要减少渲染时的闪烁和残影，进一步提高质量，可以把渲染画质改为“4+ 影视级（增强lumen）”
@@ -1786,7 +1844,7 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 </details>
 
 #### 0.4-pre1
-![image](Readme素材/0.4-pre1封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 - 新的里程碑(*・ω・)ﾉ 我们在这一周修复了大量bug并带来几个新功能，稍后将上传打包的exe示例文件，包含0.3和0.4-pre1的所有内容，作为正式的Release发布
 - mcprep_data.json已更新至1.21版本，与刚刚发布的MCprep 3.6同步。默认资源包尚未更新
 - 插件面板的“启用碰撞”选项旁边添加了`复杂碰撞`选项，默认开启，之前的准备场景也都在用复杂碰撞；如果要进行物理模拟，请关闭此选项，再对选中物品使用准备场景。此外还增加了三个新功能：
@@ -1965,7 +2023,7 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 </details>
 
 ### 0.3 : 多彩世界
-![image](Readme素材/0.3封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.3%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 - 0.3正式版现已发布！本次更新的主题为“多彩世界”，和0.2版本相比，加入了大量新功能与资源素材，我们用其制作了动画短片《史蒂夫之梦》。来看一看最后更新的内容吧：
 - **优化安装流程，减少对其他插件的依赖**。之前的版本必须借助TApython才能运行，否则整个蓝图都会报错。现在只有“植物摇摆”功能依赖TApython，而且它不影响其他功能。具体来说，我们用python自带的filedialog替代了“更换材质”的选择文件夹弹窗，用UE自带的“显示消息对话”节点替代了右下角提示弹窗。

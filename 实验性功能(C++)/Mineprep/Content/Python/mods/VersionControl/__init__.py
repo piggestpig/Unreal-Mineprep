@@ -3,8 +3,8 @@ from mineprep import bilingual
 mod_info = {
     'Name': bilingual('插件更新与迁移工具', 'Plugin Update & Migration'),
     'Description': bilingual(
-        '把工程里的 Mineprep 同步到安装包仓库',
-        'Sync project Mineprep into the installer repo',
+        '迁移Mineprep插件至其他工程文件或安装包仓库',
+        'Migrate Mineprep plugins to other projects or the installer',
     ),
     'Version': '1.0',
     'CreatedBy': 'Pig',

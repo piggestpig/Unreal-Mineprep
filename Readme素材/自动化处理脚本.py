@@ -132,6 +132,15 @@ if installer_blend.exists():
 else:
     print(f"跳过（不存在）: {installer_blend}")
 
+installer_py = plugin_dir / "Mineprep_installer.py"
+if installer_py.exists():
+    dst_py = lite_dir / "Mineprep_Lite_installer.py"
+    dst_py.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(installer_py, dst_py)
+    print(f"已复制: {installer_py} -> {dst_py}")
+else:
+    print(f"跳过（不存在）: {installer_py}")
+
 mc_default_src = plugin_dir / "Blender扩展资源" / "mc_default"
 mc_default_dst = lite_dir / "Blender扩展资源" / "mc_default"
 if mc_default_src.exists():

@@ -27,7 +27,6 @@ from mc_localization import (localize, loctext, nsloctext, loctable_col, bilingu
 from mc_structure import (
     parse_structure, structure_to_tex, structure_parts, Blocks,
     convert_to_unreal_transforms, convert_to_packed_arrays,
-    _apply_cull,
 )
 import mcvars
 from mc_config import config, paths, wclass
@@ -992,7 +991,7 @@ def spawn_structure(source='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0,
         use_center = True if center is None else bool(center)
         cells = loaded.copy_cells()
 
-    cells = _apply_cull(cells, cull)
+    cells = mc_structure._apply_cull(cells, cull)
     packed = bool(gpu)
     if packed:
         payload_map = convert_to_packed_arrays(cells, center=use_center, merge=merge)

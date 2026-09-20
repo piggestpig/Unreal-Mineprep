@@ -4,9 +4,9 @@ English | [**中文**](./README.md) | [**繁體中文**](./README_繁體中文.m
 
 ✨This is a UE5 plugin that inherits the practical features of [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/), and adds some new assets to facilitate the creation of MC animations.
 
-![image](Readme素材/0.5封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
-![image](Readme素材/插件展示_EN.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/%E6%8F%92%E4%BB%B6%E5%B1%95%E7%A4%BA_EN.jpg)
 
 *This plugin is not affiliated with Minecraft or MCprep. Upon their suggestion, we changed the name from Unreal MCprep to Unreal Mineprep to avoid confusion (versions 0.3 and earlier have been archived so they remain unchanged).
 
@@ -130,7 +130,7 @@ In addition to the minimum requirements in the [Unreal Engine Documentation](htt
 <details>
 <summary> *Show Specs Details </summary>
 
-<img src="Readme素材/Mac&Linux合影留念.jpg" alt="Mac&Linux Group Photo">
+<img src="https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/Mac%26Linux%E5%90%88%E5%BD%B1%E7%95%99%E5%BF%B5.jpg" alt="Mac&Linux Group Photo">
 <sup><i> ↑ A group photo of Mineprep 0.5 running on MacOS and Linux </i></sup>
 
 - The installer is a Python script written in Blender. It's theoretically cross-platform, but some details like os.startfile() are only available on Windows. We try to use fallbacks for these functions via command line.
@@ -200,7 +200,7 @@ See [Epic Games' EULA](https://www.unrealengine.com/en-US/eula) for details.
 ## Version Updates
 
 ### 0.5: The Wild Update
-![image](Readme素材/0.5封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 Mineprep 0.5 has been released! This is the first cross-platform version supporting Windows, MacOS, and Linux, with experimental features tailored for UE 5.7.
 
@@ -282,7 +282,7 @@ Let's see what's new:
 </details>
 
 #### 0.5-pre3
-![image](Readme素材/0.5-pre3封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre3%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 <sup><i> This is a jpg cover with HDR Gain Map! View the high dynamic range effect on an HDR display or downloading to your phone. <br>
 Map from https://www.curseforge.com/minecraft/worlds/rtx-aio-map </i></sup>
 
@@ -327,7 +327,7 @@ Note: This version is in the transition phase between UE5.6 and 5.7, so many new
 
 
 #### 0.5-pre2
-![image](Readme素材/0.5-pre2封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre2%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 Mineprep 0.5-pre2 carries out a phased overhaul of mobs and rigs, along with many new media playback and compositing assets. We have created a cat meme *Adopt a Happy Little Ghastling*.
 > Note: This release has some new bugs due to upgrading to UE5.6 (such as broken MC Pixel Text and crashes when enabling physics interaction on motion matching players). We currently avoid them by disabling certain settings. Please wait for Mineprep 0.5 for fixes.
@@ -364,7 +364,7 @@ Mineprep 0.5-pre2 carries out a phased overhaul of mobs and rigs, along with man
 
 
 #### 0.5-pre1
-![image](Readme素材/0.5-pre1封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 The first preview version of Mineprep 0.5 is here, and the new animation "Silverfish Rush" has been released!
 > This might be the last version supporting UE5.5—we'll be upgrading the engine soon, with non-experimental features already adapted for UE5.6.
 - Swarm particles now have global inter-particle collision functionality with "write" and "read" options, which will consume more GPU performance and VRAM
@@ -382,19 +382,19 @@ The first preview version of Mineprep 0.5 is here, and the new animation "Silver
 
 
 ### 0.4 : Trails and Tails
-![image](Readme素材/0.4封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 The official release of v0.4 is here! This is a major update, including many new features and improvements, and is also the last version that supports UE5.4.  
 Let's take a look at the new features:
 
-![image](Readme素材/0.4更新汇总1_EN.jpg)
-![image](Readme素材/0.4更新汇总2_EN.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4%E6%9B%B4%E6%96%B0%E6%B1%87%E6%80%BB1_EN.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4%E6%9B%B4%E6%96%B0%E6%B1%87%E6%80%BB2_EN.jpg)
 
 - The above pictures are a brief summary. More content can be found in the update log of snapshots.
 - Starting from this version, we will not publish demo scenes in the Releases section. Instead, we pack the current repository. After downloading and unzipping, you can see the installer and plugin resources. (We may publish demo scenes and Mineprep Lite somewhere else in the future)
 
 
 #### 0.4-pre2
-![image](Readme素材/0.4-pre2封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4-pre2%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 - A new milestone! We have put the results of the past few months into actual production, creating the video "Epic Animations 2" and bringing many detailed optimizations and bug fixes.
 - Added `MC Director Station`, generated together with Mineprep post-processing volume as the basic module of the scene.
   - In the detail panel, you can separately control preview quality, preview FPS limit and rendering quality to optimize performance (all rendering presets no longer use cinematic quality settings, but are controlled by the MC Director Station). The default preview quality is "3+ Ultra High", and the default rendering quality is "4 Cinematic". If your computer performance is weak, it is recommended to change the preview quality to "2 High (Fast Lumen)"; if you want to reduce flickering and ghosting during rendering and further improve quality, you can change the rendering quality to "4+ Cinematic (Enhanced Lumen)".
@@ -419,7 +419,7 @@ Let's take a look at the new features:
 - *Story: The theme of this version is called "Trails and Tails". According to our original plan, there are two major updates - "Trails" refers to motion matching (0.4-pre1), and "Tails" refers to camera language (0.4). So what about 0.4-pre2? It's actually a overhaul of the plugin during the summer vacation. Besides, we are glad to see many new features added to the plugin too. In the next few months, we will focus on updating camera and movements~*
 
 #### 0.4-pre1
-![image](Readme素材/0.4-pre1封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 - New milestone (*・ω・)ﾉ We fixed a lot of bugs and added several new features this week. The packaged demo exe containing all the content from 0.3 and 0.4-pre1 will be uploaded later as a formal Release.
 - mcprep_data.json has been updated to version 1.21, synchronized with the newly released MCprep 3.6. The default resource pack has not been updated yet.
 - Added a `Complex` option next to the "Collision" option in the plugin panel, enabled by default. Previous prepared scenes also used complex collision; if you want to perform physical simulations, please disable this option and then use the prepared scene on the selected items. Additionally, three new functions have been added:

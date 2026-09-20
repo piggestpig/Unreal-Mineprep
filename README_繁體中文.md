@@ -4,9 +4,9 @@
 
 ✨這是一個正在開發中的UE5插件，繼承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的實用功能，並加入一些新的資產，爲製作MC動畫帶來便利
 
-![image](Readme素材/0.5封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
-![image](Readme素材/插件展示.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/%E6%8F%92%E4%BB%B6%E5%B1%95%E7%A4%BA.jpg)
 
 · 本插件與Minecraft、MCprep官方沒有直接聯繫，在其建議下插件名稱由Unreal MCprep更改爲Unreal Mineprep，以避免混淆（0.3及之前的版本已經歸檔，就不做修改了）。
 
@@ -133,7 +133,7 @@ Mineprep 0.5 使用 Windows + UE5.7 開發，建議在此環境下使用。其�
 <details>
 <summary> *展開細節 </summary>
 
-<img src="Readme素材/Mac&Linux合影留念.jpg" alt="Mac&Linux合影留念">
+<img src="https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/Mac%26Linux%E5%90%88%E5%BD%B1%E7%95%99%E5%BF%B5.jpg" alt="Mac&Linux合影留念">
 <sup><i> ↑ Mineprep 0.5 在 MacOS 和 Linux 運行的紀念照 </i></sup>
 
 - 安裝包是寫在Blender裏的python腳本，理論上是跨平臺的，但是有一些細節比如os.startfile()只在Windows上可用，我們嘗試用命令行替代這些功能
@@ -203,7 +203,7 @@ Mineprep提供了可拓展的多語言翻譯，目前支持中文/英文/繁體�
 ## 版本更新
 
 ### 0.5 : 荒野更新
-![image](Readme素材/0.5封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 Mineprep 0.5 正式發佈了！這是首個支持Windows、MacOS和Linux的跨平臺版本，實驗性功能適用於UE5.7
 
@@ -377,7 +377,7 @@ Mineprep 0.5 正式發佈了！這是首個支持Windows、MacOS和Linux的跨�
 - 可能是我更新了顯卡驅動，ffmpeg的hevc_vulkan和prores_ks_vulkan視頻編碼修好了，只剩下av1_vulkan卡住無法播放
 
 #### 0.5-RC2
-![image](Readme素材/Mac&Linux合影留念.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/Mac%26Linux%E5%90%88%E5%BD%B1%E7%95%99%E5%BF%B5.jpg)
 <sup><i> 歷史性時刻：Mineprep在 MacOS 和 Linux 上運行！ </i></sup>
 
 - 本週我們租用雲電腦，在Mac和Linux實機測試安裝包與插件，編譯了所有實驗性功能，並修復大量兼容性問題。正巧這周破萬粉了，或許可以把Mineprep 0.5作爲萬粉禮物發佈呢ヾ(≧▽≦*)o
@@ -578,7 +578,7 @@ Mineprep 0.5 正式發佈了！這是首個支持Windows、MacOS和Linux的跨�
 </details>
 
 #### 0.5-pre3
-![image](Readme素材/0.5-pre3封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre3%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 <sup><i> 這是一張帶 HDR增益圖的 jpg封面！使用 HDR顯示器或下載到手機上即可查看高動態範圍效果 <br>
 地圖來自https://www.curseforge.com/minecraft/worlds/rtx-aio-map </i></sup>
 
@@ -889,7 +889,7 @@ MC即將迎來新的版本編號方法，下一次大更新不是1.22，不是2.
 </details>
 
 #### 0.5-pre2
-![image](Readme素材/0.5-pre2封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre2%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 Mineprep 0.5-pre2帶來了生物模型大改的階段性成果，同時也新增了許多媒體播放和後期合成的素材，我們用其製作了貓meme《撿到一隻快樂小幽靈》
 > 需要注意的是，這個版本由於升級到UE5.6的產生了新的bug（例如MC像素文字損壞、第三人稱運動匹配角色開啓物理交互後閃退），目前通過禁用部分設置來避免問題，最終的修復需要等Mineprep 0.5正式版發佈
@@ -1024,7 +1024,7 @@ Mineprep 0.5-pre2帶來了生物模型大改的階段性成果，同時也新增
 </details>
 
 #### 0.5-pre1
-![image](Readme素材/0.5-pre1封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 Mineprep 0.5的第一個預覽版來了，全新動畫《捅了銀魚窩了》現已發佈！
 > 這可能是最後一個支持UE5.5的版本——我們將在不久後升級引擎，非實驗性功能已適配UE5.6。
 - 蟲羣粒子新增全局粒子間碰撞功能，有“寫入”和“讀取”兩個選項，會消耗更多的顯卡性能和顯存
@@ -1147,12 +1147,12 @@ Mineprep 0.5的第一個預覽版來了，全新動畫《捅了銀魚窩了》�
 </details>
 
 ### 0.4 : 足跡與故事
-![image](Readme素材/0.4封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 0.4版本正式發佈了！這是一個重大更新，包含了許多新功能和改進，也是最後一個支持UE5.4的版本。
 快來看看有哪些新功能吧
 
-![image](Readme素材/0.4更新汇总1.jpg)
-![image](Readme素材/0.4更新汇总2.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4%E6%9B%B4%E6%96%B0%E6%B1%87%E6%80%BB1.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4%E6%9B%B4%E6%96%B0%E6%B1%87%E6%80%BB2.jpg)
 - 以上是精彩集錦，更多內容參見下方的快照。
 - 從這個版本起，我們不在Releases中發佈內容示例場景，而是打包當前庫，下載解壓後能看到安裝包和各種資源。（之後考慮在其他地方發佈內容示例和精簡版插件）
 
@@ -1355,7 +1355,7 @@ Mineprep 0.5的第一個預覽版來了，全新動畫《捅了銀魚窩了》�
 </details>
 
 #### 0.4-pre2
-![image](Readme素材/0.4-pre2封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4-pre2%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 - 新的里程碑！我們將這幾個月的成果投入實際生產，製作了動畫視頻《史詩級動作優化2》，並帶來了許多細節優化和bug修復
 - 新增`MC導播臺`，與Mineprep後期處理體積一起生成，作爲場景的基礎模塊
   - 在細節面板中，可以分別控制預覽畫質、預覽幀率上限和渲染畫質，優化性能或提升質量（所有渲染預設已不再使用過場動畫質量設置，轉而由MC導播臺控制）。預覽畫質默認爲“3+ 極高”，渲染畫質默認爲“4 影視級”。如果電腦性能較弱，建議把預覽畫質改爲“2 高（快速lumen）”；如果想要減少渲染時的閃爍和殘影，進一步提高質量，可以把渲染畫質改爲“4+ 影視級（增強lumen）”
@@ -1456,7 +1456,7 @@ Mineprep 0.5的第一個預覽版來了，全新動畫《捅了銀魚窩了》�
 </details>
 
 #### 0.4-pre1
-![image](Readme素材/0.4-pre1封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 - 新的里程碑(*・ω・)ﾉ 我們在這一週修復了大量bug並帶來幾個新功能，稍後將上傳打包的exe示例文件，包含0.3和0.4-pre1的所有內容，作爲正式的Release發佈
 - mcprep_data.json已更新至1.21版本，與剛剛發佈的MCprep 3.6同步。默認資源包尚未更新
 - 插件面板的“啓用碰撞”選項旁邊添加了`複雜碰撞`選項，默認開啓，之前的準備場景也都在用複雜碰撞；如果要進行物理模擬，請關閉此選項，再對選中物品使用準備場景。此外還增加了三個新功能：
@@ -1635,7 +1635,7 @@ Mineprep 0.5的第一個預覽版來了，全新動畫《捅了銀魚窩了》�
 </details>
 
 ### 0.3 : 多彩世界
-![image](Readme素材/0.3封面图.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.3%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 - 0.3正式版現已發佈！本次更新的主題爲“多彩世界”，和0.2版本相比，加入了大量新功能與資源素材，我們用其製作了動畫短片《史蒂夫之夢》。來看一看最後更新的內容吧：
 - **優化安裝流程，減少對其他插件的依賴**。之前的版本必須藉助TApython才能運行，否則整個藍圖都會報錯。現在只有“植物搖擺”功能依賴TApython，而且它不影響其他功能。具體來說，我們用python自帶的filedialog替代了“更換材質”的選擇文件夾彈窗，用UE自帶的“顯示消息對話”節點替代了右下角提示彈窗。

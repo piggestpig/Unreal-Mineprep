@@ -10,6 +10,7 @@ mod_info = {
     'CreatedBy': '',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
+    'Priority': 1,
 }
 
 

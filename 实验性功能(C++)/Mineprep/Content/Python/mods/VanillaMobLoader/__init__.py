@@ -13,6 +13,7 @@ mod_info = {
     'CreatedBy': 'Pig',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
+    'Priority': 1,
 }
 
 
