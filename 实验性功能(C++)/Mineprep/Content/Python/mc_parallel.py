@@ -347,18 +347,16 @@ def thread(func=None, *, callback=None):
 
 
 def asyncthread(func=None):
-    """函数装饰器，把原函数变成可供 yield from 的 generator（配合 @asynctask）。
-
-    包装函数含 yield，因此 work() 只返回 generator，函数体此时尚未执行。
-    第一次 next() / yield from / for 才会启动 daemon 线程。
-    单独写 work() 不会跑 sleep，也拿不到返回值。
-
+    """将函数放到后台线程执行，配合 asynctask 使用。
+    
+    调用后返回生成器，首次迭代才启动线程。用 yield from 等待结果，
+    等待期间每帧让出执行；线程中的异常会传给调用方。
+    
     @asynctask
     def task():
-        result = yield from work()   # 启动线程，每帧 yield 直到完成
-
-    子线程禁止 unreal.*。异常经 future.result() 传到外层 asynctask。
-    """
+        result = yield from work()
+    
+    后台函数不能调用 unreal API。"""
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):

@@ -8,11 +8,11 @@
 
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/%E6%8F%92%E4%BB%B6%E5%B1%95%E7%A4%BA.jpg)
 
-· 本插件与Minecraft、MCprep官方没有直接联系，在其建议下插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆（0.3及之前的版本已经归档，就不做修改了）。
+· 本插件与Minecraft、MCprep官方没有直接联系，在其建议下插件名称由Unreal MCprep更改为Unreal Mineprep，以避免混淆（0.3及之前的版本已经归档，就不做修改了）
 
-在v1.0正式发布前，插件主要供内部使用，可能存在兼容性问题和潜在的 ~~bug~~ 特性。之后会逐步修复并写一些[ 使用教程（点击查看）](https://github.com/piggestpig/Unreal-Mineprep/wiki)
+Mineprep 1.0 预计在2027年发布。我们正通过Python进行大型底层重构，同时为最新版编写[使用教程](https://github.com/piggestpig/Unreal-Mineprep/wiki)。当前，插件主要供内部使用，可能存在兼容性问题和潜在的 ~~bug~~ 特性，之后会逐步修复。
 
-[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite)是此插件的精简版。它的体积更小，下载更快，以GPLv3协议开源，保留了95%的核心功能
+[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite)是此插件的精简版。它的体积更小，下载更快，以GPLv3协议开源，保留了95%的核心功能。
 
 ## 下载与安装
 
@@ -68,7 +68,7 @@ Mineprep_installer.py new [目标文件夹] [--name 工程文件名] --experimen
 </details>
 <br>
 
-如果你经常更新快照版本，建议使用git克隆仓库，这样只需拉取最新的提交，不必反复下载整个压缩包！喜欢UI界面的用户可以用[Github Desktop](https://desktop.github.com/download/)
+如果你经常更新快照版本，建议使用git克隆仓库，这样只需拉取最新的提交，不必反复下载整个压缩包！喜欢UI界面的用户可以用[Github Desktop](https://desktop.github.com/download/)代替git
 
 <details>
 <summary> 查看安装时修改的文件 </summary>
@@ -154,9 +154,9 @@ Mineprep 0.6-pre1 使用 Windows + UE5.7 开发，建议在此环境下使用。
 
 Mineprep的绝大部分功能都用蓝图和Python编写，旨在支持不同的平台和更高的引擎版本。实验性功能是C++代码，通常只为Windows编译。
 
-| Mineprep 版本 | Python API 版本 | 引擎版本 | Windows 实验性功能 | Mac/Linux 实验性功能 |
+| Mineprep<br>版本 | Python<br>API 版本 | 引擎版本 | Windows<br>实验性功能 | Mac/Linux<br>实验性功能 |
 | :---: | :---: | :---: | :---: | :---: |
-| 0.6-pre1 | 1.0 | 5.7 | ✅ | ⚠️ |
+| 0.6-pre1 | 1.0 | 5.7 | ✅ | ℹ️ |
 | 0.5 | 0.1 | 5.7 | ✅ | ✅ |
 |  |  |  |  |  |
 | 0.5-pre3 | - | 5.6 | ✅ | - |
@@ -173,7 +173,7 @@ Mineprep的绝大部分功能都用蓝图和Python编写，旨在支持不同的
 > [!WARNING]  
 > 请勿在不兼容的环境（比如高版本引擎）勾选实验性功能，否则工程文件打都打不开，一上来就报错！！
 
-Mineprep 0.6-pre1 只在 Windows 上编译了最新的实验性功能。Mac和Linux用户可以尝试安装0.5旧版本，但不保证能正常运行
+Mineprep 0.6-pre1 只在 Windows 上编译了最新的实验性功能。我们保留了来自0.5版本的二进制文件，Mac和Linux用户可以尝试安装，但不保证能正常运行
 
 <details>
 <summary> *展开细节 </summary>
@@ -206,13 +206,13 @@ Mineprep 0.6-pre1 只在 Windows 上编译了最新的实验性功能。Mac和Li
 > ⚠️  
 > 使用NvRTX等非官方引擎版本，实验性功能不可用，其他功能应该可用  
 > 非官方版本一般需要自己编译，假如你已经配好了环境，其实可以安装实验性功能，在打开工程文件时根据提示重新编译  
-> NvRTX 5.7仅支持Blendable Gbuffer，安装插件时请勾选“使用兼容性更好的有限Blendable GBuffer材质”
+> 我之前使用NvRTX 5.7，发现它仅支持Blendable Gbuffer，安装插件时请勾选“使用兼容性更好的有限Blendable GBuffer材质”
 
 · 充足的显存是流畅运行的基础，渲染动画会额外占用更多显存。Windows(DX12)和MacOS在爆显存后能使用内存/硬盘继续渲染，但速度会慢10倍左右。Vulkan爆显存则会直接崩溃。
 
 · 使用推荐配置中的RTX4080主机制作动画，编辑器中的帧率通常在60~120fps之间
 
-· 我们常用的渲染预设是 `2K_120.mp4` 和 `2K_120_HDR.mp4`，使用 `4 影视级（特调画质）`，开启DLAA和DLSS光线重构，输出帧率在10~30fps左右
+· 我们常用的渲染预设是 `2K_120.mp4` 和 `2K_120_HDR.mp4`，使用 `4 影视级（特调画质）`，开启DLAA，输出帧率在5~30fps左右
 
 
 </details>
@@ -229,13 +229,41 @@ Mineprep 0.6-pre1 只在 Windows 上编译了最新的实验性功能。Mac和Li
 
 ## 语言本地化
 Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体中文
-- **安装包**会根据Blender的偏好设置选择语言。本地化内容以字典的形式写在代码中，参见[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py)
+- **安装包**会根据Blender的偏好设置选择语言。本地化内容以字典的形式写在代码中，参见[Mineprep_installer.blend](./Mineprep_installer.blend)或[Mineprep_installer.py](./Mineprep_installer.py)
 - **插件面板**上方有选择语言的按钮，在启动时会根据UE的偏好设置选择语言。本地化内容保存在[语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv) 和 [变量显示名_VariableDisplayNames.csv](./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)中。
 - 只有安装了第一个实验性功能 `(Mineprep C++ 拓展模块)` 才能翻译粒子参数。  
 - 只有安装了第二个实验性功能 `(为材质参数面板添加关键帧按钮和本地化翻译)` 才能翻译材质参数
 - 第一个实验性功能还提供了自定义快捷键，可以按`insert`尝试翻译鼠标下的文本；如果在变量显示名的csv文件中找到匹配条目，就替换文本。有了实验性功能后，还能通过`本地化翻译控制板`模组收集最新的变量显示名
 
 更多内容正在更新中
+
+
+## 模组
+模组是通过 [Mineprep Python API](https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API) 编写的脚本文件，支持像Blender一样快速创建UI界面，运行自定义程序
+
+- 可随时安装和卸载
+- 体积小，通常只有几十KB
+- 跨平台，易于扩展
+- 能自动保存属性集
+- 适合Agent迭代开发
+
+使用方法：在 `顶部菜单栏 → MC → 模组管理器` 中安装、卸载、启用、禁用模组。  
+Mineprep 0.6-pre1有以下内置模组（目前仍处于早期开发阶段，可能存在bug）：
+
+| 模组名称 | 版本 | 简介 | 源码参考 |
+| :--- | :---: | :--- | :--- |
+| [模组管理器](<./实验性功能(C++)/Mineprep/Content/Python/mods/ModManager>) | 1.0 | 启用、禁用、安装和卸载模组 | |
+| [VAT顶点动画工具](<./实验性功能(C++)/Mineprep/Content/Python/mods/VAT_Tools>) | 1.0 | 烘焙顶点动画纹理，用于大型群体粒子 | [Anim To Texture Helpers](https://github.com/kromond/AnimToTextureHelpers) |
+| [皮肤&表情编辑器](<./实验性功能(C++)/Mineprep/Content/Python/mods/Skin_Editor>) | 1.0 | 编辑选中Actor的皮肤与头部材质；绘制纹理 | [MC Skin Converter](https://util.gflash.eu/mcskinconverter/) |
+| [MC原版生物加载器](<./实验性功能(C++)/Mineprep/Content/Python/mods/VanillaMobLoader>) | 1.0 | 浏览、导入并放置MC生物模型（需要联网） | [CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/) |
+| [基岩版动画转换器](<./实验性功能(C++)/Mineprep/Content/Python/mods/BedrockAnimator>) | 1.0 | 把基岩版 animation.json 转换为动画序列 | |
+| | | | |
+| [插件更新与迁移工具](<./实验性功能(C++)/Mineprep/Content/Python/mods/VersionControl>) | 1.0 | 迁移Mineprep插件至其他工程文件或安装包仓库 | |
+| [本地化翻译控制板](<./实验性功能(C++)/Mineprep/Content/Python/mods/LocalizationBoard>) | 1.0 | 扫描资产并整理变量显示名 CSV（需要实验性功能）| |
+| [自动化测试](<./实验性功能(C++)/Mineprep/Content/Python/mods/AutomationTest>) | 1.0 | 运行编辑器自动化测试项目 | |
+| [Mod模板](<./实验性功能(C++)/Mineprep/Content/Python/mods/template.py>) | 1.0 | 面向开发者的普通mod模板 | |
+| [minimal](<./实验性功能(C++)/Mineprep/Content/Python/mods/minimal.py>) | - | 最小示例 | |
+
 
 ## 开源协议
 - 由于完整版Mineprep包含了虚幻引擎官方示例和源代码，它们和开源许可证不兼容，这里就先不放License文件了。[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite) 是此插件的精简版，它以GPLv3协议开源
@@ -249,17 +277,100 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
 ### 0.6-pre1
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
+Mineprep 0.6-pre1 是最后一个支持UE5.7的版本，主题为水域更新，我们用其制作了新的动画视频《选一扇门，开启你的MC之旅》
+
+先来看看和大版本主题相关的更新吧：
+
+<details>
+<summary> 高级水体 </summary>
+
+- 高级水体包含专用水面材质和水下后期处理效果，提供浮力、水波交互、自定义曲线区域等多种功能
+
+</details>
+
+<details>
+<summary> 水坑贴花与LabPBR孔隙率 </summary>
+
+- 使用水坑贴花在任意位置生成水坑和涟漪
+- LabPBR的孔隙率参数现已实装，它在此处被解释为“吸水程度”，会减弱材质对贴花金属度、高光度、粗糙度和法线的响应效果
+
+</details>
+
+<details>
+<summary> 更多MC原版生物 </summary>
+
+- 新增鳕鱼、鲑鱼、热带鱼及其NPC生物。热带鱼有不同的体型、花纹和颜色
+- 全新的`MC原版生物加载器`模组能从Blockbench的CEM Template Loader下载所有生物模型，并绑定简易的单层骨骼
+
+</details>
+
+<details>
+<summary> 鱼群粒子与大型群体 </summary>
+
+- 鱼群和鸟群粒子已加入生成器面板，它们在3D空间中运动，能检测高级水体和环境碰撞
+- 大幅改进了粒子群体和材质，支持新的力场效果、手持物品、眨眼等功能
+- 使用`VAT顶点动画工具`模组快速烘焙顶点动画模型，可用于粒子群体、实例化静态网格体、植被绘制或PCG散布器
+
+</details>
+<br>
+
+随着UE5系列接近尾声，我们开启了迄今为止最大、时间跨度最长的底层重构。Mineprep 1.0 也提上日程了！
+
+<details>
+<summary> Python正如闪电般归来 </summary>
+
+- [Mineprep Python API](https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API) 经过完整重写，不再是实验性功能，并推动了插件的现代化和模块化。下列功能都是基于Python实现的：
+
+</details>
+
+<details>
+<summary> 原生的放置方块/物品功能 </summary>
+
+- 不需要Blender了！点击按钮立即导入模型
+
+</details>
+
+<details>
+<summary> 导入MC结构 </summary>
+
+- 初步支持解析和导入 .nbt / .mcstructure / .schem 文件
+
+</details>
+
+<details>
+<summary> 自动化 </summary>
+
+- Mineprep Python API能够运行大型程序构建场景
+- 使用mineprep.panel()访问插件面板
+- 使用@mineprep.asynctask创建异步延迟任务
+- 使用mineprep-skills让AI操作编辑器
+
+</details>
+
+<details>
+<summary> 模组 </summary>
+
+- 模组是使用Python编写的轻量级脚本，体积小、功能强大、易于扩展。我们模仿Blender提供了创建UI界面的API，方便开发者和Agent快速迭代、制作新功能。[点击查看内置模组](#模组)
+
+</details>
+<br>
+
+除此之外，还有大量性能优化和bug修复。Mineprep 0.6、0.7、0.8都在同步开发中，接下来的版本号和更新节奏可能有所调整
+
+<details>
+<summary> 📜展开快照 </summary>
 
 #### 26w35a
 - Mineprep 0.6-pre1即将发布，这里记录了最后的更新内容
-- 新增鳕鱼、鲑鱼、热带鱼的NPC生物。马、鹦鹉、热带鱼现在统一采用随机挑选数组皮肤的方法
-- 新增[Python安装脚本](./Mineprep_installer.py)和`插件更新与迁移`模组。安装时会自动启用RemoteControl等更多编辑器设置
+- 新增鳕鱼、鲑鱼、热带鱼的NPC生物。马、鹦鹉、热带鱼现在统一采用从数组中随机挑选皮肤的方法
+- 新增[Python安装脚本](./Mineprep_installer.py)和`插件更新与迁移`模组。重写了configparser，支持虚幻引擎特有的带“+”的条目。安装时会自动启用RemoteControl等更多编辑器设置
 - 新增`MC原版生物加载器`模组，需要联网使用，从Blockbench的CEM Template Loader下载最新的生物模型，导入为骨骼网格体。从某种程度上来说，Mineprep已经支持所有原版生物了！
 - 更新了本地化翻译，新增`本地化翻译控制板`模组
 - 改进了“堆放方块”素材，现在能设置任意方块类型和权重，调整间距，随机修改位置、旋转、缩放，剔除重叠模型，极大拓展了功能。不仅适用于方块，还能放置观众人群
 - MC导播台新增`后期处理体积框作遮罩场`参数，勾选后将高精度长方体区域作为遮罩场
 - 半透明水材质支持遮罩层了
-- 粒子系统现在会重新解释“线性速度”和“角扭矩”这两个力场，增强了实用性
+- 大幅改进了粒子群体和顶点动画材质，适配手持物品、眨眼效果，并能用于实例化静态网格体、植被绘制和PCG散布器。
+- 粒子系统现在会重新解释“线性速度”和“角扭矩”这两个力场，增强了实用性：
   - 将自身速度插值到目标线性速度
   - 将自身旋转插值到角扭矩向量所指方向
 - 更新了粒子交互场的用法，用整数部分表示粒子事件
@@ -269,13 +380,14 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
   - 负数：杀死粒子
 - 基于方形、曲线和图像的全局粒子生成区域能投射到地面上了
 - 头身分离绑定基础生物模型在烘焙骨骼网格体时会自动合并相同模型的材质插槽了
+- 默认画质预设关闭了DLSS光线重构。之前制作猫meme时，必须借助光线重构得到清晰的半透明阴影；但在一般情况下，光线重构反而会降低性能，有时还会产生噪点与拖影
 - 礼花粒子改用长方形飘带
 - 猪灵头部使用和身体一致的皮肤
 - 略微移动了村民的腿，避免在烘焙VAT模型时共用顶点
 - 修复了部分四足NPC生物的头身朝向问题
 - 修复了烈焰人动画循环首尾帧不一致的问题
 - 修复了中键点击放置生物按钮，未能添加烈焰人粒子的bug
-- 修复了粒子群体的位置偏移坐标系问题
+- 修复了粒子群体渲染偏移的坐标系相关问题
 - 修复了蓝图在python初始化前调用函数的问题
 - 由于现在启用了Lumen命中光照，阴影处不再死黑一片，我们关闭了粒子群体材质的次表面散射，这能显著提高性能
 
@@ -589,6 +701,8 @@ Mineprep 0.6的主题已确定为“水域更新”！
 - 为Lumen启用了屏幕空间反射，否则水坑反射已遮罩材质时会显示为蓝色的天空。（之前好像发现屏幕空间反射有些问题，把它关掉了，现在需要更多测试）
 - 修改了2K_120.mp4渲染预设，使用exr作为中间图片格式。之后的动画视频都会用16bit原图来编码10bit视频
 - 每周快照都会更新一部分Mineprep Wiki的内容
+
+</details>
 
 ### 0.5 : 荒野更新
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)

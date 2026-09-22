@@ -10,27 +10,63 @@ English | [**中文**](./README.md) | [**繁體中文**](./README_繁體中文.m
 
 *This plugin is not affiliated with Minecraft or MCprep. Upon their suggestion, we changed the name from Unreal MCprep to Unreal Mineprep to avoid confusion (versions 0.3 and earlier have been archived so they remain unchanged).
 
-Before the official release of v1.0, the plugin is mainly for internal use. There might be compatibility issues and potential ~~bugs~~ features. We will gradually fix them and write some [tutorials (click to view)](https://github.com/piggestpig/Unreal-Mineprep/wiki).
+Mineprep 1.0 is expected to be released in 2027. We are currently working on a major overhaul through Python, and writing [tutorials](https://github.com/piggestpig/Unreal-Mineprep/wiki) for the latest version. Currently, the plugin is mainly for internal use, which may have compatibility issues and potential ~~bugs~~ features. These will be gradually resolved.
 
-[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite) is a lite version of this plugin, which is small in size, fast to download, and open source under the GPLv3 license. It contains 95% of the core features with a ~250MB zip file.
+[Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite) is a lite version of this plugin, which is small in size, fast to download, and open source under the GPLv3 license. It contains 95% of the core features.
 
-## Installation
+## Download and Installation
 
-### ① Using the Installer (Recommended, for version 0.4+)
-1. Prerequisites: Install [Unreal Engine](https://www.unrealengine.com/en-US/download), [Blender](https://www.blender.org/download/), and the [MCprep](https://theduckcow.com/dev/blender/mcprep/) plugin.
-> MacOS users also need to install [Xcode](https://developer.apple.com/xcode/) to launch Unreal Engine.
+> Before using Mineprep, you need to install [Unreal Engine](https://www.unrealengine.com/en-US/download). MacOS users also need to install [Xcode](https://developer.apple.com/xcode/) to launch the engine.
 
-2. Download Mineprep, preferably save it in a pure English path.
-> You can go to [Releases](https://github.com/piggestpig/Unreal-Mineprep/releases) -> Assets -> Source code (zip) to download the stable major versions.  
-> Or click the green "Code" button above -> "Download ZIP" to download the latest snapshots.
+① Download Mineprep, preferably save it in a path without non-ASCII characters.
+- You can go to [Releases](https://github.com/piggestpig/Unreal-Mineprep/releases) -> Assets -> Source code (zip) to download stable major versions.
+- Or click the green "Code" button above -> "Download ZIP" to download the latest snapshot.
+- For beginners or slower internet connections, you can download the [Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite) edition, with a zip file of only ~250MB.
 
-3. Extract the plugin package and open the "Mineprep_installer.blend" file using Blender.
+② Choose any installation method; depending on the enabled features, required disk space ranges from 80MB to 2GB:
 
-4. Click ▶️ to run the script. A menu and installation guide will pop up. Currently, it supports "Create a new UE project" or "Install to an existing project".
-> You can select experimental features and modify plugin settings. The required space is between 500MB~2GB.
+<details>
+<summary> 1. Using the Blender Installer (for version 0.4+) </summary>
 
-### ② Manual Installation
-This requires manually copying the content folder and modifying project settings. Detailed steps will be updated later.
+- Prerequisite: You already have [Blender](https://www.blender.org/download/) installed.
+- After extracting the plugin package, open the [Mineprep_installer.blend file](./Mineprep_installer.blend) in Blender.
+- Click ▶️ to run the script. A menu and installation wizard will pop up, currently supporting "Create a new project" or "Install to an existing project".
+- You can select experimental features and modify plugin settings in the UI.
+
+</details>
+
+<details>
+<summary> 2. Using the Python Installer Script (for version 0.6+) </summary>
+
+- Prerequisite: You have a [Python](https://www.python.org/downloads/) environment installed.
+- Run the [Mineprep_installer.py](./Mineprep_installer.py) script in the terminal.
+- Recommended example command to install a performance-optimized lite version:  
+```
+Mineprep_installer.py new [TargetFolder] [--name ProjectName] --experimental 12 --lite 1 --optimize --gbuffer 0 --open
+```
+- Use `--dry-run` to print the files to be installed and estimate required space. Usage details for all arguments are documented at the beginning of the script.
+
+</details>
+
+<details>
+<summary> 3. Migrate Plugin from an Existing Project (for version 0.6+) </summary>
+
+- Prerequisite: You already have a project with Mineprep installed.
+- Go to Top Menu Bar → MC → Mod Manager, check "Show Advanced Options" in the bottom left, and enable the `Plugin Update & Migration` mod.
+- You can choose the target path and select what to migrate in the UI.
+> Migrating preserves your own modified or added files, and migrates mod preference settings.
+
+</details>
+
+<details>
+<summary> 4. Manual Installation </summary>
+
+Requires copying the Mineprep content folder and modifying project settings. Detailed steps will be updated later.
+
+</details>
+<br>
+
+If you update snapshots frequently, we recommend cloning the repository via git so you only need to pull the latest commits instead of redownloading the entire zip. You can also use [GitHub Desktop](https://desktop.github.com/download/) for a graphic interface.
 
 <details>
 <summary> View files modified during installation </summary>
@@ -52,19 +88,19 @@ Project Directory
 
 
 * Optional experimental features
-(*) Both normal/experimental features are available
+(*) Both normal and experimental versions available
 ```
 
 </details>
 
 <details>
-<summary> [Recommended] Install DLSS </summary>
+<summary> [Recommended] Install Third-Party Super Resolution Plugins like DLSS </summary>
 
-It is highly recommended for NVIDIA users to install DLSS to improve performance, enhance image quality and save VRAM.
+It is highly recommended for NVIDIA users to install DLSS to improve performance, enhance image quality, and save VRAM.
 
-1. Go to [https://developer.nvidia.com/rtx/dlss#getstarted](https://developer.nvidia.com/rtx/dlss#getstarted), download the corresponding plugin version in the "DLSS 4 Plugin for Unreal Engine" section.
+1. Go to [https://developer.nvidia.com/rtx/dlss](https://developer.nvidia.com/rtx/dlss), download the corresponding plugin version under the "DLSS 4.5 Plugin for Unreal Engine" section.
 
-2. After extraction, copy the subfolders inside the Plugins folder to the Marketplace folder in the Unreal Engine plugins directory (as shown below):
+2. After extraction, copy the subfolders inside the Plugins folder to the Marketplace folder in your Unreal Engine plugins directory, as shown below:
 
 **From extracted DLSS plugin folder**
 ```
@@ -85,20 +121,20 @@ Engine
   │     └── ...
   └── ...
 ```
-If the Marketplace folder doesn't exist, create one by yourself.
+If the Marketplace folder does not exist, create it manually.
 
-3. Open the project, search for DLSS in the top-left toolbar -> Edit -> Plugins, enable `NVIDIA DLSS Super Resolution/Ray Reconstruction/DLAA` and `Movie Render Queue DLSS/DLAA Support`, then restart the engine.
+3. Open the project, go to Edit -> Plugins in the top left, search for DLSS, enable `NVIDIA DLSS Super Resolution/Ray Reconstruction/DLAA` and `Movie Render Queue DLSS/DLAA Support`, and restart the engine.
 
-After a successful installation, you can adjust DLSS settings in the MC Director Station.
+Once installed, you can adjust DLSS quality levels in the MC Director Station.
 
-> Only DLSS and Ray Reconstruction can be used when rendering animations (Frame Generation is not supported here), so enabling these two plugins is sufficient.
+> Only DLSS and Ray Reconstruction can be used during animation rendering (Frame Generation is not supported), so enabling the two plugins above is sufficient.
 
 </details>
 
 
 
 ## System Requirements
-Mineprep 0.5 is developed on Windows + UE5.7, and it's recommended to use this environment. Some features may not be available on other platforms or engine versions.
+Mineprep 0.6-pre1 is developed on Windows + UE5.7, and it is recommended to use this environment. Some features may not be available on other platforms or engine versions.
 
 In addition to the minimum requirements in the [Unreal Engine Documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/hardware-and-software-specifications-for-unreal-engine), rendering animations requires higher specs and more VRAM:
 
@@ -106,67 +142,73 @@ In addition to the minimum requirements in the [Unreal Engine Documentation](htt
 | :--- | :--- |
 | - GPU supporting Hardware Ray Tracing<sup>[2]</sup> <br>- 32GB+ RAM and 12GB+ VRAM<br>- SSD (Solid State Drive) | - CPU: i7-13700K<br>- RAM: 32GB*2 DDR5-6400MHz<br>- GPU: RTX 4080 (16GB)<br>- Storage: 2TB + 4TB PCIe 4.0 SSD |
 
-<sup> [1] The computer we use for development and animation.  
+<sup> [1] The computer we use for plugin development and animation production.  
 [2] NVIDIA 20 series, AMD 6000 series, Intel Arc, or Apple M3 and above. </sup>
 
 
-### Platform Compatibility
+### Version History and Platform Compatibility
 
-| *Mineprep 0.5* | Installer(Blender) | UE5.7 | Higher Engine Versions(5.8+) | Lower Engine Versions(5.6-) |
+The vast majority of Mineprep features are written in Blueprint and Python, designed to support different platforms and higher engine versions. Experimental features are C++ code, typically compiled only for Windows.
+
+| Mineprep<br>Version | Python<br>API Version | Engine Version | Windows<br>Experimental | Mac/Linux<br>Experimental |
 | :---: | :---: | :---: | :---: | :---: |
-| Windows | ✅ | ✅ | ⚠️ | ❌ |
-|   Mac   | ✅ | ✅* | ⚠️ | ❌ |
-|  Linux  | ✅ | ✅* | ⚠️ | ❌ |
-
-
-✅: Compatible, tested and fully functional  
-ℹ️: Untested, theoretically should work  
-⚠️: **Experimental features unavailable**, non-experimental features should work  
-❌: Incompatible, cannot be used
+| 0.6-pre1 | 1.0 | 5.7 | ✅ | ℹ️ |
+| 0.5 | 0.1 | 5.7 | ✅ | ✅ |
+|  |  |  |  |  |
+| 0.5-pre3 | - | 5.6 | ✅ | - |
+| 0.5-pre2 | - | 5.6 | ✅ | - |
+| 0.5-pre1 | - | 5.5 | ✅ | - |
+| 0.4 | - | 5.4 | ✅ | - |
+| 0.4-pre2 | - | 5.4 | ✅ | - |
+| 0.4-pre1 | - | 5.4 | ✅ | - |
+| 0.3 | - | 5.4 | - | - |
+| 0.3-pre1 | - | 5.4 | - | - |
+| 0.2 | - | 5.3 | - | - |
+| 0.1 | - | - | - | - |
 
 > [!WARNING]  
-> Do not check experimental features in incompatible environments (like higher engine versions), otherwise the project won't open and it will crash right at the start!!
+> Do not check experimental features in incompatible environments (such as higher engine versions), otherwise the project will fail to open and crash right away!!
+
+Mineprep 0.6-pre1 only compiles the latest experimental features on Windows. We retain the binaries from version 0.5; Mac and Linux users can try installing them, but normal operation is not guaranteed.
 
 <details>
-<summary> *Show Specs Details </summary>
+<summary> *Show Details </summary>
 
 <img src="https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/Mac%26Linux%E5%90%88%E5%BD%B1%E7%95%99%E5%BF%B5.jpg" alt="Mac&Linux Group Photo">
-<sup><i> ↑ A group photo of Mineprep 0.5 running on MacOS and Linux </i></sup>
+<sup><i> ↑ A commemorative photo of Mineprep 0.5 running on MacOS and Linux </i></sup>
 
-- The installer is a Python script written in Blender. It's theoretically cross-platform, but some details like os.startfile() are only available on Windows. We try to use fallbacks for these functions via command line.
-- Non-experimental features of the plugin are UE5 Blueprint assets. Higher engine versions can be backward compatible with old assets, but lower engine versions cannot open new assets. If you have to use a lower engine version, please download earlier versions of Mineprep.
-- Experimental features are C++ code and must be compiled for specific platforms and engine versions. Windows will be updated with every snapshot. Mac and Linux will only be updated with major version releases.
+- The installer is a Python script written in Blender, theoretically cross-platform, but some details like os.startfile() are only available on Windows; we attempt to replace these features using the command line.
+- Non-experimental features of the plugin are UE5 Blueprint assets. Higher engine versions are backward compatible with old assets, but lower engine versions cannot open new assets. If you have to use a lower engine version, please download earlier versions of Mineprep.
+- Experimental features are C++ code and must be compiled for specific platforms and engine versions. Windows updates with every snapshot, while Mac and Linux will only update with major version releases.
 - Currently, physics interaction rigs cause crashes on Mac and Linux; this asset will be skipped during installation.
-- Additionally, the plugin bundles FFmpeg for video encoding. You can also manually download FFmpeg and specify its path during installation. It is recommended to download the latest master build.
+- Additionally, the plugin bundles FFmpeg for video encoding. You can also manually download FFmpeg and specify its path during installation. It is officially recommended to download the latest master build.
 
 > ⚠️  
-> MacOS has been tested with M4 Max (36GB) and M2 Max (32GB). Current issues are as follows:  
-> · Although Hardware Ray Tracing and Megalights are usable, Alpha mask seems unsupported. VSM (Virtual Shadow Maps) is enabled by default  
-> · Distant Landscape Generator performance is poor, several times slower than expected  
-> · Interactive 3D Water Pool is highly unstable, causing severe self-collision  
-> · Without super resolution plugins like DLSS, the engine's built-in TSR is used by default, resulting in severe ghosting and poor performance. An empty scene takes 6ms, even slower than ray tracing  
-> · nDisplay is missing, so 3D stereoscopic rendering is unsupported. Preliminary 3D rendering functions are available only after installing experimental features  
-> · Tkinter is missing, preventing those like shortcut summary panel from displaying  
-> · MacOS can place files anywhere in a folder. After rendering, you may need to scroll down to see the video at the bottom  
-> · The text sorting in the spawner subpanel is different from Windows, likely a python  issue. It doesn't influence the function anyway, so just treat it as a feature  
-> · The Ctrl hotkey seems to become Cmd. I couldn't trigger any shortcuts during remote control, but it should be fine in local use
+> MacOS has been tested on M4 Max (36GB) and M2 Max (32GB). Current issues are as follows:  
+> · Although Hardware Ray Tracing and Megalights are supported, Alpha mask seems unsupported. VSM (Virtual Shadow Maps) is enabled by default.  
+> · Distant Landscape Generator performance is poor, several times slower than expected.  
+> · Interactive 3D Water Pool is very unstable, producing severe self-collision.  
+> · Without super-resolution plugins like DLSS, the engine's built-in TSR is used by default, resulting in severe ghosting and poor performance. An empty scene takes 6ms, even slower than ray tracing.  
+> · Lacks nDisplay, does not support 3D stereoscopic rendering; preliminary 3D rendering features are only available after installing experimental features.  
+> · Mac folders allow free positioning of files; after rendering, you seem to need to scroll down to see the video at the bottom.  
+> · The sorting in the spawner subpanel differs from Windows, likely an issue with python sort. Since Chinese names lack an intrinsic order anyway, just treat it as a feature.  
+> · The Ctrl shortcut seems to turn into Cmd; no shortcuts could be triggered during remote connection, but local usage should be fine.
 
 > ⚠️  
-> Linux was tested briefly on a server with E5+64G+3090:  
-> · Besides missing tkinter, no major issues were found for now  
-> · E5 is just way too slow. Despite having 18 cores, compiling shaders took half an hour, and editor framerate was only 40-50fps (It's my first intuitive realization of the importance of single-core performance)  
-> · Is anyone really using linux for animation?
+> Linux was tested briefly on an E5 + 64GB + RTX 3090 server; no major issues found:  
+> · E5 is just way, way too slow. Despite having 18 cores, compiling shaders took half an hour, and entering the editor yielded only 40-50 fps qwq (my first intuitive realization of the importance of single-core performance).  
+> · Is anyone really using Linux for animation?
 
 > ⚠️  
 > When using unofficial engine versions like NvRTX, experimental features are unavailable, though other features should work.  
-> Unofficial versions typically require manual compilation. If your environment is set up, you can actually install experimental features and recompile as prompted when opening the project.  
-> NvRTX 5.7 only supports Blendable GBuffer. Please check "Use limited Blendable GBuffer material for better compatibility" during installation.
+> Unofficial versions typically require manual compilation. If your environment is already configured, you can install experimental features and recompile when opening the project according to prompts.  
+> I previously used NvRTX 5.7 and found it only supports Blendable GBuffer; please check "Use limited Blendable GBuffer material for better compatibility" during installation.
 
-· Sufficient VRAM is the foundation for smooth operation. Rendering animations will consume additional VRAM. Windows (DX12) and MacOS can continue rendering using RAM/Disk when VRAM is exceeded, but at about 1/10 the speed. Exceeding VRAM on Vulkan will result in a direct crash.
+· Sufficient VRAM is the foundation for smooth operation. Rendering animations will consume additional VRAM. Windows (DX12) and MacOS can continue rendering using RAM/disk when running out of VRAM, but at roughly 1/10 the speed. Vulkan will crash directly upon running out of VRAM.
 
-· With the recommended RTX 4080 specs, editor framerates are typically between 60~120fps.
+· Using the recommended RTX 4080 PC to produce animations, the editor framerate is usually between 60~120 fps.
 
-· Our commonly used render presets are `2K_120.mp4` and `2K_120_HDR.mp4`, using `4 Cinematic (Specially Tuned)`, enabling DLAA and DLSS Ray Reconstruction, with output frame rates around 10~30fps.
+· Our commonly used render presets are `2K_120.mp4` and `2K_120_HDR.mp4`, using `4 Cinematic (Specially Tuned)`, with DLAA enabled, outputting at around 5~30 fps.
 
 
 </details>
@@ -176,19 +218,47 @@ In addition to the minimum requirements in the [Unreal Engine Documentation](htt
 
 ## Mobs
 - Mineprep provides Minecraft mobs which can be placed through the spawner panel.
-- Currently, there are skeletal meshes and automated NPCs. Some mobs have vertex-animated instance model for large crowd particles. All mobs can change materials, and humanoids may add universal IK bindings.
-- Current version supports: Steve/Alex player, pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, bogged, piglin, piglin brute, pillager, vindicator, iron golem, silverfish, endermite, spider (cave spider), villager, blaze, wither, hoglin, snow golem, wolf, cat, allay, wandering trader, ocelot, ghast, ghastling, happy ghast, creeper, parrot, camel, camel husk, parched.
+- Currently, there are skeletal meshes and automated NPCs. Some mobs have vertex-animated instance models for large crowd particles. All mobs can change materials, and bipedal mobs can try adding universal IK bindings.
+- Current version supports: Steve/Alex player, pig, cow, sheep, horse (donkey, mule, zombie horse, skeleton horse), zombie, husk, drowned, skeleton, wither skeleton, stray, bogged, piglin, piglin brute, pillager, vindicator, iron golem, silverfish, endermite, spider (cave spider), villager, blaze, wither, hoglin, snow golem, wolf, cat, allay, wandering trader, ocelot, ghast, ghastling, happy ghast, creeper, parrot, camel, camel husk, parched, cod, salmon, tropical fish.
+- Through the `Vanilla Mob Loader` mod, you can download the latest mob models from Blockbench's CEM Template Loader and import them as skeletal meshes.
 - More content is WIP.
 
 ## Localization
 Mineprep provides extensible multi-language translation, currently supporting Chinese/English/Traditional Chinese.
-- The **installer** will select the language based on Blender's preference settings. Localization content is written in the form of a dictionary in the code, see [Mineprep_installer.blend](./Mineprep_installer.blend) or [Mineprep_installer.py](Blender扩展资源/Mineprep_installer.py).
+- The **installer** will select the language based on Blender's preference settings. Localization content is written in the form of a dictionary in the code, see [Mineprep_installer.blend](./Mineprep_installer.blend) or [Mineprep_installer.py](./Mineprep_installer.py).
 - The **Plugin Panel** has a language selection button at the top, which defaults to UE's preferences at startup. Localization is saved in [语言本地化_language_localization.csv](./Mineprep/插件贴图/语言本地化_language_localization.csv) and [变量显示名_VariableDisplayNames.csv](./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv).
 - Particle parameters can only be translated if the first experimental feature `(Mineprep C++ Extensions)` is installed.  
 - Material parameters can only be translated if the second experimental feature `(Add keyframe buttons and localization for material parameter panel)` is installed.
-- The first experimental feature also provides custom shortcuts. You can press `Insert` to attempt translation of the text under the mouse cursor. If a match is found in the VariableDisplayNames CSV file, the text will be replaced.
+- The first experimental feature also provides custom shortcuts. You can press `Insert` to attempt translation of the text under the mouse cursor. If a match is found in the VariableDisplayNames CSV file, the text will be replaced. With experimental features installed, you can also collect the latest variable display names using the `Localization Board` mod.
 
 More content is WIP.
+
+
+## Mods
+Mods are script files written with [Mineprep Python API](https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API), allowing rapid creation of UI layouts like Blender and running custom functions.
+
+- Can be installed and uninstalled at any time
+- Small in size, typically tens of KBs
+- Cross-platform and easily extensible
+- Automatically persists property groups
+- Ideal for Agent-driven iterative development
+
+Usage: Install / uninstall / enable / disable mods via `Top Menu Bar → MC → Mod Manager`.  
+Mineprep 0.6-pre1 includes the following built-in mods (currently in early development, bugs may present):
+
+| Mod Name | Version | Description | Source Reference |
+| :--- | :---: | :--- | :--- |
+| [Mod Manager](<./实验性功能(C++)/Mineprep/Content/Python/mods/ModManager>) | 1.0 | Enable, disable, install, and uninstall mods | |
+| [VAT Tools](<./实验性功能(C++)/Mineprep/Content/Python/mods/VAT_Tools>) | 1.0 | Bake vertex animation textures (VAT) for large crowd particles | [Anim To Texture Helpers](https://github.com/kromond/AnimToTextureHelpers) |
+| [Skin & Face Editor](<./实验性功能(C++)/Mineprep/Content/Python/mods/Skin_Editor>) | 1.0 | Edit skin and head materials of selected Actor; draw textures | [MC Skin Converter](https://util.gflash.eu/mcskinconverter/) |
+| [Vanilla Mob Loader](<./实验性功能(C++)/Mineprep/Content/Python/mods/VanillaMobLoader>) | 1.0 | Browse, import, and place skeletal MC mobs (requires internet connection) | [CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/) |
+| [Bedrock Animation Converter](<./实验性功能(C++)/Mineprep/Content/Python/mods/BedrockAnimator>) | 1.0 | Convert Bedrock animation.json into animation sequences | |
+| | | | |
+| [Plugin Update & Migration](<./实验性功能(C++)/Mineprep/Content/Python/mods/VersionControl>) | 1.0 | Migrate Mineprep plugin to other project files or installer repos | |
+| [Localization Board](<./实验性功能(C++)/Mineprep/Content/Python/mods/LocalizationBoard>) | 1.0 | Scan assets and refresh variable display-name CSVs (requires experimental features) | |
+| [Automation Test](<./实验性功能(C++)/Mineprep/Content/Python/mods/AutomationTest>) | 1.0 | Run editor automation test projects | |
+| [Mod Template](<./实验性功能(C++)/Mineprep/Content/Python/mods/template.py>) | 1.0 | A standard mod template for developers | |
+| [minimal](<./实验性功能(C++)/Mineprep/Content/Python/mods/minimal.py>) | - | Minimal example | |
 
 ## License
 - Since the full version of Mineprep contains Unreal's example contents and source code, which are incompatible with open-source licenses, there is no individual License file here. [Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite) is a lite version open-sourced under the GPLv3 license.
@@ -198,6 +268,80 @@ See [Epic Games' EULA](https://www.unrealengine.com/en-US/eula) for details.
 
 
 ## Version Updates
+
+### 0.6-pre1
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
+
+Mineprep 0.6-pre1 is the final version supporting UE5.7, themed around the Aquatic Update. We used it to produce our new animation *Pick a Door, and Begin Your Journey to Minecraft*.
+
+Let's first take a look at the major updates related to this version's theme:
+
+<details>
+<summary> Advanced Water Body </summary>
+
+- Advanced Water Body features dedicated water surface materials and underwater post-process effects, providing buoyancy, wave interaction, custom spline areas, and more.
+
+</details>
+
+<details>
+<summary> Water Puddle Decals and LabPBR Porosity </summary>
+
+- Generate puddles and ripples anywhere using decals.
+- The porosity parameter from the LabPBR standard is now implemented, interpreted here as "water absorption", which dampens the material's response to decal metallic, specular, roughness, and normals.
+
+</details>
+
+<details>
+<summary> More Vanilla Minecraft Mobs </summary>
+
+- Added Cod, Salmon, Tropical Fish, and their corresponding NPC mobs. Tropical fish feature varying body shapes, patterns, and colors.
+- The brand-new `Vanilla Mob Loader` mod can download mob models directly from Blockbench's CEM Template Loader and bind them to simple single-layer armatures.
+
+</details>
+
+<details>
+<summary> Fish Swarms and Large Crowds </summary>
+
+- Fish swarm and bird flock particles have been added to the spawner panel; they navigate in 3D space and detect advanced water body as well as environmental collisions.
+- Greatly improved boid particles and materials, supporting new force field effects, held items, blinking, and many other features.
+- Bake vertex animation textures with easy through the `VAT Tools` mod, ready for use in particle swarms, Instanced Static Meshes, foliage painting, or PCG scatterers.
+
+</details>
+<br>
+
+As the UE5 series draws to a close, we have commenced our largest and longest overhaul to date. Mineprep 1.0 is on the horizon!
+
+<details>
+<summary> Python Returns Like Lightning </summary>
+
+- The [Mineprep Python API](https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API) has been completely rewritten, graduated from experimental status, and spearheaded the plugin's modernization and modularization. The following features are all built upon Python:
+
+</details>
+
+<details>
+<summary> Native Block/Item Spawning </summary>
+
+- No Blender needed! Click the button to import models instantly.
+
+</details>
+
+<details>
+<summary> Import MC Structures </summary>
+
+- Preliminary support for parsing and importing `.nbt`, `.mcstructure`, and `.schem` files.
+
+</details>
+
+<details>
+<summary> Mods </summary>
+
+- Mods are lightweight Python scripts: compact, capable, and easily extensible. Inspired by Blender, we provide an intuitive UI layout API, empowering developers and AI agents to rapidly iterate and craft new features. [Click to view built-in mods](#mods)
+
+</details>
+<br>
+
+In addition, there are numerous performance optimizations and bug fixes. Mineprep 0.6, 0.7, and 0.8 are all undergoing concurrent development; upcoming version numbering and release pacing may be adjusted.
+
 
 ### 0.5: The Wild Update
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)

@@ -1,6 +1,9 @@
+import re
+from pathlib import Path
+
 import opencc
 
-# 定义字符串替换规则
+# 生物等专有译名。按词条从长到短替换，避免“猪”先改掉“疣猪兽”
 replacements = {
     "僵尸马": "殭屍馬",
     "僵尸": "喪屍(殭屍)",
@@ -28,43 +31,60 @@ replacements = {
     "小恶魂": "小幽靈",
     "恶魂": "地獄幽靈",
     "豹猫": "豹貓(山貓)",
-    "中文 | [**English**](./README_English.md) | [**繁體中文**](./README_繁體中文.md)" : "繁體中文 | [**English**](./README_English.md) | [**中文**](./README.md)",
+    "中文 | [**English**](./README_English.md) | [**繁體中文**](./README_繁體中文.md)": "繁體中文 | [**English**](./README_English.md) | [**中文**](./README.md)",
 }
 
-replace_back = {
-    "封面圖": "封面图",
-    "更新彙總": "更新汇总",
-    "Blender擴展資源/": "Blender扩展资源/",
-    "插件貼圖/語言本地化": "插件贴图/语言本地化",
-    "(./Mineprep/插件貼圖/變量顯示名_VariableDisplayNames.csv)": "(./Mineprep/插件贴图/变量显示名_VariableDisplayNames.csv)",
+# 仓库路径和图片地址保持原样；#锚点要随标题一起转换
+_LINK = re.compile(r"(\]\()(<[^>]+>|[^)\s]+)(\))|(src=\")([^\"]+)(\")")
+converter = opencc.OpenCC("s2t.json")
+ROOT = Path(__file__).resolve().parent.parent
 
-}
 
-# 定义简转繁转换器
-converter = opencc.OpenCC('s2t.json')
-
-def translate_readme(content):
-    # 应用替换规则
-    for key, value in replacements.items():
+def apply_replacements(content):
+    for key, value in sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True):
         content = content.replace(key, value)
-    
-    # 进行简转繁转换
-    content = converter.convert(content)
-
-    # 替换回特殊名称
-    for key, value in replace_back.items():
-        content = content.replace(key, value)
-
     return content
 
-# 读取并翻译README文件
-with open("README.md", "r", encoding="utf-8") as f:
-    content = f.read()
 
-translated_content = translate_readme(content)
+def mask_urls(content):
+    slots = []
 
-# 将翻译结果写入新文件
-with open("README_繁體中文.md", "w", encoding="utf-8") as f:
-    f.write(translated_content)
+    def repl(match):
+        if match.group(1):
+            url = match.group(2)
+            raw = url[1:-1] if url.startswith("<") and url.endswith(">") else url
+            if raw.startswith("#"):
+                return match.group(0)
+            token = f"@@URL{len(slots):04d}@@"
+            slots.append(url)
+            return match.group(1) + token + match.group(3)
+        token = f"@@URL{len(slots):04d}@@"
+        slots.append(match.group(5))
+        return match.group(4) + token + match.group(6)
 
-print("README 文件已成功转换为繁体中文并保存。")
+    return _LINK.sub(repl, content), slots
+
+
+def unmask_urls(content, slots):
+    for index, url in enumerate(slots):
+        content = content.replace(f"@@URL{index:04d}@@", url)
+    return content
+
+
+def translate_readme(content):
+    content = apply_replacements(content)
+    content, slots = mask_urls(content)
+    content = converter.convert(content)
+    return unmask_urls(content, slots)
+
+
+def main():
+    source = ROOT / "README.md"
+    target = ROOT / "README_繁體中文.md"
+    content = source.read_text(encoding="utf-8")
+    target.write_text(translate_readme(content), encoding="utf-8")
+    print(f"已写入 {target.name}")
+
+
+if __name__ == "__main__":
+    main()
