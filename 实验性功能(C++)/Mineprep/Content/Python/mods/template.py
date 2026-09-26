@@ -46,4 +46,4 @@ def register():
 
 # 写成文件夹的大型模组可在此注销子模块，参见ModManager的__init__.py
 def unregister():
-    pass
+    mod_template.unregister()

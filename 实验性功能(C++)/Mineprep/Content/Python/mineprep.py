@@ -281,7 +281,7 @@ class MineprepAddonHandle(MineprepAPIHandle):
         elif cast(self.target, wclass.option):
             option_count = self.target.get_option_count()
             if index < 0:
-                index = option_count() + index
+                index = option_count + index
             index = max(0, min(index, option_count - 1))
             self.target.set_selected_index(index)
             string = self.target.get_option_at_index(index)

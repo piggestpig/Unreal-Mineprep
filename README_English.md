@@ -307,7 +307,6 @@ Let's first take a look at the major updates related to this version's theme:
 - Bake vertex animation textures with easy through the `VAT Tools` mod, ready for use in particle swarms, Instanced Static Meshes, foliage painting, or PCG scatterers.
 
 </details>
-<br>
 
 As the UE5 series draws to a close, we have commenced our largest and longest overhaul to date. Mineprep 1.0 is on the horizon!
 
@@ -333,12 +332,22 @@ As the UE5 series draws to a close, we have commenced our largest and longest ov
 </details>
 
 <details>
+<summary>Automation</summary>
+
+* Mineprep Python API can run large-scale programs.
+* Use `mineprep.panel()` to access the plugin panel.
+* Use `@mineprep.asynctask` to create asynchronous delayed tasks.
+* Use `mineprep-skills` to let AI operate the editor.
+
+</details>
+
+
+<details>
 <summary> Mods </summary>
 
 - Mods are lightweight Python scripts: compact, capable, and easily extensible. Inspired by Blender, we provide an intuitive UI layout API, empowering developers and AI agents to rapidly iterate and craft new features. [Click to view built-in mods](#mods)
 
 </details>
-<br>
 
 In addition, there are numerous performance optimizations and bug fixes. Mineprep 0.6, 0.7, and 0.8 are all undergoing concurrent development; upcoming version numbering and release pacing may be adjusted.
 
