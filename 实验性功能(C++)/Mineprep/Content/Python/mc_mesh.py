@@ -57,7 +57,7 @@ def _xf_to_root(root, child):
         return child.get_relative_transform() * root.get_socket_transform(
             sock, unreal.RelativeTransformSpace.RTS_COMPONENT
         )
-    return root.get_world_transform().inverse() * child.get_world_transform()
+    return child.get_world_transform() * root.get_world_transform().inverse()
 
 
 def _paint_bone(dm, bone_name, body_dm, bone_opts):

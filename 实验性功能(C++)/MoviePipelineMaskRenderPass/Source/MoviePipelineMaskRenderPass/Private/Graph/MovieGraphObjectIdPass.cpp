@@ -133,9 +133,6 @@ namespace UE::MovieGraph
 
 			AccumulatorPin->FetchFinalPixelDataLinearColor(OutputLayers);
 
-			MoviePipeline::FObjectIdAccelerationData* AccelData = FMovieGraphObjectIdPass::GetAccelerationData(SampleStatePayload->TraversalContext.RenderDataIdentifier.RootBranchName);
-			check(AccelData);
-
 			// If there are multiple cameras being rendered, layer names should include the camera name
 			bool bIsMultiCam = false;
 			{
@@ -148,7 +145,7 @@ namespace UE::MovieGraph
 			const FMovieGraphRenderDataIdentifier& RenderDataIdentifier = SampleStatePayload->TraversalContext.RenderDataIdentifier;
 			const FString CryptomatteTypename = GetCryptomatteTypename(RenderDataIdentifier, bIsMultiCam);
 			const FString TypenameHash = GetTypenameHash(RenderDataIdentifier);
-			UpdateCryptomatteMetadata(*AccelData, TypenameHash, CryptomatteTypename, SampleStatePayload->AdditionalFileMetadata);
+			MoviePipeline::UpdateCryptomatteMetadata(ObjectIdArgs->JsonManifestCachedOutput, TypenameHash, CryptomatteTypename, SampleStatePayload->AdditionalFileMetadata);
 
 			for (int32 Index = 0; Index < ObjectIdArgs->NumOutputLayers; Index++)
 			{
@@ -283,6 +280,9 @@ TSharedRef<MoviePipeline::IMoviePipelineAccumulationArgs> FMovieGraphObjectIdPas
 	AccumulationArgs->AccumulatorInstance = SampleAccumulatorPool->GetAccumulatorInstance_GameThread<FMaskOverlappedAccumulator>(InSampleState.TraversalContext.Time.OutputFrameNumber, InSampleState.TraversalContext.RenderDataIdentifier);
 	AccumulationArgs->NumOutputLayers = RenderDataIdentifiers.Num();
 	AccumulationArgs->CacheData = MakeShared<TMap<int32, UE::MoviePipeline::FMoviePipelineHitProxyCacheValue>>(*AccelerationData->Cache);
+	// Copy JsonManifestCachedOutput by value so the accumulation worker thread never reads from AccelerationDataByBranch,
+	// which is mutated on the game thread.
+	AccumulationArgs->JsonManifestCachedOutput = AccelerationData->JsonManifestCachedOutput;
 	AccumulationArgs->RenderPassNode = LayerData.RenderPassNode;
 
 	return AccumulationArgs;

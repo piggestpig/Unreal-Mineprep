@@ -1,5 +1,6 @@
 """生成到 Sequencer / 烘焙动画序列。"""
 import json
+import math
 import os
 
 import mineprep
@@ -10,22 +11,12 @@ from . import util
 
 
 def apply(mod):
+    """面板适配；返回异步句柄，完成后的 result 包含实际写键信息。"""
     props = mod.props
-    bone_map = util.parse_bone_map(props.BoneMap)
-    path = util.json_file(props)
-    if not path or not os.path.isfile(path):
-        mineprep.throw('找不到 JSON: ' + path)
-    with open(path, encoding='utf-8') as f:
-        data = json.load(f)
-    anim_name, anim = util.first_anim(data)
-    bones = anim.get('bones') or {}
     had_actor = isinstance(props.Actor, unreal.Actor)
     target = util.resolve_actor(props)
     if not had_actor:
         util.sync_asset_names(props)
-    ah = mineprep.actor(target)
-    if not ah.target:
-        mineprep.throw('找不到角色')
     create_new = bool(props.CreateNewSequence)
     if create_new:
         if not (props.LevelSequenceName or '').strip():
@@ -40,8 +31,39 @@ def apply(mod):
         if not seq:
             mineprep.throw('未打开 Level Sequence，请先在 Sequencer 中打开或聚焦一个序列')
         t0 = mineprep.sequencer.time() if props.StartAtPlayhead else 0.0
-    body = ah.rig()
-    time_scale = float(props.TimeScale) if props.TimeScale else 1.0
+    return apply_animation(util.json_file(props), target, sequence=seq,
+                           bone_map=props.BoneMap, time_scale=props.TimeScale or 1.0,
+                           start_time=t0, resize_playback=create_new, save=create_new)
+
+
+def _open_sequence(sequence):
+    if not isinstance(sequence, unreal.LevelSequence):
+        raise ValueError('需要有效的 LevelSequence')
+    if not unreal.LevelSequenceEditorBlueprintLibrary.open_level_sequence(sequence):
+        raise RuntimeError('无法打开关卡序列: ' + sequence.get_path_name())
+
+
+@mineprep.asynctask
+def apply_animation(json_path, actor, *, sequence, bone_map=None, time_scale=1.0,
+                    start_time=0.0, resize_playback=False, save=False):
+    """写入首个 Bedrock 动画。UE 主线程调用；时间为秒，返回 AsyncTaskRunner。"""
+    time_scale, start_time = float(time_scale), float(start_time)
+    if not math.isfinite(time_scale) or time_scale <= 0 or not math.isfinite(start_time):
+        raise ValueError('time_scale 必须为正有限数，start_time 必须为有限数')
+    if not util.body_skm(actor):
+        raise ValueError('角色没有骨骼网格体')
+    bone_map = util.parse_bone_map(bone_map)
+    if not json_path or not os.path.isfile(json_path):
+        raise FileNotFoundError('找不到 JSON: ' + str(json_path))
+    with open(json_path, encoding='utf-8-sig') as f:
+        anim_name, anim = util.first_anim(json.load(f))
+    bones = anim.get('bones') or {}
+    _open_sequence(sequence)
+    body = mineprep.actor(actor).rig()
+    # 新建 Control Rig 的绑定/通道要经过编辑器一帧才可可靠写键。
+    yield
+    if mc_sequencer.resolve_sequence() != sequence:
+        raise RuntimeError('写键前活动关卡序列已改变，请重新调用')
     duration = util.anim_length(anim, bones) * time_scale
     nkey = 0
     skipped = []
@@ -88,21 +110,26 @@ def apply(mod):
                         )
                     else:
                         val = rot
-                    body.key(ctrl, val, t0 + t * time_scale)
+                    body.key(ctrl, val, float(start_time + t * time_scale))
                     nkey += 1
-            if create_new:
-                util.set_playback_seconds(seq, duration)
+            if resize_playback:
+                util.set_playback_seconds(sequence, max(0.0, start_time) + duration)
     finally:
         mc_sequencer._refresh_sequencer = refresh
         refresh()
-    if create_new:
-        unreal.EditorAssetLibrary.save_loaded_asset(seq)
+    channel_keys = sum(ch.get_num_keys() for section in body.track.get_sections()
+                       for ch in section.get_all_channels())
+    if nkey and not channel_keys:
+        raise RuntimeError('Control Rig 未写入关键帧')
+    if save and not unreal.EditorAssetLibrary.save_loaded_asset(sequence):
+        raise RuntimeError('保存关卡序列失败: ' + sequence.get_path_name())
     msg = anim_name + ' keys=' + str(nkey)
     if skipped:
         msg += ' skip=' + ','.join(skipped)
     mineprep.prints(msg)
     print('OK APPLY', nkey, anim_name)
-    return nkey
+    return dict(sequence=sequence, actor=actor, keys=nkey,
+                channel_keys=channel_keys, skipped=skipped)
 
 
 def bake(mod):
@@ -111,28 +138,33 @@ def bake(mod):
     target = util.resolve_actor(props)
     if not had_actor:
         util.sync_asset_names(props)
-    skm = util.body_skm(target)
-    mesh = skm.get_skeletal_mesh_asset() if skm else None
-    skeleton = mesh.skeleton if mesh else None
-    if not skeleton:
-        mineprep.throw('角色没有骨骼网格体')
     if not (props.AnimSequenceName or '').strip():
         util.sync_asset_names(props)
     anim_name = util.sanitize_asset(props.AnimSequenceName)
     if not anim_name:
         mineprep.throw('动画序列名称为空')
     seq = _sequence_for_bake(props)
-    binding = mc_sequencer._ensure_binding(seq, skm)
-    anim = util.open_or_create_anim(anim_name, skeleton)
+    return bake_animation(target, seq, anim_name)
+
+
+def bake_animation(actor, sequence, output_path):
+    """烘焙为 AnimSequence 并保存；output_path 可为名称或 /Game/... 资产路径。"""
+    skm = util.body_skm(actor)
+    mesh = skm.get_skeletal_mesh_asset() if skm else None
+    if not mesh or not mesh.skeleton:
+        raise ValueError('角色没有骨骼网格体')
+    _open_sequence(sequence)
+    binding = mc_sequencer._ensure_binding(sequence, skm)
+    anim = util.open_or_create_anim(output_path, mesh.skeleton)
     ok = unreal.SequencerTools.export_anim_sequence(
-        mineprep.world(), seq, anim, util.export_options(), binding, False,
+        mineprep.world(), sequence, anim, util.export_options(), binding, False,
     )
     if not ok:
         mineprep.throw('烘焙动画失败')
-    unreal.EditorAssetLibrary.save_loaded_asset(anim)
+    if not unreal.EditorAssetLibrary.save_loaded_asset(anim):
+        raise RuntimeError('保存动画失败: ' + anim.get_path_name())
     nkeys = int(unreal.AnimationLibrary.get_num_keys(anim) or 0)
-    mineprep.prints(anim_name + ' keys=' + str(nkeys))
-    print('OK BAKE', nkeys, anim_name)
+    mineprep.prints(anim.get_name() + ' keys=' + str(nkeys))
     return anim
 
 

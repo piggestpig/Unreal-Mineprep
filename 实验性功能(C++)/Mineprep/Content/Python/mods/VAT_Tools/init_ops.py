@@ -83,26 +83,31 @@ def _set_mic_texture_collection(
 
 
 def create_vat_from_skm(mod) -> unreal.Object | None:
-    """
-    右栏主流程：
-    SKM → SM + MC_VAT + 空动画/皮肤纹理集合 + MIC → 填入左栏 DataAsset。
-    资产写到 init_props.SavePath（默认 SKM 旁 DA_VAT_{名称}/ 或物品 VAT_{名称}/）。
-    """
+    """面板适配：创建资产后回填路径、DataAsset 和动画列表。"""
     skm = mod.init_props.SKM
-    if not isinstance(skm, unreal.SkeletalMesh):
-        u.notify('请先指定骨骼网格体')
-        return None
-
     is_item = bool(getattr(mod.init_props, 'bIsItem', False))
     save_path = (mod.init_props.SavePath or '').strip()
     if not save_path:
         save_path = default_vat_save_path(skm, is_item)
         mod.init_props.SavePath = save_path
     try:
-        directory = u.ensure_dir(save_path)
-    except ValueError as e:
+        mc_vat = create_from_skm(skm, save_path=save_path, is_item=is_item,
+                                 overwrite_model=bool(mod.init_props.bOverwriteModel))
+    except (ValueError, RuntimeError) as e:
         u.notify(str(e))
         return None
+    u.assign_soft_prop(mod.bake_props, 'DataAsset', mc_vat)
+    bake_anim_ops.sync_anim_seq_from_data_asset(mod)
+    bake_anim_ops.sync_copy_props_from_data_asset(mod)
+    u.notify(f'已创建并填入左栏: {mc_vat.get_name()}')
+    return mc_vat
+
+
+def create_from_skm(skm, *, save_path=None, is_item=False, overwrite_model=False):
+    """创建或复用 VAT 资产组，返回 MC_VAT；失败抛异常，可能留下已创建资产。"""
+    if not isinstance(skm, unreal.SkeletalMesh):
+        raise ValueError('请先指定骨骼网格体')
+    directory = u.ensure_dir(save_path or default_vat_save_path(skm, is_item))
 
     skm_name = u.display_name(skm)
     sm_name = f'SM_{skm_name}'
@@ -112,7 +117,7 @@ def create_vat_from_skm(mod) -> unreal.Object | None:
     mic_name = f'VAT_{skm_name}_Inst'
 
     # --- 1) Static Mesh ---
-    overwrite_sm = bool(getattr(mod.init_props, 'bOverwriteModel', False))
+    overwrite_sm = bool(overwrite_model)
     sm_path = f'{directory}/{sm_name}'
     sm_exists = unreal.EditorAssetLibrary.does_asset_exist(sm_path)
     if sm_exists and not overwrite_sm:
@@ -123,8 +128,7 @@ def create_vat_from_skm(mod) -> unreal.Object | None:
         )
         u.save(sm)
     if not isinstance(sm, unreal.StaticMesh):
-        u.notify(f'创建静态网格体失败: {sm_name}')
-        return None
+        raise RuntimeError(f'创建静态网格体失败: {sm_name}')
     if sm_exists and overwrite_sm:
         u.notify(f'已覆写静态网格体: {sm.get_name()} @ {directory}')
     else:
@@ -133,16 +137,16 @@ def create_vat_from_skm(mod) -> unreal.Object | None:
     # --- 2) MC_VAT ---
     mc_cls = unreal.load_object(None, u.MC_VAT_CLASS_PATH)
     if not mc_cls:
-        u.notify(f'找不到 MC_VAT 类: {u.MC_VAT_CLASS_PATH}')
-        return None
+        raise RuntimeError(f'找不到 MC_VAT 类: {u.MC_VAT_CLASS_PATH}')
     mc_vat = u.create_asset(directory, da_name, mc_cls)
     if not mc_vat:
-        u.notify(f'创建 MC_VAT 失败: {da_name}')
-        return None
+        raise RuntimeError(f'创建 MC_VAT 失败: {da_name}')
 
     # --- 3) 空 TextureCollection ---
     vat_tc = u.create_asset(directory, vat_tc_name, unreal.TextureCollection)
     skin_tc = u.create_asset(directory, skin_tc_name, unreal.TextureCollection)
+    if not isinstance(vat_tc, unreal.TextureCollection) or not isinstance(skin_tc, unreal.TextureCollection):
+        raise RuntimeError('创建纹理集合失败')
     if isinstance(vat_tc, unreal.TextureCollection):
         slots = list(vat_tc.get_editor_property('textures') or [])
         if len(slots) < 3:
@@ -152,8 +156,12 @@ def create_vat_from_skm(mod) -> unreal.Object | None:
     # --- 4) MIC + 从 SKM 提取「纹理贴图」→ 默认皮肤 ---
     skin_tex = skin_texture_from_skm(skm)
     mic_template = unreal.load_asset(u.MIC_TEMPLATE)
+    if not mic_template:
+        raise RuntimeError(f'找不到材质模板: {u.MIC_TEMPLATE}')
     if mic_template:
         mic = u.duplicate_or_load(directory, mic_name, mic_template)
+        if not isinstance(mic, unreal.MaterialInstanceConstant):
+            raise RuntimeError(f'创建材质实例失败: {mic_name}')
         if isinstance(mic, unreal.MaterialInstanceConstant):
             if skin_tex:
                 unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(
@@ -196,10 +204,4 @@ def create_vat_from_skm(mod) -> unreal.Object | None:
         _set_texture_collection_param(mc_vat, '皮肤纹理集合', skin_tc)
     u.save(mc_vat)
 
-    # --- 6) 填入左栏 DataAsset，并同步 AnimSeq ---
-    u.assign_soft_prop(mod.bake_props, 'DataAsset', mc_vat)
-    bake_anim_ops.sync_anim_seq_from_data_asset(mod)
-    bake_anim_ops.sync_copy_props_from_data_asset(mod)
-    u.notify(f'已创建并填入左栏: {mc_vat.get_name()}')
     return mc_vat
-

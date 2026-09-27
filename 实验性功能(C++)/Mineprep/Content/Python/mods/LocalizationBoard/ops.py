@@ -37,8 +37,8 @@ def csv_dir() -> str:
     return os.path.join(root, 'Content', 'Mineprep', '插件贴图')
 
 
-def csv_paths() -> dict:
-    folder = csv_dir()
+def csv_paths(csv_root=None) -> dict:
+    folder = os.path.abspath(os.fspath(csv_root)) if csv_root is not None else csv_dir()
     return {
         'folder': folder,
         'old': os.path.join(folder, OLD_NAME),
@@ -81,8 +81,8 @@ PROMPT_TEMPLATE = """请翻译虚幻引擎插件（Minecraft风格）的变量�
 Token 足够，条目多时可以开多个子agent"""
 
 
-def make_prompt() -> str:
-    paths = csv_paths()
+def make_prompt(csv_root=None) -> str:
+    paths = csv_paths(csv_root)
     return PROMPT_TEMPLATE.format(
         old_csv=paths['old'],
         new_csv=paths['new'],
@@ -147,8 +147,8 @@ def _write_csv(path: str, rows: list[list[str]]):
         raise
 
 
-def load_working() -> dict[str, list[str]]:
-    paths = csv_paths()
+def load_working(csv_root=None) -> dict[str, list[str]]:
+    paths = csv_paths(csv_root)
     new_rows = _read_csv(paths['new'])
     old_rows = _read_csv(paths['old'])
     old_by_key = _index_by_key(old_rows)
@@ -199,10 +199,10 @@ def working_rows(working: dict[str, list[str]]) -> list[list[str]]:
     return list(working.values())
 
 
-def write_tables(working: dict[str, list[str]], *, fill: bool) -> dict:
+def write_tables(working: dict[str, list[str]], *, fill: bool, csv_root=None) -> dict:
     if fill:
         fill_chinese(working)
-    paths = csv_paths()
+    paths = csv_paths(csv_root)
     rows = working_rows(working)
     todo = untranslated_rows(working)
     _write_csv(paths['new'], rows)
@@ -215,12 +215,12 @@ def write_tables(working: dict[str, list[str]], *, fill: bool) -> dict:
     }
 
 
-def refresh_todo() -> dict:
-    paths = csv_paths()
+def refresh_todo(csv_root=None) -> dict:
+    paths = csv_paths(csv_root)
     if not os.path.isfile(paths['new']) and not os.path.isfile(paths['old']):
         mineprep.throw(str(tr('找不到变量显示名 CSV', 'Variable display-name CSV not found')))
-    working = load_working()
-    stats = write_tables(working, fill=True)
+    working = load_working(csv_root)
+    stats = write_tables(working, fill=True, csv_root=csv_root)
     mineprep.prints(tr(
         f"已刷新待翻译表：{stats['untranslated']} / {stats['total']} 行",
         f"Refreshed untranslated table: {stats['untranslated']} / {stats['total']} rows",
@@ -272,31 +272,34 @@ def gather_names(obj, set_enum_key: bool) -> tuple[list[str], list[str], list[st
 
 
 def iter_gather(props, on_status, is_closed, out=None):
-    """Yield 0 each asset so asynctask can cancel. Calls on_status(text).
+    """兼容原调用；关闭不提交，主动 close 且面板未关闭时保留阶段结果。"""
+    return (yield from _iter_gather(
+        str(props.ScanPath or ''), bool(props.SetEnumKey), None, on_status,
+        is_closed, lambda: not is_closed(), out))
 
-    ``out`` is filled with the same stats dict so cancel (GeneratorExit) can
-    still report after ``yield from`` is aborted.
-    """
+
+def _iter_gather(scan_path, set_enum_key, csv_root, on_status, is_cancelled,
+                 save_partial, out):
     if not has_cpp_gather():
         mineprep.throw(str(tr(
             '未找到 C++ 函数 unreal.mineprep.gather_property_names',
             'C++ function unreal.mineprep.gather_property_names not found',
         )))
-    scan_path = str(getattr(props, 'ScanPath', '') or '')
     assets = list_scan_assets(scan_path)
-    old_by_key = _index_by_key(_read_csv(csv_paths()['old']))
-    working = load_working()
+    old_by_key = _index_by_key(_read_csv(csv_paths(csv_root)['old']))
+    working = load_working(csv_root)
     added = reused = scanned = failed = 0
     total = len(assets)
-    set_enum_key = bool(getattr(props, 'SetEnumKey', True))
     committed = False
 
     def commit(cancelled):
         nonlocal committed
-        stats = write_tables(working, fill=True)
+        saved = not cancelled or save_partial()
+        stats = (write_tables(working, fill=True, csv_root=csv_root) if saved
+                 else dict(total=len(working), untranslated=len(untranslated_rows(working))))
         stats.update(
             added=added, reused=reused, scanned=scanned, failed=failed,
-            cancelled=cancelled)
+            cancelled=cancelled, saved=saved)
         if out is not None:
             out.clear()
             out.update(stats)
@@ -306,18 +309,22 @@ def iter_gather(props, on_status, is_closed, out=None):
     try:
         if not total:
             on_status(str(tr('没有可扫描的资产', 'No matching assets to scan')))
-            return commit(False)
+            return commit(is_cancelled())
 
         for i, path in enumerate(assets):
-            if is_closed():
+            if is_cancelled():
                 scanned = i
                 return commit(True)
             on_status(str(tr(
                 f'收集中 {i + 1}/{total}  新增 {added}  复用 {reused}  失败 {failed}\n{path}',
                 f'Gathering {i + 1}/{total}  added {added}  reused {reused}  failed {failed}\n{path}',
             )))
+            if is_cancelled():
+                return commit(True)
             try:
                 obj = unreal.EditorAssetLibrary.load_asset(path)
+                if obj is None:
+                    raise RuntimeError('无法加载资产: ' + path)
                 if obj:
                     _types, keys, names = gather_names(obj, set_enum_key)
                     for key, name in zip(keys, names):
@@ -335,8 +342,69 @@ def iter_gather(props, on_status, is_closed, out=None):
             scanned = i + 1
             yield
 
-        return commit(False)
+        return commit(is_cancelled())
     except GeneratorExit:
-        if not committed and not is_closed():
+        if not committed:
             commit(True)
         raise
+
+
+_jobs = set()
+
+
+class GatherJob:
+    """UE 主线程任务；status() 查询结果，cancel(False) 丢弃本轮未提交数据。"""
+
+    def __init__(self, scan_path, set_enum_key, csv_root, on_progress, on_done):
+        self.state, self.result, self.error = 'running', {}, None
+        self._save_partial = True
+        self._runner = None
+        _jobs.add(self)
+
+        @mineprep.asynctask
+        def run():
+            try:
+                # 先返回句柄，空扫描也在 UI 完成赋值后触发 on_done。
+                yield
+                yield from _iter_gather(
+                    scan_path, set_enum_key, csv_root, on_progress or (lambda text: None),
+                    lambda: self.state == 'cancelling', lambda: self._save_partial, self.result)
+                self.state = 'cancelled' if self.result['cancelled'] else 'completed'
+            except GeneratorExit:
+                self.state = 'cancelled'
+                if not self.result:
+                    self.result.update(cancelled=True, saved=False)
+                raise
+            except Exception as exc:
+                self.error = exc
+                self.state = 'failed'
+                mineprep.warn('LocalizationBoard', exc)
+            finally:
+                _jobs.discard(self)
+                if on_done:
+                    on_done(self)
+
+        self._runner = run()
+
+    def status(self):
+        return dict(state=self.state, result=dict(self.result),
+                    error=str(self.error) if self.error else None)
+
+    def cancel(self, save_partial=True):
+        if self.state not in ('running', 'cancelling'):
+            return
+        self.state, self._save_partial = 'cancelling', bool(save_partial)
+        if self._runner is not None and not self._runner.advancing:
+            self._runner.destroy()
+
+
+def start_gather(scan_path, *, set_enum_key=True, csv_root=None,
+                 on_progress=None, on_done=None):
+    """无需面板收集变量名；csv_root 默认使用原模组目录。回调在主线程运行。"""
+    return GatherJob(str(scan_path), bool(set_enum_key), csv_paths(csv_root)['folder'],
+                     on_progress, on_done)
+
+
+def cancel_all():
+    for job in tuple(_jobs):
+        job.cancel(save_partial=False)

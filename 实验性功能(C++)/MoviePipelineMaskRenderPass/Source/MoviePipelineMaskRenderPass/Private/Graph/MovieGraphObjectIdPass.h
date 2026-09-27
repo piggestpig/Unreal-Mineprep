@@ -17,6 +17,9 @@ struct FMovieGraphObjectIdMaskSampleAccumulationArgs : UE::MovieGraph::Rendering
 	/** The mapping of a HitProxy index to the data associated with the HitProxy. */
 	TSharedPtr<TMap<int32, UE::MoviePipeline::FMoviePipelineHitProxyCacheValue>> CacheData;
 
+	/** Serialized Cryptomatte manifest data captured on the game thread for use by the accumulation task. */
+	FString JsonManifestCachedOutput;
+
 	/** The node that is using this accumulator. */
 	TWeakObjectPtr<UMovieGraphRenderPassNode> RenderPassNode;
 };

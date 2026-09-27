@@ -1,6 +1,5 @@
 """Dockable Mineprep browser. All Unreal calls stay on the Slate thread."""
 import time
-import weakref
 from concurrent.futures import wait, FIRST_COMPLETED
 from functools import partial
 
@@ -10,7 +9,6 @@ from .assets import AssetStore, load_settings, save_settings
 from .props import LoaderOptions
 from . import composition
 
-_instances = weakref.WeakSet()
 CATEGORIES = {'ALL': ('全部', 'All'), 'Regular': ('常规', 'Regular'),
               'Babies': ('幼体', 'Babies'), 'Custom': ('自定义', 'Custom'),
               'Legacy': ('历史版本', 'Legacy'), 'Unsupported': ('未支持', 'Unsupported')}
@@ -28,11 +26,6 @@ def picture(parent, size):
     node = parent.image(size=size, color=unreal.LinearColor(1, 1, 1, 0), padding=1, align=(2, 2))
     node.hide(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)
     return node
-
-
-def close_all():
-    for instance in list(_instances):
-        instance.destruct()
 
 
 class VanillaMobLoader(mineprep.Mod):
@@ -79,7 +72,6 @@ class VanillaMobLoader(mineprep.Mod):
         self._badges = {}
         self._highlighted = {}
         self._visible_keys = set()
-        _instances.add(self)
 
         try:
             super().__init__(context)
@@ -581,4 +573,3 @@ class VanillaMobLoader(mineprep.Mod):
             self.tick_handle = None
         self.store.close()
         self.textures.clear()
-        _instances.discard(self)

@@ -14,11 +14,11 @@ import mc_sequencer as mcseq
 from mc_importer import import_block, import_item, resolve_block_json_path, get_all_blocks
 from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
                       enum, askopenfilename, send2trash, set_actor_label, select_actors,
-                      lazy_import, undo, get_hotkey_object, construct, uasset, copy,
+                      lazy_import, undo, open_main_panel, get_hotkey_object, construct, uasset, copy,
                       List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
                       askdirectory, asksaveasfilename, startfile, screenshot)
 from mc_parallel import (
-    delay, tick, asynctask, thread, asyncthread,
+    delay, tick, asynctask, thread, asyncthread, until,
     DelayRunner, TickRunner, AsyncTaskRunner, ThreadRunner,
 )
 from mc_prep import prep_texture, load_mcprep_data, colorize_material
@@ -26,7 +26,7 @@ from mc_material import tex_to_color, color_to_tex, ColorList
 from mc_localization import (localize, loctext, nsloctext, loctable_col, bilingual, tooltip)
 from mc_structure import (
     parse_structure, structure_to_tex, structure_parts, Blocks,
-    convert_to_unreal_transforms, convert_to_packed_arrays,
+    convert_to_unreal_transforms, convert_to_packed_arrays, add_packed_instances,
 )
 import mcvars
 from mc_config import config, paths, wclass
@@ -76,6 +76,16 @@ class MineprepAPIHandle:
             target = WrapList(target) if iscollection(target) else WrapList()
         self.target = target
         self.label = label
+
+    def __len__(self):
+        """返回集合句柄的元素数量；单对象句柄不支持长度。"""
+        if not self._collection:
+            raise TypeError(f'{type(self).__name__} is not a collection handle')
+        return len(self.target)
+
+    def __bool__(self):
+        """集合非空或单对象 target 不为 None 时为真。"""
+        return len(self.target) > 0 if self._collection else self.target is not None
 
     def __str__(self):
         return pformat(self.label)
@@ -344,7 +354,6 @@ class MineprepWorldHandle(MineprepAPIHandle):
             return None
         return list(cls()[key])
 
-    @undo
     def __class_getitem__(cls, key):
         """类下标：int/slice/numpy 多轴/花式下标取集合元素；其它参数走构造查找"""
         if isinstance(key, (int, slice)):
@@ -739,6 +748,13 @@ class bindings(MineprepSequencerHandle):
         """从序列中收集绑定，可按显示名过滤"""
         return mcseq.gather_bindings(parent, name)
 
+    def actor(self):
+        """唯一绑定时返回它在关卡里的 Actor。没有、多个或尚未解析时返回 None。序列需已打开。"""
+        items = [b for b in self.target if mcseq.is_binding(b)]
+        if len(items) != 1:
+            return None
+        return mcseq.bound_actor(items[0])
+
 
 class tracks(MineprepSequencerHandle):
     _collection = True
@@ -989,14 +1005,12 @@ def spawn_structure(source='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0,
             return []
         filename = name or loaded.name or Path(str(source)).stem
         use_center = True if center is None else bool(center)
-        cells = loaded.copy_cells()
+        cells = loaded._cells
+        loaded = None
 
     cells = mc_structure._apply_cull(cells, cull)
-    packed = bool(gpu)
-    if packed:
-        payload_map = convert_to_packed_arrays(cells, center=use_center, merge=merge)
-    else:
-        payload_map = convert_to_unreal_transforms(cells, center=use_center, merge=merge)
+    payload_map = convert_to_packed_arrays(cells, center=use_center, merge=merge)
+    cells = None
 
     inventory = loctable_col(6,2)
     actors = []
@@ -1009,7 +1023,11 @@ def spawn_structure(source='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0,
         if path is not None:
             mesh = import_block(path, asset_name=model_name, reload=reload)
         else:
-            candidate = next((n for n in inventory if n.startswith(model_name)), None)
+            # 只接受同名或下划线后的后缀，避免 bed 匹配到 bedrock
+            candidate = next(
+                (n for n in inventory if n == model_name or n.startswith(f"{model_name}_")),
+                None,
+            )
             path = resolve_block_json_path(candidate) if candidate else None
             if path is not None:
                 mesh = import_block(path, asset_name=model_name, reload=reload)
@@ -1021,8 +1039,13 @@ def spawn_structure(source='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0,
             spawn_jobs.append((model_name, mesh, payload))
 
     if not gpu:
-        for model_name, mesh, transforms in spawn_jobs:
-            actor = spawn_blocks(mesh, transforms, loc, rot)
+        loaded_class = uclass('/Game/Mineprep/MC_Blueprint/Core/实例化方块.实例化方块')
+        for model_name, mesh, payload in spawn_jobs:
+            actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
+            ism = actor.root_component
+            ism.set_editor_property('StaticMesh', mesh)
+            ism.clear_instances()
+            add_packed_instances(ism, payload)
             actor.set_folder_path(filename)
             actors.append(actor)
             set_actor_label(actor, f'{filename}_{model_name}')

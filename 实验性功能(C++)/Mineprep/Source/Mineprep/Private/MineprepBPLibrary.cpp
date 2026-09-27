@@ -19,8 +19,11 @@
 #include "ScreenPass.h"
 #include "SceneViewExtension.h"
 #include "Slate/SceneViewport.h"
+#include "Slate/SlateViewportProvider.h"
 #include "UnrealClient.h"
 #include "Widgets/SViewport.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Rendering/SlateRenderer.h"
 #include "Internationalization/Text.h"
 #include "Internationalization/TextNamespaceUtil.h"
 #include "Internationalization/TextPackageNamespaceUtil.h"
@@ -31,6 +34,7 @@
 #include "Layout/WidgetPath.h"
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
+#include "Widgets/SToolTip.h"
 
 struct FMineprepCaptureSource
 {
@@ -226,14 +230,7 @@ static FTextureRHIRef MineprepResolveViewportSourceTexture(FViewport* Viewport);
 
 static FSceneViewport* MineprepAsSceneViewport(FViewport* Viewport)
 {
-    static const FName SceneViewportType(TEXT("SceneViewport"));
-
-    if (!Viewport || Viewport->GetViewportType() != SceneViewportType)
-    {
-        return nullptr;
-    }
-
-    return static_cast<FSceneViewport*>(Viewport);
+    return Viewport ? Viewport->AsSceneViewport() : nullptr;
 }
 
 static bool MineprepIsSimulateViewport(FViewport* Viewport)
@@ -477,15 +474,28 @@ static FTextureRHIRef MineprepResolveViewportSourceTexture(FViewport* Viewport)
             {
                 return SceneViewport->GetRenderTargetTexture();
             }
-        }
-    }
 
-    if (Viewport->GetViewportRHI().IsValid())
-    {
-        FTextureRHIRef BackBuffer = RHIGetViewportBackBuffer(Viewport->GetViewportRHI());
-        if (BackBuffer.IsValid())
-        {
-            return BackBuffer;
+            if (TSharedPtr<SWindow> Window = SceneViewport->FindWindow())
+            {
+                if (FSlateRenderer* SlateRenderer = FSlateApplication::Get().GetRenderer())
+                {
+                    if (ISlateViewportProvider* ViewportProvider = SlateRenderer->GetViewportProvider(*Window))
+                    {
+                        if (FRHITexture* BackBuffer = ViewportProvider->GetBackBufferResource())
+                        {
+                            return BackBuffer;
+                        }
+                    }
+                    else if (FRHIViewport* ViewportRHI = static_cast<FRHIViewport*>(SlateRenderer->GetViewportResource(*Window)))
+                    {
+                        FTextureRHIRef BackBuffer = RHIGetViewportBackBuffer(ViewportRHI);
+                        if (BackBuffer.IsValid())
+                        {
+                            return BackBuffer;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -917,8 +927,14 @@ void Umineprep::GetWidgetTextUnderMouse(FString& OutWidgetText, FString& OutTool
                     TSharedPtr<IToolTip> ToolTip = Widget->GetToolTip();
                     if (ToolTip.IsValid() && !ToolTip->IsEmpty())
                     {
-                        if (TSharedPtr<SToolTip> SlateToolTip = StaticCastSharedPtr<SToolTip>(ToolTip))
+                        // UE 5.7 的 MakeToolTip 直接返回 SToolTip。UE 5.8 改为 SDeferredToolTipText：
+                        // 它实现 IToolTip，但不是 SToolTip。对 IToolTip 做 StaticCastSharedPtr<SToolTip>
+                        // 会按 SToolTip 第二基类的偏移改指针，GetTextTooltip() 因此读到 0x270 并闪退。
+                        // 先通过接口物化真正的控件，确认类型是 SToolTip 后再转换。
+                        const TSharedRef<SWidget> TipWidget = ToolTip->AsWidget();
+                        if (TipWidget->GetType() == FName(TEXT("SToolTip")))
                         {
+                            const TSharedRef<SToolTip> SlateToolTip = StaticCastSharedRef<SToolTip>(TipWidget);
                             FText TooltipFText = SlateToolTip->GetTextTooltip();
                             TooltipText = TooltipFText.ToString();
                             // 打印 Tooltip 的本地化信息
@@ -2355,7 +2371,7 @@ bool Umineprep::CallDelegate(UObject* Object, const FString& DelegateName, const
     FMulticastScriptDelegate* ScriptDelegate = static_cast<FMulticastScriptDelegate*>(DelegateAddr);
     if (ScriptDelegate)
     {
-        ScriptDelegate->ProcessMulticastDelegate<UObject>(ParamsBuffer);
+        ScriptDelegate->ProcessDelegate<UObject>(ParamsBuffer);
     }
 
     // 清理参数

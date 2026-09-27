@@ -22,6 +22,11 @@ FEngineShowFlags UMovieGraphObjectIdNode::GetShowFlags() const
 	return Flags;
 }
 
+int32 UMovieGraphObjectIdNode::GetNumSpatialSamplesDuringWarmUp(const FMovieGraphTraversalContext& InFrameTraversalContext, const FMovieGraphTimeStepData& InTimeData) const
+{
+	return 0;
+}
+
 EViewModeIndex UMovieGraphObjectIdNode::GetViewModeIndex() const
 {
 	return VMI_Unlit;

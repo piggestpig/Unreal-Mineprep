@@ -1,15 +1,9 @@
-"""
-Sequencer 关键帧工具 — 等效于细节面板菱形“添加关键帧”按钮。
+"""Sequencer 关键帧工具。
 
-支持：
-  - Transform（默认）：Location / Rotation / Scale 及单轴子通道
-  - 常见属性：bool, int, float, Vector, Vector2D, Rotator, LinearColor, str
-
-限制：
-  - 首版以 Possessable Actor/Component 为主；Spawnable 绑定可能需手动添加
-  - 子序列内使用 local 时间与绑定（与 Sequencer UI 一致）
-  - 暂不支持 enum/byte/object 引用等复杂类型
-"""
+支持 Transform 及其单轴通道，以及 bool、int、float、Vector、Vector2D、
+Rotator、LinearColor 和 str 属性。子序列使用本地时间和绑定。
+主要处理 Possessable Actor/Component；Spawnable 绑定可能需要手动添加。
+暂不支持 enum、byte 和对象引用属性。"""
 
 import fnmatch
 from collections.abc import Iterable
@@ -113,6 +107,16 @@ def _binding_id(binding) -> unreal.MovieSceneObjectBindingID:
     binding_id = unreal.MovieSceneObjectBindingID()
     binding_id.set_editor_property('Guid', binding.get_id())
     return binding_id
+
+
+def bound_actor(binding):
+    """已打开序列里，该绑定对应的第一个 Actor。尚未解析时返回 None。"""
+    if not is_binding(binding):
+        return None
+    for obj in unreal.LevelSequenceEditorBlueprintLibrary.get_bound_objects(_binding_id(binding)):
+        if _is_actor(obj):
+            return obj
+    return None
 
 
 def _iter_bindings(sequence):
@@ -1418,7 +1422,8 @@ class Rig:
         setter(self.sequence, self.target, full_name, frame, value, _TIME_UNIT, set_key)
         return value
 
-        """读取控件值；time=None 为播放头（int 帧 / float 秒）"""
+    def get(self, name, time=None):
+        """读取控件值；time=None 为播放头（int 帧 / float 秒），不修改姿态或关键帧。"""
         full = self._resolve_name(name)
         return self._read(full, self._frame(time))
 

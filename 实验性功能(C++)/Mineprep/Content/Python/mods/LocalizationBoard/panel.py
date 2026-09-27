@@ -107,31 +107,19 @@ class LocalizationBoard(mineprep.Mod):
             _RUNNING,
         )
 
-        @mineprep.asynctask
-        def run():
-            out = {}
-            try:
-                stats = yield from ops.iter_gather(
-                    self.props, self._on_progress, lambda: self.closed, out)
-                if self.closed:
-                    return
-                self._report(stats or out)
-            except GeneratorExit:
-                if not self.closed:
-                    self._report({**out, 'cancelled': True} if out else {'cancelled': True})
-                raise
-            except Exception as exc:
-                if self.closed:
-                    return
-                mineprep.warn('LocalizationBoard', exc)
-                self._set_status(str(exc).strip() or type(exc).__name__, _FAIL)
-            finally:
-                self._busy = False
-                self._runner = None
-                if not self.closed:
-                    self._sync_buttons()
+        self._runner = ops.start_gather(
+            self.props.ScanPath, set_enum_key=self.props.SetEnumKey,
+            on_progress=self._on_progress, on_done=self._finished)
 
-        self._runner = run()
+    def _finished(self, job):
+        self._busy = False
+        self._runner = None
+        if not self.closed:
+            if job.error:
+                self._set_status(str(job.error), _FAIL)
+            else:
+                self._report(job.result or {'cancelled': True})
+            self._sync_buttons()
 
     def _on_progress(self, text):
         self._set_status(text, _RUNNING)
@@ -185,7 +173,7 @@ class LocalizationBoard(mineprep.Mod):
         runner = self._runner
         self._runner = None
         if runner is not None:
-            runner.destroy()
+            runner.cancel()
         self._busy = False
         if not self.closed:
             self._sync_buttons()
@@ -193,6 +181,6 @@ class LocalizationBoard(mineprep.Mod):
     def destruct(self):
         self.closed = True
         if self._runner is not None:
-            self._runner.destroy()
+            self._runner.cancel(save_partial=False)
             self._runner = None
         self._busy = False

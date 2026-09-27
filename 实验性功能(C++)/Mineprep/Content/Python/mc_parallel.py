@@ -2,7 +2,7 @@ import threading
 import unreal
 from concurrent.futures import Future
 from functools import wraps
-from mc_utils import warn
+from mc_utils import throw, warn
 
 _active_delays = set()
 _active_async = set()
@@ -52,7 +52,7 @@ class AsyncTaskRunner:
 
     __slots__ = (
         'gen', 'func_name', 'on_done', 'result', 'callback_handle',
-        'target_wait_time', 'elapsed_time', 'advancing',
+        'target_wait_time', 'elapsed_time', 'advancing', 'done', 'error',
     )
 
     def __init__(self, gen, func_name, on_done=None):
@@ -64,6 +64,8 @@ class AsyncTaskRunner:
         self.target_wait_time = 0.0
         self.elapsed_time = 0.0
         self.advancing = False
+        self.done = False
+        self.error = None
 
     def start(self):
         _active_async.add(self)
@@ -93,6 +95,8 @@ class AsyncTaskRunner:
         except StopIteration as stop:
             self._finish(stop.value)
         except Exception as e:
+            self.error = f'{type(e).__name__}: {e}'
+            self.done = True
             warn(f"异步任务【{self.func_name}】运行时崩溃", e)
             self.destroy()
         finally:
@@ -100,6 +104,8 @@ class AsyncTaskRunner:
 
     def _finish(self, result):
         self.result = result
+        self.done = True
+        self.error = None
         cb = self.on_done
         self.destroy()
         if not cb:
@@ -261,6 +267,25 @@ def asynctask(func=None, *, callback=None):
     return decorator
 
 
+def until(find, timeout=5.0, step=0.1, delay=0.1, label=''):
+    """生成器。在 @asynctask 里 yield from。先等 delay 秒，再调用 find()。
+    未找到时再等 step 秒后重试。find()返回有效对象时结束并返回它。超时则throw。
+    """
+    elapsed = 0.0
+    label = label or getattr(find, '__name__', '目标')
+    if delay:
+        yield delay
+    while True:
+        found = find()
+        if found:
+            if not isinstance(found, unreal.Object) or unreal.SystemLibrary.is_valid(found):
+                return found
+        if elapsed >= timeout:
+            throw(f'{find.__name__}超时，{timeout:g}秒内未返回{label}')
+        yield step
+        elapsed += step
+
+
 class ThreadRunner:
     """thread 句柄；destroy() 只取消 callback / 轮询，子线程仍会跑完。
 
@@ -346,23 +371,23 @@ def thread(func=None, *, callback=None):
     return decorator
 
 
-def asyncthread(func=None):
+def asyncthread(func=None, *, step=0):
     """将函数放到后台线程执行，配合 asynctask 使用。
-    
+
     调用后返回生成器，首次迭代才启动线程。用 yield from 等待结果，
-    等待期间每帧让出执行；线程中的异常会传给调用方。
-    
+    等待期间按 step 秒轮询；step 为 0 时每帧轮询。线程中的异常会传给调用方。
+
     @asynctask
     def task():
         result = yield from work()
-    
+
     后台函数不能调用 unreal API。"""
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             future = _submit_thread(fn, args, kwargs)
             while not future.done():
-                yield
+                yield step
             return future.result()
 
         return wrapper

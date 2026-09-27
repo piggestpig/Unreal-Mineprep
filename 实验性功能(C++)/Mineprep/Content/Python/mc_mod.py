@@ -6,7 +6,8 @@ import mcvars
 from pathlib import Path
 from mc_config import wclass
 from mc_widget import Layout, copy
-from mc_utils import uclass, startfile
+from mc_utils import uclass, startfile, warn
+from mc_localization import bilingual
 
 PAUSE_BREAK = unreal.Key()
 PAUSE_BREAK.import_text('Pause')
@@ -254,9 +255,28 @@ subsystem.spawn_and_register_tab_with_id(widget_bp, {id})
         toolbar = unreal.ToolMenus.get().find_menu("LevelEditor.MainMenu.mineprep")
         toolbar.add_menu_entry('mods', mod_entry)
 
+
     @classmethod
     def unregister(cls):
-        """从 RegisteredMods 和工具栏菜单中移除本模组"""
+        """关闭本模组面板，并从 RegisteredMods / 工具栏移除"""
+        widget_path = f'/Game/mc/mods/{cls.__name__}'
+        widget_bp = unreal.load_object(None, widget_path) if unreal.EditorAssetLibrary.does_asset_exist(widget_path) else None
+        if widget_bp:
+            subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
+            tab_id = subsystem.get_tab_id_from_blueprint(widget_bp)
+            if tab_id and not tab_id.is_none():
+                subsystem.unregister_tab_by_id(tab_id)
+
+            for widget, instance in list(mcvars.WidgetModMap.items()):
+                if isinstance(instance, cls):
+                    mcvars.WidgetModMap.pop(widget, None)
+                    try:
+                        warn(bilingual(f'未能关闭所有的{cls.__name__}模组面板：{instance}',
+                            f'Failed to close all {cls.__name__} mod panels: {instance}'))
+                        instance.layout.clear_children()
+                    except:
+                        pass
+
         mod_path = f'{cls.__module__}.{cls.__name__}'
         mcvars.RegisteredMods.pop(mod_path, None)
         menus = unreal.ToolMenus.get()

@@ -59,7 +59,7 @@ localization = {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
         2: "---Mineprep v0.6-pre1 安装向导---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "欢迎使用Mineprep！",
-        4: "· 当前版本适用于 UE5.7 (Windows/Mac/Linux)",
+        4: "· 当前版本适用于 UE5.8 (Windows)",
         5: "· 非实验性功能也许能兼容高版本UE",
         6: "· 重复安装会直接覆盖原文件",
         7: "· 安装前需要关闭虚幻引擎",
@@ -68,7 +68,7 @@ localization = {
         10: "安装至现有工程",
         11: "选择安装路径",
         12: "警告: 文件夹路径包含中文或非ASCII字符！可能会导致部分功能失效",
-        13: "实验性功能 (支持Windows/Mac/Linux + UE5.7):",
+        13: "实验性功能 (支持Windows + UE5.8):",
         14: "Mineprep C++ 拓展模块",
         15: "解锁双目立体全景渲染",
         16: "扩展模板序列以支持双精度浮点和向量属性乘数",
@@ -99,7 +99,7 @@ localization = {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
         2: "---Mineprep v0.6-pre1 Installer---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "Welcome to Mineprep!",
-        4: "· The experimental features are exclusive to UE5.7 (Windows/Mac/Linux)",
+        4: "· The experimental features are exclusive to UE5.8 (Windows)",
         5: "· Non-experimental features may be compatible with Mac and higher engine version",
         6: "· Reinstalling will overwrite the original files",
         7: "· Please close Unreal Engine before installation",
@@ -108,7 +108,7 @@ localization = {
         10: "Install to an existing project",
         11: "Installation directory",
         12: "The path contains non-ASCII characters! Some functions may be broken",
-        13: "Experimental features (for Windows/Mac/Linux + UE5.7):",
+        13: "Experimental features (for Windows + UE5.8):",
         14: "Mineprep C++ extensions",
         15: "Unlock VR stereoscopic rendering",
         16: "Extend Template Sequence with float64 & vector property multiplier",
@@ -139,7 +139,7 @@ localization = {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
         2: "---Mineprep v0.6-pre1 安裝嚮導---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "歡迎使用Mineprep！",
-        4: "· 實驗性功能適用於 UE5.7 (Windows/Mac/Linux)",
+        4: "· 實驗性功能適用於 UE5.8 (Windows)",
         5: "· 非實驗性功能也許能兼容高版本UE",
         6: "· 重複安裝會直接覆蓋原文件",
         7: "· 安裝前需要關閉虛幻引擎",
@@ -148,7 +148,7 @@ localization = {
         10: "安裝至現有工程",
         11: "選擇安裝路徑",
         12: "警告: 文件夾路徑包含中文或非ASCII字符！可能會導致部分功能失效",
-        13: "實驗性功能 (支持Windows/Mac/Linux + UE5.7):",
+        13: "實驗性功能 (支持Windows + UE5.8):",
         14: "Mineprep C++ 擴展模組",
         15: "解鎖雙目立體全景渲染",
         16: "擴展模板序列以支援雙精度浮點與向量屬性乘數",
@@ -622,6 +622,12 @@ def install():
             'bShowFrameRateAndMemory': 'True',
         },
     })
+    # MCP「自动开启服务器」。Saved 里的用户配置会盖过 Default，已有文件时两处都写。
+    mcp_autostart = {
+        '/Script/ModelContextProtocolEngine.ModelContextProtocolSettings': {
+            'bAutoStartServer': 'True',
+        },
+    }
     patch_ue_ini(join(cfg, 'DefaultEditorPerProjectUserSettings.ini'), {
         '/Script/UnrealEd.EditorLoadingSavingSettings': {
             'LoadLevelAtStartup': 'LastOpened',
@@ -629,8 +635,14 @@ def install():
         '/Script/AvalancheEditor.AvaEditorSettings': {
             'bAutoActivateMotionDesignViewport': 'False',
         },
+        **mcp_autostart,
     })
-    #为UE5.7启用无绑定渲染，目前All会导致DLSS闪退
+    editor_saved = {'Win64': 'WindowsEditor', 'Mac': 'MacEditor', 'Linux': 'LinuxEditor'}.get(system)
+    if editor_saved:
+        user_ini = join(install_path, 'Saved', 'Config', editor_saved, 'EditorPerProjectUserSettings.ini')
+        if os.path.isfile(user_ini):
+            patch_ue_ini(user_ini, mcp_autostart)
+    #启用无绑定渲染
     patch_ue_ini(join(cfg, 'Windows', 'WindowsEngine.ini'), {
         'ShaderPlatformConfig PCD3D_SM6': {
             'BindlessConfiguration': 'Minimal',
@@ -794,7 +806,7 @@ class Installer2(bpy.types.Operator):
                 layout.prop(mc, "core_only", text=loc(38,"仅安装核心功能（跳过90%预设素材）"))
         layout.prop(mc, "skip_other_platform", text=loc(34,"跳过为其他平台编译的文件"))
         layout.separator(type='LINE')
-        layout.label(text=loc(13,"实验性功能(仅适用于Windows+UE5.7):"))
+        layout.label(text=loc(13,"实验性功能(仅适用于Windows+UE5.8):"))
         layout.prop(mc, "exp_basic", text=loc(14,"Mineprep C++ 拓展模块"))
         layout.prop(mc, "exp_material", text=loc(31,"为材质参数面板添加关键帧按钮和本地化翻译"))
         layout.prop(mc, "exp_vr3d", text=loc(15,"解锁双目立体全景渲染"))

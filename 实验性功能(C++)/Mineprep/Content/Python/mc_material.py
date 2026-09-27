@@ -48,6 +48,18 @@ class ColorList(List):
             items = args
         super().__init__(self._item(v) for v in items)
 
+    @classmethod
+    def from_rows(cls, rows):
+        """按行创建二维颜色表，每个元素作为像素转换，保留各行长度。"""
+        if not iscollection(rows):
+            raise TypeError('rows must be an iterable of pixel rows')
+        result = cls()
+        for row in rows:
+            if not iscollection(row):
+                raise TypeError('each row must be an iterable of pixels')
+            result.append(cls(to_linear(pixel) for pixel in row))
+        return result
+
     @staticmethod
     def _item(v):
         if isinstance(v, ColorList):

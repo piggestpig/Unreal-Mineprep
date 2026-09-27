@@ -311,7 +311,7 @@ namespace UE::MoviePipeline
 		const double JsonEndTime = FPlatformTime::Seconds();
 		const float ElapsedJsonMs = static_cast<float>((JsonEndTime - JsonBeginTime) * 1000.0f);
 
-		UE_LOG(LogMovieRenderPipeline, VeryVerbose, TEXT("Cache Size: %d NumCacheHits: %d NumCacheMisses: %d NumCacheUpdates: %d CacheDuration: %8.2fms JsonDuration: %8.2fms"), InAccelData.Cache->Num(), NumCacheHits.load(), NumCacheMisses.load(), NumCacheUpdates.load(), ElapsedMs, ElapsedJsonMs);
+		UE_LOGF(LogMovieRenderPipeline, VeryVerbose, "Cache Size: %d NumCacheHits: %d NumCacheMisses: %d NumCacheUpdates: %d CacheDuration: %8.2fms JsonDuration: %8.2fms", InAccelData.Cache->Num(), NumCacheHits.load(), NumCacheMisses.load(), NumCacheUpdates.load(), ElapsedMs, ElapsedJsonMs);
 	}
 
 	static void RemapHitProxyIdToCryptomatteHash(const FIntPoint& InImageSize, const FColor* InHitProxyBuffer, const TSharedPtr<TMap<int32, FMoviePipelineHitProxyCacheValue>> InHitProxyCache, TArray64<float>& OutCryptomatteBuffer)
@@ -337,7 +337,7 @@ namespace UE::MoviePipeline
 				}
 				else
 				{
-					UE_LOG(LogMovieRenderPipeline, VeryVerbose, TEXT("Failed to find cache data for Hitproxy! Id: %d"), HitProxyIndex);
+					UE_LOGF(LogMovieRenderPipeline, VeryVerbose, "Failed to find cache data for Hitproxy! Id: %d", HitProxyIndex);
 				}
 
 				OutCryptomatteBuffer[DstIndex] = Hash;
@@ -345,11 +345,16 @@ namespace UE::MoviePipeline
 		});
 	}
 
-	static void UpdateCryptomatteMetadata(const FObjectIdAccelerationData& InAccelData, const FString& InTypenameHash, const FString& InLayerName, TMap<FString, FString>& InOutMetadataMap)
+	static void UpdateCryptomatteMetadata(const FString& InJsonManifestCachedOutput, const FString& InTypenameHash, const FString& InLayerName, TMap<FString, FString>& InOutMetadataMap)
 	{
-		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/manifest"), *InTypenameHash), InAccelData.JsonManifestCachedOutput);
+		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/manifest"), *InTypenameHash), InJsonManifestCachedOutput);
 		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/name"), *InTypenameHash), InLayerName);
 		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/hash"), *InTypenameHash), TEXT("MurmurHash3_32"));
 		InOutMetadataMap.Add(FString::Printf(TEXT("cryptomatte/%s/conversion"), *InTypenameHash), TEXT("uint32_to_float32"));
+	}
+
+	static void UpdateCryptomatteMetadata(const FObjectIdAccelerationData& InAccelData, const FString& InTypenameHash, const FString& InLayerName, TMap<FString, FString>& InOutMetadataMap)
+	{
+		UpdateCryptomatteMetadata(InAccelData.JsonManifestCachedOutput, InTypenameHash, InLayerName, InOutMetadataMap);
 	}
 }

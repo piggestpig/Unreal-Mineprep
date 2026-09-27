@@ -105,21 +105,25 @@ def sync_asset_names(props):
         props.LevelSequenceName = ls
 
 
-def ensure_seq_dir():
-    if not unreal.EditorAssetLibrary.does_directory_exist(SEQ_DIR):
-        unreal.EditorAssetLibrary.make_directory(SEQ_DIR)
+def _asset_path(name):
+    path = str(name or '').strip()
+    path = path if path.startswith('/') else SEQ_DIR + '/' + path
+    if not path.startswith('/Game/') or any(p in ('', '.', '..') for p in path[1:].split('/')):
+        raise ValueError('需要 /Game/.../Name 资产路径')
+    return path
 
 
 def open_or_create_sequence(name):
-    path = SEQ_DIR + '/' + name
+    path = _asset_path(name)
+    directory, name = path.rsplit('/', 1)
     if unreal.EditorAssetLibrary.does_asset_exist(path):
         seq = unreal.load_asset(path)
         if not isinstance(seq, unreal.LevelSequence):
             mineprep.throw('已存在但不是关卡序列: ' + path)
     else:
-        ensure_seq_dir()
+        unreal.EditorAssetLibrary.make_directory(directory)
         seq = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
-            name, SEQ_DIR, unreal.LevelSequence, unreal.LevelSequenceFactoryNew(),
+            name, directory, unreal.LevelSequence, unreal.LevelSequenceFactoryNew(),
         )
         if not isinstance(seq, unreal.LevelSequence):
             mineprep.throw('无法创建关卡序列: ' + path)
@@ -129,17 +133,20 @@ def open_or_create_sequence(name):
 
 
 def open_or_create_anim(name, skeleton):
-    path = SEQ_DIR + '/' + name
+    path = _asset_path(name)
+    directory, name = path.rsplit('/', 1)
     if unreal.EditorAssetLibrary.does_asset_exist(path):
         anim = unreal.load_asset(path)
         if not isinstance(anim, unreal.AnimSequence):
             mineprep.throw('已存在但不是动画序列: ' + path)
+        if anim.skeleton != skeleton:
+            raise ValueError('已有动画使用不同骨架: ' + path)
         return anim
-    ensure_seq_dir()
+    unreal.EditorAssetLibrary.make_directory(directory)
     factory = unreal.AnimSequenceFactory()
     factory.set_editor_property('target_skeleton', skeleton)
     anim = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
-        name, SEQ_DIR, unreal.AnimSequence, factory,
+        name, directory, unreal.AnimSequence, factory,
     )
     if not isinstance(anim, unreal.AnimSequence):
         mineprep.throw('无法创建动画序列: ' + path)
@@ -243,7 +250,7 @@ def remap(xyz, spec):
 
 def parse_bone_map(text):
     try:
-        data = ast.literal_eval((text or '').strip() or DEFAULT_BONE_MAP_TEXT)
+        data = text if isinstance(text, dict) else ast.literal_eval((text or '').strip() or DEFAULT_BONE_MAP_TEXT)
     except (SyntaxError, ValueError) as exc:
         mineprep.throw('骨骼映射不是合法 Python 字典: ' + str(exc))
     if not isinstance(data, dict):

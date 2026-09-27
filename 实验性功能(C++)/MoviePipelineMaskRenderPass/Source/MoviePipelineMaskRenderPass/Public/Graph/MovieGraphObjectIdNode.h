@@ -24,7 +24,7 @@ public:
 	virtual bool GetAllowsShowFlagsCustomization() const override;
 	virtual bool GetAllowsCompositing() const override;
 	virtual int32 GetNumSpatialSamples() const override { return SpatialSampleCount; }
-	virtual int32 GetNumSpatialSamplesDuringWarmUp() const  override { return 0; }
+	virtual int32 GetNumSpatialSamplesDuringWarmUp(const FMovieGraphTraversalContext& InFrameTraversalContext, const FMovieGraphTimeStepData& InTimeData) const override;
 	// The ObjectID pass doesn't support any anti-aliasing so we force it to None so that their spatial samples turn into MRG-based camera jitter.
 	virtual bool GetOverrideAntiAliasing() const override { return true; }
 	virtual EAntiAliasingMethod GetAntiAliasingMethod() const override { return EAntiAliasingMethod::AAM_None; }

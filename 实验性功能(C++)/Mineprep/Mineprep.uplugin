@@ -1,9 +1,9 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "UE 5.7",
+	"VersionName": "UE 5.8",
 	"FriendlyName": "Mineprep",
-	"Description": "Mineprep实验性内容（C++脚本），适用于UE5.7",
+	"Description": "Mineprep实验性内容（C++脚本），适用于UE5.8",
 	"Category": "Other",
 	"CreatedBy": "Pig/冬猫夏羊工作室",
 	"CreatedByURL": "https://github.com/piggestpig/Unreal-Mineprep",
@@ -24,19 +24,27 @@
 	],
 	"Plugins": [
 		{
-			"Name": "PythonScriptPlugin",
+			"Name": "AllToolsets",
 			"Enabled": true
 		},
 		{
-			"Name": "MovieRenderPipeline",
+			"Name": "ActorSequence",
 			"Enabled": true
 		},
 		{
-			"Name": "MoviePipelineMaskRenderPass",
+			"Name": "AnimationLocomotionLibrary",
 			"Enabled": true
 		},
 		{
-			"Name": "OpenColorIO",
+			"Name": "AnimationWarping",
+			"Enabled": true
+		},
+		{
+			"Name": "AnimatorKit",
+			"Enabled": true
+		},
+		{
+			"Name": "AnimToTexture",
 			"Enabled": true
 		},
 		{
@@ -47,7 +55,67 @@
 			]
 		},
 		{
-			"Name": "NiagaraFluids",
+			"Name": "Avalanche",
+			"Enabled": true
+		},
+		{
+			"Name": "CelestialVault",
+			"Enabled": true
+		},
+		{
+			"Name": "ChaosFlesh",
+			"Enabled": true
+		},
+		{
+			"Name": "Chooser",
+			"Enabled": true
+		},
+		{
+			"Name": "CommonUI",
+			"Enabled": true
+		},
+		{
+			"Name": "ConsoleVariables",
+			"Enabled": true
+		},
+		{
+			"Name": "ControlRigPhysics",
+			"Enabled": true
+		},
+		{
+			"Name": "CustomizableSequencerTracks",
+			"Enabled": true
+		},
+		{
+			"Name": "DaySequence",
+			"Enabled": true
+		},
+		{
+			"Name": "DeformerGraph",
+			"Enabled": true
+		},
+		{
+			"Name": "GameplayStateTree",
+			"Enabled": true
+		},
+		{
+			"Name": "GizmoFramework",
+			"Enabled": true
+		},
+		{
+			"Name": "JsonBlueprintUtilities",
+			"Enabled": true
+		},
+		{
+			"Name": "Locomotor",
+			"Enabled": true
+		},
+		{
+			"Name": "Metasound",
+			"Enabled": true
+		},
+		{
+			"Name": "ModelContextProtocol",
 			"Enabled": true
 		},
 		{
@@ -59,42 +127,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "PoseSearch",
-			"Enabled": true
-		},
-		{
-			"Name": "AnimationWarping",
-			"Enabled": true
-		},
-		{
-			"Name": "AnimationLocomotionLibrary",
-			"Enabled": true
-		},
-		{
-			"Name": "Chooser",
-			"Enabled": true
-		},
-		{
-			"Name": "DeformerGraph",
-			"Enabled": true
-		},
-		{
-			"Name": "Text3D",
-			"Enabled": true
-		},
-		{
-			"Name": "Metasound",
-			"Enabled": true
-		},
-		{
-			"Name": "PhysicsControl",
-			"Enabled": true
-		},
-		{
-			"Name": "PCG",
-			"Enabled": true
-		},
-		{
 			"Name": "Mover",
 			"Enabled": true
 		},
@@ -103,43 +135,11 @@
 			"Enabled": true
 		},
 		{
-			"Name": "Takes",
+			"Name": "MoviePipelineMaskRenderPass",
 			"Enabled": true
 		},
 		{
-			"Name": "ChaosFlesh",
-			"Enabled": true
-		},
-		{
-			"Name": "PostProcessMaterialChainGraph",
-			"Enabled": true
-		},
-		{
-			"Name": "JsonBlueprintUtilities",
-			"Enabled": true
-		},
-		{
-			"Name": "CustomizableSequencerTracks",
-			"Enabled": true
-		},
-		{
-			"Name": "VirtualProductionUtilities",
-			"Enabled": true
-		},
-		{
-			"Name": "GizmoFramework",
-			"Enabled": true
-		},
-		{
-			"Name": "ConsoleVariables",
-			"Enabled": true
-		},
-		{
-			"Name": "Avalanche",
-			"Enabled": true
-		},
-		{
-			"Name": "OpenCV",
+			"Name": "MovieRenderPipeline",
 			"Enabled": true
 		},
 		{
@@ -151,19 +151,39 @@
 			]
 		},
 		{
-			"Name": "DaySequence",
+			"Name": "NiagaraFluids",
 			"Enabled": true
 		},
 		{
-			"Name": "CelestialVault",
+			"Name": "OpenColorIO",
 			"Enabled": true
 		},
 		{
-			"Name": "AnimToTexture",
+			"Name": "OpenCV",
 			"Enabled": true
 		},
 		{
-			"Name": "ScriptableToolsFramework",
+			"Name": "PCG",
+			"Enabled": true
+		},
+		{
+			"Name": "PhysicsControl",
+			"Enabled": true
+		},
+		{
+			"Name": "PoseSearch",
+			"Enabled": true
+		},
+		{
+			"Name": "PostProcessMaterialChainGraph",
+			"Enabled": true
+		},
+		{
+			"Name": "PythonScriptPlugin",
+			"Enabled": true
+		},
+		{
+			"Name": "RigLogicUAF",
 			"Enabled": true
 		},
 		{
@@ -171,31 +191,15 @@
 			"Enabled": true
 		},
 		{
-			"Name": "Locomotor",
+			"Name": "ScriptableToolsFramework",
 			"Enabled": true
 		},
 		{
-			"Name": "AnimatorKit",
+			"Name": "Takes",
 			"Enabled": true
 		},
 		{
-			"Name": "CommonUI",
-			"Enabled": true
-		},
-		{
-			"Name": "ActorSequence",
-			"Enabled": true
-		},
-		{
-			"Name": "GameplayStateTree",
-			"Enabled": true
-		},
-		{
-			"Name": "ControlRigPhysics",
-			"Enabled": true
-		},
-		{
-			"Name": "RigLogicUAF",
+			"Name": "Text3D",
 			"Enabled": true
 		},
 		{
@@ -228,6 +232,10 @@
 		},
 		{
 			"Name": "UAFWarping",
+			"Enabled": true
+		},
+		{
+			"Name": "VirtualProductionUtilities",
 			"Enabled": true
 		},
 		{

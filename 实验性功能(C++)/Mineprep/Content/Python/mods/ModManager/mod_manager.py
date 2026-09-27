@@ -1,14 +1,12 @@
-import sys
-import shutil
-import zipfile
 from pathlib import Path
 from pprint import pformat
 from functools import partial
 
 import unreal
 import mineprep
-from mineprep import bilingual, Layout, askopenfilename, send2trash, dialog
+from mineprep import bilingual, Layout, askopenfilename, dialog
 from mc_mod import iter_mod_modules
+from . import ops
 
 MODS_DIR = Path(__file__).resolve().parent.parent
 
@@ -116,17 +114,20 @@ class ModManager(mineprep.Mod):
         if not path:
             return
 
-        src = Path(path)
-        if src.suffix.lower() == '.py':
-            shutil.copy2(src, MODS_DIR / src.name)
-        elif src.suffix.lower() == '.zip':
-            with zipfile.ZipFile(src) as zf:
-                zf.extractall(MODS_DIR)
-        else:
-            mineprep.warn(bilingual(f"不支持的文件类型: {src.suffix}", f"Unsupported file type: {src.suffix}"))
+        try:
+            try:
+                result = ops.install_mod(path, mods_dir=MODS_DIR)
+            except FileExistsError as exc:
+                if not dialog(bilingual('覆盖安装', 'Overwrite installation'), str(exc)):
+                    return
+                result = ops.install_mod(path, mods_dir=MODS_DIR, overwrite=True)
+        except (OSError, ValueError) as exc:
+            mineprep.warn(str(exc))
             return
+        src = Path(path)
         mineprep.prints(bilingual(f"已安装模组: {src.name}", f"Installed mod: {src.name}"))
         self.redraw()
+        return result
 
 
     def uninstall_mod(self, name, mod):
@@ -137,14 +138,11 @@ class ModManager(mineprep.Mod):
                   bilingual(f'你确定要删除这个模组吗？\n"{stem}"将会消失很久！（真的很久！）',
                             f'Are you sure you want to delete this mod?\n"{stem}" will be lost forever! (A long time!)')):
 
-            mineprep.mods.unregister(mod)
-            target = MODS_DIR / f"{stem}.py"
-            if not target.exists():
-                target = MODS_DIR / stem
-            send2trash(target)
-
-            for key in list(sys.modules):
-                if key == name or key.startswith(name + '.'):
-                    sys.modules.pop(key, None)
+            try:
+                result = ops.uninstall_mod(name, mods_dir=MODS_DIR)
+            except (OSError, ValueError, RuntimeError) as exc:
+                mineprep.warn(str(exc))
+                return
             mineprep.prints(bilingual(f"已卸载模组: {stem}", f"Uninstalled mod: {stem}"))
             self.redraw()
+            return result

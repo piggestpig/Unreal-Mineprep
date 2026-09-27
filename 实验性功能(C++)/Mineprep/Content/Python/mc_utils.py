@@ -25,18 +25,17 @@ libs = {
 def lazy_import(func):
     """函数装饰器，自动扫描函数内部引用的全局名称，并导入libs中匹配的库"""
     referenced_names = func.__code__.co_names
-    # 筛选出匹配我们映射表的库
+    # 只处理 libs 中登记的库
     detected_dependencies = {name: libs[name] for name in referenced_names if name in libs}
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # 3. 在函数被实际调用时，才执行以下逻辑（延迟加载）
+        # 调用函数时再导入依赖
         for alias, real_lib_name in detected_dependencies.items():
-            # 如果这个库还没有被导入过
             if alias not in func.__globals__:
-                # 动态导入库，fromlist=['*'] 是为了兼容 matplotlib.pyplot 这种带点的子模块
+                # fromlist 使 matplotlib.pyplot 等子模块返回自身
                 module = __import__(real_lib_name, fromlist=['*'] if '.' in real_lib_name else [])
-                # 把导入的模块以别名（如 np）的形式，直接注入到该函数的全局命名空间中！
+                # 按别名写入函数的全局命名空间
                 func.__globals__[alias] = module
         return func(*args, **kwargs)
     return wrapper
@@ -291,11 +290,7 @@ def undo(arg: str=None):
 
 
 def _adopt_module(dst, src):
-    """把 src 的命名空间拷进 dst，保持 dst 对象身份。
-
-    控制台里的 `mineprep` 仍是旧模块对象；只换 sys.modules 条目的话，
-    `mineprep.reload()` 之后 `mineprep.screenshot` 仍会找不到。
-    """
+    """用新模块的内容更新旧模块对象，使控制台等处已有的引用继续有效。"""
     dst_dict = dst.__dict__
     src_dict = src.__dict__
     keep = ('__name__', '__doc__', '__package__', '__loader__', '__spec__')
@@ -331,17 +326,11 @@ def _rebind_mineprep(from_mod, to_mod) -> int:
 
 
 def reload(*args):
-    """重新加载 mineprep 及其子模块；传入特定模块时，只重新加载这些模块。
-
-    全量重载流程：
-      1. 注销 ReloadWithMineprep 的 mod
-      2. 从 sys.modules 卸载 mineprep / mc_*（保留 mcvars）/ 相关 mods
-      3. 全新 import mineprep（避免 importlib.reload 造成 Layout/PropertyGroup 多份类对象）
-      4. 把新模块的命名空间写回旧模块对象（控制台无需 mineprep = mineprep.reload()）
-      5. 再 import 并 register 先前启用的 mod
-
-    返回同一个 mineprep 模块对象（原地更新）。控制台直接 `mineprep.reload()` 即可。
-    """
+    """重新加载 Mineprep 及其子模块；传入模块时，只重载指定模块。
+    
+    完整重载会先注销支持 ReloadWithMineprep 的模组，重新导入后再注册。
+    mcvars 保留。mineprep 模块对象原地更新，控制台无需重新赋值。
+    重新导入可避免 Layout、PropertyGroup 等类沿用旧定义。"""
     import importlib
     import sys
 
@@ -586,6 +575,19 @@ def resolve_soft(path: str | unreal.SoftObjectPath):
     if not path:
         return None
     return unreal.find_object(None, path) or unreal.load_object(None, path)
+
+
+def open_main_panel():
+    """打开 Mineprep 主面板。已经在标签页中时直接返回现有控件。"""
+    blueprint = uasset('/Game/Mineprep/Mineprep')
+    if not blueprint:
+        warn('未找到插件面板 /Game/Mineprep/Mineprep')
+        return None
+
+    subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
+    if widget := subsystem.find_utility_widget_from_blueprint(blueprint):
+        return widget
+    return subsystem.spawn_and_register_tab(blueprint)
 
 
 def get_hotkey_object(reload=False):

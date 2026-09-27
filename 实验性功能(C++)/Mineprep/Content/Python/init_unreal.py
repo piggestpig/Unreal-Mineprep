@@ -15,3 +15,9 @@ mc_menu.add_section('mods', mineprep.bilingual('模组', 'Mods'))
 
 mineprep.mods.register_all()
 
+try:
+    import mcptools
+    mcptools.register()
+except Exception as exc:
+    unreal.log_warning(f'[Mineprep] MCP Python tools not registered: {exc}')
+

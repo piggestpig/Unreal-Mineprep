@@ -23,10 +23,5 @@ def register():
 
 
 def unregister():
-    import unreal
     from . import panel
-    panel.close_all()
-    # UE prefixes the requested unique ID with the widget blueprint object path.
-    tab_id = '/Game/mc/mods/VanillaMobLoader.VanillaMobLoaderVanillaMobLoader'
-    unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem).unregister_tab_by_id(tab_id)
     panel.VanillaMobLoader.unregister()

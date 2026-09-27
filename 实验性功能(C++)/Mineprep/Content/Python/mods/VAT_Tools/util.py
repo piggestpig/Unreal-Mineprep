@@ -27,8 +27,8 @@ def asset_tools():
 
 
 def save(asset: unreal.Object | None):
-    if asset:
-        unreal.EditorAssetLibrary.save_loaded_asset(asset)
+    if asset and not unreal.EditorAssetLibrary.save_loaded_asset(asset):
+        raise RuntimeError(f'保存资产失败: {asset.get_path_name()}')
 
 
 def world():
@@ -66,6 +66,8 @@ def load_or_none(directory: str, name: str):
 def create_asset(directory: str, name: str, asset_class, factory=None):
     existing = load_or_none(directory, name)
     if existing:
+        if not isinstance(existing, asset_class):
+            raise ValueError(f'目标资产类型不匹配: {directory}/{name}')
         return existing
     asset = asset_tools().create_asset(name, directory, asset_class, factory)
     save(asset)
@@ -75,6 +77,8 @@ def create_asset(directory: str, name: str, asset_class, factory=None):
 def duplicate_or_load(directory: str, name: str, original: unreal.Object):
     existing = load_or_none(directory, name)
     if existing:
+        if existing.get_class() != original.get_class():
+            raise ValueError(f'目标资产类型不匹配: {directory}/{name}')
         return existing
     asset = asset_tools().duplicate_asset(name, directory, original)
     save(asset)
@@ -82,11 +86,12 @@ def duplicate_or_load(directory: str, name: str, original: unreal.Object):
 
 
 def ensure_dir(directory: str) -> str:
-    directory = (directory or '').rstrip('/')
-    if not directory:
-        raise ValueError('保存路径为空')
+    directory = (directory or '').strip().rstrip('/')
+    if (directory != '/Game' and not directory.startswith('/Game/')) or any(p in ('', '.', '..') for p in directory[1:].split('/')):
+        raise ValueError('保存目录必须在 /Game 下且不含空段或相对路径')
     if not unreal.EditorAssetLibrary.does_directory_exist(directory):
-        unreal.EditorAssetLibrary.make_directory(directory)
+        if not unreal.EditorAssetLibrary.make_directory(directory):
+            raise RuntimeError(f'无法创建目录: {directory}')
     return directory
 
 

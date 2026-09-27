@@ -6,7 +6,7 @@ mod_info = {
         '把基岩版 animation.json 转换为动画序列',
         'Convert Bedrock animation.json to an anim sequence',
     ),
-    'Version': '1.0',
+    'Version': '2.0',
     'CreatedBy': '',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,

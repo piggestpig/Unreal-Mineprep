@@ -273,10 +273,10 @@ namespace MoviePipeline
 			int64 ExpectedTotalSize = SizeX * SizeY * ByteDepth * NumChannels;
 			int64 ActualTotalSize = InPixelData->GetRawDataSizeInBytes();
 
-			UE_LOG(LogMovieRenderPipeline, Log, TEXT("MaskPassAccumulateSample_TaskThread: Data is not well formed."));
-			UE_LOG(LogMovieRenderPipeline, Log, TEXT("Image dimension: %lldx%lld, %lld, %lld"), SizeX, SizeY, ByteDepth, NumChannels);
-			UE_LOG(LogMovieRenderPipeline, Log, TEXT("Expected size: %lld"), ExpectedTotalSize);
-			UE_LOG(LogMovieRenderPipeline, Log, TEXT("Actual size:   %lld"), ActualTotalSize);
+			UE_LOGF(LogMovieRenderPipeline, Log, "MaskPassAccumulateSample_TaskThread: Data is not well formed.");
+			UE_LOGF(LogMovieRenderPipeline, Log, "Image dimension: %lldx%lld, %lld, %lld", SizeX, SizeY, ByteDepth, NumChannels);
+			UE_LOGF(LogMovieRenderPipeline, Log, "Expected size: %lld", ExpectedTotalSize);
+			UE_LOGF(LogMovieRenderPipeline, Log, "Actual size:   %lld", ActualTotalSize);
 		}
 
 		check(bIsWellFormed);
@@ -335,7 +335,7 @@ namespace MoviePipeline
 			const double AccumulateEndTime = FPlatformTime::Seconds();
 			const float ElapsedAccumulateMs = float((AccumulateEndTime - AccumulateBeginTime) * 1000.0f);
 
-			UE_LOG(LogMovieRenderPipeline, VeryVerbose, TEXT("Remap Time: %8.2fms Accumulation time: %8.2fms"), ElapsedRemapMs, ElapsedAccumulateMs);
+			UE_LOGF(LogMovieRenderPipeline, VeryVerbose, "Remap Time: %8.2fms Accumulation time: %8.2fms", ElapsedRemapMs, ElapsedAccumulateMs);
 		}
 
 		if (FramePayload->IsLastTile() && FramePayload->IsLastTemporalSample())
@@ -374,11 +374,11 @@ namespace MoviePipeline
 			const double FetchEndTime = FPlatformTime::Seconds();
 			const float ElapsedFetchMs = float((FetchEndTime - FetchBeginTime) * 1000.0f);
 
-			UE_LOG(LogMovieRenderPipeline, VeryVerbose, TEXT("Final Frame Fetch Time: %8.2fms"), ElapsedFetchMs);
+			UE_LOGF(LogMovieRenderPipeline, VeryVerbose, "Final Frame Fetch Time: %8.2fms", ElapsedFetchMs);
 		}
 		const double TotalSampleEndTime = FPlatformTime::Seconds();
 		const float ElapsedTotalSampleMs = float((TotalSampleEndTime - TotalSampleBeginTime) * 1000.0f);
-		UE_LOG(LogMovieRenderPipeline, VeryVerbose, TEXT("Total Sample Time: %8.2fms"), ElapsedTotalSampleMs);
+		UE_LOGF(LogMovieRenderPipeline, VeryVerbose, "Total Sample Time: %8.2fms", ElapsedTotalSampleMs);
 
 	}
 }

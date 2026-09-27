@@ -1004,21 +1004,24 @@ class Layout():
         return Layout(add_widget(self.target, widget, **kwargs), public=self._public_)
 
 
+def _run_ui_script(script, context=None):
+    """每次执行独立命名空间；回调保留本次变量，类的模块和默认保存路径不变。"""
+    code = compile(script, '<mineprep.ui>', 'exec') if isinstance(script, str) else script
+    import mineprep
+    namespace = globals().copy()
+    namespace['mineprep'] = mineprep
+    namespace['context'] = context
+    namespace['layout'] = mineprep.Layout(context.find_child_widget_by_name('Root')) if context is not None else mineprep.Layout()
+    exec(code, namespace)
+
+
 def ui(script='', save_path=None, run=True):
-    """创建一个新的自定义控件并运行, 可设置保存名称或路径，输入名称时会自动保存到/Game/mc/mods/"""
+    """创建自定义控件；每次运行的脚本变量独立。save_path 输入名称时保存到/Game/mc/mods/。"""
     if mcvars.DebugMode:
         unreal.log(script)
 
-    save_script = f"""
-layout = mineprep.Layout(context.find_child_widget_by_name('Root'))
-{script}
-"""
-    compile_script = f"""
-import mineprep
-layout = mineprep.Layout()
-{script}
-"""
-    compiled_code = compile(compile_script, '<mineprep.ui>', 'exec')
+    save_script = f"import mc_widget\nmc_widget._run_ui_script({script!r}, context)\n"
+    compiled_code = compile(script, '<mineprep.ui>', 'exec')
 
     if save_path:
         #是否是包含'/'的路径
@@ -1033,5 +1036,4 @@ layout = mineprep.Layout()
             subsystem.spawn_and_register_tab_with_id(widget, str(random.randint(0, 999999999)))
         return widget
     elif run:
-        exec(compiled_code, globals())
-
+        _run_ui_script(compiled_code)

@@ -1,5 +1,6 @@
 # Mineprep 命令行安装脚本（不依赖 Blender）
 # 与 Mineprep_installer.blend 放在同一目录，用系统 Python 即可运行。
+# 当前实验性功能仅支持Windows
 #
 # 用法:
 #   python Mineprep_installer.py new [目录] [--name 工程名]
@@ -632,6 +633,12 @@ def write_project_ini(opt, dest):
             'bShowFrameRateAndMemory': 'True',
         },
     })
+    # MCP「自动开启服务器」。Saved 里的用户配置会盖过 Default，已有文件时两处都写。
+    mcp_autostart = {
+        '/Script/ModelContextProtocolEngine.ModelContextProtocolSettings': {
+            'bAutoStartServer': 'True',
+        },
+    }
     patch_ue_ini(cfg / 'DefaultEditorPerProjectUserSettings.ini', {
         '/Script/UnrealEd.EditorLoadingSavingSettings': {
             'LoadLevelAtStartup': 'LastOpened',
@@ -639,7 +646,13 @@ def write_project_ini(opt, dest):
         '/Script/AvalancheEditor.AvaEditorSettings': {
             'bAutoActivateMotionDesignViewport': 'False',
         },
+        **mcp_autostart,
     })
+    editor_saved = {'Win64': 'WindowsEditor', 'Mac': 'MacEditor', 'Linux': 'LinuxEditor'}.get(HOST)
+    if editor_saved:
+        user_ini = Path(dest) / 'Saved' / 'Config' / editor_saved / 'EditorPerProjectUserSettings.ini'
+        if user_ini.is_file():
+            patch_ue_ini(user_ini, mcp_autostart)
     patch_ue_ini(cfg / 'Windows' / 'WindowsEngine.ini', {
         'ShaderPlatformConfig PCD3D_SM6': {
             'BindlessConfiguration': 'Minimal',

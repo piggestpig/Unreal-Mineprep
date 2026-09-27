@@ -478,8 +478,7 @@ def _bake_one_slot(
 
     temp_da = u.create_asset(cache_dir, da_name, unreal.AnimToTextureDataAsset)
     if not temp_da:
-        u.notify(f'创建临时 DataAsset 失败: {cache_dir}/{da_name}')
-        return False
+        raise RuntimeError(f'创建临时 DataAsset 失败: {cache_dir}/{da_name}')
 
     textures = _create_cache_textures(cache_dir, tex_base)
     try:
@@ -489,8 +488,7 @@ def _bake_one_slot(
             target_fps=target_fps,
         )
     except Exception as e:
-        u.notify(f'#{anim_index} 动画缓存重采样失败: {e}')
-        return False
+        raise RuntimeError(f'#{anim_index} 动画缓存重采样失败: {e}') from e
     fallback_rate = float(mc_vat.get_editor_property('sample_rate') or 30.0)
     if override_fps and float(target_fps) > 0:
         sample_rate = float(target_fps)
@@ -499,8 +497,7 @@ def _bake_one_slot(
     _configure_temp_da(temp_da, skm, sm, bake_anim, textures, sample_rate)
 
     if not _bake_temp(temp_da, sm):
-        u.notify(f'#{anim_index} AnimationToTexture 失败，注意不同生物需要设置兼容骨架才能共享动画')
-        return False
+        raise RuntimeError(f'#{anim_index} AnimationToTexture 失败，注意不同生物需要设置兼容骨架才能共享动画')
 
     bpt = temp_da.bp_get_bone_position_texture() or textures['bpt']
     brt = temp_da.bp_get_bone_rotation_texture() or textures['brt']
@@ -539,8 +536,7 @@ def _bake_one_slot(
     )
 
     if not all(isinstance(t, unreal.Texture2D) for t in (premul_bpt, premul_brt, premul_bwt)):
-        u.notify(f'#{anim_index} 预乘纹理生成失败')
-        return False
+        raise RuntimeError(f'#{anim_index} 预乘纹理生成失败')
 
     _write_texture_collection(tc, anim_index, premul_bpt, premul_brt, premul_bwt)
     _set_mc_vat_anim_at(mc_vat, anim_index, anim)
@@ -572,12 +568,27 @@ def bake_animation(
         except Exception:
             target_fps = 60.0
 
-    mc_vat = u.resolve_mc_vat(mc_vat)
-    if not mc_vat:
-        u.notify('请指定有效的动画数据集资产')
+    try:
+        result = bake(mc_vat, anims, override_framerate=override_fps,
+                      framerate=target_fps, auto_clean_cache=auto_clean_cache)
+    except (ValueError, RuntimeError) as exc:
+        u.notify(str(exc))
         return False
+    return bool(result['succeeded']) or not result['failed']
 
-    anims = list(anims or [])
+
+def bake(dataset, animations, *, override_framerate=False, framerate=60.0,
+         auto_clean_cache=False):
+    """同步烘焙，返回各槽位结果；输入错误抛异常，单槽失败记录在 errors 中。"""
+    import math
+    override_fps, target_fps = bool(override_framerate), float(framerate)
+    if override_fps and (not math.isfinite(target_fps) or target_fps <= 0):
+        raise ValueError('覆盖帧率必须为正有限数')
+    mc_vat = u.resolve_mc_vat(dataset)
+    if not mc_vat:
+        raise ValueError('请指定有效的动画数据集资产')
+
+    anims = list(animations or [])
     bake_slots = [
         (i, a) for i, a in enumerate(anims) if isinstance(a, unreal.AnimSequence)
     ]
@@ -585,21 +596,17 @@ def bake_animation(
         i for i, a in enumerate(anims) if not isinstance(a, unreal.AnimSequence)
     ]
     if not bake_slots and not empty_slots:
-        u.notify('请至少指定一个动画序列')
-        return False
+        raise ValueError('请至少指定一个动画序列')
 
     skm = mc_vat.get_editor_property('skeletal_mesh') or mc_vat.bp_get_skeletal_mesh()
     sm = mc_vat.get_editor_property('static_mesh') or mc_vat.bp_get_static_mesh()
     tc = _get_anim_texture_collection(mc_vat)
     if not isinstance(skm, unreal.SkeletalMesh):
-        u.notify('MC_VAT 缺少骨骼网格体')
-        return False
+        raise ValueError('MC_VAT 缺少骨骼网格体')
     if not isinstance(sm, unreal.StaticMesh):
-        u.notify('MC_VAT 缺少静态网格体')
-        return False
+        raise ValueError('MC_VAT 缺少静态网格体')
     if not isinstance(tc, unreal.TextureCollection):
-        u.notify('MC_VAT 缺少「动画纹理集合」')
-        return False
+        raise ValueError('MC_VAT 缺少「动画纹理集合」')
 
     for anim_index in empty_slots:
         _write_texture_collection(tc, anim_index)
@@ -609,6 +616,7 @@ def bake_animation(
         )
 
     ok_count = 0
+    succeeded, errors = [], {}
     reuse = {}
     for anim_index, anim in bake_slots:
         key = anim.get_path_name()
@@ -626,14 +634,18 @@ def bake_animation(
                 f'{anim_index * 3}-{anim_index * 3 + 2}'
             )
             ok_count += 1
+            succeeded.append(anim_index)
             continue
-        if _bake_one_slot(
-            mc_vat, skm, sm, tc, anim, anim_index,
-            override_fps=override_fps,
-            target_fps=target_fps,
-        ):
+        try:
+            if not _bake_one_slot(mc_vat, skm, sm, tc, anim, anim_index,
+                                  override_fps=override_fps, target_fps=target_fps):
+                raise RuntimeError('烘焙未完成')
             reuse[key] = anim_index
             ok_count += 1
+            succeeded.append(anim_index)
+        except Exception as exc:
+            errors[anim_index] = str(exc)
+            u.notify(f'#{anim_index} 烘焙失败: {exc}')
 
     _recompile_sm_mics(sm)
 
@@ -644,6 +656,7 @@ def bake_animation(
 
     if bake_slots:
         u.notify(f'烘焙结束: 成功 {ok_count}/{len(bake_slots)}')
-        return ok_count > 0
-    u.notify('未烘焙（AnimSeq 均为空），已清空对应纹理组')
-    return True
+    else:
+        u.notify('未烘焙（AnimSeq 均为空），已清空对应纹理组')
+    return dict(dataset=mc_vat, succeeded=succeeded, failed=list(errors),
+                cleared=empty_slots, errors=errors, ok=not errors)

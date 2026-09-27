@@ -486,8 +486,6 @@ FSceneView* UMoviePipelinePanoramicPass::GetSceneViewForSampleState(FSceneViewFa
 		const float MatrixFOV = FMath::Max(0.001f, ViewFOV) * (float)PI / 360.0f;
 		// ToDo: I think this is a FMath::DegreesToRadians, easier to read that way than PI/360
 
-		static_assert((int32)ERHIZBuffer::IsInverted != 0, "ZBuffer should be inverted");
-
 		float XAxisMultiplier = 1.f;
 		float YAxisMultiplier = 1.f;
 		if (PaneSizeX > PaneSizeY)
@@ -749,7 +747,7 @@ void UMoviePipelinePanoramicPass::RenderSample_GameThreadImpl(const FMoviePipeli
 					if (!bHasWarnedSettings)
 					{
 						bHasWarnedSettings = true;
-						UE_LOG(LogMovieRenderPipeline, Warning, TEXT("Panoramic Renders do not support TAA/TSR without enabling bAllocateHistoryPerPane! Forcing AntiAliasing off."));
+						UE_LOGF(LogMovieRenderPipeline, Warning, "Panoramic Renders do not support TAA/TSR without enabling bAllocateHistoryPerPane! Forcing AntiAliasing off.");
 					}
 					
 					InOutSampleState.AntiAliasingMethod = EAntiAliasingMethod::AAM_None;

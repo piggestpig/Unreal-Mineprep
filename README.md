@@ -274,6 +274,11 @@ Mineprep 0.6-pre1有以下内置模组（目前仍处于早期开发阶段，可
 
 ## 版本更新
 
+#### 26w39a
+
+引擎版本已升级至UE5.8，并为Windows编译了实验性功能
+
+
 ### 0.6-pre1
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 

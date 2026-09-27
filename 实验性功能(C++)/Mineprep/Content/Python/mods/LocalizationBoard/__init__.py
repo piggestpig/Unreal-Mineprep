@@ -6,7 +6,7 @@ mod_info = {
         '扫描资产并整理变量显示名 CSV',
         'Scan assets and refresh variable display-name CSVs',
     ),
-    'Version': '1.0',
+    'Version': '2.0',
     'CreatedBy': 'Pig',
     'EnabledByDefault': False,
     'ReloadWithMineprep': True,
@@ -22,7 +22,8 @@ def register():
 
 def unregister():
     import sys
-    from . import panel
+    from . import panel, ops
+    ops.cancel_all()
     panel.LocalizationBoard.unregister()
     for sub in ('panel', 'ops', 'props'):
         sys.modules.pop(f'{__name__}.{sub}', None)

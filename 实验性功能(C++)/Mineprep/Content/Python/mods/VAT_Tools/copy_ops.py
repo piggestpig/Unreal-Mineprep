@@ -83,6 +83,8 @@ def _duplicate_or_use(directory: str, name: str, original: unreal.Object):
         return None
     existing = u.load_or_none(directory, name)
     if existing:
+        if existing.get_class() != original.get_class():
+            raise ValueError(f'目标资产类型不匹配: {directory}/{name}')
         u.notify(f'目标已存在，复用: {directory}/{name}')
         return existing
     asset = u.asset_tools().duplicate_asset(name, directory, original)
@@ -195,22 +197,34 @@ def _copy_with_deps(mc_vat, directory: str, new_name: str):
 
 def copy_data_asset(mod) -> unreal.Object | None:
     """左栏「复制数据集」：按 CopyProps 复制当前 MC_VAT（可选依赖）。"""
-    mc_vat = u.resolve_mc_vat(mod.bake_props.DataAsset)
+    try:
+        new_da = copy_dataset(mod.bake_props.DataAsset, mod.copy_props.TargetPath,
+                              mod.copy_props.NewName, copy_dependencies=bool(mod.copy_props.CopyDeps))
+    except (ValueError, RuntimeError) as exc:
+        u.notify(str(exc))
+        return None
+    u.assign_soft_prop(mod.bake_props, 'DataAsset', new_da)
+    bake_anim_ops.sync_anim_seq_from_data_asset(mod)
+    bake_anim_ops.sync_copy_props_from_data_asset(mod)
+    u.notify(f'已复制并填入左栏: {new_da.get_name()} @ {u.package_dir(new_da)}')
+    return new_da
+
+
+def copy_dataset(dataset, target_path, new_name, *, copy_dependencies=False):
+    """复制或复用数据集；保留依赖重连规则，返回目标 MC_VAT。"""
+    mc_vat = u.resolve_mc_vat(dataset)
     if not mc_vat:
-        u.notify('请先指定有效的动画数据集')
-        return None
+        raise ValueError('请先指定有效的动画数据集')
 
-    target_path = _validate_copy_path(mod.copy_props.TargetPath or '')
+    target_path = _validate_copy_path(target_path)
     if not target_path:
-        return None
+        raise ValueError('目标路径无效或无法创建')
 
-    new_name = (mod.copy_props.NewName or '').strip()
-    if not new_name:
-        u.notify('新名称不能为空')
-        return None
+    new_name = (new_name or '').strip()
+    if not new_name or any(c in new_name for c in '/\\.:'):
+        raise ValueError('新名称必须是不含路径的资产名')
 
-    copy_deps = bool(mod.copy_props.CopyDeps)
-    if copy_deps:
+    if copy_dependencies:
         u.notify(f'复制数据集及依赖 → {target_path}/{new_name}')
         new_da = _copy_with_deps(mc_vat, target_path, new_name)
     else:
@@ -218,10 +232,5 @@ def copy_data_asset(mod) -> unreal.Object | None:
         new_da = _duplicate_or_use(target_path, new_name, mc_vat)
 
     if not new_da:
-        return None
-
-    u.assign_soft_prop(mod.bake_props, 'DataAsset', new_da)
-    bake_anim_ops.sync_anim_seq_from_data_asset(mod)
-    bake_anim_ops.sync_copy_props_from_data_asset(mod)
-    u.notify(f'已复制并填入左栏: {new_da.get_name()} @ {target_path}')
+        raise RuntimeError(f'复制数据集失败: {target_path}/{new_name}')
     return new_da
