@@ -271,7 +271,7 @@ GPU（粒子）",,,,👤🟩,金合欢木门 [顶部右],acacia_door_top_right,�
 98,运行时按键映射,Runtime Key mapping,運行時按鍵映射,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹门 [底部左打开],bamboo_door_bottom_left_open,竹門 [底部左打開],,,,🟩,木炭,charcoal,木炭
 99,编辑器HDR亮度,Editor Brightness,編輯器HDR亮度,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹门 [底部右],bamboo_door_bottom_right,竹門 [底部右],,,,👤🟩🌊,樱花木船,cherry_boat,櫻花木船
 100,调色示波器,Color Scopes,調色示波器,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹门 [底部右打开],bamboo_door_bottom_right_open,竹門 [底部右打開],,,,👤🟩🌊,樱花木运输船,cherry_chest_boat,儲物箱櫻花木船
-101,采样步长,Sample Steps,采樣步長,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹门 [顶部左],bamboo_door_top_left,竹門 [頂部左],,,,👤🟩,樱花木门,cherry_door,櫻花木門
+101,渲染模式（ACES）,Render Mode (ACES),渲染模式（ACES）,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹门 [顶部左],bamboo_door_top_left,竹門 [頂部左],,,,👤🟩,樱花木门,cherry_door,櫻花木門
 102,波形图亮度,Scope Brightness,波形圖亮度,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹门 [顶部左打开],bamboo_door_top_left_open,竹門 [頂部左打開],,,,👤🟩,悬挂式樱花木告示牌,cherry_hanging_sign,櫻花木吊牌 (懸掛式櫻花木告示牌)
 103,编辑器快捷键,Editor Shortcuts,編輯器快捷鍵,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹门 [顶部右],bamboo_door_top_right,竹門 [頂部右],,,,👤🟩,樱花木告示牌,cherry_sign,櫻花木指示牌 (櫻花木告示牌)
 104,打开引擎快捷键菜单,Open Engine Shortcuts Menu,打開引擎快捷鍵菜單,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹门 [顶部右打开],bamboo_door_top_right_open,竹門 [頂部右打開],,,,👤🟩,运输矿车,chest_minecart,儲物箱礦車
@@ -313,7 +313,7 @@ Right Click (Red): Disable Megalights and fall back to Lumen","調整定向光�
 預設(白色)：Megalights光線追蹤陰影
 左鍵(綠色)：Megalights虛擬陰影貼圖，品質高但效能差
 右鍵(紅色)：停用Megalights，回退至Lumen",,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹马赛克楼梯 [内角],bamboo_mosaic_stairs_inner,竹拼樓梯 (竹拼階梯) [內角],,,,👤🟩,时钟 [19],clock_19,時鐘 [19]
-129,HDR渲染亮度倍率,Render Brightness Mult,HDR渲染亮度倍率,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹马赛克楼梯 [外角],bamboo_mosaic_stairs_outer,竹拼樓梯 (竹拼階梯) [外角],,,,👤🟩,时钟 [20],clock_20,時鐘 [20]
+129,HDR亮度倍率,HDR Render Mult,HDR亮度倍率,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹马赛克楼梯 [外角],bamboo_mosaic_stairs_outer,竹拼樓梯 (竹拼階梯) [外角],,,,👤🟩,时钟 [20],clock_20,時鐘 [20]
 130,图片转码,Image Transcode,圖片轉碼,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹板,bamboo_planks,竹板 (竹材),,,,👤🟩,时钟 [21],clock_21,時鐘 [21]
 131,3D格式,3D Format,3D格式,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹压力板,bamboo_pressure_plate,竹壓力板,,,,👤🟩,时钟 [22],clock_22,時鐘 [22]
 132,渲染结束打开文件夹,Open Folder After Render,渲染結束打開文件夾,,,,,,,,,,,,,,,,,,,,,,,,,,,,,👤🟩,竹压力板 [按下],bamboo_pressure_plate_down,竹壓力板 [按下],,,,👤🟩,时钟 [23],clock_23,時鐘 [23]

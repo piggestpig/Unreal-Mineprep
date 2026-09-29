@@ -1642,109 +1642,45 @@ def _is_packed_structure_data(ue_data) -> bool:
     return isinstance(sample, dict) and "pos" in sample and "rot" in sample
 
 
-@lazy_import
+def import_structure_textures(files, destination=None):
+    """Import prepared EXRs on the editor thread; encoding performs no UE calls."""
+    destination = destination or paths.game + 'mc/structure'
+    textures = []
+    for key in ('BPT', 'BRT'):
+        imported = _run_import_task(_make_import_task(files[key], destination))
+        if not imported:
+            raise RuntimeError(f'{key} texture import failed')
+        texture = imported[0]
+        prep_texture(texture, unreal.TextureCompressionSettings.TC_HDR_F32)
+        if 'side' in files and (texture.blueprint_get_size_x() != files['side']
+                                or texture.blueprint_get_size_y() != files['side']):
+            raise RuntimeError('imported structure texture size does not match encoded data')
+        unreal.EditorAssetLibrary.set_metadata_tag(texture, '方块映射', pformat(files['mapping']))
+        textures.append(texture)
+    return textures[0], textures[1], files['mapping']
+
+
 def structure_to_tex(ue_data, name='structure', fp32=True):
-    """将结构数据烘焙为位置/旋转贴图。支持 Transform 列表或 packed 数组。
-    BRT：RGB=局部缩放 (X,Y,Z)，A=旋转序号 0..7（查 HLSL Rotation[]）。
-    """
-    dtype = np.float32  # if fp32 else np.float16
-    exr_type = cv2.IMWRITE_EXR_TYPE_FLOAT if fp32 else cv2.IMWRITE_EXR_TYPE_HALF
-
+    """Compatibility entry: encode then import. Supports Transform or packed data."""
+    from mc_structure_tex import write_structure_textures
     if not ue_data:
-        unreal.log_warning("ue_data 为空，取消贴图导出。")
+        unreal.log_warning('ue_data 为空，取消贴图导出。')
         return
-
-    packed = _is_packed_structure_data(ue_data)
-    block_types = list(ue_data.keys())
-    if packed:
-        total_blocks = sum(len(v["pos"]) for v in ue_data.values())
+    if _is_packed_structure_data(ue_data):
+        payloads = ue_data
     else:
-        total_blocks = sum(len(v) for v in ue_data.values())
-
-    if total_blocks == 0:
-        unreal.log_warning("未发现有效的方块转换数据，取消贴图导出。")
+        payloads = {}
+        for model, transforms in ue_data.items():
+            payloads[model] = {
+                'pos': np.array([[t.translation.x, t.translation.y, t.translation.z]
+                                 for t in transforms], dtype=np.float32).reshape(-1, 3),
+                'rot': np.array([_euler_to_rot_id(t.rotation.pitch, t.rotation.yaw, t.rotation.roll)
+                                 for t in transforms], dtype=np.int32),
+                'scale': np.array([[t.scale3d.x, t.scale3d.y, t.scale3d.z]
+                                   for t in transforms], dtype=np.float32).reshape(-1, 3),
+            }
+    if not any(len(p['pos']) for p in payloads.values()):
+        unreal.log_warning('未发现有效的方块转换数据，取消贴图导出。')
         return
-
-    side = int(np.ceil(np.sqrt(total_blocks)))
-    unreal.log(f"开始生成数据贴图：总方块数 = {total_blocks}, 分辨率 = {side} x {side}")
-
-    bpt_img = np.zeros((side, side, 4), dtype=dtype)
-    bpt_img[:, :, 3] = -1.0
-    brt_img = np.zeros((side, side, 4), dtype=dtype)
-    brt_img[:, :, 0] = 1.0
-    brt_img[:, :, 1] = 1.0
-    brt_img[:, :, 2] = 1.0
-    brt_img[:, :, 3] = 0.0
-
-    if packed:
-        i = 0
-        for type_idx, payload in enumerate(ue_data.values()):
-            pos = np.asarray(payload["pos"], dtype=dtype)
-            rot = np.asarray(payload["rot"], dtype=dtype)
-            scale = payload.get("scale")
-            if scale is None:
-                scale_arr = np.ones((pos.shape[0], 3), dtype=dtype)
-            else:
-                scale_arr = np.asarray(scale, dtype=dtype)
-            n = int(pos.shape[0])
-            if n == 0:
-                continue
-            idx = np.arange(i, i + n)
-            rows = idx // side
-            cols = idx % side
-            # OpenCV BGRA → EXR：B=Z/100, G=Y/100, R=X/100, A=type
-            bpt_img[rows, cols, 0] = pos[:, 2] / 100.0
-            bpt_img[rows, cols, 1] = pos[:, 1] / 100.0
-            bpt_img[rows, cols, 2] = pos[:, 0] / 100.0
-            bpt_img[rows, cols, 3] = float(type_idx)
-            # BRT：B=scale.Z G=scale.Y R=scale.X → UE RGB=(X,Y,Z)；A=rot_id
-            brt_img[rows, cols, 0] = scale_arr[:, 2]
-            brt_img[rows, cols, 1] = scale_arr[:, 1]
-            brt_img[rows, cols, 2] = scale_arr[:, 0]
-            brt_img[rows, cols, 3] = rot
-            i += n
-    else:
-        i = 0
-        for type_idx, transforms in enumerate(ue_data.values()):
-            for transform in transforms:
-                row = i // side
-                col = i % side
-                loc = transform.translation
-                bpt_img[row, col, 0] = loc.z / 100.0
-                bpt_img[row, col, 1] = loc.y / 100.0
-                bpt_img[row, col, 2] = loc.x / 100.0
-                bpt_img[row, col, 3] = float(type_idx)
-                rot = transform.rotation
-                sc = transform.scale3d
-                brt_img[row, col, 0] = float(sc.z)
-                brt_img[row, col, 1] = float(sc.y)
-                brt_img[row, col, 2] = float(sc.x)
-                brt_img[row, col, 3] = float(
-                    _euler_to_rot_id(rot.pitch, rot.yaw, rot.roll)
-                )
-                i += 1
-
-    if not os.path.exists(paths.cache):
-        os.makedirs(paths.cache)
-
-    bpt_path = os.path.join(paths.cache, f"{name}_BPT.exr")
-    brt_path = os.path.join(paths.cache, f"{name}_BRT.exr")
-    json_path = os.path.join(paths.cache, f"{name}_names.json")
-
-    cv2.imwrite(bpt_path, bpt_img, [cv2.IMWRITE_EXR_TYPE, exr_type])
-    cv2.imwrite(brt_path, brt_img, [cv2.IMWRITE_EXR_TYPE, exr_type])
-
-    mapping_data = {idx: n for idx, n in enumerate(block_types)}
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(mapping_data, f, indent=4, ensure_ascii=False)
-
-    unreal.log(f"成功导出贴图！\n位置图: {bpt_path}\n旋转图: {brt_path}\n索引表: {json_path}")
-
-    BPT_Tex = _run_import_task(_make_import_task(bpt_path, paths.game + f'mc/structure'))[0]
-    BRT_Tex = _run_import_task(_make_import_task(brt_path, paths.game + f'mc/structure'))[0]
-    prep_texture(BPT_Tex, unreal.TextureCompressionSettings.TC_HDR_F32)
-    prep_texture(BRT_Tex, unreal.TextureCompressionSettings.TC_HDR_F32)
-    unreal.EditorAssetLibrary.set_metadata_tag(BPT_Tex, '方块映射', pformat(mapping_data))
-    unreal.EditorAssetLibrary.set_metadata_tag(BRT_Tex, '方块映射', pformat(mapping_data))
-
-    return BPT_Tex, BRT_Tex, mapping_data
+    files = write_structure_textures(payloads, paths.cache, name, fp32)
+    return import_structure_textures(files)

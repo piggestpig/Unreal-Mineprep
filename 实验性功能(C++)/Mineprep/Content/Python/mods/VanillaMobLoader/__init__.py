@@ -9,7 +9,7 @@ import mineprep
 mod_info = {
     'Name': mineprep.bilingual('MC原版生物加载器', 'Vanilla Mob Loader'),
     'Description': mineprep.bilingual('浏览、导入并放置MC生物模型', 'Browse, import and place skeletal MC entities'),
-    'Version': '1.0',
+    'Version': '2.0',
     'CreatedBy': 'Pig',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
@@ -23,5 +23,6 @@ def register():
 
 
 def unregister():
-    from . import panel
+    from . import panel, api
+    api.cancel_all()
     panel.VanillaMobLoader.unregister()

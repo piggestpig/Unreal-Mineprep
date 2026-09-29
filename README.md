@@ -138,7 +138,7 @@ Super Resolution/Ray Reconstruction/DLAA`和`Movie Render Queue DLSS/DLAA Suppor
 
 
 ## 系统要求
-Mineprep 0.6-pre1 使用 Windows + UE5.7 开发，建议在此环境下使用。其他平台或引擎版本将会有一些功能不可用。
+Mineprep 0.6-pre2 使用 Windows + UE5.8 开发，建议在此环境下使用。其他平台或引擎版本将会有一些功能不可用。
 
 除了[虚幻引擎官方文档](https://dev.epicgames.com/documentation/zh-cn/unreal-engine/hardware-and-software-specifications-for-unreal-engine)中的最低要求之外，渲染动画还需要更高的配置和更多的显存：
 
@@ -156,6 +156,7 @@ Mineprep的绝大部分功能都用蓝图和Python编写，旨在支持不同的
 
 | Mineprep<br>版本 | Python<br>API 版本 | 引擎版本 | Windows<br>实验性功能 | Mac/Linux<br>实验性功能 |
 | :---: | :---: | :---: | :---: | :---: |
+| 最新快照 | 2.0 | 5.8 | ✅ | - |
 | 0.6-pre1 | 1.0 | 5.7 | ✅ | ℹ️ |
 | 0.5 | 0.1 | 5.7 | ✅ | ✅ |
 |  |  |  |  |  |
@@ -248,19 +249,19 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
 - 适合Agent迭代开发
 
 使用方法：在 `顶部菜单栏 → MC → 模组管理器` 中安装、卸载、启用、禁用模组。  
-Mineprep 0.6-pre1有以下内置模组（目前仍处于早期开发阶段，可能存在bug）：
+Mineprep 0.6-pre2有以下内置模组（目前仍处于早期开发阶段，可能存在bug）：
 
 | 模组名称 | 版本 | 简介 | 源码参考 |
 | :--- | :---: | :--- | :--- |
-| [模组管理器](<./实验性功能(C++)/Mineprep/Content/Python/mods/ModManager>) | 1.0 | 启用、禁用、安装和卸载模组 | |
-| [VAT顶点动画工具](<./实验性功能(C++)/Mineprep/Content/Python/mods/VAT_Tools>) | 1.0 | 烘焙顶点动画纹理，用于大型群体粒子 | [Anim To Texture Helpers](https://github.com/kromond/AnimToTextureHelpers) |
-| [皮肤&表情编辑器](<./实验性功能(C++)/Mineprep/Content/Python/mods/Skin_Editor>) | 1.0 | 编辑选中Actor的皮肤与头部材质；绘制纹理 | [MC Skin Converter](https://util.gflash.eu/mcskinconverter/) |
-| [MC原版生物加载器](<./实验性功能(C++)/Mineprep/Content/Python/mods/VanillaMobLoader>) | 1.0 | 浏览、导入并放置MC生物模型（需要联网） | [CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/) |
-| [基岩版动画转换器](<./实验性功能(C++)/Mineprep/Content/Python/mods/BedrockAnimator>) | 1.0 | 把基岩版 animation.json 转换为动画序列 | |
+| [模组管理器](<./实验性功能(C++)/Mineprep/Content/Python/mods/ModManager>) | 2.0 | 启用、禁用、安装和卸载模组 | |
+| [VAT顶点动画工具](<./实验性功能(C++)/Mineprep/Content/Python/mods/VAT_Tools>) | 2.0 | 烘焙顶点动画纹理，用于大型群体粒子 | [Anim To Texture Helpers](https://github.com/kromond/AnimToTextureHelpers) |
+| [皮肤&表情编辑器](<./实验性功能(C++)/Mineprep/Content/Python/mods/Skin_Editor>) | 2.0 | 编辑选中Actor的皮肤与头部材质；绘制纹理 | [MC Skin Converter](https://util.gflash.eu/mcskinconverter/) |
+| [MC原版生物加载器](<./实验性功能(C++)/Mineprep/Content/Python/mods/VanillaMobLoader>) | 2.0 | 浏览、导入并放置MC生物模型（需要联网） | [CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/) |
+| [基岩版动画转换器](<./实验性功能(C++)/Mineprep/Content/Python/mods/BedrockAnimator>) | 2.0 | 把基岩版 animation.json 转换为动画序列 | |
 | | | | |
-| [插件更新与迁移工具](<./实验性功能(C++)/Mineprep/Content/Python/mods/VersionControl>) | 1.0 | 迁移Mineprep插件至其他工程文件或安装包仓库 | |
-| [本地化翻译控制板](<./实验性功能(C++)/Mineprep/Content/Python/mods/LocalizationBoard>) | 1.0 | 扫描资产并整理变量显示名 CSV（需要实验性功能）| |
-| [自动化测试](<./实验性功能(C++)/Mineprep/Content/Python/mods/AutomationTest>) | 1.0 | 运行编辑器自动化测试项目 | |
+| [插件更新与迁移工具](<./实验性功能(C++)/Mineprep/Content/Python/mods/VersionControl>) | 2.0 | 迁移Mineprep插件至其他工程文件或安装包仓库 | |
+| [本地化翻译控制板](<./实验性功能(C++)/Mineprep/Content/Python/mods/LocalizationBoard>) | 2.0 | 扫描资产并整理变量显示名 CSV（需要实验性功能）| |
+| [自动化测试](<./实验性功能(C++)/Mineprep/Content/Python/mods/AutomationTest>) | 2.0 | 运行编辑器自动化测试项目 | |
 | [Mod模板](<./实验性功能(C++)/Mineprep/Content/Python/mods/template.py>) | 1.0 | 面向开发者的普通mod模板 | |
 | [minimal](<./实验性功能(C++)/Mineprep/Content/Python/mods/minimal.py>) | - | 最小示例 | |
 
@@ -276,7 +277,23 @@ Mineprep 0.6-pre1有以下内置模组（目前仍处于早期开发阶段，可
 
 #### 26w39a
 
-引擎版本已升级至UE5.8，并为Windows编译了实验性功能
+引擎版本已升级至UE5.8，我们为Windows编译了实验性功能。先前设计的Lumen中等质量照明和雾屏幕空间散射也已可用
+
+- 改进导入结构的程序，优化内存和速度，支持新版nbt格式与基岩版的状态信息，修复床、楼梯、火把、栅栏门、压力板、栅栏、玻璃板等许多方块的异常
+- 改进方块实例材质，单个实例缩放时UV在一定范围内能保持不变
+- 修复了UE5.8放置Niagara粒子后渲染png/exr序列帧在最后一帧闪退的bug
+> 我天呢 怎么有这么严重的问题，现在还挂在官网上没修 [UE-392456](https://issues.unrealengine.com/issue/UE-392456)，幸好提交者找到了临时解决方案  
+> 上一次遇到这么头疼的bug，还是UE5.7的无绑定渲染导致DLSS闪退😭
+
+- 上传了[Mineprep Skills](./实验性功能(C++)/Mineprep/Content/Python/mineprep-skills)，这是集开发和使用于一体的agent技能，需要配置Unreal MCP才能发挥全部功能
+- Mineprep Python API和模组更新至2.0版本，根据新的设计理念进行重构和解耦，无需UI界面就能调用模组功能，并改善了许多细节
+- Mineprep Wiki的教程序章已经更新，甚至有一键运行脚本
+- UE5.8大幅改进了HDR渲染管线！我们做了初步适配
+  - 省流：在颜色子面板勾选“HDR”，依旧能所见即所得，甚至比以前更准确了
+  - 后期处理体积中现在有Filmic和Standard ACES两种模式。引擎默认的Filmic支持HDR了，各种小参和lut都能用于HDR画面，但是不支持SceneColorMultiplier。Standard ACES则是渲染输出使用的管线，和以前一样接着用SceneColorMultiplier，虽然画面一致，但是怎么看都没有Filmic好看
+  - OCIO里面的ACES更新至2.0版本了，加入了Rec.2100 HLG等更多色彩模式，等重构渲染输出子面板的时候考虑加进来
+  - 以前编辑器视口的亮度上限会随显示器变化，导致它和渲染输出的亮度有所不同。现在能用 r.HDR.Display.OverrideOSMaxLuminance 1 重载亮度上限为1000nits，完美对齐输出结果，即使显示器本身的亮度上限不高，也能用笔记本/手机远程连接电脑 监看高质量HDR画面
+  - 编辑器亮度等其他参数也变得不同了，总之颜色子面板已经适配了新版引擎，调色示波器也直接用自带功能，旧的删了
 
 
 ### 0.6-pre1

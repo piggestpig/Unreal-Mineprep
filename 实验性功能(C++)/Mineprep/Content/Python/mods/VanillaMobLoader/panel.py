@@ -7,7 +7,7 @@ import unreal
 import mineprep
 from .assets import AssetStore, load_settings, save_settings
 from .props import LoaderOptions
-from . import composition
+from . import composition, api
 
 CATEGORIES = {'ALL': ('全部', 'All'), 'Regular': ('常规', 'Regular'),
               'Babies': ('幼体', 'Babies'), 'Custom': ('自定义', 'Custom'),
@@ -53,6 +53,7 @@ class VanillaMobLoader(mineprep.Mod):
         self.textures = {}
         self.attempted = set()
         self.refreshing = False
+        self._build_job = None
         self.closed = False
         self.tick_handle = None
         self._search_due = 0
@@ -341,78 +342,71 @@ class VanillaMobLoader(mineprep.Mod):
         if self.refreshing or self.closed or not self.selected or not self.catalog:
             return
 
-        from . import importer, skeletal
+        from . import importer
         self.refreshing = True
         self.refresh_button.set_is_enabled(False)
         self.load_button.set_is_enabled(False)
         self.reload_button.set_is_enabled(False)
-        self.store.close()
-        self.store = AssetStore()
-
         try:
             entries = self.selected_entries()
             folder, name = composition.destination(self.options.SavePath, self.options.SaveName)
             self.options.SaveName = name
             self._save()
-            entry = composition.aggregate_entry(entries, name, self.options.LayerExpansion, self.options.RandomScale)
             placement = None if reload else importer.placement_target()
-            target = importer.composition_target(entry, folder, name, reload)
-            mesh = target[2]
-            warnings = []
-            if mesh is None or reload:
-                skeletal.prerequisites()
-                models = [self.catalog.model_data(e) for e in entries]
-                skins = [None]*len(entries)
-                with unreal.ScopedSlowTask(len(entries)+2, tr('正在加载模型', 'Loading model')) as progress:
-                    progress.make_dialog(False)
-                    futures = {self.store.submit(self.store.skin,e.id): i for i,e in enumerate(entries) if not e.textureless}
-                    for i,result in self._wait_batch(futures,progress):
-                        try:
-                            skins[i] = result.result()
-                        except Exception as exc:
-                            warnings.append(entries[i].name+': '+str(tr('皮肤不可用', 'Skin unavailable'))+' '+str(exc)[:80])
-                    future = self.store.submit(composition.combine, entries, models, skins,
-                                               self.options.LayerExpansion, self.options.RandomScale)
-                    for _,result in self._wait_batch({future:None},progress):
-                        geo, conflicts = result.result()
-                    if conflicts:
-                        mineprep.panic(tr('组合骨骼冲突', 'Conflicting bones'),
-                                       str(tr('继续运行将使用主模型的骨骼，忽略后续多选模型的冲突骨骼。',
-                                          'Continue to keep the first selected bone definitions and ignore later conflicting bones.'))
-                                       + '\n' + '\n'.join(conflicts))
-                    from dataclasses import replace
-                    from types import SimpleNamespace
-                    sources = []
-                    reserved = set()
-                    for slot in geo.materials:
-                        e = entries[slot['source']]
-                        digest = slot['digest']
-                        single = len(entries) == 1
-                        owner = e if single else replace(e, key='skin:'+digest)
-                        material_name = importer.skin_name(owner, target[0], composition.clean_name(e.id), reserved)
-                        reserved.add(material_name.casefold())
-                        path = self.store.skin_path(e.id) if not e.textureless else None
-                        sources.append((owner, material_name, path, SimpleNamespace(single_sided=slot['single_sided'])))
-                    mesh, build_warnings = skeletal.create_assets(entry, self.catalog.version, target, geo,
-                                                                  reload=reload, material_sources=sources)
-                    warnings += build_warnings
-                    progress.enter_progress_frame(1)
-                if any(self.catalog.texture_count(e)>1 for e in entries):
-                    warnings.append(str(tr('每个模板仅使用主皮肤', 'Primary skin only for each template')))
-                if self.store.unsaved:
-                    warnings.append(str(tr('部分缓存未保存', 'Some cache was not saved')))
+            scale = self.options.ModelScale
 
-            if not reload:
-                importer.place(mesh, self.options.ModelScale, placement)
-            self._status = str(tr('已更新：', 'Updated: ') if reload else tr('已放置：', 'Placed: ')) + entry.name
-            if warnings:
-                self._status += ' · ' + '; '.join(warnings)
+            def progress(text):
+                if not self.closed:
+                    self._status = text
+                    self._update_status()
+
+            def conflict(conflicts):
+                mineprep.panic(tr('组合骨骼冲突', 'Conflicting bones'),
+                               str(tr('继续运行将使用主模型的骨骼，忽略后续多选模型的冲突骨骼。',
+                                      'Continue to keep the first selected bone definitions and ignore later conflicting bones.'))
+                               + '\n' + '\n'.join(conflicts))
+                return True
+
+            def stalled():
+                mineprep.panic(tr('资源下载停滞', 'Download stalled'),
+                               tr('连续 10 秒没有资源下载完成。可继续等待，或停止本次刷新。',
+                                  'No resource completed for 10 seconds. Continue waiting or stop this refresh.'))
+                return True
+
+            def finished(job):
+                try:
+                    if self.closed:
+                        return
+                    if job.state == 'failed':
+                        raise RuntimeError(job.error)
+                    if job.state == 'cancelled':
+                        self._status = str(tr('已取消', 'Cancelled'))
+                        return
+                    result = job.result
+                    if not reload:
+                        importer.place(result['mesh'], scale, placement)
+                    self._status = str(tr('已更新：', 'Updated: ') if reload else tr('已放置：', 'Placed: ')) + result['name']
+                    if result['warnings']:
+                        self._status += ' · ' + '; '.join(result['warnings'])
+                except Exception as exc:
+                    self._status = str(tr('加载失败：', 'Import failed: ')) + str(exc)[:220]
+                    mineprep.warn('VanillaMobLoader', exc)
+                finally:
+                    self._finish_build()
+
+            self._build_job = api.build_entity(self.catalog, [e.key for e in entries],
+                save_path=self.options.SavePath, name=name, layer_expansion=self.options.LayerExpansion,
+                random_scale=self.options.RandomScale, reload=reload, cache=self.store.cache, on_progress=progress,
+                on_conflict=conflict, on_stall=stalled, on_done=finished)
         except Exception as exc:
             self._status = str(tr('加载失败：', 'Import failed: ')) + str(exc)[:220]
             mineprep.warn('VanillaMobLoader', exc)
-        finally:
-            self.store.close()
-            self.refreshing = False
+            self._finish_build()
+
+    def _finish_build(self):
+        self._build_job = None
+        self.refreshing = False
+        if not self.closed:
             self.refresh_button.set_is_enabled(True)
             self.load_button.set_is_enabled(bool(self.selected))
             self.reload_button.set_is_enabled(bool(self.selected))
@@ -568,6 +562,9 @@ class VanillaMobLoader(mineprep.Mod):
         if self.closed:
             return
         self.closed = True
+        if self._build_job is not None:
+            self._build_job.cancel()
+            self._build_job = None
         if self.tick_handle is not None:
             unreal.unregister_slate_post_tick_callback(self.tick_handle)
             self.tick_handle = None

@@ -187,12 +187,61 @@ only when the task calls for it.
   through panel opening, reload or repeated spawn calls.
 - Query `mineprep.panel('生成器子面板.放置生物选项').get(list)` only when the requested name
   is unknown or fails after the generator is ready. Known names do not require
-  option enumeration. Persistent errors belong in a focused diagnostic, not a
-  replacement generator implementation.
+  option enumeration. If the ready options list lacks that species, use the
+  VanillaMobLoader fallback below. Other persistent errors need focused diagnosis.
 
 For backend debugging, `spawn_helper` reads the actor from `mcvars.ActorCache`.
 An actor can appear despite an error if a Blueprint writes `mineprep.ActorCache`
 instead. Inspect that handshake when the symptom occurs; it is not normal setup.
+
+### Mob missing from the generator
+
+The generator's list is not the full supported mob catalog. Once absence is
+confirmed and no actor was already created, use `mods.VanillaMobLoader` directly.
+The user's placement request covers this alternate route; no extra approval or
+mod-panel opening is needed. Start with these public calls and the
+[mod README](../mods/VanillaMobLoader/README.md), not a scan of its implementation.
+
+Run these stages in separate editor calls, allowing frames between them:
+
+```python
+from mods.VanillaMobLoader import api as mob_api, importer as mob_importer
+mob_catalog_job = mob_api.load_catalog()  # cached catalog first
+```
+
+When `mob_catalog_job.state == 'completed'`, search using the English species
+name/identifier across all categories. For example, 鹦鹉螺 is `nautilus`, not
+`parrot`. Return only matching keys/names, not the whole catalog:
+
+```python
+mob_catalog = mob_catalog_job.result['catalog']
+mob_matches = mob_catalog.search(category='ALL', query='nautilus')
+[(e.key, e.id, e.name) for e in mob_matches]
+```
+
+Choose the actual matching entry; inspect the short list if there are variants.
+The following example assumes one unambiguous match. Do not invent catalog keys:
+
+```python
+assert len(mob_matches) == 1, 'Select the intended entry from the matches first'
+mob_build_job = mob_api.build_entity(mob_catalog, [mob_matches[0].key])
+```
+
+Once `mob_build_job.state == 'completed'`, place exactly once:
+
+```python
+placed_mob = mob_importer.place(mob_build_job.result['mesh'])
+placed_mob
+```
+
+Default placement uses the current viewport; provide `target=(location, False)`
+only for an explicit position. Building creates/reuses assets but does not place
+an actor. Check the returned actor and mesh as the postcondition. For running
+jobs, query only `state/error` in a later call; never block UE or restart the job
+to poll. On failure inspect its error and relevant warnings before retrying.
+If the cached catalog has no match, refresh the catalog once with
+`load_catalog(refresh=True)` and search again; do not refresh every thumbnail.
+If still absent, report that limitation rather than placing a different species.
 
 ### Structures and repeated blocks
 

@@ -32,7 +32,10 @@ For straightforward editor tasks, try the matching public API with its defaults
 before probing implementation details. For example, place a known mob with
 `mineprep.spawn_mob('Blaze')`; omit coordinates unless requested. Investigate
 prerequisites only after a concrete failure, and check uncertain outcomes before
-retrying a mutation. See [placement and recovery](api.md#spawn).
+retrying a mutation. If the ready generator's options lack the requested mob,
+use [VanillaMobLoader fallback](api.md#mob-missing-from-the-generator) directly;
+do not inspect the whole mod or substitute a similarly named species.
+See [placement and recovery](api.md#spawn).
 
 **Evidence order:** current source for plugin contracts; the installed engine's
 bindings/docs for `unreal.*`; the product README for installation and releases.

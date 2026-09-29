@@ -152,14 +152,17 @@ def intro_tutorial(status=placeholder):
 
 TESTS = [
     {
+        'id': 'spawn_oak',
         'label': mineprep.bilingual('生成橡树', 'Spawn oak'),
         'fn': spawn_oak,
     },
     {
+        'id': 'mob_spawner',
         'label': mineprep.bilingual('生成生物', 'Spawn mobs'),
         'fn': mob_spawner,
     },
     {
+        'id': 'intro_tutorial',
         'label': mineprep.bilingual('入门教程示例', 'Getting started example'),
         'fn': intro_tutorial,
     },

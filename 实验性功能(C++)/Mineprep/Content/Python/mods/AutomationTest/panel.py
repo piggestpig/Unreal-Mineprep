@@ -1,9 +1,8 @@
-import inspect
 from functools import partial
 
 import unreal
 import mineprep
-from . import tests
+from . import tests, ops
 
 
 def tr(zh, en):
@@ -58,54 +57,31 @@ class AutomationTest(mineprep.Mod):
         row['status'].set_text(text)
         row['status'].set_color_and_opacity(unreal.SlateColor(color))
 
-    def _call_test(self, row):
-        def status(text, color=_RUNNING):
-            self._set_status(row, text, color)
-
-        fn = row['spec']['fn']
-        params = inspect.signature(fn).parameters
-        if 'status' in params or any(p.kind is p.VAR_KEYWORD for p in params.values()):
-            return fn(status=status)
-        return fn()
-
     def _start(self, rows):
         if self.closed or self._busy or not rows:
             return
         self._busy = True
         self._set_enabled(False)
-        queue = list(rows)
+        by_id = {row['spec']['id']: row for row in rows}
 
-        @mineprep.asynctask
-        def run():
-            try:
-                for row in queue:
-                    if self.closed:
-                        return
-                    self._set_status(row, tr('运行中…', 'Running…'), _RUNNING)
-                    try:
-                        result = self._call_test(row)
-                        if inspect.isgenerator(result):
-                            yield from result
-                        if self.closed:
-                            return
-                        self._set_status(row, tr('通过', 'Passed'), _PASS)
-                    except Exception as exc:
-                        if self.closed:
-                            return
-                        self._set_status(row, str(exc).strip() or type(exc).__name__, _FAIL)
-                        mineprep.warn('AutomationTest', exc)
-                    yield 0.1
-            finally:
-                self._busy = False
-                self._runner = None
-                if not self.closed:
-                    self._set_enabled(True)
+        def progress(item, text, color):
+            labels = {'running': tr('运行中…', 'Running…'), 'passed': tr('通过', 'Passed'),
+                      'cancelled': tr('已取消', 'Cancelled'), 'failed': item['error'] or tr('失败', 'Failed')}
+            self._set_status(by_id[item['id']], text or labels.get(item['state'], ''),
+                             color if color is not None else _PASS if item['state'] == 'passed' else
+                             _FAIL if item['state'] == 'failed' else _RUNNING)
 
-        self._runner = run()
+        def finished(job):
+            self._busy, self._runner = False, None
+            for item in job.result:
+                progress(item, None, None)
+            self._set_enabled(True)
+
+        self._runner = ops.run_cases(list(by_id), on_progress=progress, on_done=finished)
 
     def destruct(self):
         self.closed = True
         if self._runner is not None:
-            self._runner.destroy()
+            self._runner.cancel()
             self._runner = None
         self._busy = False
