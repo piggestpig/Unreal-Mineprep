@@ -11,6 +11,9 @@
 class FUICommandList;
 class UObject;
 
+// 快捷键动态多播委托：广播 CommandName
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMineprepHotkeyPressedSignature, const FString&, CommandName);
+
 UCLASS(BlueprintType, Blueprintable)
 class MINEPREP_API UMineprepSubsystem : public UEditorSubsystem
 {
@@ -20,56 +23,21 @@ public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
 
-    //从蓝图对象中加载快捷键配置
-    UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
-    void LoadHotkeysFromFile();
+    // 快捷键触发动态多播委托（Python端直连监听）
+    UPROPERTY(BlueprintAssignable, Category = "Mineprep|快捷键")
+    FMineprepHotkeyPressedSignature OnHotkeyPressed;
 
-    //从蓝图对象中注销快捷键配置
+    // 注册快捷键
     UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
-    void UnloadHotkeysFromFile();
+    bool RegisterHotkey(const FString& CommandName, const FString& DisplayName, const FString& Description, const FInputChord& Chord);
 
-    //注册快捷键
-    UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
-    bool RegisterHotkey(const FString& CommandName, const FString& DisplayName, const FString& Description,
-                        const FInputChord& Chord, const FString& BlueprintEventName = TEXT(""));
-
-    //注销指定的快捷键
+    // 注销快捷键
     UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
     bool UnregisterHotkey(const FString& CommandName);
 
-    //执行"Mineprep自定义快捷键"蓝图中的事件
+    // 统一快捷键触发入口（广播委托）
     UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
-    void ExecuteBlueprintEvent(FString EventName);
-
-    //获取自定义快捷键对象
-    UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
-    UObject* GetHotkeyObject();
-
-    //重新加载快捷键对象
-    UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
-    UObject* ReloadHotkeyObject();
-
-public:
-    // 存储命令名到蓝图事件名的映射
-    UPROPERTY(BlueprintReadWrite, Category = "Mineprep")
-    TMap<FString, FString> CommandToEventMap;
-    
-    // 用于执行蓝图事件的蓝图路径
-    UPROPERTY(BlueprintReadWrite, Category = "Mineprep")
-    FString BlueprintPath = TEXT("/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C");
-    
-    // 快捷键对象
-    UPROPERTY(BlueprintReadWrite, Category = "Mineprep")
-    UObject* HotkeyObject = nullptr;
-    
-    // 命令列表
-    TSharedPtr<FUICommandList> CommandList;
-    
-    // 创建动态命令类(Forward声明)
-    TSharedPtr<class FDynamicHotkeyCommands> DynamicCommands;
-    
-    // 初始化动态命令
-    void InitializeDynamicCommands();
+    void ExecuteHotkey(FString CommandName);
 
     /**
      * 检测给定快捷键是否与已注册命令冲突
@@ -78,5 +46,32 @@ public:
      * @param OutConflictDisplayName 冲突命令的显示名称（输出）
      * @return 有冲突时返回 true
      */
+    UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
     bool CheckHotkeyConflict(const FInputChord& Chord, FString& OutConflictName, FString& OutConflictDisplayName);
+
+    // 获取快捷键对象（供 AddKeyframes/Mineprep.cpp 等模块调用）
+    UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
+    UObject* GetHotkeyObject();
+
+    // 重新加载快捷键对象
+    UFUNCTION(BlueprintCallable, Category = "Mineprep|快捷键")
+    UObject* ReloadHotkeyObject();
+
+public:
+    // 供 AddKeyframes 兼容保留
+    UPROPERTY(BlueprintReadWrite, Category = "Mineprep")
+    FString BlueprintPath = TEXT("/Mineprep/Mineprep自定义快捷键.Mineprep自定义快捷键_C");
+
+    // 快捷键对象（供 AddKeyframes 兼容保留）
+    UPROPERTY(BlueprintReadWrite, Category = "Mineprep")
+    UObject* HotkeyObject = nullptr;
+
+    // 命令列表
+    TSharedPtr<FUICommandList> CommandList;
+
+    // 动态命令类
+    TSharedPtr<class FDynamicHotkeyCommands> DynamicCommands;
+
+    // 初始化动态命令
+    void InitializeDynamicCommands();
 };

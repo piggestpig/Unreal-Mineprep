@@ -305,6 +305,10 @@ w = mineprep.panel['Mineprep'] #插件面板
 saved = unreal.mineprep.widget_screenshot(w, shot)
 ```
 
+`widget_screenshot(w, shot, delay=0.3)` saves immediately, then captures again
+after the delay (seconds) and overwrites the same path if the target is still
+visible. Read the final image after that interval; `delay=0` captures only once.
+
 ## Iterative test loop
 
 If the file log is unavailable and the 20,000-entry engine log fallback has lost the call's start marker, `logs` is empty and marked `log_window_limit`; the original count is unknown. Do not interpret this as proof that the call emitted no warnings.
@@ -343,6 +347,7 @@ path = os.path.join(shot_dir, f'view_{uuid.uuid4().hex}.png')
 mineprep.screenshot(
     size=(1920, 1080),   # omit → viewport res; (1080,1080) square; (1080,1920) portrait
     path=path,           # always set — default auto-name is hard to find
+    delay=0.3,           # seconds before capture; default 0
     pos=unreal.Vector(2100, -4400, 1600),      # optional camera location
     lookat=unreal.Vector(100, -1600, 900),     # optional look-at; with pos sets yaw/pitch
 )
@@ -353,7 +358,16 @@ mineprep.screenshot(
 | `size` | viewport | `(w,h)` sets aspect. Landscape `(1920,1080)`, square `(1080,1080)`, portrait `(1080,1920)`. A single int → square |
 | `path` | `Saved/Screenshots/` + auto suffix | **Pass an explicit `.png` path** so you can Read it. Reusing the path overwrites |
 | `pos` / `lookat` | current viewport | `lookat` uses `find_look_at_rotation(pos, lookat)` |
+| `delay` | `0` | Seconds before a single async capture; unlike UI capture, no immediate first image |
 
 The capture is async and may stall on **shader compile**. Use a new filename, or check that a reused file changed since the request. On the host, poll briefly until the new file is nonempty and can be decoded, then inspect it. If it is not ready, report that rather than treating an old PNG or RE `success` as a new screenshot.
+
+Prefer Mineprep's capture functions. If no image arrives, try official MCP
+`EditorToolset.EditorAppToolset.CaptureEditorImage` or
+`SlateInspectorToolset.SlateInspectorToolset.Screenshot` (use a current window
+ref). If still unsuccessful, tell the user and ask them to bring UE and the
+scene viewport forward. A background/occluded viewport may stop drawing;
+neither `delay` nor `@mineprep.delay` guarantees a screenshot. Official MCP
+returns inline images, not saved files.
 
 PNG only (not EXR). `{Project}/Saved/Screenshots/` may be gitignored — use `unreal.Paths.project_saved_dir()` (there is **no** `project_saved_directory`), do not hardcode a drive letter. `os.makedirs` the folder first.

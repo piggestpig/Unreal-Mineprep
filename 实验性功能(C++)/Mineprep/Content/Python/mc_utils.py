@@ -487,10 +487,11 @@ def debug(*args):
         unreal.log(text)
 
 
-def screenshot(size: tuple[int, int]=None, path: str='', pos: unreal.Vector=None, lookat: unreal.Vector=None):
+def screenshot(size: tuple[int, int]=None, path: str='', pos: unreal.Vector=None, lookat: unreal.Vector=None, delay: float=0):
     """在编辑器中截取高分辨率截图，size默认是视口分辨率，
     path默认在项目/Saved/Screenshots下，会自动生成后缀名；指定path则覆写图片
     使用pos和lookat调整摄像机坐标与朝向
+    delay为截图前等待的秒数，默认0
     """
     size = 0 if size is None else size
     size = (size, size) if isinstance(size, (int, float)) else size
@@ -502,7 +503,7 @@ def screenshot(size: tuple[int, int]=None, path: str='', pos: unreal.Vector=None
         rot = unreal.MathLibrary.find_look_at_rotation(pos, lookat) if lookat else current_rot
         subsystem.set_level_viewport_camera_info(pos, rot)
 
-    unreal.AutomationLibrary.take_high_res_screenshot(size[0], size[1], path)
+    unreal.AutomationLibrary.take_high_res_screenshot(size[0], size[1], path, delay=delay)
 
 
 def uasset(input):

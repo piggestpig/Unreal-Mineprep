@@ -11,9 +11,14 @@ toolbar = menus.find_menu("LevelEditor.MainMenu")
 mc_menu = toolbar.add_sub_menu("LevelEditor.MainMenu", "mineprep", "mineprep", "MC")
 mc_menu.add_section('render', mineprep.bilingual('渲染', 'Render'))
 mc_menu.add_section('debug', mineprep.bilingual('调试与开发', 'Debug & Dev'))
+mc_menu.add_section('modules', mineprep.bilingual('核心模块', 'Core Modules'))
 mc_menu.add_section('mods', mineprep.bilingual('模组', 'Mods'))
 
-mineprep.mods.register_all()
+try:
+    mineprep.mods.register_all()
+except Exception as exc:
+    import traceback
+    unreal.log_error(f'[Mineprep] 模组注册阶段抛出异常: {exc}\n{traceback.format_exc()}')
 
 try:
     import mcptools

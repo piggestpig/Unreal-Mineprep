@@ -26,6 +26,7 @@ class SkinEditor(mineprep.Mod):
         self._syncing = False
         self._tabs = []
         self._pages = None
+        self._split = None
         self._left = None
         self._right = None
         self._body_title = None
@@ -70,16 +71,16 @@ class SkinEditor(mineprep.Mod):
         main = util.pick_main(skms, actor) if actor and skms else None
         head = util.pick_head(skms, main) if actor and skms else None
 
-        row = layout.row()
-        self._left = row.col(fill=1, padding=3)
-        self._right = row.col(fill=1, padding=3)
+        split = self._split = layout.splitter(ratio=0.5, fill=1)
+        self._left = split.first.col(fill=1, padding=3, align=(0, 0))
+        self._right = split.second.col(fill=1, padding=3, align=(0, 0))
 
         self._body_title = self._left.text('', size=12, padding=(3, 4), clip=True)
         self._body_view = _material_prop(self._left, main)
         self._head_title = self._right.text('', size=12, padding=(3, 4))
         self._head_view = _material_prop(self._right, head)
 
-        footer = layout.row(align=(1, 3), padding=(3, 1), fill=1)
+        footer = layout.row(align=(1, 3), padding=(3, 1))
         footer.text('Actor', size=10, padding=(3, 1), align=(1, 2))
         self._actor_spin = footer.spinbox(
             1, min=1, max=1, step=1, digits=0, width=32,
@@ -107,10 +108,11 @@ class SkinEditor(mineprep.Mod):
     def _draw_paint(self, layout: mineprep.Layout):
         self._pad = paint.Pad(self.paint_tools)
 
-        row = layout.row(align=(0, 0), fill=1)
-        left = row.col(align=(0, 0), fill=1, padding=3)
-        mid = row.col(padding=3, align=(0, 0))
-        right = row.col(padding=3, align=(0, 0))
+        split = layout.splitter(ratio=0.5, fill=1)
+        left = split.first.col(align=(0, 0), fill=1, padding=3)
+        props = split.second.row(align=(0, 0), fill=1)
+        mid = props.col(fill=1, padding=3, align=(0, 0))
+        right = props.col(fill=1, padding=3, align=(0, 0))
 
         box = left.scalebox(align=(2, 2), fill=1)
         box.target.set_editor_property('Stretch', unreal.Stretch.SCALE_TO_FIT)

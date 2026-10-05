@@ -52,6 +52,7 @@ def iter_mod_modules(*, loaded_only=False, reverse=False):
 
 def register_mod(mod, *, force=False):
     """注册单个 mod；默认需 EnabledByDefault 为真，成功后设置 EnabledByDefault=True"""
+    name = getattr(mod, '__name__', str(mod))
     info = getattr(mod, 'mod_info', None)
     if info is None:
         mod.mod_info = info = {}
@@ -60,10 +61,15 @@ def register_mod(mod, *, force=False):
     register = getattr(mod, 'register', None)
     if not callable(register):
         return False
-    register()
-    info['EnabledByDefault'] = True
-    unreal.log(f'已注册 mod: {getattr(mod, "__name__", mod)}')
-    return True
+    try:
+        register()
+        info['EnabledByDefault'] = True
+        unreal.log(f'已注册 mod: {name}')
+        return True
+    except Exception as e:
+        import traceback
+        unreal.log_error(f'注册 mod 失败 [{name}]: {e}\n{traceback.format_exc()}')
+        return False
 
 
 def unregister_mod(mod):
@@ -90,7 +96,11 @@ def unregister_mod(mod):
 def register_all():
     """扫描 mods/，按 Priority 降序注册 EnabledByDefault 的 mod（越大越先）"""
     for _name, mod in iter_mod_modules():
-        register_mod(mod)
+        try:
+            register_mod(mod)
+        except Exception as e:
+            import traceback
+            unreal.log_error(f'注册 mod 异常 [{_name}]: {e}\n{traceback.format_exc()}')
     mcvars.ModsInitialized = True
 
 
@@ -137,10 +147,12 @@ class Mod():
     """模组基类，继承 mineprep.Mod 可创建自定义UI面板，self.layout默认是scrollbox"""
     layout: Layout = None
     context = None
+    tab_id = None
     _public_ = False
     _unique_ = False  # True → 固定一个 tab，id = 类名；False → 每次随机 id
     _label_ = None
     _root_ = 'Root'
+    _menu_ = 'mods'
     _template_ = None
 
     def __new__(cls, context=None):
@@ -150,7 +162,16 @@ class Mod():
         public = cls._public_ or mcvars.DebugMode
         root = context.find_child_widget_by_name(cls._root_) if context else None
         instance.layout = Layout(root, public=public)
-        mcvars.WidgetModMap[instance.layout.outer] = instance
+        widget = instance.layout.outer
+        mcvars.WidgetModMap[widget] = instance
+
+        # 尝试保存自身的tab_id
+        bp, has_bp = unreal.BlueprintEditorLibrary.get_blueprint_for_class(widget.get_class())
+        if has_bp:
+            subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
+            instance.tab_id = str(subsystem.get_tab_id_from_blueprint(bp))
+        else:
+            unreal.log_warning(f'无法获取{cls._label_ or cls.__name__}的 tab_id')
         return instance
 
     def __init__(self, context=None):
@@ -167,6 +188,10 @@ class Mod():
         if self.layout:
             self.layout.clear_children()
         self.draw(self.context)
+
+    def close(self):
+        if self.tab_id:
+            unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem).unregister_tab_by_id(self.tab_id)
 
     def destruct(self):
         """由蓝图模板传递的析构函数，关闭面板时调用"""
@@ -218,7 +243,6 @@ subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
 subsystem.spawn_and_register_tab_with_id(widget_bp, {id})
 """
 
-
     @classmethod
     def register(cls, open=False):
         """注册mod并创建/更新控件蓝图；在模组初始化后注册时，open=True立即打开面板"""
@@ -253,29 +277,24 @@ subsystem.spawn_and_register_tab_with_id(widget_bp, {id})
                                     string=cls.toolbar_script()
         )
         toolbar = unreal.ToolMenus.get().find_menu("LevelEditor.MainMenu.mineprep")
-        toolbar.add_menu_entry('mods', mod_entry)
+        toolbar.add_menu_entry(f'{cls._menu_}', mod_entry)
 
 
     @classmethod
     def unregister(cls):
         """关闭本模组面板，并从 RegisteredMods / 工具栏移除"""
-        widget_path = f'/Game/mc/mods/{cls.__name__}'
-        widget_bp = unreal.load_object(None, widget_path) if unreal.EditorAssetLibrary.does_asset_exist(widget_path) else None
-        if widget_bp:
-            subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
-            tab_id = subsystem.get_tab_id_from_blueprint(widget_bp)
-            if tab_id and not tab_id.is_none():
-                subsystem.unregister_tab_by_id(tab_id)
-
-            for widget, instance in list(mcvars.WidgetModMap.items()):
-                if isinstance(instance, cls):
-                    mcvars.WidgetModMap.pop(widget, None)
-                    try:
-                        warn(bilingual(f'未能关闭所有的{cls.__name__}模组面板：{instance}',
-                            f'Failed to close all {cls.__name__} mod panels: {instance}'))
-                        instance.layout.clear_children()
-                    except:
-                        pass
+        for widget, instance in list(mcvars.WidgetModMap.items()):
+            if not isinstance(instance, cls):
+                continue
+            instance.close()
+            if mcvars.WidgetModMap.get(widget) is instance:
+                mcvars.WidgetModMap.pop(widget, None)
+                try:
+                    warn(bilingual(f'未能关闭所有的{cls.__name__}模组面板：{instance}',
+                        f'Failed to close all {cls.__name__} mod panels: {instance}'))
+                    instance.layout.clear_children()
+                except:
+                    pass
 
         mod_path = f'{cls.__module__}.{cls.__name__}'
         mcvars.RegisteredMods.pop(mod_path, None)

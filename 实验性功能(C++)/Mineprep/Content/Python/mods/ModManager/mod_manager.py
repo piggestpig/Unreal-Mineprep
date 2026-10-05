@@ -38,6 +38,7 @@ def _info(name, info):
 class ModManager(mineprep.Mod):
     _unique_ = True
     _label_ = bilingual("模组管理器", "Mod Manager")
+    _menu_ = "modules"
 
     def draw(self, context=None):
         layout = self.layout

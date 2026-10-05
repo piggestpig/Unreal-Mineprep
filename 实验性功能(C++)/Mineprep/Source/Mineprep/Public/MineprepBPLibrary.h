@@ -120,14 +120,6 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static void GatherPropertyNames(UObject* BlueprintObject, TArray<FString>& OutTypes, TArray<FString>& OutKeys, TArray<FString>& OutSourceStrings, const bool SetEnumKey = false);
 
-	//为蓝图变量或函数注入DisplayName元数据，已弃用
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)", meta=(DeprecatedFunction))
-	static bool InjectDisplayName(UObject* BlueprintObject, const TMap<FString, FString>& PropertyDisplayMap, const bool save = false, const bool debug = false);
-
-	//为蓝图变量或函数设置工具提示
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)", meta=(DeprecatedFunction))
-	static bool SetPropertyTooltip(UObject* BlueprintObject, const TMap<FString, FString>& PropertyTooltipMap, const bool save = false, const bool debug = false);
-
 	//设置Niagara参数轨道绑定的变量
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static void BindNiagaraParam(UMovieSceneNiagaraParameterTrack* ParameterTrack, FNiagaraVariable Parameter, TArray<uint8> DefaultValueData);
@@ -164,16 +156,6 @@ class Umineprep : public UBlueprintFunctionLibrary
 		float Duration = 3.0f,
 		bool bUseThrobber = false);
 
-	/**
-	 * 通用委托触发函数：通过反射查找并调用指定名称的多播委托
-	 * @param Object 目标对象
-	 * @param DelegateName 委托属性名称（如 "OnClicked", "OnValueChanged" 等）
-	 * @param Params 参数字符串数组，按顺序对应委托参数。不足的参数使用默认值，支持: bool, int, float, FString, FName, FVector, FRotator 等
-	 * @return 是否成功触发
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)", meta=(AutoCreateRefTerm="Params"))
-	static bool CallDelegate(UObject* Object, const FString& DelegateName, const TArray<FString>& Params);
-
 	// 将当前视口画面绘制到渲染目标
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static bool DrawViewportToRenderTarget(UTextureRenderTarget2D* RenderTarget, bool bAutoResize = true, bool bBlockUntilReady = false);
@@ -188,11 +170,11 @@ class Umineprep : public UBlueprintFunctionLibrary
 	 * 控件不在可见 Slate 树中时改为离屏绘制。
 	 * @param Widget  要截取的 UMG 控件；为空则截取当前顶层窗口
 	 * @param Path    输出路径。空=Saved/Screenshots/WidgetScreenshot.png；相对路径相对该目录；无后缀则补 .png
+	 * @param Delay   秒数；立即保存第一张，Delay>0 时延时再截并覆盖同一路径；目标不再可见时跳过刷新
 	 * @return        成功：保存的绝对路径（.png）；失败：以 WidgetScreenshot: 开头的错误说明（不是文件路径）
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
-	static FString WidgetScreenshot(UWidget* Widget, const FString& Path = TEXT(""));
+	static FString WidgetScreenshot(UWidget* Widget, const FString& Path = TEXT(""), float Delay = 0.f);
 
 
 };
-

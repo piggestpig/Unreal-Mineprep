@@ -79,13 +79,14 @@ Unknown names forward to the UWidget: `pages.set_active_widget_index(i)`, not `p
 | Method | Notes |
 |--------|--------|
 | `text` / `title` / `label` | `text(..., wrap=True)` auto-wraps to slot width. Text slots always H-fill; `align=(2, v)` / `(3, v)` set `TextJustify` center/right. `title` defaults center |
-| `button` / `operator` | `on_clicked`; default `EditorUtilityButton`. Empty `text` skips the inner label |
+| `button` / `operator` | `on_clicked` / `on_hovered` / `on_unhovered`, all zero-argument (`partial` to bind values); default `EditorUtilityButton`. Empty `text` skips the inner label. When a `sizebox` limits button width, prefer `text_scaling=True` to fit long labels |
 | `checkbox` | `on_check_state_changed`; default `EditorUtilityCheckBox` |
 | `spinbox` | `on_value_changed` / `on_value_committed`; default `EditorUtilitySpinBox` |
 | `textbox` | `hint` / `on_text_changed` / `on_text_committed`; default `EditorUtilityEditableTextBox` |
 | `combo` | ComboBoxKey; `options` is a list (`key=str(item)`) or `{key: text}`; generate defaults to `make_combo_text`; callbacks get `str`; `on_selection_changed` / `on_opening`; default `EditorUtilityComboBoxKey` |
 | `prop(data, property=None, text=None, on_property_changed=None)` | Omit `property` → full DetailsView. Set `property` → `SinglePropertyView` (**scalars only** — not `list` / `Array` / `set` / `map`) |
 | `row` / `col` / `column` | Boxes |
+| `splitter` | Draggable two-pane layout; add content to `.first` / `.second`, not the returned container. See below |
 | `spacer` / `overlay` / `switcher` / `scalebox` / `sizebox` / `wrapbox` / `scrollbox` | Containers; `sizebox(w, h)` fixes axes (omit = unconstrained); `wrapbox(inner_padding=6)` wraps children |
 | `image` / `custom` | Media / raw widget. `image=None` is an empty placeholder; scalar `size` is square until a texture is set. `custom`: prefer an `EditorUtility*` subclass when one exists |
 | `border` | Container + mouse; callbacks get `Layout`, not `FGeometry` — **border** below |
@@ -107,6 +108,30 @@ Interactive builders default to **Editor Utility** subclasses (`EditorUtilityBut
 | `hidden` | Initial visibility (int → `SlateVisibility`) |
 
 Example footer layout (Mod Manager / VAT Tools / Skin Editor log): `align=(1, 3)` on the **one** vertical filler (`fill=1`).
+
+### splitter
+
+```python
+split = layout.splitter(ratio=0.5, fill=1)
+split.first.text('Left')
+split.second.text('Right')
+# vertical=True: first above second; get_ratio() / set_ratio(value) adjust the split.
+split.solo(1)  # first only: left / top
+split.solo(2)  # second only: right / bottom
+split.solo(0)  # restore both panes and the divider; other values also restore
+```
+
+`limits=(0.1, 0.9)` clamps the first pane's proportion. `handle_size=8` is the
+drag hit area; `line_margin=3` leaves space at both ends of the line.
+`color=unreal.LinearColor(.4, .4, .4, 1)` sets the line color (gray by default).
+`on_changed(ratio)` reports changes; do not call `set_ratio()` from that callback.
+The returned container also exposes `.divider`. Sizes follow the ratio without
+a persistent tick; limits are proportions, not minimum pixel widths.
+
+`solo(mode=0)` collapses the unused pane and the complete divider slot, so
+the remaining pane fills the available space without a leftover gap. It keeps
+the ratio, does not call `on_changed`, and returns the splitter for chaining.
+It only changes pane-container visibility; visibility inside each pane is kept.
 
 ### fill (Slate FILL weights)
 
@@ -222,6 +247,17 @@ img.target.set_visibility(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)
 - `handled` means the mouse event is not passed to widgets below
 - `unhandled` continues to pass it through
 - Return an `EventReply` as-is. Truthy → `handled()`. Falsy / `None` → `unhandled()`.
+- UE calls such as `capture_mouse` / `release_mouse_capture` return a tuple
+  `(EventReply, reply)` in Python. The wrapper also passes through its first
+  `EventReply`; do not reduce that tuple to a boolean or the capture request is lost.
+
+For dragging, return `unreal.WidgetLibrary.capture_mouse(unreal.WidgetLibrary.handled(), w.target)`
+on Down and `release_mouse_capture(handled())` on Up. Capture keeps Move/Up routed
+to the Border outside its bounds; `handled()` alone does not capture. Paint tools
+should separately stop outside-canvas drawing and break the stroke on re-entry.
+UE 5.8 real pointer callbacks still yielded zero Geometry/PointerEvent data in a
+2026-10-01 probe; use the Layout coordinate helpers above. User confirmed the
+capture fix works; capture-loss/window-focus cleanup remains a separate concern.
 
 A child `Image` that is `Visible` takes the hit first. For drawing, set it `SELF_HIT_TEST_INVISIBLE` so the Border receives Down/Move/Up. Prefer `img.hide(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)` (or `set_visibility`). **Do not** assign `brush.image_size = Vector2D(...)` — UE 5.7 raises `TypeError: DeprecateSlateVector2D`. Size the Image with `set_desired_size_override`. After swapping the RT, `set_brush_resource_object(None)` then the RT again.
 
@@ -308,6 +344,8 @@ p.Mesh = skm
 `save()` / `load(path='')` dump fields to JSON, best-effort (failures `debug`, no throw). Empty path uses `inspect.getfile(type(self))` → `{source directory}/__pycache__/{ClassName}.json` (`mkdir` on save). Ordinary `ui()` classes belong to `mc_widget`, so their default is the plugin Python directory's `__pycache__`, not a no-op. A console class with no resolvable source file has no default path. Explicit path always selects that file for the call. Soft/struct fields go through `export_text` / `import_text`; UObject refs as asset paths.
 
 `_autosave_ = True` → `load()` on instantiate (default json); `save()` on Python setattr and on `layout.prop` Details edits. `load()` writes via `set_editor_property`, so it does not re-save. Default `_autosave_ = False`. `str` fields stay strings even if they look like `/Game/...` — do not `load_asset` those (would nativize a Texture2D into `SavePath`). Object fields still restore from asset paths.
+
+`dict[K, V]` is saved as a JSON list of pairs, `[[key, value], ...]`. An empty Map is `[]`. `list` and `set` stay JSON arrays; load tells them apart by the property annotation, or by a live `unreal.Map` when the field has no annotation. Keys may be `str`, `int`, `bool`, or `float`. Values use the same conversion as list elements. A key or value annotated as `str` stays text, including strings that start with `/Game/`. Do not nest containers — `dict[str, list[int]]` is not a legal Map property. Struct keys are not restored.
 
 ### Persistence in a temporary panel
 

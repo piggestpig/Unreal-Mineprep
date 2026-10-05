@@ -47,7 +47,14 @@ a.mats()
 a.get('prop'); a.set('prop', value)     # int may coerce to enum
 a.key('prop', value, time)             # int=display-rate frame, float=seconds; not Control Rig
 a.rig()                                 # Control Rig on default SKM; a.rig('Head') for a named SKM
+sel = mineprep.selected()                      # selected actors, same actors handle
+mineprep.selected[0]                           # first selected actor (raw UObject)
+mineprep.selected(0)                           # actor handle; -1 last, 0.5 proportional
+mineprep.actors(0.5)                           # actor handle from the default actor collection
+mineprep.selected(unreal.SkeletalMeshActor)    # type / label / callable, selection only
 ```
+
+`selected()` and `selected(unreal.Actor)` are the current editor selection. A class, label wildcard, or callable filters that selection and does not search the rest of the level. `selected(0)`, `selected(-1)`, and `selected(0.5)` return an `actor` handle at that index; `actors(n)` does the same for the default actor collection, and `components(n)` returns a `component`. Class subscript `[0]` stays the raw object. Call it on the game thread. An empty selection is an empty `actors` handle; a numeric call on an empty collection wraps `None`.
 
 - Subscript class filter: `mineprep.actor[unreal.StaticMeshActor]`
 ### Collections
@@ -56,6 +63,7 @@ Use `len(mineprep.actors())` to count actors. Collection handles support integer
 indices, slices, index lists and boolean masks: `items[0]`, `items[:3]`,
 `items[[0, 2]]`, `items[[True, False]]`. Masks must match the intended collection.
 Class indexing such as `mineprep.actors[[0, 2]]` selects from the default collection.
+A float class index uses the same 0–1 ratio as `List`: `mineprep.selected[0.5]` is `floor(0.5 * n)`.
 Multi-axis indexing requires nested indexable elements; see ColorList below.
 
 Use `if items` / `if not items` to test whether a collection is nonempty / empty.

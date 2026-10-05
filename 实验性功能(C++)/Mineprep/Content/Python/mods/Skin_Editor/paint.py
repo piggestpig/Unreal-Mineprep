@@ -261,23 +261,30 @@ class Pad:
     def down(self, w):
         self.begin_stroke(self.pos(w))
         self.update_hint(w)
-        return True
+        return unreal.WidgetLibrary.capture_mouse(
+            unreal.WidgetLibrary.handled(), w.target)
 
     def move(self, w):
+        uv = w.get_mouse_uv()
+        inside = 0 <= uv.x < 1 and 0 <= uv.y < 1
+        if not inside:
+            self.last = None  # Break the stroke while outside the canvas.
+            return self.drawing
+
         if self.drawing:
             p = self.pos(w)
-            self.stamp_segment(self.last, p)
+            self.stamp_segment(self.last if self.last is not None else p, p)
             self.last = p
             if not self.replace:
                 self.composite()
-            self.update_hint(w)
-            return True
         self.update_hint(w)
-        return False
+        return self.drawing
 
     def up(self, w):
         self.drawing = False
-        return True
+        self.last = None
+        return unreal.WidgetLibrary.release_mouse_capture(
+            unreal.WidgetLibrary.handled())
 
     def bind_hover(self, hover):
         self.hover = hover

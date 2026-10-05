@@ -86,12 +86,17 @@ def _sync_spin(mod, count):
 
 def apply_columns(mod):
     opts = getattr(mod, 'options', None)
-    left = getattr(mod, '_left', None)
-    right = getattr(mod, '_right', None)
-    if opts and _alive_layout(left):
-        left.hide(not opts.Body)
-    if opts and _alive_layout(right):
-        right.hide(not opts.Head)
+    split = getattr(mod, '_split', None)
+    if not opts or not _alive_layout(split):
+        return
+    body, head = bool(opts.Body), bool(opts.Head)
+    split.hide(not (body or head))
+    if body and head:
+        split.solo(0)
+    elif body:
+        split.solo(1)
+    elif head:
+        split.solo(2)
 
 
 def on_actor_index(mod, _value=None):

@@ -275,6 +275,24 @@ Mineprep 0.6-pre2有以下内置模组（目前仍处于早期开发阶段，可
 
 ## 版本更新
 
+#### 26w40a
+
+- `自定义快捷键`系统经过重构，已经变成模组，支持Python代码和蓝图函数这两种编程方式，并修复了一部分有冲突的快捷键。
+- 顶部工具栏的MC菜单中新增`核心模块`，存放比较重要的模组。
+- 更新了MC_Startup工程的鼠标旋转灵敏度。之前一直有非常奇怪的问题，把官方运动匹配角色迁移到另一个工程后，旋转视角特别快。最近才发现，项目设置里有个0.07的输入倍率
+- 第三人称运动匹配角色已损坏。我们即将移植UE5.8的全新模板，并尝试把NPC升级为Mover Pawn
+- 改进了Mineprep Python API
+  - 模组会在启动时保存tab_id，随后能通过self.close()关闭面板。重新加载Python API终于能自动关闭所有旧模组了。
+  - 新增`layout.splitter()`，用于创建可拖动的分割条。例如
+  ```py
+  mineprep.ui('''
+  split = layout.splitter()
+  split.first.border(color=(1,0,0,0.2), padding=3).title("1")
+  split.second.border(color=(0,1,0,0.2), padding=3).title("2")
+  ''')
+  ```
+  splitter在Layout类的基础上提供了first, second, divider, get_ratio, set_ratio, solo这些成员，是新一代复合控件的典范。我们已经改进了几个模组的UI界面。
+
 #### 26w39a
 
 引擎版本已升级至UE5.8，我们为Windows编译了实验性功能。先前设计的Lumen中等质量照明和雾屏幕空间散射也已可用
@@ -282,9 +300,9 @@ Mineprep 0.6-pre2有以下内置模组（目前仍处于早期开发阶段，可
 - 改进导入结构的程序，优化内存和速度，支持新版nbt格式与基岩版的状态信息，修复床、楼梯、火把、栅栏门、压力板、栅栏、玻璃板等许多方块的异常
 - 改进方块实例材质，单个实例缩放时UV在一定范围内能保持不变
 - 修复了UE5.8放置Niagara粒子后渲染png/exr序列帧在最后一帧闪退的bug
-> 我天呢 怎么有这么严重的问题，现在还挂在官网上没修 [UE-392456](https://issues.unrealengine.com/issue/UE-392456)，幸好提交者找到了临时解决方案  
-> 上一次遇到这么头疼的bug，还是UE5.7的无绑定渲染导致DLSS闪退😭
+> UE5.8.3已经彻底修复了这个bug，我们保留了兼容旧版本的cvar
 
+- 修复了实验性功能朗读鼠标下文本闪退的bug
 - 上传了[Mineprep Skills](./实验性功能(C++)/Mineprep/Content/Python/mineprep-skills)，这是集开发和使用于一体的agent技能，需要配置Unreal MCP才能发挥全部功能
 - Mineprep Python API和模组更新至2.0版本，根据新的设计理念进行重构和解耦，无需UI界面就能调用模组功能，并改善了许多细节
 - Mineprep Wiki的教程序章已经更新，甚至有一键运行脚本

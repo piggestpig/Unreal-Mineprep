@@ -994,8 +994,10 @@ def _resolve_value_kind(value):
     return None
 
 
-def _track_class_for_kind(kind):
+def _track_class_for_kind(kind, prop=''):
     """按 kind 返回对应 MovieScene*Track 类"""
+    if prop and prop.lower() in ('bhidden', 'visibility'):
+        return unreal.MovieSceneVisibilityTrack
     mapping = {
         'bool': unreal.MovieSceneBoolTrack,
         'int': unreal.MovieSceneIntegerTrack,
@@ -1011,7 +1013,7 @@ def _track_class_for_kind(kind):
 
 def _track_kind(track):
     """从属性轨道推断其值类型 kind"""
-    if isinstance(track, unreal.MovieSceneBoolTrack):
+    if isinstance(track, (unreal.MovieSceneBoolTrack, unreal.MovieSceneVisibilityTrack)):
         return 'bool'
     if isinstance(track, unreal.MovieSceneIntegerTrack):
         return 'int'
@@ -1041,6 +1043,9 @@ def _validate_property_keyframe(obj, binding, prop, value):
     if not prop:
         _log_skip('非 Transform 关键帧必须指定 prop')
         return None
+
+    if prop.lower() == 'visibility' and not _property_exists(obj, prop):
+        prop = 'bHidden'
 
     if not _property_exists(obj, prop):
         _log_skip(f'找不到属性 {prop!r}')
@@ -1094,6 +1099,10 @@ def _is_property_track(track) -> bool:
 def _find_property_track(binding, prop):
     """在绑定中查找匹配属性路径的轨道"""
     prop_name, prop_path = _prop_name_and_path(prop)
+    if prop_name.lower() in ('bhidden', 'visibility'):
+        vis_tracks = binding.find_tracks_by_exact_type(unreal.MovieSceneVisibilityTrack)
+        if vis_tracks:
+            return vis_tracks[0]
     for track in binding.get_tracks():
         if not _is_property_track(track):
             continue
@@ -1112,7 +1121,7 @@ def _get_or_create_property_section(binding, prop, kind):
     """获取或创建属性轨道及其 section"""
     track = _find_property_track(binding, prop)
     if not track:
-        track_class = _track_class_for_kind(kind)
+        track_class = _track_class_for_kind(kind, prop)
         if not track_class:
             _log_skip(f'无法为属性种类 {kind!r} 创建轨道')
             return None

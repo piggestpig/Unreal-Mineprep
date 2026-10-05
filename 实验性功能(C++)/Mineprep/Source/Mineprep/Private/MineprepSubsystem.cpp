@@ -11,7 +11,6 @@
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 
-
 // 动态命令类定义
 class FDynamicHotkeyCommands : public TCommands<FDynamicHotkeyCommands>
 {
@@ -43,15 +42,26 @@ public:
             EUserInterfaceActionType::Button,
             Chord);
 
-        // 存储命令信息用于后续访问
         CommandMap.Add(CommandName, Command);
         return Command;
     }
 
     // 获取命令
-    TSharedPtr<FUICommandInfo> GetCommand(const FString& CommandName)
+    TSharedPtr<FUICommandInfo> GetCommand(const FString& CommandName) const
     {
         return CommandMap.FindRef(CommandName);
+    }
+
+    // 检查是否存在命令
+    bool HasCommand(const FString& CommandName) const
+    {
+        return CommandMap.Contains(CommandName);
+    }
+
+    // 移除命令
+    void RemoveCommand(const FString& CommandName)
+    {
+        CommandMap.Remove(CommandName);
     }
 
 private:
@@ -138,9 +148,6 @@ void UMineprepSubsystem::Deinitialize()
 {
     // 清除快捷键对象
     HotkeyObject = nullptr;
-    
-    // 清除所有映射
-    CommandToEventMap.Empty();
     DynamicCommands.Reset();
     CommandList.Reset();
     
@@ -149,7 +156,6 @@ void UMineprepSubsystem::Deinitialize()
 
 void UMineprepSubsystem::InitializeDynamicCommands()
 {
-    // 创建动态命令处理程序
     if (!DynamicCommands.IsValid())
     {
         DynamicCommands = MakeShareable(new FDynamicHotkeyCommands());
@@ -162,12 +168,13 @@ bool UMineprepSubsystem::CheckHotkeyConflict(const FInputChord& Chord, FString& 
     return MineprepFindHotkeyConflict(Chord, true, OutConflictName, OutConflictDisplayName);
 }
 
-bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FString& DisplayName, const FString& Description,
-                                      const FInputChord& Chord, const FString& BlueprintEventName)
+void UMineprepSubsystem::ExecuteHotkey(FString CommandName)
 {
-    // 如果没有提供BlueprintEventName，使用CommandName作为默认值
-    FString EventName = BlueprintEventName.IsEmpty() ? CommandName : BlueprintEventName;
+    OnHotkeyPressed.Broadcast(CommandName);
+}
 
+bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FString& DisplayName, const FString& Description, const FInputChord& Chord)
+{
     // 检查FSlateApplication是否已准备好
     if (!FSlateApplication::IsInitialized())
     {
@@ -197,7 +204,7 @@ bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FStrin
 
     const FString ChordStr = MineprepInputChordToString(Chord);
 
-    // 检测快捷键冲突
+    // 检测快捷键严格冲突
     {
         FString ConflictName, ConflictDisplayName;
         if (CheckHotkeyConflict(Chord, ConflictName, ConflictDisplayName))
@@ -228,13 +235,6 @@ bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FStrin
                 *ChordStr, *ConflictDisplayName);
 
             UE_LOG(LogTemp, Warning, TEXT("%s（命令：%s）"), *Msg, *ConflictName);
-
-            // Umineprep::ShowEditorNotification(
-            //     Msg,
-            //     FString::Printf(TEXT("现有命令：%s"), *ConflictName),
-            //     EEditorNotificationState::None,
-            //     5.0f,
-            //     false);
         }
     }
 
@@ -247,13 +247,10 @@ bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FStrin
         return false;
     }
     
-    // 存储命令到事件的映射
-    CommandToEventMap.Add(CommandName, EventName);
-    
-    // 使用值传递而不是引用传递
+    // 直接映射到 ExecuteHotkey，广播委托
     CommandList->MapAction(
         Command,
-        FExecuteAction::CreateUObject(this, &UMineprepSubsystem::ExecuteBlueprintEvent, EventName)
+        FExecuteAction::CreateUObject(this, &UMineprepSubsystem::ExecuteHotkey, CommandName)
     );
 
     // 设置活动快捷键并确保FInputBindingManager知道该变更
@@ -268,28 +265,52 @@ bool UMineprepSubsystem::RegisterHotkey(const FString& CommandName, const FStrin
     return true;
 }
 
-
-// 修改参数类型为值传递，而不是const引用
-void UMineprepSubsystem::ExecuteBlueprintEvent(FString EventName)
+bool UMineprepSubsystem::UnregisterHotkey(const FString& CommandName)
 {
-    // 获取或创建快捷键对象
-    UObject* CustomHotkeyWidget = GetHotkeyObject();
+    if (!CommandList.IsValid() || !DynamicCommands.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("注销快捷键失败：命令列表或动态命令未初始化"));
+        return false;
+    }
     
-    if (CustomHotkeyWidget)
+    // 获取动态命令实例
+    TSharedPtr<FDynamicHotkeyCommands> DynamicCommandsPtr = StaticCastSharedPtr<FDynamicHotkeyCommands>(DynamicCommands);
+    if (!DynamicCommandsPtr.IsValid() || !DynamicCommandsPtr->HasCommand(CommandName))
     {
-        if (UFunction* Func = CustomHotkeyWidget->FindFunction(FName(*EventName)))
-        {
-            CustomHotkeyWidget->ProcessEvent(Func, nullptr);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("无法找到蓝图函数：%s"), *EventName);
-        }
+        UE_LOG(LogTemp, Warning, TEXT("注销快捷键失败：没有找到命令名 %s"), *CommandName);
+        return false;
     }
-    else
+    
+    TSharedPtr<FUICommandInfo> Command = DynamicCommandsPtr->GetCommand(CommandName);
+    if (Command.IsValid())
     {
-        UE_LOG(LogTemp, Error, TEXT("无法获取快捷键对象，蓝图路径：%s"), *BlueprintPath);
+        // 从命令列表中解绑该命令
+        CommandList->UnmapAction(Command);
+        
+        static FName BindingContextName = TEXT("Mineprep自定义快捷键");
+        TSharedPtr<FBindingContext> BindingContext = FInputBindingManager::Get().GetContextByName(BindingContextName);
+        if (BindingContext.IsValid())
+        {
+            // 从绑定管理器中删除命令
+            FInputBindingManager::Get().RemoveInputCommand(BindingContext.ToSharedRef(), Command.ToSharedRef());
+                
+            // 移除用户定义的快捷键
+            for (int32 ChordIdx = 0; ChordIdx < static_cast<int32>(EMultipleKeyBindingIndex::NumChords); ++ChordIdx)
+            {
+                FInputChord EmptyChord;
+                Command->SetActiveChord(EmptyChord, static_cast<EMultipleKeyBindingIndex>(ChordIdx));
+                FInputBindingManager::Get().NotifyActiveChordChanged(*Command, static_cast<EMultipleKeyBindingIndex>(ChordIdx));
+            }
+                
+            // 强制保存更改
+            FInputBindingManager::Get().SaveInputBindings();
+        }
+
+        DynamicCommandsPtr->RemoveCommand(CommandName);
     }
+    
+    UE_LOG(LogTemp, Display, TEXT("成功注销快捷键：%s"), *CommandName);
+    return true;
 }
 
 UObject* UMineprepSubsystem::GetHotkeyObject()
@@ -325,102 +346,6 @@ UObject* UMineprepSubsystem::GetHotkeyObject()
     UE_LOG(LogTemp, Error, TEXT("无法加载蓝图类：%s"), *BlueprintPath);
     return nullptr;
 }
-
-void UMineprepSubsystem::LoadHotkeysFromFile()
-{
-    // 获取或创建快捷键对象
-    UObject* HotkeyWidgetObj = GetHotkeyObject();
-
-    // 查找LoadHotkeysFromFile函数
-    UFunction* LoadFunc = HotkeyWidgetObj->FindFunction(FName("LoadHotkeysFromFile"));
-    if (!LoadFunc)
-    {
-        UE_LOG(LogTemp, Error, TEXT("无法找到LoadHotkeysFromFile函数，请确保蓝图中实现了该函数"));
-        return;
-    }
-
-    // 调用蓝图函数
-    HotkeyWidgetObj->ProcessEvent(LoadFunc, nullptr);
-    return;
-}
-
-void UMineprepSubsystem::UnloadHotkeysFromFile()
-{
-    // 获取或创建快捷键对象
-    UObject* HotkeyWidgetObj = GetHotkeyObject();
-
-    // 查找UnloadHotkeysFromFile函数
-    UFunction* UnloadFunc = HotkeyWidgetObj->FindFunction(FName("UnloadHotkeysFromFile"));
-    if (!UnloadFunc)
-    {
-        UE_LOG(LogTemp, Error, TEXT("无法找到UnloadHotkeysFromFile函数，请确保蓝图中实现了该函数"));
-        return;
-    }
-
-    // 调用蓝图函数
-    HotkeyWidgetObj->ProcessEvent(UnloadFunc, nullptr);
-    return;
-}
-
-
-bool UMineprepSubsystem::UnregisterHotkey(const FString& CommandName)
-{
-    if (!CommandList.IsValid() || !DynamicCommands.IsValid())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("注销快捷键失败：命令列表或动态命令未初始化"));
-        return false;
-    }
-    
-    // 检查映射是否存在
-    if (!CommandToEventMap.Contains(CommandName))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("注销快捷键失败：没有找到命令名 %s"), *CommandName);
-        return false;
-    }
-    
-    // 获取动态命令实例
-    TSharedPtr<class FDynamicHotkeyCommands> DynamicCommandsPtr = StaticCastSharedPtr<FDynamicHotkeyCommands>(DynamicCommands);
-    TSharedPtr<FUICommandInfo> Command = DynamicCommandsPtr->GetCommand(CommandName);
-    
-    if (!Command.IsValid())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("注销快捷键失败：没有找到对应的命令实例 %s"), *CommandName);
-        return false;
-    }
-    
-    // 从映射中移除
-    CommandToEventMap.Remove(CommandName);
-    
-    // 从命令列表中解绑该命令
-    CommandList->UnmapAction(Command);
-    
-    // 重要：通知InputBindingManager该命令已被删除，以便它可以更新UI和用户配置
-    // 这对于解决快捷键在编辑器设置中仍可见的问题很重要
-    static FName BindingContextName = TEXT("Mineprep自定义快捷键");
-    TSharedPtr<FBindingContext> BindingContext = FInputBindingManager::Get().GetContextByName(BindingContextName);
-    if (BindingContext.IsValid())
-    {
-        // 从绑定管理器中删除命令
-        FInputBindingManager::Get().RemoveInputCommand(BindingContext.ToSharedRef(), Command.ToSharedRef());
-            
-        // 移除用户定义的快捷键 - 对每个可能的绑定索引都尝试清除
-        for (int32 ChordIdx = 0; ChordIdx < static_cast<int32>(EMultipleKeyBindingIndex::NumChords); ++ChordIdx)
-        {
-            FInputChord EmptyChord;
-            // 保存空的快捷键以覆盖现有的
-            Command->SetActiveChord(EmptyChord, static_cast<EMultipleKeyBindingIndex>(ChordIdx));
-            // 通知变更以确保UI和配置更新
-            FInputBindingManager::Get().NotifyActiveChordChanged(*Command, static_cast<EMultipleKeyBindingIndex>(ChordIdx));
-        }
-            
-        // 强制保存更改
-        FInputBindingManager::Get().SaveInputBindings();
-    }
-    
-    UE_LOG(LogTemp, Display, TEXT("成功注销快捷键：%s"), *CommandName);
-    return true;
-}
-
 
 UObject* UMineprepSubsystem::ReloadHotkeyObject()
 {

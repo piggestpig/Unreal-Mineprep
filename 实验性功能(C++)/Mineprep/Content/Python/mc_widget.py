@@ -98,14 +98,52 @@ def _to_jsonable(value):
     tname = type(value).__name__
     if isinstance(value, (list, set, tuple)) or tname in ('Array', 'FixedArray', 'Set'):
         return [_to_jsonable(v) for v in value]
+    if isinstance(value, dict) or tname == 'Map':
+        return [[_to_jsonable(k), _to_jsonable(v)] for k, v in value.items()]
     if hasattr(value, 'export_text'):
         return value.export_text()
     raise TypeError(tname)
 
 
-def _from_jsonable(group, name, raw, hint=None):
+def _dict_args(expected_type):
+    """dict[K, V] → (K, V)。不是 dict 注解时返回 None。"""
+    if getattr(expected_type, '__origin__', None) is not dict:
+        return None
+    args = getattr(expected_type, '__args__', ()) or ()
+    key_type = args[0] if args else None
+    value_type = args[1] if len(args) > 1 else None
+    return key_type, value_type
+
+
+def _live_is_map(group, name, hint):
+    current = hint
+    if current is None and group is not None:
+        try:
+            current = group._uobj.get_editor_property(name)
+        except Exception:
+            return False
+    return type(current).__name__ == 'Map'
+
+
+def _from_jsonable(group, name, raw, hint=None, *, expected_type=None, live_map=False):
     if raw is None or isinstance(raw, (bool, int, float)):
         return raw
+    # 注解为 str 的键/值保持文本。不能把 /Game/... 交给 load_asset。
+    if expected_type is str and isinstance(raw, str):
+        return raw
+    dict_args = _dict_args(expected_type)
+    if dict_args is None and live_map and expected_type is None and _live_is_map(group, name, hint):
+        dict_args = (None, None)
+    if dict_args is not None and isinstance(raw, list):
+        key_type, value_type = dict_args
+        restored = {}
+        for entry in raw:
+            if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+                raise ValueError(f'{name}: Map entry must be a pair')
+            key, value = entry
+            restored[_from_jsonable(group, name, key, expected_type=key_type)] = _from_jsonable(
+                group, name, value, expected_type=value_type)
+        return restored
     if isinstance(raw, list):
         cur = hint if hint is not None else group._uobj.get_editor_property(name)
         out = []
@@ -388,7 +426,9 @@ class PropertyGroup:
             if name not in names:
                 continue
             try:
-                self._uobj.set_editor_property(name, _from_jsonable(self, name, raw))
+                expected = type(self).__annotations__.get(name)
+                self._uobj.set_editor_property(name, _from_jsonable(
+                    self, name, raw, expected_type=expected, live_map=True))
             except Exception as exc:
                 debug(f'{cls_name}.{name}: {exc}')
 
@@ -482,6 +522,7 @@ def make_combo_text(item, texts=None, outer=None):
     block.set_font(unreal.SlateFontInfo(
         font_object=uasset('/Engine/EditorResources/DefaultEditorFont.DefaultEditorFont'),
         size=10))
+    block.set_clipping(unreal.WidgetClipping.CLIP_TO_BOUNDS)
     return block
 
 
@@ -714,11 +755,33 @@ class Layout():
         return label_row
 
 
+    def scalebox(self, scale: float=None, padding=0,
+                 **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
+        """添加缩放容器，可指定scale为固定缩放比例。若要动态调整scale，需设置默认值"""
+        scalebox = add_widget(self.target, unreal.ScaleBox, padding=padding, **kwargs)
+        if scale is not None:
+            scalebox.set_editor_property('Stretch', unreal.Stretch.USER_SPECIFIED)
+            scalebox.set_editor_property('UserSpecifiedScale', float(scale))
+        return Layout(scalebox, public=self._public_)
+
+
+    def sizebox(self, width=None, height=None,
+                **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
+        """固定宽高的容器；省略的边不覆盖，之后仍可 set_width_override / set_height_override"""
+        box = add_widget(self.target, unreal.SizeBox, **kwargs)
+        if width is not None:
+            box.set_width_override(float(width))
+        if height is not None:
+            box.set_height_override(float(height))
+        return Layout(box, public=self._public_)
+
+
     def button(self, text='', size=14, text_color=(1,1,1,1), text_padding=2,
-               on_clicked: Callable[[], Any]=None,
+               text_scaling=False, on_clicked: Callable[[], Any]=None,
+               on_hovered: Callable[[], Any]=None, on_unhovered: Callable[[], Any]=None,
                subclass: unreal.Button=unreal.EditorUtilityButton,
                **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
-        """添加按钮，可绑定 on_clicked 回调"""
+        """添加按钮，可绑定 on_clicked / on_hovered / on_unhovered 回调"""
         button = add_widget(self.target, unreal.Button, subclass=subclass, **kwargs)
         style = button.get_editor_property('widget_style')
         style.normal.tint_color.specified_color = unreal.LinearColor(0.039546, 0.039546, 0.039546, 0.8)
@@ -731,10 +794,15 @@ class Layout():
 
         if on_clicked:
             button.on_clicked.add_callable(on_clicked)
+        if on_hovered:
+            button.on_hovered.add_callable(on_hovered)
+        if on_unhovered:
+            button.on_unhovered.add_callable(on_unhovered)
         button_widget = Layout(button, public=self._public_)
 
         if text:
-            button_widget.text(text, size=size, align=(2, 1),
+            parent = button_widget.scalebox() if text_scaling else button_widget
+            parent.text(text, size=size, align=2,
                                color=text_color, padding=text_padding)
         return button_widget
 
@@ -802,10 +870,10 @@ class Layout():
     def textbox(self, text='', hint='',
                 on_text_changed: Callable[[str], Any]=None,
                 on_text_committed: Callable[[str, unreal.TextCommit], Any]=None,
-                subclass: unreal.EditableTextBox=unreal.EditorUtilityEditableTextBox,
+                subclass: unreal.MultiLineEditableTextBox=unreal.EditorUtilityMultiLineEditableTextBox,
                 **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
         """添加文本框，可绑定 on_text_changed / on_text_committed 回调"""
-        box = add_widget(self.target, unreal.EditableTextBox, subclass=subclass, **kwargs)
+        box = add_widget(self.target, unreal.MultiLineEditableTextBox, subclass=subclass, **kwargs)
         if text:
             box.set_text(text)
         if hint:
@@ -852,6 +920,17 @@ class Layout():
             return wrapped
 
         box = add_widget(self.target, unreal.ComboBoxKey, subclass=subclass, **kwargs)
+
+        # 隐藏右侧黑色下拉箭头，避免遮挡文本
+        style = box.get_editor_property('widget_style')
+        button_style = style.combo_button_style
+        arrow = button_style.down_arrow_image
+        image_size = unreal.DeprecateSlateVector2D()
+        arrow.image_size = image_size
+        button_style.down_arrow_image = arrow
+        button_style.down_arrow_padding = unreal.Margin(0, 0, 0, 0)
+        style.combo_button_style = button_style
+        box.set_editor_property('widget_style', style)
         keys, texts = _combo_options(options)
 
         gen_content = bind_generate(on_generate_content_widget)
@@ -899,6 +978,117 @@ class Layout():
         return self.column(**kwargs)
 
 
+    def splitter(self, ratio=0.5, vertical=False,
+                 limits=(0.1, 0.9), handle_size=8.0, line_margin=3.0,
+                 color=unreal.LinearColor(0.1, 0.1, 0.1, 0.8),
+                 on_changed=None, **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
+        """可拖动的两栏：将子控件加到 splitter.first / splitter.second 上。
+
+        vertical=False 为左右分栏，True 为上下分栏；first 在左或上。  
+        ratio 为 first 占两侧可用空间的比例，limits 限制比例范围。  
+        handle_size 为拖动热区宽度，line_margin 为细线两端留白（Slate 单位）。  
+        color 为细线颜色，默认灰色（LinearColor）。  
+        返回容器还提供 divider、get_ratio()、set_ratio(value)、solo(mode)。  
+        solo(1) 只显示 first，solo(2) 只显示 second；  
+        solo(0) 或其他值恢复双栏和分割条，不改变比例。  
+        不要直接向返回容器添加子控件，否则会形成额外栏位。  
+        on_changed(ratio) 接收比例变化；回调内不要调用 set_ratio()。
+        """
+        import math
+
+        low, high = map(float, limits)
+        ratio, handle_size, line_margin = float(ratio), float(handle_size), float(line_margin)
+        if not all(math.isfinite(v) for v in (low, high, ratio, handle_size, line_margin)):
+            raise ValueError('分割栏参数必须为有限数值')
+        if not 0 < low < high < 1 or handle_size <= 0:
+            raise ValueError('要求 0 < limits[0] < limits[1] < 1 且 handle_size > 0')
+        if line_margin < 0:
+            raise ValueError('line_margin 不能为负数')
+
+        horizontal = not vertical
+        kwargs.setdefault('align', (0, 0))
+        body = self.row(**kwargs) if horizontal else self.col(**kwargs)
+        state = {'ratio': max(low, min(ratio, high)), 'drag': False, 'offset': 0.0, 'solo': 0}
+        first = body.col(fill=state['ratio'], padding=0, align=(0, 0), clip=True)
+        gap = body.sizebox(width=handle_size if horizontal else None,
+                           height=None if horizontal else handle_size,
+                           padding=0, align=(0, 0))
+        second = body.col(fill=1-state['ratio'], padding=0, align=(0, 0), clip=True)
+
+        def axis(vector):
+            return vector.x if horizontal else vector.y
+
+        def set_ratio(value):
+            value = float(value)
+            if not math.isfinite(value):
+                raise ValueError('ratio 必须为有限数值')
+            value = max(low, min(value, high))
+            if abs(value-state['ratio']) < 1e-6:
+                return state['ratio']
+            state['ratio'] = value
+            first.target.slot.set_size(unreal.SlateChildSize(value, unreal.SlateSizeRule.FILL))
+            second.target.slot.set_size(unreal.SlateChildSize(1-value, unreal.SlateSizeRule.FILL))
+            if on_changed is not None:
+                on_changed(value)
+            return value
+
+        def down(w):
+            if state['solo']:
+                return False
+            state['drag'] = True
+            state['offset'] = axis(w.get_mouse_local())-handle_size/2
+            return unreal.WidgetLibrary.capture_mouse(unreal.WidgetLibrary.handled(), w.target)
+
+        def move(w):
+            if not state['drag']:
+                return False
+            if not w.target.has_mouse_capture():
+                state['drag'] = False
+                return False
+            available = axis(body.get_local_size())-handle_size
+            if available <= 0:
+                return False
+            position = axis(body.get_mouse_local())
+            set_ratio((position-handle_size/2-state['offset'])/available)
+            return True
+
+        def up(w):
+            if not state['drag'] and not w.target.has_mouse_capture():
+                return False
+            state['drag'] = False
+            return unreal.WidgetLibrary.release_mouse_capture(unreal.WidgetLibrary.handled())
+
+        handle = gap.border(color=unreal.LinearColor(0, 0, 0, 0),
+                            padding=0, align=(0, 0), on_mouse_button_down=down,
+                            on_mouse_move=move, on_mouse_button_up=up)
+        handle.set_cursor(unreal.MouseCursor.RESIZE_LEFT_RIGHT if horizontal
+                          else unreal.MouseCursor.RESIZE_UP_DOWN)
+        line_box = handle.sizebox(width=1 if horizontal else None,
+                                 height=None if horizontal else 1,
+                                 padding=(0, line_margin) if horizontal else (line_margin, 0),
+                                 align=(2, 0) if horizontal else (0, 2))
+        line = line_box.border(color=color, padding=0, align=(0, 0))
+        for node in (line_box, line):
+            node.hide(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)
+
+        def solo(mode=0):
+            """1 显示 first，2 显示 second，其他值恢复双栏。"""
+            mode = mode if mode in (1, 2) else 0
+            state['solo'] = mode
+            state['drag'] = False
+            state['offset'] = 0.0
+            first.hide(mode == 2)
+            second.hide(mode == 1)
+            gap.hide(mode != 0)
+            return body
+
+        body.first, body.second, body.divider = first, second, handle
+        body.get_ratio = lambda: state['ratio']
+        body.set_ratio = set_ratio
+        body.solo = solo
+        return body
+
+
     def spacer(self, size=unreal.Vector2D(1, 1),
                **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
         """添加空白占位"""
@@ -919,27 +1109,6 @@ class Layout():
         """添加页面切换器；animated=True 使用动画切换"""
         switcher_type = unreal.CommonAnimatedSwitcher if animated else unreal.WidgetSwitcher
         return Layout(add_widget(self.target, switcher_type, **kwargs), public=self._public_)
-
-
-    def scalebox(self, scale: float=None, padding=0,
-                 **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
-        """添加缩放容器，可指定scale为固定缩放比例。若要动态调整scale，需设置默认值"""
-        scalebox = add_widget(self.target, unreal.ScaleBox, padding=padding, **kwargs)
-        if scale is not None:
-            scalebox.set_editor_property('Stretch', unreal.Stretch.USER_SPECIFIED)
-            scalebox.set_editor_property('UserSpecifiedScale', float(scale))
-        return Layout(scalebox, public=self._public_)
-
-
-    def sizebox(self, width=None, height=None,
-                **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
-        """固定宽高的容器；省略的边不覆盖，之后仍可 set_width_override / set_height_override"""
-        box = add_widget(self.target, unreal.SizeBox, **kwargs)
-        if width is not None:
-            box.set_width_override(float(width))
-        if height is not None:
-            box.set_height_override(float(height))
-        return Layout(box, public=self._public_)
 
 
     def wrapbox(self, inner_padding=(0, 0),
@@ -979,6 +1148,9 @@ class Layout():
 
         def handled(func, *args):
             result = func(*args)
+            # UE Python may return (EventReply, output parameters).
+            if isinstance(result, tuple) and result and isinstance(result[0], unreal.EventReply):
+                result = result[0]
             if isinstance(result, unreal.EventReply):
                 return result
             return unreal.WidgetLibrary.handled() if result else unreal.WidgetLibrary.unhandled()

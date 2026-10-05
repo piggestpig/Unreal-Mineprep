@@ -10,9 +10,9 @@ description: >-
 # Mineprep
 
 Plugin Python lives in `Plugins/Mineprep/Content/Python/`; entry: `import mineprep`.
-Prefer public `mineprep.*` wrappers for supported operations. Use `unreal.*` for
-engine operations with no wrapper; experimental `unreal.mineprep` is a separate
-C++ library — [cpp.md](cpp.md). Editor Python is the runtime; writing or reviewing
+Prefer public `mineprep.*` wrappers for supported operations. Use
+`unreal.*` for engine operations with no wrapper; experimental `unreal.mineprep`
+is a separate C++ library — [cpp.md](cpp.md). Editor Python is the runtime; writing or reviewing
 code does not require a live editor connection.
 
 ## Scope and evidence
@@ -92,6 +92,9 @@ allowlist. Read focused sections rather than the entire package by default.
   (Output Log, console set to **Python**), and state it was not executed.
 - Verify postconditions, not just logs or a successful call. Check state before
   retrying a submitted operation whose outcome is uncertain.
+- Screenshots: prefer Mineprep's viewport/UI functions; if no image arrives,
+  try official MCP capture, then ask the user to bring UE/its viewport forward.
+  Delay behavior and capture details: [remote.md](remote.md).
 - UI: instantiate PropertyGroup before `layout.prop` and before Mod's
   `super().__init__` calls `draw`. Never redraw from `draw`; prefer `Layout.hide`
   for visibility. Temporary `ui()` scripts have per-execution namespaces; keep imports

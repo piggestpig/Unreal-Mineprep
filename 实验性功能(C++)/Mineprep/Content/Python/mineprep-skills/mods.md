@@ -207,8 +207,9 @@ For a custom unload/re-import workflow outside full `mineprep.reload()`, clear a
 
 ### Panel lifecycle — UE 5.8
 
-`Mod.unregister()` uses `EditorUtilitySubsystem.get_tab_id_from_blueprint`
-and `unregister_tab_by_id`. On window close the current Blueprint template
+`Mod.unregister()` calls `close()` on each mapped instance of that class.
+`close()` uses the `tab_id` saved in `__new__` and `unregister_tab_by_id`.
+On window close the current Blueprint template
 removes the widget's instance from `WidgetModMap`, then calls its `destruct()`:
 
 ```python
@@ -219,12 +220,12 @@ if mod:
     mod.destruct()
 ```
 
-Python `unregister()` does not proactively destruct all mapped instances.
-That API returns the blueprint `RegistrationName`, not “None whenever the live
-tab is closed”: after `spawn_and_register_tab_with_id` the ID is
-`bp.get_path_name() + str(requested_id)`, and it stays set after the user
-closes the tab. `None` means this session never registered that blueprint.
-Do not hardcode the prefixed path in a mod's `unregister()`.
+`tab_id` is the blueprint `RegistrationName` captured when that window opened,
+not a later `get_tab_id_from_blueprint` lookup. After `spawn_and_register_tab_with_id`
+the ID is `bp.get_path_name() + str(requested_id)`, and asking again returns only
+the last registration for that asset. It also stays set after the user closes the tab.
+`None` from that lookup means this session never registered that blueprint.
+Do not hardcode the prefixed path; close a specific window with its saved `tab_id`.
 
 For mods owning callbacks/tasks, keep `destruct()` idempotent: mark closed,
 unregister tick/delegates, cancel pending work and discard late results before
@@ -232,15 +233,14 @@ they access widgets. Cancellation does not forcibly stop a running worker. UE
 objects and UI remain main-thread work. Reuse `mc_parallel` where appropriate;
 do not assume its handles are automatically owned by the Mod.
 
-`_unique_` tabs are closed by this path. Non-unique (`_unique_=False`) extras
-use a new random requested ID each open; only the last `RegistrationName` is
-unregistered. Remaining mapped instances produce a warning and their layouts
-are cleared best-effort; that is not window closure or completed destruction.
-The user must close those extra windows manually. To use a panel after reload,
-reopen it from the Mineprep menu.
+Each open window is closed from its own saved id, including non-unique extras.
+An instance still in `WidgetModMap` after `close()` was not closed: Mineprep warns
+and clears that layout best-effort. The user must close that window manually.
+To use a panel after reload, reopen it from the Mineprep menu.
 
 Lifecycle guidance is based on the current Python source and Blueprint close
-callback. Multi-window close events have not been fully tested.
+callback. On 2026-10-05, three temporary panels of one class were opened and
+`unregister()` closed every saved `tab_id`; none remained in `WidgetModMap`.
 
 ## Testing
 

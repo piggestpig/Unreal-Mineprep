@@ -7,7 +7,7 @@ mod_info = {
         'Convert Bedrock animation.json to an anim sequence',
     ),
     'Version': '2.0',
-    'CreatedBy': '',
+    'CreatedBy': 'Pig',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
     'Priority': 1,

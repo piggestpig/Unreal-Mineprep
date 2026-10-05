@@ -23,9 +23,9 @@ class VersionControl(mineprep.Mod):
 
     def draw(self, context=None):
         layout = self.layout
-        row = layout.row()
+        split = self._split = layout.splitter(ratio=0.4, fill=1)
 
-        left = row.col(fill=0.7, padding=3)
+        left = split.first.col(padding=3)
         left.prop(self.props, on_property_changed=self.on_props)
         self._hint = left.text('', size=10, color=_HINT_YELLOW, padding=(6, 2))
         self._btn_update = left.button(
@@ -48,10 +48,10 @@ class VersionControl(mineprep.Mod):
             padding=3,
         )
 
-        self._right = row.col(fill=1, padding=3)
-        self._right.prop(self.script, on_property_changed=self.on_script)
-        self._right.prop(self.filters, on_property_changed=self.on_filters)
-        self._right.prop(self.extras, on_property_changed=self.on_extras)
+        right = split.second.col(padding=3)
+        right.prop(self.script, on_property_changed=self.on_script)
+        right.prop(self.filters, on_property_changed=self.on_filters)
+        right.prop(self.extras, on_property_changed=self.on_extras)
 
         self._sync_buttons()
         self._sync_hint()
@@ -96,7 +96,7 @@ class VersionControl(mineprep.Mod):
         self._btn_migrate.hide(update)
 
     def _sync_right(self):
-        self._right.hide(bool(self.props.ClearDest))
+        self._split.solo(1 if self.props.ClearDest else 0)
 
     def _sync_hint(self):
         msg = ops.path_warnings(self.props, require_uproject=not self.props.UpdateInstaller)

@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import Any
 
 import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
-import mc_sequencer, mc_widget, mc_mod, mc_mesh, mc_material, mc_parallel
+import mc_sequencer, mc_widget, mc_mod, mc_mesh, mc_material, mc_parallel, mc_bplib
 import mc_sequencer as mcseq
+from mc_bplib import BPLibCaller, BPLib, EditorBPLib
 from mc_importer import import_block, import_item, resolve_block_json_path, get_all_blocks
 from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
                       enum, askopenfilename, send2trash, set_actor_label, select_actors,
@@ -347,6 +348,15 @@ class hotkey(MineprepAddonHandle):
 ###########################################################################
 
 class MineprepWorldHandle(MineprepAPIHandle):
+    _element = None
+
+    def __new__(cls, *args, **kwargs):
+        """集合句柄用单个 int/float 调用时，返回该下标元素的单个包装器。"""
+        if (cls._element is not None and len(args) == 1 and not kwargs
+                and isinstance(args[0], (int, float)) and not isinstance(args[0], bool)):
+            return cls._element(cls()[args[0]])
+        return super().__new__(cls)
+
     @classmethod
     def _indexed(cls, key):
         """int/bool 列表视为对 cls() 的花式下标；否则 None。"""
@@ -355,8 +365,8 @@ class MineprepWorldHandle(MineprepAPIHandle):
         return list(cls()[key])
 
     def __class_getitem__(cls, key):
-        """类下标：int/slice/numpy 多轴/花式下标取集合元素；其它参数走构造查找"""
-        if isinstance(key, (int, slice)):
+        """类下标：int/float/slice/numpy 多轴/花式下标取集合元素；其它参数走构造查找"""
+        if isinstance(key, (int, slice)) or (cls._collection and isinstance(key, float)):
             return cls()[key]
         if isinstance(key, tuple) and len(key) == 2:
             return cls()[key]
@@ -446,6 +456,7 @@ class actor(MineprepWorldHandle):
 
 class actors(MineprepWorldHandle):
     _collection = True
+    _element = actor
 
     def __init__(self, name=unreal.Actor):
         """按标签/类型/回调查找多个 Actor，支持批量组件与材质操作"""
@@ -492,6 +503,26 @@ class actors(MineprepWorldHandle):
         self.mats = MaterialsHandle
 
 
+class selected(actors):
+    """按标签/类型/回调查选中的Actors。整数或小数索引返回对应的 actor。"""
+
+    def __new__(cls, name=unreal.Actor):
+        if isinstance(name, (int, float)) and not isinstance(name, bool):
+            return super().__new__(cls, name)
+        subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+        picked = list(subsystem.get_selected_level_actors())
+        if isinstance(name, type):
+            if name is not unreal.Actor:
+                picked = [a for a in picked if isinstance(a, name)]
+        elif isinstance(name, str):
+            pattern = name if '*' in name else f'*{name}*'
+            picked = list(unreal.EditorFilterLibrary.by_actor_label(
+                picked, pattern, unreal.EditorScriptingStringMatchType.MATCHES_WILDCARD))
+        elif callable(name):
+            picked = [a for a in picked if name(a)]
+        return actors(picked)
+
+
 class component(MineprepWorldHandle):
     def __init__(self, target=None):
         super().__init__(target, target.get_name() if target else '')
@@ -536,6 +567,7 @@ class component(MineprepWorldHandle):
 
 class components(MineprepWorldHandle):
     _collection = True
+    _element = component
 
     def __init__(self, target=None):
         indexed = type(self)._indexed(target)

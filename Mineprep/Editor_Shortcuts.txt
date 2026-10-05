@@ -1,0 +1,112 @@
+{
+  "放置空物体": {
+    "chord_text": "(Key=Zero,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】在场景中放置一个空物体",
+    "code": "asset = unreal.load_asset('/Game/Mineprep/MC_Blueprint/Core/空物体.空物体')\nactor = mineprep.EditorBPLib['放置模型并选中'](asset, False, 'None', False, True)\nif actor:\n    mineprep.EditorBPLib['设置Actor标签+后缀'](actor, '空物体', unreal.Actor)\n"
+  },
+  "随机弃选一半选中项": {
+    "chord_text": "(Key=One,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】随机弃选一半的选中项",
+    "code": "import random\nactors = mineprep.selected[:]\nif len(actors) > 1:\n    random.shuffle(actors)\n    mineprep.select_actors(actors[:0.5])\n"
+  },
+  "启用/禁用预览摄像机窗口": {
+    "chord_text": "(Key=Two,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】启用/禁用预览摄像机窗口",
+    "code": "curr = unreal.mineprep.get_project_setting('bPreviewSelectedCameras')\nunreal.mineprep.set_project_setting('bPreviewSelectedCameras', str(curr != 'True'))\n"
+  },
+  "仅显示工具栏图标": {
+    "chord_text": "(Key=Three,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】仅显示工具栏图标",
+    "code": "curr = unreal.mineprep.get_project_setting('bUseSmallToolBarIcons')\nunreal.mineprep.set_project_setting('bUseSmallToolBarIcons', str(curr != 'True'))\n"
+  },
+  "显示蓝图生成的组件": {
+    "chord_text": "(Key=Four,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】显示蓝图生成的组件",
+    "code": "curr = unreal.mineprep.get_project_setting('bHideConstructionScriptComponentsInDetailsView')\nunreal.mineprep.set_project_setting('bHideConstructionScriptComponentsInDetailsView', str(curr != 'True'))\n"
+  },
+  "高亮选中项": {
+    "chord_text": "(Key=Five,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】高亮选中项",
+    "code": "curr = unreal.mineprep.get_project_setting('bUseSelectionOutline')\nunreal.mineprep.set_project_setting('bUseSelectionOutline', str(curr != 'True'))\n"
+  },
+  "移动选中项到面前": {
+    "chord_text": "(Key=Six,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】移动选中项到面前",
+    "code": "actors = mineprep.selected()\nif actors:\n    loc = mineprep.EditorBPLib['编辑器视口线条追踪'](True)\n    with unreal.ScopedEditorTransaction(mineprep.bilingual('移动到面前', 'Move To Front')):\n        actors.set_actor_location(loc, False, False)\n"
+  },
+  "设置可视性关键帧": {
+    "chord_text": "(Key=Seven,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】设置可视性关键帧",
+    "code": "actors = mineprep.selected()\nif actors:\n    f = mineprep.sequencer.frame()\n    with unreal.ScopedEditorTransaction(mineprep.bilingual('添加可视性关键帧', 'Add Visibility Keyframe')):\n        actors.key('bHidden', True, f - 1)\n        actors.key('bHidden', False, f)\n"
+  },
+  "刷选选中项，重新编译蓝图": {
+    "chord_text": "(Key=Eight,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】刷新选中项，重新编译蓝图",
+    "code": "skel = mineprep.selected().comps(unreal.SkeletalMeshComponent)\nif skel:\n    skel.set_update_animation_in_editor(True)\nbps = []\nseen = set()\nfor actor in mineprep.selected[:]:\n    bp, has_bp = unreal.BlueprintEditorLibrary.get_blueprint_for_class(actor.get_class())\n    if has_bp and bp:\n        path = bp.get_path_name()\n        if path not in seen:\n            seen.add(path)\n            bps.append(bp)\nfor bp in bps:\n    unreal.BlueprintEditorLibrary.compile_blueprint(bp)\n"
+  },
+  "交换选中对象位置": {
+    "chord_text": "(Key=Nine,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】交换选中对象的位置",
+    "code": "actors = mineprep.selected[:]\nif len(actors) >= 2:\n    transforms = [(a.get_actor_location(), a.get_actor_rotation()) for a in actors]\n    with unreal.ScopedEditorTransaction(mineprep.bilingual('交换对象位置', 'Swap Actor Positions')):\n        for i, a in enumerate(actors):\n            next_loc, next_rot = transforms[(i + 1) % len(actors)]\n            a.set_actor_location_and_rotation(next_loc, next_rot, False, True)\n"
+  },
+  "进入摄像机视图": {
+    "chord_text": "(Key=NumPadZero,bShift=False,bCtrl=False,bAlt=False,bCmd=False)",
+    "tooltip": "进入摄像机视图",
+    "code": "level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)\nif level_subsystem and level_subsystem.get_pilot_level_actor():\n    level_subsystem.eject_pilot_level_actor()\nelse:\n    cams = mineprep.selected(lambda a: a.get_component_by_class(unreal.CameraComponent))\n    if not cams:\n        cams = mineprep.actors(lambda a: a.actor_has_tag('camera'))\n    if cams and level_subsystem:\n        level_subsystem.pilot_level_actor(cams[0])\n    else:\n        mineprep.warn('未找到选中的摄像机或带有 camera 标签的摄像机！')\n"
+  },
+  "对齐摄像机至视图": {
+    "chord_text": "(Key=NumPadZero,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "对齐摄像机至视图",
+    "code": "ue_subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)\nlevel_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)\ncam = None\ntry:\n    frame = mineprep.sequencer.frame()\n    cuts = mineprep.sequencer().tracks(unreal.MovieSceneCameraCutTrack).sections()\n    for cut in cuts:\n        if cut.get_start_frame() <= frame <= cut.get_end_frame():\n            bound = unreal.LevelSequenceEditorBlueprintLibrary.get_bound_objects(cut.get_camera_binding_id())\n            if bound and isinstance(bound[0], unreal.Actor):\n                cam = bound[0]\n                break\nexcept Exception:\n    pass\nif not cam:\n    cams = mineprep.selected(lambda a: a.get_component_by_class(unreal.CameraComponent))\n    if not cams:\n        cams = mineprep.actors(lambda a: a.actor_has_tag('camera'))\n    if cams:\n        cam = cams[0]\nif cam:\n    with unreal.ScopedEditorTransaction(mineprep.bilingual('对齐摄像机至视图', 'Align Camera to View')):\n        loc, rot = ue_subsystem.get_level_viewport_camera_info()\n        cam.set_actor_location_and_rotation(loc, rot, False, False)\n        if level_subsystem:\n            level_subsystem.pilot_level_actor(cam)\n        mineprep.select_actors([cam])\nelse:\n    mineprep.warn('未找到可对齐的摄像机！')\n"
+  },
+  "绑定其他选中项至最后选中项": {
+    "chord_text": "(Key=Equals,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "绑定其他选中项至最后一个视口选中项",
+    "code": "from functools import partial\npicked = mineprep.selected[:]\nif len(picked) < 2:\n    mineprep.warn('请至少选中 2 个物体')\nelse:\n    parent, children = picked[-1], picked[:-1]\n    items = [{'label': '⭐' + parent.get_actor_label(), 'comp': None, 'sockets': []}]\n    for comp in parent.get_components_by_class(unreal.SceneComponent):\n        sockets = []\n        if isinstance(comp, unreal.SkeletalMeshComponent):\n            sockets = [str(name) for name in comp.get_all_socket_names()]\n        items.append({'label': comp.get_name(), 'comp': comp, 'sockets': sockets})\n\n    class AttachParent(mineprep.Mod):\n        def draw(self, context=None):\n            frame = self.layout.sizebox(480, 560, padding=0)\n            row = frame.row(fill=1, align=(0, 0), padding=0)\n            self.left = row.col(fill=1, align=(0, 0), padding=(0, 4))\n            right = row.col(fill=1, align=(0, 0), padding=(4, 4))\n            self.right = right.scrollbox(fill=1, align=(0, 0), clip=True).col()\n            for item in items:\n                self.left.button(item['label'], on_clicked=partial(self.attach, item, ''),\n                                on_hovered=partial(self.show_sockets, item), size=12)\n\n        def show_sockets(self, item):\n            self.right.clear_children()\n            for socket in item['sockets']:\n                self.right.button(socket, on_clicked=partial(self.attach, item, socket), size=12)\n\n        def attach(self, item, socket_name):\n            comp = item['comp']\n            rule = unreal.AttachmentRule.KEEP_WORLD\n            socket = unreal.Name(socket_name) if socket_name else unreal.Name()\n            with unreal.ScopedEditorTransaction(mineprep.bilingual('绑定父级', 'Set Parent')):\n                for child in children:\n                    root = child.root_component\n                    if root:\n                        root.set_mobility(unreal.ComponentMobility.MOVABLE)\n                    if comp:\n                        child.attach_to_component(comp, socket, rule, rule, rule, False)\n                    else:\n                        child.attach_to_actor(parent, unreal.Name(), rule, rule, rule, False)\n            self.close()\n\n    AttachParent()\n"
+  },
+  "渲染图片": {
+    "chord_text": "(Key=F12,bShift=False,bCtrl=False,bAlt=False,bCmd=False)",
+    "tooltip": "渲染图片",
+    "code": "panel = mineprep.EditorBPLib('插件面板')\nif panel:\n    panel.get_editor_property('渲染输出子面板').call_method('渲染图片')\nelse:\n    unreal.EditorLevelLibrary.execute_console_command('HighResShot 1')\n"
+  },
+  "渲染视频": {
+    "chord_text": "(Key=F12,bShift=False,bCtrl=True,bAlt=False,bCmd=False)",
+    "tooltip": "渲染视频",
+    "code": "panel = mineprep.EditorBPLib('插件面板')\nif panel:\n    panel.get_editor_property('渲染输出子面板').call_method('一键渲染')\nelif mineprep.sequencer():\n    unreal.LevelSequenceEditorBlueprintLibrary.play()\nelse:\n    mineprep.warn('未打开关卡序列！')\n"
+  },
+  "绑定选中项至空物体": {
+    "chord_text": "(Key=Zero,bShift=True,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】绑定选中项至空物体",
+    "code": "panel = mineprep.EditorBPLib('插件面板')\nif panel:\n    panel.get_editor_property('生成器子面板').call_method('附加组件', (18,))\nelse:\n    actors = mineprep.selected[:]\n    if actors:\n        asset = unreal.load_asset('/Game/Mineprep/MC_Blueprint/Core/空物体.空物体')\n        parent = mineprep.EditorBPLib['放置模型并选中'](asset, False, 'None', False, True)\n        if parent:\n            mineprep.EditorBPLib['设置Actor标签+后缀'](parent, '空物体', unreal.Actor)\n            rule = unreal.AttachmentRule.KEEP_WORLD\n            with unreal.ScopedEditorTransaction(mineprep.bilingual('绑定至空物体', 'Attach to Null Actor')):\n                for child in actors:\n                    child.attach_to_actor(parent, unreal.Name(), rule, rule, rule, False)\n                mineprep.select_actors([parent])\n    else:\n        mineprep.warn('请先选择要绑定的物体！')\n"
+  },
+  "预览最终画质": {
+    "chord_text": "(Key=Tab,bShift=True,bCtrl=False,bAlt=False,bCmd=False)",
+    "tooltip": "【预设】切换到最终渲染画质，持续1秒",
+    "code": "director = mineprep.BPLib('导播台')\nif director:\n    @mineprep.asynctask\n    def toggle_quality():\n        director.call_method('设置画质', (True,))\n        yield 1.0\n        director.call_method('设置画质', (False,))\n    toggle_quality()\n"
+  },
+  "临时测试": {
+    "chord_text": "(Key=T,bShift=True,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "临时测试按键",
+    "code": "actor = mineprep.selected[0]\nif actor:\n    unreal.get_editor_subsystem(unreal.EditorActorSubsystem).duplicate_actor(actor)\n"
+  },
+  "设置隐藏关键帧": {
+    "chord_text": "(Key=Seven,bShift=True,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "【预设】设置隐藏关键帧",
+    "code": "actors = mineprep.selected()\nif actors:\n    f = mineprep.sequencer.frame()\n    with unreal.ScopedEditorTransaction(mineprep.bilingual('设置隐藏关键帧', 'Add Hidden Keyframe')):\n        actors.key('bHidden', False, f - 1)\n        actors.key('bHidden', True, f)\n"
+  },
+  "显示快捷键信息": {
+    "chord_text": "(Key=Slash,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",
+    "tooltip": "显示快捷键信息",
+    "code": "from mods.EditorShortcuts.panel import EditorShortcuts\nEditorShortcuts.register(True)\n"
+  },
+  "翻译鼠标下文本": {
+    "chord_text": "(Key=Apostrophe,bShift=False,bCtrl=False,bAlt=False,bCmd=False)",
+    "tooltip": "尝试从本地化csv文件翻译鼠标下的文本",
+    "code": "unreal.mineprep.loc_widget_text_under_mouse()\n"
+  },
+  "传送摄像机至前方物体": {
+    "chord_text": "(Key=Tilde,bShift=True,bCtrl=False,bAlt=False,bCmd=False)",
+    "tooltip": "将视口摄像机传送到前方物体",
+    "code": "subsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)\ncam_loc, cam_rot = subsystem.get_level_viewport_camera_info()\nfwd = cam_rot.get_forward_vector()\nhit = unreal.SystemLibrary.line_trace_single(\n    subsystem.get_editor_world(), cam_loc, cam_loc + fwd * 1000000.0,\n    unreal.TraceTypeQuery.ECC_CAMERA, True, [], unreal.DrawDebugTrace.NONE, True\n)\nvalues = hit.to_tuple() if hit else ()\nif values and values[0]:\n    target_loc = values[5] - fwd * 250.0\n    @mineprep.asynctask\n    def fly():\n        for i in range(1, 31):\n            alpha = i / 30.0\n            cam_loc, cam_rot = subsystem.get_level_viewport_camera_info()\n            new_loc = unreal.MathLibrary.v_lerp(cam_loc, target_loc, alpha)\n            subsystem.set_level_viewport_camera_info(new_loc, cam_rot)\n            yield 0.01\n    fly()\n"
+  }
+}
