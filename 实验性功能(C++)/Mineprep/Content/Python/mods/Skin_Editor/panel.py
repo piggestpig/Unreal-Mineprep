@@ -5,7 +5,6 @@ from functools import partial
 from mineprep import bilingual
 from . import ops, paint, util
 from .props import SkinEditorOptions, SkinPaintTools, SkinCodeTools, SkinBatchTools
-from .util import MATERIAL_DETAILS
 
 PAGES = (
     bilingual('编辑材质', 'Edit Materials'),
@@ -264,7 +263,8 @@ class SkinEditor(mineprep.Mod):
 
 
 def _material_prop(layout, obj):
-    kwargs = dict(subclass=MATERIAL_DETAILS, fill=1)
     if obj:
-        return layout.prop(obj, **kwargs)
-    return layout.custom(unreal.DetailsView, **kwargs)
+        return layout.prop(obj, categories=['Materials'], fill=1)
+    view = layout.custom(unreal.DetailsView, fill=1)
+    view.set_editor_property('categories_to_show', ['Materials'])
+    return view

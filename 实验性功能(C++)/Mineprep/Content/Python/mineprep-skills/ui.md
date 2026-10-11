@@ -82,19 +82,22 @@ Unknown names forward to the UWidget: `pages.set_active_widget_index(i)`, not `p
 | `button` / `operator` | `on_clicked` / `on_hovered` / `on_unhovered`, all zero-argument (`partial` to bind values); default `EditorUtilityButton`. Empty `text` skips the inner label. When a `sizebox` limits button width, prefer `text_scaling=True` to fit long labels |
 | `checkbox` | `on_check_state_changed`; default `EditorUtilityCheckBox` |
 | `spinbox` | `on_value_changed` / `on_value_committed`; default `EditorUtilitySpinBox` |
-| `textbox` | `hint` / `on_text_changed` / `on_text_committed`; default `EditorUtilityEditableTextBox` |
-| `combo` | ComboBoxKey; `options` is a list (`key=str(item)`) or `{key: text}`; generate defaults to `make_combo_text`; callbacks get `str`; `on_selection_changed` / `on_opening`; default `EditorUtilityComboBoxKey` |
-| `prop(data, property=None, text=None, on_property_changed=None)` | Omit `property` → full DetailsView. Set `property` → `SinglePropertyView` (**scalars only** — not `list` / `Array` / `set` / `map`) |
+| `textbox` | `hint` / `on_text_changed` / `on_text_committed`; default `EditorUtilityMultiLineEditableTextBox` (multiline widget type) |
+| `combo` | ComboBoxKey; `options` is a list (`key=str(item)`) or `{key: text}`; a label may be `unreal.Text`; generate defaults to `make_combo_text`; callbacks get `str`; `on_selection_changed` / `on_opening`; default `EditorUtilityComboBoxKey`; the down arrow is hidden |
+| `prop(data, property=None, text=None, categories=None, properties=None, searching=False, on_property_changed=None)` | Omit `property` → full DetailsView. Set `property` → `SinglePropertyView` (**scalars only** — not `list` / `Array` / `set` / `map`). `categories` / `properties` / `searching` apply only to the full view; see **prop** below |
 | `row` / `col` / `column` | Boxes |
 | `splitter` | Draggable two-pane layout; add content to `.first` / `.second`, not the returned container. See below |
+| `carousel` | `speed=3` sets `move_speed` and is applied only at build. `page(i)` clamps and returns the index; `index()`, `prev()`, `next()`. `next` is bound to `previous_page` and `prev` to `next_page` because the engine page direction is reversed — call these wrappers, do not rebind them to the engine names. `on_changed(carousel, index)` runs when the slide starts. Size each page; the carousel slot ignores padding and align |
 | `spacer` / `overlay` / `switcher` / `scalebox` / `sizebox` / `wrapbox` / `scrollbox` | Containers; `sizebox(w, h)` fixes axes (omit = unconstrained); `wrapbox(inner_padding=6)` wraps children |
-| `image` / `custom` | Media / raw widget. `image=None` is an empty placeholder; scalar `size` is square until a texture is set. `custom`: prefer an `EditorUtility*` subclass when one exists |
+| `image` / `custom` | Media / raw widget. `image=None` is an empty placeholder; scalar `size` is square until a texture is set. `custom(widget, props=None, **kwargs)`: prefer an `EditorUtility*` subclass when one exists |
 | `border` | Container + mouse; callbacks get `Layout`, not `FGeometry` — **border** below |
 | `hide(state)` | Visibility — prefer over full `redraw` when toggling regions |
 | `get` / `set` | Editor properties on the widget |
 | `parent` / `outer` / `children` / `path` | Hierarchy |
 
-Interactive builders default to **Editor Utility** subclasses (`EditorUtilityButton`, `EditorUtilityCheckBox`, `EditorUtilitySpinBox`, `EditorUtilityEditableTextBox`, `EditorUtilityComboBoxKey`). They use the editor Slate style. For `layout.custom`, pick `unreal.EditorUtility…` over the raw UMG type when it exists (`EditorUtilityEditableTextBox` not `EditableTextBox`, `EditorUtilityComboBoxKey` not `ComboBoxKey` / `ComboBoxString`). Do not restyle EU widgets to look like raw UMG unless the user asks. Override with `subclass=` only when needed. Localized combo items: `layout.combo`, not `ComboBoxString`.
+Interactive builders default to **Editor Utility** subclasses (`EditorUtilityButton`, `EditorUtilityCheckBox`, `EditorUtilitySpinBox`, `EditorUtilityMultiLineEditableTextBox`, `EditorUtilityComboBoxKey`). They use the editor Slate style. For `layout.custom`, pick `unreal.EditorUtility…` over the raw UMG type when it exists (`EditorUtilityMultiLineEditableTextBox` not `MultiLineEditableTextBox`, `EditorUtilityComboBoxKey` not `ComboBoxKey` / `ComboBoxString`). Do not restyle EU widgets to look like raw UMG unless the user asks. Override with `subclass=` only when needed.
+
+Localized combo labels belong on `layout.combo` (`{key: unreal.Text}`). `EditorUtilityComboBoxString` stores plain strings: `add_option` / `get_selected_option` do not follow the editor language, because the built-in label is `FText::FromString`. A Python `construct` is not an editor widget, so its `foreground_color` starts black `(0,0,0)` while `item_style.text_color` is already the editor gray `0.527`. Put `font` and `foreground_color` in `props`. `default_options` is consumed only in `PostInitProperties`, so call `add_option` before `custom`; `selected_option` may be in `props`. The color is copied once in `RebuildWidget`; changing it later needs `remove_from_parent` and add again.
 
 ### Common kwargs (`**kwargs` → `add_widget`)
 
@@ -107,7 +110,9 @@ Interactive builders default to **Editor Utility** subclasses (`EditorUtilityBut
 | `tooltip` | Hover text |
 | `hidden` | Initial visibility (int → `SlateVisibility`) |
 
-Example footer layout (Mod Manager / VAT Tools / Skin Editor log): `align=(1, 3)` on the **one** vertical filler (`fill=1`).
+`add_widget(..., props=None)` and `layout.custom` apply `props` with `set_editor_properties` after construct and before `add_child`. Use it for values the slate widget copies only while being built (`Carousel.move_speed`, `ComboBoxString.foreground_color`, etc.). `clip` still overwrites a `clipping` entry in `props`.
+
+For a pinned footer, use `align=(1, 3)` on the one vertical filler (`fill=1`).
 
 ### splitter
 
@@ -123,7 +128,7 @@ split.solo(0)  # restore both panes and the divider; other values also restore
 
 `limits=(0.1, 0.9)` clamps the first pane's proportion. `handle_size=8` is the
 drag hit area; `line_margin=3` leaves space at both ends of the line.
-`color=unreal.LinearColor(.4, .4, .4, 1)` sets the line color (gray by default).
+`color=unreal.LinearColor(0.1, 0.1, 0.1, 0.8)` is the default line color.
 `on_changed(ratio)` reports changes; do not call `set_ratio()` from that callback.
 The returned container also exposes `.divider`. Sizes follow the ratio without
 a persistent tick; limits are proportions, not minimum pixel widths.
@@ -139,15 +144,15 @@ It only changes pane-container visibility; visibility inside each pane is kept.
 
 Use several fills **only when you want that split**. One parent, one leftover pool.
 
-| Intent | How | In-tree example |
-|--------|-----|-----------------|
-| Equal columns | Several **siblings** `fill=1` | VAT `left`/`right` `col(fill=1)`; Mod Manager header/row `scalebox(..., fill=1)` |
-| Unequal split | Different weights | Mod Manager uninstall column `fill=0.75` next to `fill=1` |
-| Pack content, pin a footer to a corner | **At most one** FILL child in that vertical box — usually the last — plus `align=(1, 3)` | Skin Editor log; Mod Manager advanced checkbox; VAT `AutoCleanCache` |
-| Tight stack (no leftover) | Omit `fill` on everyone | Footer sits immediately under the widget above, not in the corner |
+| Intent | How |
+|--------|-----|
+| Equal columns | Several siblings with `fill=1` |
+| Unequal split | Different weights, e.g. `fill=0.75` and `fill=1` |
+| Packed content, pinned footer | One FILL child, usually the last, with `align=(1, 3)` |
+| Tight stack | Omit `fill` on everyone |
 
 ```python
-# Vertical — one filler: Details packed, log pinned bottom-left (Skin Editor)
+# Vertical — one filler: Details packed, log pinned bottom-left
 layout.prop(self.props)
 layout.text(..., align=(1, 3), padding=6, fill=1)
 
@@ -207,7 +212,7 @@ when assigning a valid image. Collapsed cards still exist in memory; this is
 widget reuse, not virtualization.
 
 For Shift-click with `button(on_clicked=...)`, read modifier state inside the
-callback (verified UE 5.7):
+callback:
 
 ```python
 state = unreal.InputLibrary.get_modifier_keys_state()
@@ -255,15 +260,14 @@ For dragging, return `unreal.WidgetLibrary.capture_mouse(unreal.WidgetLibrary.ha
 on Down and `release_mouse_capture(handled())` on Up. Capture keeps Move/Up routed
 to the Border outside its bounds; `handled()` alone does not capture. Paint tools
 should separately stop outside-canvas drawing and break the stroke on re-entry.
-UE 5.8 real pointer callbacks still yielded zero Geometry/PointerEvent data in a
-2026-10-01 probe; use the Layout coordinate helpers above. User confirmed the
-capture fix works; capture-loss/window-focus cleanup remains a separate concern.
+Use Layout coordinate helpers when callbacks provide empty Geometry/PointerEvent
+data. Handle capture loss and window-focus cleanup separately from normal release.
 
-A child `Image` that is `Visible` takes the hit first. For drawing, set it `SELF_HIT_TEST_INVISIBLE` so the Border receives Down/Move/Up. Prefer `img.hide(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)` (or `set_visibility`). **Do not** assign `brush.image_size = Vector2D(...)` — UE 5.7 raises `TypeError: DeprecateSlateVector2D`. Size the Image with `set_desired_size_override`. After swapping the RT, `set_brush_resource_object(None)` then the RT again.
+A child `Image` that is `Visible` takes the hit first. For drawing, set it `SELF_HIT_TEST_INVISIBLE` so the Border receives Down/Move/Up. Prefer `img.hide(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)` (or `set_visibility`). Size the Image with `set_desired_size_override`; `brush.image_size` may require a Slate vector type rather than `Vector2D`. After swapping the RT, `set_brush_resource_object(None)` then the RT again.
 
-### Sketch RT (Skin Editor)
+### Sketch RT
 
-Lived-in recipe: `mods/Skin_Editor/paint.py`. Color skins / PNG export — **not** VAT bake RTs.
+For color painting / PNG export; VAT bake RTs have different requirements.
 
 ```python
 rt = unreal.RenderingLibrary.create_render_target2d(
@@ -290,6 +294,14 @@ Mod keys (peek original): override `on_key_down` / `on_key_up` (`unreal.Key`). C
 `draw_material_to_render_target` draws a full material quad and sets the render target binding each call. This is not an unconditional clear: output depends on the material and resource state. For incremental strokes, use the canvas/coverage recipe above.
 
 ### `prop` callbacks
+
+Full DetailsView filters are set before the object is assigned. A non-empty `categories` or `properties` list limits that view; an empty list is the same as omitting it. `searching=True` turns on the details search bar. These three arguments are ignored when `property` selects a single field.
+
+```python
+layout.prop(component, categories=['Materials'], fill=1)
+```
+
+The category filter is installed when the details widget is first built. Set it through `prop`, or assign `categories_to_show` before `set_object`. Changing the array after that first build does not add the filter.
 
 - Full Details (`layout.prop(props)`): `on_property_changed` receives the **property name** (`'SKM'`, `'DataAsset'`, …).
 - Single-property view (`layout.prop(props, 'Field')`): same; compare against the annotation name. **Only scalars** (bool, str, int, float, object references). `list[T]` / `unreal.Array` / set / map → 「不支持的属性」.

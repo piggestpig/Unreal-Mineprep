@@ -47,7 +47,7 @@ scale = unreal.mineprep.set_editor_ui_scale(-1.0)  # <0 → current scale, no ch
 text, tip = unreal.mineprep.get_widget_text_under_mouse()
 ```
 
-Enums recorded for the UE 5.7-targeted bindings; recheck the installed build when using them:
+Check available enums against the installed bindings:
 
 - `unreal.EditorNotificationState`: `NONE`, `PENDING`, `SUCCESS`, `FAIL`
 - `unreal.MineprepPostProcessStage`: `SCENE_COLOR_BEFORE_DOF`, `SCENE_COLOR_AFTER_DOF`, `TRANSLUCENCY_AFTER_DOF`, `SSR_INPUT`, `SCENE_COLOR_BEFORE_BLOOM`, `REPLACING_TONEMAPPER`, `SCENE_COLOR_AFTER_TONEMAPPING`
@@ -58,13 +58,14 @@ Do not recommend `inject_display_name` / `set_property_tooltip` (`DeprecatedFunc
 
 | Python | Use when |
 |--------|----------|
+| `finish_build_texture(texture) -> bool` | Complete an imported source texture's async build, rebuilding invalid platform data synchronously if needed. Optional binding; game thread only. Prefer the preparation entrypoint; see [Texture2D completion](pitfalls/common.md#source-texture2d-completion). Not a painted-RT refresh or a visual correctness test |
 | `show_editor_notification(message, sub_text, state=NONE, duration=3.0, use_throbber=False)` | Editor toast. Prefer `mineprep.prints` / `warn` for ordinary script feedback |
 | `set_editor_ui_scale(scale) -> float` | Slate UI scale. `scale < 0` returns current without changing |
 | `get_widget_text_under_mouse() -> (str, str)` | Widget text + tooltip under the cursor |
 | `loc_widget_text_under_mouse(new_text="") -> int` | Empty `new_text` → look up loc table; else set text |
 | `draw_viewport_to_render_target(rt, auto_resize=True, block_until_ready=False) -> bool` | Blit viewport into an RT. Visual checks for the **agent**: `mineprep.screenshot` — [remote.md](remote.md) |
 | `draw_post_process_stage_to_render_target(rt, stage, auto_resize=True, block_until_ready=False) -> bool` | Same, at a post-process stage |
-| `widget_screenshot(widget=None, path="") -> str` | PNG of a UMG widget. Empty widget → active top-level window. Empty path → `Saved/Screenshots/WidgetScreenshot.png`. Success = saved `.png` path; failure = `WidgetScreenshot: ...` error. Visible capture is attempted first, then offscreen rendering. A PNG does not establish live-tab visibility. Panel shots: [remote.md](remote.md) |
+| `widget_screenshot(widget=None, path="", delay=0) -> str` | PNG of a UMG widget. Empty widget → active top-level window. Empty path → `Saved/Screenshots/WidgetScreenshot.png`. `delay` timing: [remote.md](remote.md). Success = saved `.png` path; failure = `WidgetScreenshot: ...` error. Visible capture is attempted first, then offscreen rendering. A PNG does not establish live-tab visibility. Panel shots: [remote.md](remote.md) |
 | `get_project_setting(name) -> str` / `set_project_setting(name, value) -> bool` | Project setting by name |
 | `open_project_setting(container, category, section)` | Open that Project Settings page |
 | `switch_editor_mode(mode_id="EM_ScriptableToolsEditorMode")` | Editor mode |
@@ -84,7 +85,7 @@ Not console APIs. Do not invent Python wrappers. Mention only if the user is in 
 
 | Code | What it is |
 |------|------------|
-| `UMineprepSubsystem` | Hotkey register/load. Python: `mineprep.hotkey(...)` |
+| `UMineprepSubsystem` | Hotkey register/load. Running one goes through `mineprep.hotkey(...)` → Editor Shortcuts `execute_shortcut` |
 | `AddKeyframes` | Details row keyframes for Niagara / color grading |
 | `CustomDetailsPanel` | Details customization for `Pawn` (Mover) and `SkeletalMeshActor` |
 | `Mineprep.TickInterval` | Console variable for the editor ticker (hotkey BP `Run`) |

@@ -1,4 +1,11 @@
 import re
+from collections import defaultdict
+from dataclasses import dataclass, replace
+from hashlib import sha256
+import json
+import math
+from pathlib import Path
+from mc_math import _rotate, rotator_quaternion
 import unreal
 from mc_utils import warn
 
@@ -317,3 +324,465 @@ def merge_skm(root: unreal.SkeletalMeshComponent, save_path: str = None,
         return None
 
     return _save_skm(body_dm, skeleton, mats, out_path, existing=existing)
+
+
+# Blocks baking: source faces, tiled rectangles and StaticMesh asset reuse.
+BAKE_VERSION = "blocks-bake-2"
+RECIPE_TAG = "Mineprep.BakeRecipe"
+STATS_TAG = "Mineprep.BakeStats"
+_DIRECTIONS = {
+    "east": (1, 0, 0), "west": (-1, 0, 0),
+    "south": (0, 1, 0), "north": (0, -1, 0),
+    "up": (0, 0, 1), "down": (0, 0, -1),
+}
+
+
+@dataclass(frozen=True)
+class Face:
+    points: tuple                 # UE axes, cell-centered, in block units
+    uvs: tuple
+    texture: str
+    direction: str | None = None
+    cullable: bool = False
+    repeatable: bool = False
+
+
+@dataclass(frozen=True)
+class Prototype:
+    faces: tuple
+    full: bool
+    opaque: bool
+
+
+@dataclass
+class BakeGeometry:
+    quads: list                   # (points in cm, explicit UVs, texture path)
+    textures: list
+    recipe: str
+    stats: dict
+
+
+def _axis_face(points):
+    """Boundary direction; winding is checked separately by source parsing."""
+    for name, normal in _DIRECTIONS.items():
+        axis = next(i for i, n in enumerate(normal) if n)
+        if all(abs(p[axis] - normal[axis] * .5) < 1e-6 for p in points):
+            return name
+    return None
+
+
+def _normal_direction(points):
+    """Axis direction, including internal faces of slabs/stairs."""
+    u = tuple(points[1][i] - points[0][i] for i in range(3))
+    v = tuple(points[2][i] - points[0][i] for i in range(3))
+    normal = (v[1]*u[2]-v[2]*u[1], v[2]*u[0]-v[0]*u[2], v[0]*u[1]-v[1]*u[0])
+    axis = max(range(3), key=lambda i: abs(normal[i]))
+    if abs(normal[axis]) < 1e-8 or any(abs(normal[i]) > abs(normal[axis])*1e-6
+                                      for i in range(3) if i != axis):
+        return None
+    return next(name for name, n in _DIRECTIONS.items() if n[axis]*normal[axis] > 0)
+
+
+def _tangents(direction):
+    axis = next(i for i, n in enumerate(_DIRECTIONS[direction]) if n)
+    return tuple(i for i in range(3) if i != axis)
+
+
+def _full_face(points, direction):
+    if direction is None:
+        return False
+    a, b = _tangents(direction)
+    return {(round(p[a], 6), round(p[b], 6)) for p in points} == {
+        (-.5, -.5), (-.5, .5), (.5, -.5), (.5, .5)}
+
+
+def _within_cell_face(points, direction):
+    return direction is not None and all(-.500001 <= p[i] <= .500001
+                                         for p in points for i in _tangents(direction))
+
+
+def _affine_uv(points, uvs, axes):
+    """Return UV origin and two gradients, or None for a non-affine quad."""
+    a, b = axes
+    x1, y1 = points[1][a] - points[0][a], points[1][b] - points[0][b]
+    x2, y2 = points[2][a] - points[0][a], points[2][b] - points[0][b]
+    det = x1 * y2 - x2 * y1
+    if abs(det) < 1e-8:
+        return None
+    gradients = []
+    for k in range(2):
+        d1, d2 = uvs[1][k] - uvs[0][k], uvs[2][k] - uvs[0][k]
+        gradients.append(((d1 * y2 - d2 * y1) / det,
+                          (x1 * d2 - x2 * d1) / det))
+    origin = tuple(uvs[0][k] - gradients[k][0] * (points[0][a] + .5)
+                   - gradients[k][1] * (points[0][b] + .5) for k in range(2))
+    if any(abs(uvs[i][k] - origin[k]
+               - gradients[k][0] * (points[i][a] + .5)
+               - gradients[k][1] * (points[i][b] + .5)) > 1e-6
+           for i in range(4) for k in range(2)):
+        return None
+    return origin, tuple(gradients)
+
+
+def _repeat_frame(face):
+    if not face.repeatable or not _full_face(face.points, face.direction):
+        return None
+    frame = _affine_uv(face.points, face.uvs, _tangents(face.direction))
+    if frame is None:
+        return None
+    origin, gradients = frame
+    # Only one full tile, with a signed axis permutation. No atlas rectangles.
+    flat = tuple(round(v, 6) for row in gradients for v in row)
+    if (any(v not in (-1, 0, 1) for v in flat)
+            or any(sum(abs(v) for v in row) != 1 for row in gradients)
+            or any(sum(abs(row[i]) for row in gradients) != 1 for i in range(2))
+            or any(abs(v - round(v)) > 1e-6 for v in origin)
+            or any(abs(min(uv[k] for uv in face.uvs)) > 1e-6
+                   or abs(max(uv[k] for uv in face.uvs) - 1) > 1e-6 for k in range(2))):
+        return None
+    return tuple(round(v, 6) for v in origin), flat
+
+
+def _rectangles(pairs):
+    """Deterministic greedy rectangles, without repeated min(set) scans."""
+    remaining = set(pairs)
+    for u, v in sorted(remaining):
+        if (u, v) not in remaining:
+            continue
+        width = 1
+        while (u + width, v) in remaining:
+            width += 1
+        height = 1
+        while all((u + du, v + height) in remaining for du in range(width)):
+            height += 1
+        for dv in range(height):
+            remaining.difference_update((u + du, v + dv) for du in range(width))
+        yield u, v, width, height
+
+
+def _validate_options(pivot, cull, merge_faces):
+    if cull not in {"none", "opaque", "same"}:
+        raise ValueError("cull must be 'none', 'opaque' or 'same'")
+    if not isinstance(merge_faces, bool):
+        raise ValueError("merge_faces must be bool")
+    try:
+        pivot = tuple(float(v) for v in pivot)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("pivot must contain three finite MC coordinates") from exc
+    if len(pivot) != 3 or not all(math.isfinite(v) for v in pivot):
+        raise ValueError("pivot must contain three finite MC coordinates")
+    return pivot
+
+
+def build_geometry(cells, resolve, *, pivot=(0, 0, 0), cull="opaque",
+                   merge_faces=True, dependencies=()):
+    """Pure geometry path; resolve(name, properties) returns a Prototype.
+
+    Dependency digests supplement the resolved geometry in the recipe. Each
+    unique state is resolved once per bake, not once per cell.
+    """
+    pivot = _validate_options(pivot, cull, merge_faces)
+    if not cells:
+        raise ValueError("Cannot bake empty Blocks")
+    states, prototypes, normalized = {}, {}, []
+    for pos, cell in sorted(cells.items()):
+        if (len(pos) != 3 or any(isinstance(v, bool) or not isinstance(v, int) for v in pos)):
+            raise ValueError(f"Invalid integer cell coordinate: {pos!r}")
+        name = str(cell["name"]).lower().removeprefix("minecraft:")
+        props = dict(cell.get("properties") or {})
+        key = name, tuple(sorted((str(k), str(v)) for k, v in props.items()))
+        if key not in prototypes:
+            proto = resolve(name, dict(key[1]))
+            if not proto.faces:
+                raise ValueError(f"No JSON geometry for {name}")
+            prototypes[key] = proto
+        states[pos] = key
+        normalized.append((pos, key))
+
+    quads, groups = [], defaultdict(dict)
+    raw_count = visible_count = 0
+    ue_pivot = pivot[0], pivot[2], pivot[1]
+    for pos, key in states.items():
+        proto = prototypes[key]
+        center = pos[0], pos[2], pos[1]
+        for face in proto.faces:
+            raw_count += 1
+            if cull != "none" and face.cullable and face.direction:
+                n = _DIRECTIONS[face.direction]
+                neighbor = states.get((pos[0] + n[0], pos[1] + n[2], pos[2] + n[1]))
+                if neighbor is not None:
+                    other = prototypes[neighbor]
+                    if other.full and (other.opaque or
+                            (cull == "same" and proto.full and key[0] == neighbor[0])):
+                        continue
+            visible_count += 1
+            frame = _repeat_frame(face) if merge_faces else None
+            if frame is not None:
+                a, b = _tangents(face.direction)
+                normal_axis = next(i for i, v in enumerate(_DIRECTIONS[face.direction]) if v)
+                group = face.texture, face.direction, center[normal_axis], frame
+                pair = center[a], center[b]
+                if pair not in groups[group]:
+                    groups[group][pair] = face
+                    continue
+                # Preserve authored layers; a set of rectangles cannot encode
+                # multiple coplanar source faces at the same grid coordinate.
+            points = tuple(tuple(100 * (p[i] + center[i] - ue_pivot[i])
+                                 for i in range(3)) for p in face.points)
+            quads.append((points, face.uvs, face.texture))
+
+    for (_, direction, plane, frame), pairs in sorted(groups.items()):
+        a, b = _tangents(direction)
+        for u, v, width, height in _rectangles(pairs):
+            face = pairs[u, v]
+            points, uvs = [], []
+            for point in face.points:
+                local = list(point)
+                local[a] = u - .5 + (point[a] + .5) * width
+                local[b] = v - .5 + (point[b] + .5) * height
+                normal_axis = next(i for i, n in enumerate(_DIRECTIONS[direction]) if n)
+                local[normal_axis] += plane
+                points.append(tuple(100 * (local[i] - ue_pivot[i]) for i in range(3)))
+                origin, gradient = frame
+                du, dv = (point[a] + .5) * width, (point[b] + .5) * height
+                uvs.append((origin[0] + gradient[0] * du + gradient[1] * dv,
+                            origin[1] + gradient[2] * du + gradient[3] * dv))
+            quads.append((tuple(points), tuple(uvs), face.texture))
+
+    if not quads:
+        raise ValueError("Baking produced no visible faces")
+    source_faces = [(key, proto.full, proto.opaque,
+                     [(f.points, f.uvs, f.texture, f.direction, f.cullable, f.repeatable)
+                      for f in proto.faces]) for key, proto in sorted(prototypes.items())]
+    recipe_data = (BAKE_VERSION, pivot, cull, merge_faces, normalized,
+                   source_faces, sorted(dependencies))
+    recipe = sha256(json.dumps(recipe_data, separators=(",", ":"),
+                               ensure_ascii=True, allow_nan=False).encode()).hexdigest()
+    textures = sorted({q[2] for q in quads})
+    return BakeGeometry(quads, textures, recipe, {
+        "version": BAKE_VERSION, "cells": len(cells), "raw_faces": raw_count,
+        "visible_faces": visible_count, "quads": len(quads),
+        "triangles": len(quads) * 2, "materials": len(textures)})
+
+
+def _canonical_uv(direction, p):
+    # Same unrotated full-face UV convention as mc_importer (including down).
+    x, y, z = (v + .5 for v in p)
+    return {"north": (x, 1-z), "south": (x, 1-z),
+            "east": (1-y, 1-z), "west": (y, 1-z),
+            "up": (x, y), "down": (x, y)}[direction]
+
+
+def _locked_uvs(original, transformed, uvs, source_dir, target_dir):
+    """Convert blockstate uvlock into UVs, not per-instance shader markers."""
+    source = [_canonical_uv(source_dir, p) + (0,) for p in original]
+    # _affine_uv uses +.5; remove it here to express the canonical [0,1] frame.
+    shifted = [(p[0] - .5, p[1] - .5, 0) for p in source]
+    frame = _affine_uv(shifted, uvs, (0, 1))
+    if frame is None:
+        return uvs
+    origin, gradients = frame
+    return tuple(tuple(origin[k] + gradients[k][0] * uv[0]
+                       + gradients[k][1] * uv[1] for k in range(2))
+                 for uv in (_canonical_uv(target_dir, p) for p in transformed))
+
+
+class _SourceResolver:
+    """Per-call source/texture reuse. No module-global source cache."""
+    def __init__(self):
+        import mc_importer
+        import mc_structure
+        self.importer, self.structure = mc_importer, mc_structure
+        self.models, self.textures, self.files, self.blockstates = {}, {}, {}, {}
+
+    def _remember(self, path):
+        path = Path(path).resolve()
+        key = str(path)
+        if key not in self.files:
+            self.files[key] = sha256(path.read_bytes()).hexdigest()
+
+    def _parents(self, path, visited=None):
+        visited = set() if visited is None else visited
+        path = Path(path).resolve()
+        if path in visited:
+            raise ValueError(f"Cyclic model parents: {path}")
+        visited.add(path)
+        self._remember(path)
+        parent = json.loads(path.read_text(encoding="utf-8")).get("parent")
+        if parent and not parent.startswith(("builtin/", "item/generated")):
+            self._parents(self.importer._resolve_model_reference(path, parent), visited)
+
+    def _texture(self, path):
+        path = Path(path).resolve()
+        key = str(path)
+        if key not in self.textures:
+            from PIL import Image
+            self._remember(path)
+            metadata = Path(str(path) + ".mcmeta")
+            if metadata.exists():
+                self._remember(metadata)
+            with Image.open(path) as image:
+                opaque = image.convert("RGBA").getchannel("A").getextrema()[0] == 255
+                square = image.width == image.height
+            animated = metadata.exists() and "animation" in json.loads(metadata.read_text(encoding="utf-8"))
+            self.textures[key] = opaque, square and not animated
+        return key, self.textures[key]
+
+    def _uvlock(self, name, model, rotation):
+        if name not in self.blockstates:
+            path = self.importer._blockstates_dir() / (name + ".json")
+            nodes = []
+            def visit(value):
+                if isinstance(value, dict):
+                    if "model" in value:
+                        nodes.append(value)
+                    for item in value.values():
+                        visit(item)
+                elif isinstance(value, list):
+                    for item in value:
+                        visit(item)
+            if path.exists():
+                self._remember(path)
+                visit(json.loads(path.read_text(encoding="utf-8")))
+            self.blockstates[name] = nodes
+        pitch, yaw, roll = rotation
+        return any(n.get("uvlock") is True and n["model"].split("/")[-1].split(":")[-1] == model
+                   and abs(pitch) < 1e-6
+                   and (float(n.get("y", 0)) - yaw) % 360 == 0
+                   and (float(n.get("x", 0)) - roll) % 360 == 0
+                   for n in self.blockstates[name])
+
+    def __call__(self, name, properties):
+        faces, opacity = [], []
+        for model, pitch, yaw, roll in self.structure.structure_parts(name, properties):
+            if model not in self.models:
+                path = self.structure.resolve_block_json_path(model)
+                if path is None:
+                    raise ValueError(f"No JSON model for {name}: {model}")
+                path = Path(path)
+                self._parents(path)
+                data = self.importer._load_mc_model(path)
+                collected = self.importer._collect_block_model(path, data, model)
+                if not collected or collected[0] != "block":
+                    raise ValueError(f"Baking requires JSON elements: {model}")
+                # Explicit translucency is also non-occluding, even with an
+                # all-opaque PNG. Be conservative for any such model texture.
+                translucent = any(isinstance(value, dict) and value.get("force_translucent")
+                                  for value in (data.get("textures") or {}).values())
+                self.models[model] = collected[2], bool(translucent)
+            quaternion = rotator_quaternion(pitch, yaw, roll)
+            locked = self._uvlock(name, model, (pitch, yaw, roll))
+            source_faces, translucent = self.models[model]
+            for source in source_faces:
+                original = tuple((v.x / 100, v.y / 100, v.z / 100) for v in source["vertices"])
+                points = tuple(tuple(round(v, 9) for v in _rotate(quaternion, p)) for p in original)
+                direction = _axis_face(points)
+                source_dir, target_dir = _normal_direction(original), _normal_direction(points)
+                uvs = tuple((v.x, v.y) for v in source["uv_corners"])
+                if locked and target_dir and source_dir:
+                    uvs = _locked_uvs(original, points, uvs, source_dir, target_dir)
+                texture, (opaque, repeatable) = self._texture(source["texture_file"])
+                full = _full_face(points, direction)
+                # A declared cullface must be the actual boundary face after rotation.
+                declared = (source.get("cullface") == source_dir and source_dir is not None
+                            and direction == target_dir and _within_cell_face(points, direction))
+                faces.append(Face(points, uvs, texture, direction,
+                                  declared,
+                                  full and repeatable))
+                opacity.append(opaque and not translucent)
+        full = (len(faces) == 6 and {f.direction for f in faces} == set(_DIRECTIONS)
+                and all(_full_face(f.points, f.direction) for f in faces))
+        if full:
+            faces = [replace(face, cullable=True) for face in faces]
+        return Prototype(tuple(faces), full, full and all(opacity))
+
+
+def resolve_geometry(cells, **options):
+    resolver = _SourceResolver()
+    # Resolve before hashing; dependency collection is populated during traversal.
+    geometry = build_geometry(cells, resolver, **options)
+    geometry.recipe = sha256((geometry.recipe + json.dumps(sorted(resolver.files.items()),
+                                                          separators=(",", ":"))).encode()).hexdigest()
+    return geometry
+
+
+def _dynamic_mesh(geometry):
+    mesh = unreal.DynamicMesh()
+    unreal.GeometryScript_Materials.enable_material_i_ds(mesh)
+    by_texture = defaultdict(list)
+    for quad in geometry.quads:
+        by_texture[quad[2]].append(quad)
+    for slot, texture in enumerate(geometry.textures):
+        vertices, triangles, normals, uv0 = [], [], [], []
+        for points, uvs, _ in by_texture[texture]:
+            offset = len(vertices)
+            u = tuple(points[1][i] - points[0][i] for i in range(3))
+            v = tuple(points[2][i] - points[0][i] for i in range(3))
+            cross = (u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0])
+            length = math.sqrt(sum(n*n for n in cross))
+            if length < 1e-8:
+                raise ValueError("Degenerate source face")
+            # UE's clockwise face convention uses the negative Cartesian cross.
+            normal = unreal.Vector(*(-n / length for n in cross))
+            vertices.extend(unreal.Vector(*p) for p in points)
+            normals.extend([normal] * 4)
+            uv0.extend(unreal.Vector2D(*uv) for uv in uvs)
+            triangles.extend((unreal.IntVector(offset, offset+1, offset+2),
+                              unreal.IntVector(offset, offset+2, offset+3)))
+        buffers = unreal.GeometryScriptSimpleMeshBuffers(
+            vertices=vertices, triangles=triangles, normals=normals, uv0=uv0,
+            vertex_colors=[unreal.LinearColor(1, 1, 1, 1)] * len(vertices))
+        unreal.GeometryScript_MeshEdits.append_buffers_to_mesh(mesh, buffers, material_id=slot)
+    if mesh.get_triangle_count() != geometry.stats["triangles"]:
+        raise RuntimeError("Incomplete baked mesh buffers")
+    return mesh
+
+
+def bake_blocks(blocks, *, destination_path="/Game/mc/baked", asset_name=None,
+                pivot=(0, 0, 0), cull="opaque", merge_faces=True, reload=False):
+    """Create/reuse one saved mesh. Asset reuse is guarded by a source recipe."""
+    import mc_importer
+    if not isinstance(reload, bool):
+        raise ValueError("reload must be bool")
+    destination_path = str(destination_path).rstrip("/")
+    if not re.fullmatch(r"/Game(?:/\w+)*", destination_path):
+        raise ValueError("destination_path must be a /Game package directory")
+    asset_name = mc_importer._sanitize_asset_name(asset_name or blocks.name)
+    asset_path = destination_path + "/" + asset_name
+    geometry = resolve_geometry(blocks.copy_cells(), pivot=pivot, cull=cull, merge_faces=merge_faces)
+    existing = unreal.load_asset(asset_path) if unreal.EditorAssetLibrary.does_asset_exist(asset_path) else None
+    if existing is not None:
+        if not isinstance(existing, unreal.StaticMesh):
+            raise ValueError(f"Target is not a StaticMesh: {asset_path}")
+        recipe = unreal.EditorAssetLibrary.get_metadata_tag(existing, RECIPE_TAG)
+        if recipe == geometry.recipe and not reload:
+            return existing
+        if not reload:
+            raise ValueError(f"Different bake recipe at {asset_path}; use reload=True to replace")
+    dynamic_mesh = _dynamic_mesh(geometry)
+    # Validate first; only now create material/texture packages and the mesh.
+    materials = mc_importer._materials_for_files(
+        [Path(p) for p in geometry.textures], destination_path, two_sided=cull == "same")
+    if any(material is None for material in materials):
+        raise RuntimeError("Baking failed to resolve a material")
+    if not unreal.EditorAssetLibrary.does_directory_exist(destination_path):
+        if not unreal.EditorAssetLibrary.make_directory(destination_path):
+            raise RuntimeError(f"Cannot create asset directory: {destination_path}")
+    # Use the importer's creator for new assets; explicitly check write outcomes.
+    if existing is None:
+        mesh, outcome = unreal.GeometryScript_NewAssetUtils.create_new_static_mesh_asset_from_mesh(
+            dynamic_mesh, asset_path, unreal.GeometryScriptCreateNewStaticMeshAssetOptions())
+    else:
+        mesh = existing
+        _, outcome = unreal.GeometryScript_AssetUtils.copy_mesh_to_static_mesh(
+            dynamic_mesh, mesh, unreal.GeometryScriptCopyMeshToAssetOptions(
+                replace_materials=True, new_materials=materials), unreal.GeometryScriptMeshWriteLOD())
+    if mesh is None or outcome != unreal.GeometryScriptOutcomePins.SUCCESS:
+        raise RuntimeError(f"Failed to write baked mesh: {asset_path} ({outcome})")
+    for slot, material in enumerate(materials):
+        mesh.set_material(slot, material)
+    unreal.EditorAssetLibrary.set_metadata_tag(mesh, RECIPE_TAG, geometry.recipe)
+    unreal.EditorAssetLibrary.set_metadata_tag(mesh, STATS_TAG, json.dumps(geometry.stats, sort_keys=True))
+    if not unreal.EditorAssetLibrary.save_loaded_asset(mesh):
+        raise RuntimeError(f"Failed to save baked mesh: {asset_path}")
+    return mesh

@@ -299,4 +299,4 @@ subsystem.spawn_and_register_tab_with_id(widget_bp, {id})
         mod_path = f'{cls.__module__}.{cls.__name__}'
         mcvars.RegisteredMods.pop(mod_path, None)
         menus = unreal.ToolMenus.get()
-        menus.remove_entry("LevelEditor.MainMenu.mineprep", "mods", mod_path)
+        menus.remove_entry("LevelEditor.MainMenu.mineprep", cls._menu_, mod_path)

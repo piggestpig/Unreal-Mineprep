@@ -2,11 +2,14 @@
 from pathlib import Path
 import json
 import numpy as np
+from mc_math import validate_packed
 
-ENCODING_VERSION = 'bpt-brt-f32-1'
+ENCODING_VERSION = 'bpt-brt-f32-3'
 
 
 def encode_arrays(payloads, max_side=16384):
+    # Check every payload before allocating or writing any result.
+    payloads = {name: validate_packed(p) for name, p in payloads.items()}
     if len(payloads) > 2**24:
         raise ValueError('mesh type IDs exceed float32 texture integer precision')
     count = sum(len(p['pos']) for p in payloads.values())
@@ -21,14 +24,8 @@ def encode_arrays(payloads, max_side=16384):
     brt[:, 3] = 0
     cursor = 0
     for type_id, payload in enumerate(payloads.values()):
-        pos = np.asarray(payload['pos'], dtype=np.float32)
-        rot = np.asarray(payload['rot'], dtype=np.float32)
-        scale = np.asarray(payload.get('scale', np.ones_like(pos)), dtype=np.float32)
+        pos, rot, scale = payload['pos'], payload['rot'], payload['scale']
         n = len(pos)
-        if (pos.shape != (n, 3) or rot.shape != (n,) or scale.shape != (n, 3)
-                or not all(np.isfinite(a).all() for a in (pos, rot, scale))
-                or np.any(rot != np.floor(rot)) or np.any((rot < 0) | (rot > 7))):
-            raise ValueError('invalid packed pos/rot/scale arrays')
         dest = slice(cursor, cursor+n)
         bpt[dest, :3], bpt[dest, 3] = pos[:, ::-1]/100, type_id
         brt[dest, :3], brt[dest, 3] = scale[:, ::-1], rot

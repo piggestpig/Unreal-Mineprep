@@ -7,6 +7,8 @@ from mods.EditorShortcuts import ops
 
 items = ops.get_shortcuts()          # 名称 -> {chord_text, tooltip, code}
 ops.execute_shortcut('放置空物体')    # 立即执行，无返回值
+mineprep.hotkey()                      # 打印全部快捷键：按键、提示
+mineprep.hotkey('放置空物体')           # 公共入口，内部同样调用 execute_shortcut
 
 name = ops.add_shortcut('我的快捷键')
 code = "unreal.log('hello')"

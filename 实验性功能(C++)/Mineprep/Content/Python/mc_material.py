@@ -120,12 +120,14 @@ def _blit_texture(tex, w, h):
     ctx_world = world()
     rt = unreal.RenderingLibrary.create_render_target2d(
         ctx_world, w, h, FORMAT, CLEAR)
-    rt.set_editor_property('clear_color', CLEAR)
-    rt.set_editor_property('filter', NEAREST)
-    rt.set_editor_property('address_x', CLAMP)
-    rt.set_editor_property('address_y', CLAMP)
-    rt.set_editor_property('render_target_format', FORMAT)
-    rt.set_editor_property('srgb', True)
+    rt.set_editor_properties(dict(
+        clear_color=CLEAR,
+        filter=NEAREST,
+        address_x=CLAMP,
+        address_y=CLAMP,
+        render_target_format=FORMAT,
+        srgb=True,
+    ))
     _force_update(rt)
     _force_update(tex)
     canvas, size, ctx = unreal.RenderingLibrary.begin_draw_canvas_to_render_target(

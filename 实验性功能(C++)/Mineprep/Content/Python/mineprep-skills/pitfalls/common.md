@@ -24,6 +24,7 @@ Module-specific references (read the relevant topic):
 | Panel shows old fields / ops use old names | Registration alone does not reload code; open panels retain objects | Full `mineprep.reload()` clears reloadable Mod submodules; reopen the panel. Other lifecycles: [../mods.md](../mods.md) |
 | Props attrs empty in ops | Read class attrs or passed class not instance | Instantiate `Props()` in the UI; pass its values to core operations. [Callable operations](../mods.md#callable-operations) |
 | Re-import JSON but mesh unchanged | `import_block` skips existing asset | `reload=True` when the source changed; no asset deletion is needed |
+| `ValueError` on an existing block mesh (`MineprepModelFrame`) | Tag is not `cell-center-1` | `reload=True` or clear the mesh. Item meshes are not checked. [../structure.md](../structure.md) |
 | `unreal.mineprep.panel` missing | C++ BFL ≠ Python module | `import mineprep` then `mineprep.panel`; experimental C++: [../cpp.md](../cpp.md) |
 | `spawn_mob` logs `不存在` after `reload()`; actor still appears; `loc=` ignored | Blueprint wrote `mineprep.ActorCache`; handshake is `mcvars.ActorCache` | Assign `mcvars.ActorCache` (and spawn name/id caches). Restart also works until the next reload. [../api.md](../api.md) § Spawn |
 
@@ -57,11 +58,31 @@ for supplied structure files or composed cells; see [structure.md](../structure.
 
 | Symptom | Cause | Fix |
 |---------|--------|-----|
-| First sample / bake **all black**; second run OK | CPU/Source updated; GPU Resource not ready | `unreal.LandmassBlueprintFunctionLibrary.force_update_texture(tex)` on the **source Texture2D** before `set_texture_parameter_value` / `draw_material_to_render_target` |
+| First sample / bake **all black**; second run OK | May be unfinished source Texture2D compilation or invalid platform data | Follow completion guidance below; do not use `modify()` / Landmass force-update as an asynchronous-build wait |
 | Canvas RT goes **white / empty** after load, save, or `force_update` | `force_update_texture(rt)` → `UpdateResource()` rebuilds GPU from **clear color** | Never `force_update` a **painted** canvas RT. Only after **create / resize**, and **before** blit or paint |
 | Exported PNG / saved skin **much darker** than the paint view | `RTF_RGBA8` is linear; PNG writer dumps U8 bytes | `RTF_RGBA8_SRGB`. Do **not** also set `target_gamma=2.2` on an sRGB RT |
 
-`mc_prep.prep_texture` already force-updates. Paint coverage / `draw_line`: [../ui.md](../ui.md) § Sketch RT + [ui.md](ui.md). VAT bake DA: [vat.md](vat.md).
+### Source Texture2D completion
+
+- Use `mc_prep.prep_texture`; optional `unreal.mineprep.finish_build_texture`
+  waits for async compilation and can rebuild invalid platform data. Check
+  availability and result; deduplicate assets before synchronous completion.
+- Texture `Modify()` and Landmass force-update can cancel unfinished compilation.
+  They are not substitutes for waiting. Preserve the texture object and its
+  material references; do not reset healthy reused textures.
+- Without native completion, yield until the real engine frame changes and
+  recheck. Unconditional save (`only_if_is_dirty=False`) invokes PreSave without
+  a preceding `modify()`. Invalid derived data may require a new build key;
+  avoid same-frame polling, fixed sleeps and bulk reimports.
+- Separate reference integrity, platform readiness and rendered correctness.
+  Check expected source dimensions and platform memory together: nonempty
+  compiler placeholders can have different dimensions. Black output alone does
+  not identify a PNG encoding or path defect. Report affected assets and the
+  caller's chosen failure policy; do not cache an unready result as successful.
+
+This applies to imported source Texture2D data, not painted canvas RTs. Paint
+coverage / `draw_line`: [../ui.md](../ui.md) § Sketch RT + [ui.md](ui.md).
+VAT bake DA: [vat.md](vat.md).
 
 ## warn
 

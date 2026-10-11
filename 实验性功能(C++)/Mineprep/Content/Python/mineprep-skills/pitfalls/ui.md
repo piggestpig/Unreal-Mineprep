@@ -1,6 +1,6 @@
 # Pitfalls — Layout / PropertyGroup / paint RT
 
-Open with [../ui.md](../ui.md). Common reload / instantiate / `force_update`: [common.md](common.md). Pattern: `mods/Skin_Editor/paint.py`.
+Open with [../ui.md](../ui.md). Common reload / instantiate / `force_update`: [common.md](common.md).
 
 ## PropertyGroup / SoftObjectPath
 
@@ -24,13 +24,14 @@ Open with [../ui.md](../ui.md). Common reload / instantiate / `force_update`: [c
 | Footer hugs content inside a `switcher` page | switcher/page default packs to the top | `layout.switcher(align=(0, 0), fill=1)` then `pages.col(align=(0, 0))`; footer `fill=1` + `align=(1, 3)` |
 | 「不支持的属性」 in a column | `layout.prop(group, 'ArrayField')` uses SinglePropertyView; arrays/sets/maps are unsupported there | `left.prop(group)` with no property name (full Details). One array per column → one PropertyGroup per column |
 | `module 'unreal' has no attribute 'is_valid'` | There is no `unreal.is_valid` | `unreal.SystemLibrary.is_valid(obj)` |
-| `SystemLibrary.is_valid(DetailsView)` throws `ObjectInstance is null` | Destroyed/stale UMG widget: Python `is_valid` does **not** return False | `try/except` around `is_valid`; `Mod.destruct` unbind selection (Skin Editor `_alive_layout`) |
+| `SystemLibrary.is_valid(DetailsView)` throws `ObjectInstance is null` | Destroyed/stale UMG widget: validity checks may raise | Guard the check; unbind selection callbacks in `Mod.destruct` |
 | `TypeError: DeprecateSlateVector2D` on Image | `brush.image_size = Vector2D` | `set_desired_size_override(size)` |
 | `Text + str` or `str.join(notes)` raises `TypeError` | `bilingual()` / `localize()` return `unreal.Text` | Convert before concatenation / join; `set_text` accepts Text directly |
 | Mod Manager-style toggle needs full rebuild | Structural rows depend on flag | `on_property_changed=lambda _: self.redraw()` (OK **outside** `draw`) |
 | `ZeroDivisionError` on Border mouse / `get_local_size` is `(0,0)` | Python `FGeometry` is an empty copy — **UMG Geometry** below | `layout.border` callback `Layout`; `get_mouse_local` / `get_mouse_uv` |
 | `NameError: name 'Layout' is not defined` on `reload()` | `Callable[[Layout], ...]` inside `class Layout` is evaluated while the class is still being created | `Callable[['Layout'], ...]` (quotes) |
 | Image on a paint Border never gets Down/Move | Child `Image` is `Visible` and eats the hit | `SELF_HIT_TEST_INVISIBLE` on the Image |
+| `EditorUtilityComboBoxString` text is black | Python `construct` is not an editor widget, so `foreground_color` stays `(0,0,0)` and is copied only in `RebuildWidget` | Set it in `custom(..., props=)` before parenting. A later change needs `remove_from_parent` and add again. Not a localization widget — [../ui.md](../ui.md) |
 
 `Layout.hide(True)` → Collapsed; `hide(False)` → Visible (bool cast to `SlateVisibility` index).
 

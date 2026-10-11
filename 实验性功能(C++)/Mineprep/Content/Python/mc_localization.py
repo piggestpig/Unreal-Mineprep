@@ -71,6 +71,9 @@ class tooltip(str):
         '所有插件面板': lambda x: bilingual(
             '【mineprep.panel() 可用的对象->类别】',
             'Available objects -> classes for mineprep.panel()'),
+        '所有快捷键': lambda x: bilingual(
+            '【mineprep.hotkey() 全部快捷键】',
+            'All shortcuts for mineprep.hotkey()'),
         '未找到面板': lambda x: bilingual(
             f'未找到"{x}", 运行 mineprep.panel() 在日志中打印所有控件',
             f'No widget found for "{x}", run mineprep.panel() to print all available widgets'),

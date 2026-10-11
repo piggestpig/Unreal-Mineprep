@@ -4,10 +4,6 @@ import unreal
 import mineprep
 
 
-MATERIAL_DETAILS = (
-    '/Mineprep/Python/mods/Skin_Editor/MaterialDetailsView.MaterialDetailsView')
-
-
 def _alive(obj):
     return bool(obj) and unreal.SystemLibrary.is_valid(obj)
 

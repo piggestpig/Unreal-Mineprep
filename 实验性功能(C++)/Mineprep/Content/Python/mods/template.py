@@ -19,7 +19,7 @@ mod_info = {
 # mineprep.Mod在__init__中调用draw()构建界面；需要重绘时可绑定self.redraw到on_clicked等事件
 # 如果不需要UI界面，可以重载__new__，此时 self.layout 默认为 None
 class mod_template(mineprep.Mod):
-    # _label_ = bilingual('工具栏显示名称', 'Toolbar Display Name')
+    # _label_ = mineprep.bilingual('工具栏显示名称', 'Toolbar Display Name')
     # _unique_ = True  # 单例模式，多次点击工具栏只打开一个模组面板
 
     # def __init__(self, context=None):
@@ -32,7 +32,7 @@ class mod_template(mineprep.Mod):
         layout.button(mineprep.bilingual("打开Python文件", "Open Python File"),
                       on_clicked=lambda: mineprep.startfile(__file__))
 
-    # 其他可重载函数。on_key_down 请调用 super()，以保留 Pause/Break 打开模组目录
+    # 其他可重载函数
     # def destruct(self):
     # def on_key_down(self, key: unreal.Key):
     # def on_key_up(self, key: unreal.Key):

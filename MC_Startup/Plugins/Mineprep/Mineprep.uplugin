@@ -18,11 +18,11 @@
     "NoCode": true,
     "Plugins": [
         {
-            "Name": "AllToolsets",
+            "Name": "ActorSequence",
             "Enabled": true
         },
         {
-            "Name": "ActorSequence",
+            "Name": "AllToolsets",
             "Enabled": true
         },
         {
@@ -86,6 +86,10 @@
         },
         {
             "Name": "DeformerGraph",
+            "Enabled": true
+        },
+        {
+            "Name": "GameplayInteractions",
             "Enabled": true
         },
         {

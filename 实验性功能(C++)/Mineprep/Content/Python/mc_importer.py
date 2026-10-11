@@ -5,6 +5,7 @@ import re
 import struct
 
 import unreal
+from mc_math import MODEL_FRAME, model_vertices_to_ue
 from mc_prep import prep_texture, colorize_material
 from mc_utils import warn, get_tex_size
 
@@ -78,12 +79,14 @@ UVLOCK_FACE_AXIS_ALPHA = {
 _CUBE_FACE_NAMES = frozenset(FACE_NAMES)
 BASE_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面1_材质实例.LabPBR单面1_材质实例"
 ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面2_材质实例.LabPBR单面2_材质实例"
+TWO_SIDED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR1_基础_材质实例.LabPBR1_基础_材质实例"
+TWO_SIDED_ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR2_动画_材质实例.LabPBR2_动画_材质实例"
 BASE_TEXTURE_PARAMETER_NAME = "纹理贴图"
 
 # blockstates 中出现过 uvlock:true 的模型名（不含 .json）缓存
 _UVLOCK_MODEL_NAMES_CACHE = None
 # 样式 key → 已建碰撞的原型网格路径。仅当前编辑器会话有效。
-_MESH_STYLE_VERSION = 1
+_MESH_STYLE_VERSION = 2
 _MESH_STYLE_CACHE = {}
 
 
@@ -350,11 +353,11 @@ def _is_square_texture(texture_asset) -> bool:
     return width == height
 
 
-def _material_instance_path_for_texture(texture_asset) -> str:
+def _material_instance_path_for_texture(texture_asset, *, two_sided=False) -> str:
     """由贴图路径推导对应材质实例路径"""
     if _is_square_texture(texture_asset):
-        return BASE_MATERIAL_INSTANCE_PATH
-    return ANIMATED_MATERIAL_INSTANCE_PATH
+        return TWO_SIDED_MATERIAL_INSTANCE_PATH if two_sided else BASE_MATERIAL_INSTANCE_PATH
+    return TWO_SIDED_ANIMATED_MATERIAL_INSTANCE_PATH if two_sided else ANIMATED_MATERIAL_INSTANCE_PATH
 
 
 def _sample_texture_alpha_mask(texture_asset, alpha_threshold=0.5, max_resolution=32):
@@ -579,15 +582,15 @@ def _import_texture_asset(source, texture_package_path, asset_name=None) -> unre
     texture_name = _sanitize_asset_name(asset_name or source.stem)
     imported = _run_import_task(_make_import_task(source, texture_package_path, texture_name))
     texture_asset = imported[0]
-    prep_texture(texture_asset)
+    prep_texture(texture_asset, detect_normal=True)
     return texture_asset
 
 
-def _create_texture_material(texture_asset, destination_path, asset_name) -> unreal.MaterialInstanceConstant:
+def _create_texture_material(texture_asset, destination_path, asset_name, *, two_sided=False) -> unreal.MaterialInstanceConstant:
     """为贴图创建/更新材质实例"""
     material_name = _mc_material_asset_name(asset_name)
     material_path = _asset_path(destination_path, material_name)
-    base_material_path = _material_instance_path_for_texture(texture_asset)
+    base_material_path = _material_instance_path_for_texture(texture_asset, two_sided=two_sided)
     material = _load_asset_if_exists(material_path, unreal.MaterialInstanceConstant)
     if material is None:
         material = unreal.EditorAssetLibrary.duplicate_asset(base_material_path, material_path)
@@ -1043,15 +1046,6 @@ def _load_mc_model(model_path):
     return result
 
 
-def _mc_point_to_ue(mc_pos) -> unreal.Vector:
-    """MC 坐标点转到 UE 厘米坐标"""
-    return unreal.Vector(
-        (float(mc_pos[0]) - 8.0) * MC_UNIT_TO_CM,
-        (float(mc_pos[2]) - 8.0) * MC_UNIT_TO_CM,
-        float(mc_pos[1]) * MC_UNIT_TO_CM,
-    )
-
-
 def _mc_rotate_point_raw(mc_pos, origin, axis, angle_deg):
     """按 MC 元素旋转绕轴旋转点"""
     axis_index = ord(str(axis).lower()) - ord("x")
@@ -1117,17 +1111,8 @@ def _build_element_corners(bounds_from, bounds_to, rotation=None):
             position = _mc_rotate_point_raw(position, origin, axis, angle)
             if rescale:
                 position = _mc_rescale_point_raw(position, origin, axis, angle)
-        corners.append(_mc_point_to_ue(position))
-    return corners
-
-
-def _mc_to_ue_center(bounds_from, bounds_to) -> tuple[float, float, float]:
-    """元素包围盒中心转 UE"""
-    return (
-        ((float(bounds_from[0]) + float(bounds_to[0])) * 0.5 - 8.0) * MC_UNIT_TO_CM,
-        ((float(bounds_from[2]) + float(bounds_to[2])) * 0.5 - 8.0) * MC_UNIT_TO_CM,
-        ((float(bounds_from[1]) + float(bounds_to[1])) * 0.5) * MC_UNIT_TO_CM,
-    )
+        corners.append(position)
+    return [unreal.Vector(*map(float, p)) for p in model_vertices_to_ue(corners)]
 
 
 def _mc_to_ue_dimensions(bounds_from, bounds_to) -> tuple[float, float, float]:
@@ -1247,7 +1232,7 @@ def _build_item_dynamic_mesh(width_cm, height_cm, thickness_cm, opaque_mask) -> 
     return mesh
 
 
-def _material_context_for_texture(texture_cache, material_cache, texture_source, texture_package, material_package):
+def _material_context_for_texture(texture_cache, material_cache, texture_source, texture_package, material_package, *, two_sided=False):
     """缓存并返回贴图对应的材质上下文"""
     texture_key = str(texture_source).lower()
     if texture_key not in texture_cache:
@@ -1257,6 +1242,7 @@ def _material_context_for_texture(texture_cache, material_cache, texture_source,
             texture_cache[texture_key],
             material_package,
             texture_source.stem,
+            two_sided=two_sided,
         )
     return texture_cache[texture_key], material_cache[texture_key]
 
@@ -1375,10 +1361,11 @@ def _uv_key(uv_corners) -> tuple:
 def _style_key(collected) -> tuple:
     """几何样式 key。不含贴图路径和方块名。"""
     if collected[0] == "fluid":
-        return (_MESH_STYLE_VERSION, "fluid", _q(collected[1]))
+        return (_MESH_STYLE_VERSION, MODEL_FRAME, "fluid", _q(collected[1]))
     _, apply_uvlock, faces = collected
     return (
         _MESH_STYLE_VERSION,
+        MODEL_FRAME,
         bool(apply_uvlock),
         tuple(
             (face["from"], face["to"], face["rotation"], face["face_name"], _uv_key(face["uv_corners"]), face["slot"])
@@ -1400,10 +1387,13 @@ def _texture_files_in_slot_order(faces) -> list:
     return files
 
 
-def _materials_for_files(texture_files, destination_path, category="block") -> list:
+def _materials_for_files(texture_files, destination_path, category="block", *, two_sided=False) -> list:
     """按槽位顺序创建材质；已有贴图沿用现有导入缓存"""
     texture_package = _mc_texture_path(destination_path, category)
     material_package = _mc_material_path(destination_path, category)
+    if two_sided:
+        # Keep names for colorize_material, but isolate from single-sided assets.
+        material_package = _normalize_package_path(material_package + "/two_sided")
     imported_textures = {}
     created_materials = {}
     materials = []
@@ -1414,6 +1404,7 @@ def _materials_for_files(texture_files, destination_path, category="block") -> l
             texture_file,
             texture_package,
             material_package,
+            two_sided=two_sided,
         )
         materials.append(material_asset)
     return materials
@@ -1441,6 +1432,7 @@ def _clone_styled_mesh(style_key, target_path, materials):
         return None
     for index, material in enumerate(materials):
         mesh.set_material(index, material)
+    unreal.EditorAssetLibrary.set_metadata_tag(mesh, 'MineprepModelFrame', MODEL_FRAME)
     unreal.EditorAssetLibrary.save_loaded_asset(mesh)
     unreal.log(f"import_block (json): duplicated style from {proto}")
     return mesh
@@ -1592,6 +1584,7 @@ def _collect_block_model(model_path, model_data, asset_name, fluid_level=0):
                 "to": to_key,
                 "rotation": rotation_key,
                 "face_name": face_name,
+                "cullface": face_data.get("cullface"),
                 "vertices": [corners[index] for index in face_indices],
                 "uv_corners": _compute_face_uv_corners(
                     face_name,
@@ -1724,6 +1717,9 @@ def import_block(
             if not reload:
                 existing_mesh = _load_asset_if_exists(target_mesh_path, unreal.StaticMesh)
                 if existing_mesh:
+                    if category == 'block' and unreal.EditorAssetLibrary.get_metadata_tag(
+                            existing_mesh, 'MineprepModelFrame') != MODEL_FRAME:
+                        raise ValueError(f'{target_mesh_path}: expected {MODEL_FRAME}; clear the old mesh or re-import with reload=True')
                     unreal.log(f"import_block (json): Asset already exists, skipping: {target_mesh_path}")
                     return existing_mesh
 
@@ -1759,6 +1755,7 @@ def import_block(
                     target_mesh_path,
                     materials,
                 )
+                unreal.EditorAssetLibrary.set_metadata_tag(mesh_asset, 'MineprepModelFrame', MODEL_FRAME)
                 _remember_style(style_key, target_mesh_path, _generate_collision(mesh_asset))
                 unreal.log(f"import_block created from json: {mesh_asset.get_path_name()}")
                 return mesh_asset

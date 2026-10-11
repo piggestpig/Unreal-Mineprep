@@ -176,5 +176,13 @@ class Umineprep : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static FString WidgetScreenshot(UWidget* Widget, const FString& Path = TEXT(""), float Delay = 0.f);
 
+	/**
+	 * 等待贴图平台数据编译完成。不调用 Modify()，因此不会取消正在进行的编译。
+	 * 若仍是占位图或没有 Mip，则强制重建一次并再次等待。
+	 * @return 之后不再使用编译器占位图
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static bool FinishBuildTexture(UTexture* Texture);
+
 
 };

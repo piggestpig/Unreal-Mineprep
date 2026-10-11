@@ -28,12 +28,10 @@ Call `mineprep.merge_skm` — [../api.md](../api.md). Implementation: `mc_mesh.p
 
 Dest exists on **VAT DA copy** is the opposite policy (load + reuse) — [vat.md](vat.md). Do not mix the two.
 
-## Generated meshes and skeletal import — verified UE 5.7
+## Generated meshes and skeletal import
 
-VanillaMobLoader demonstrates pure Python geometry/GLB generation followed by
-Interchange skeletal import and UE material assignment. Its CEM axis mapping,
-box UV layout, inflation and skin choices belong to that adapter, not to the
-general Mineprep API. Recheck translator behavior after engine upgrades.
+Keep pure geometry construction separate from editor import. Source-format axis
+and UV conventions belong to the adapter; check installed translator behavior.
 
 - Test geometry outside UE where possible. Use an asymmetric box with six
   marked faces; assert **position-to-UV corner pairs**, not only UV ranges or
@@ -62,6 +60,4 @@ general Mineprep API. Recheck translator behavior after engine upgrades.
 With reused assets, separate ownership from the complete build recipe. Recipe
 identity may depend on ordered inputs and options; a matching destination name
 alone is insufficient. Cleanup should touch only assets created by that operation.
-For material setters, verify the resulting reference: UE 5.7's
-`set_material_instance_texture_parameter_value` returned false in this workflow
-even when `get_material_instance_texture_parameter_value` confirmed assignment.
+For material setters, verify the resulting reference as well as the return value.

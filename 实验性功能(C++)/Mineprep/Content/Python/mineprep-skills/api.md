@@ -26,6 +26,7 @@ import mineprep
 | Spawn | `spawn_block/item/mob/preset`, `attach`, `spawn_blocks`, `spawn_structure`, `Blocks`, `structure_parts`, `get_all_blocks` |
 | Mesh | `merge_skm` |
 | Assets | `uasset`, `uclass`, `bpclass`, `construct`, `copy` |
+| Blueprint libs | `BPLib`, `EditorBPLib`, `BPLibCaller` — call a Blueprint function library by function, attribute, or subscript. Not `unreal.mineprep` |
 | Utils | `prints`, `warn`, `throw`, `panic`, `undo`, `world`, `cast`, `enum`, `startfile`, `dialog`, file dialogs, `send2trash`, `screenshot` |
 | Parallel | `delay`, `tick`, `asynctask`, `thread`, `asyncthread`, `until` — [parallel.md](parallel.md) |
 | Prep | `prep_texture`, `colorize_material`, `load_mcprep_data`, `tex_to_color`, `color_to_tex`, `ColorList` |
@@ -130,19 +131,18 @@ r.key('head', unreal.Rotator(pitch=28, yaw=0, roll=0), 8)  # int=frame, float=se
 
 On a newly created Control Rig track, even `Rig.key()` can return before any keys exist when creation and first keying happen in the same editor tick. Let the editor process a frame (for example, use a subsequent MCP call), then key and inspect the actual channels. Do not recreate tracks repeatedly or report success from the return value alone.
 
-UE 5.8.2 runtime check (2026-09-22): after track initialization, frame 24 and 1.0 seconds matched at 24 fps; omitted time read frame 0. Reads left the 18 test keys, playhead and observed skeletal bone transform unchanged. Other rig types and all control types were not exhaustively tested. UE 5.8 may emit `find_control` / control-settings deprecation warnings.
-
 Axes, retiming, split Body/Head SKMs: [pitfalls/anim.md](pitfalls/anim.md).
 
 ## Plugin chrome (`panel` / `toolbar` / `hotkey`)
 
-These talk to Mineprep's editor widgets / hotkey Blueprint, not to arbitrary UMG.
+`panel` and `toolbar` talk to Mineprep's editor widgets / hotkey Blueprint, not to arbitrary UMG. `hotkey()` with no name prints every shortcut (chord, tooltip). `hotkey(name)` runs the Editor Shortcuts mod (`execute_shortcut`): saved Python when that shortcut has code, otherwise the same-named function on `/Mineprep/Mineprep自定义快捷键`.
 
 ```python
 mineprep.panel()                         # print cached widget paths (avoid under RE)
 w = mineprep.panel('生成器子面板.放置方块选项')
 mineprep.toolbar('SomeToolbarButton')
-mineprep.hotkey('SomeFunction')
+mineprep.hotkey()                        # print every shortcut
+mineprep.hotkey('放置空物体')
 ```
 
 `panel` reads `WidgetsCache` (`public=True`, or `mcvars.DebugMode`). Lookup is exact; a miss warns with substring candidates. Remote Mod / `ui` tabs: [remote.md](remote.md) § panel. `click(-1)` is left click.
@@ -259,15 +259,16 @@ These APIs still require the Unreal Editor and Mineprep assets; this is not a cl
 mineprep.spawn_blocks(mesh, transforms, loc=(0, 0, 0), rot=(0, 0, 0))
 mineprep.spawn_structure(
     r'C:\path\file.nbt', loc=(0, 0, 0), rot=(0, 0, 0),
-    gpu=0, cull=0, merge=0, reload=False, name='', center=None)
+    gpu=0, cull=0, merge=0, reload=False, name='', center=False)
 # source: file path or Blocks (not filepath=)
 # gpu=0 ISM instances, 1=PCG actor, 2=Niagara actor
 # cull=0 off, 1=per-type, 2=unified interior, 3=2+AABB sides&bottom (keep top)
 # merge=0 off, 1=1D runs, 2=2D quads, 3=3D boxes (full cubes only; after cull)
 # reload=True re-imports JSON meshes that already exist under /Game/mc/...
 # name overrides the source name used for actor labels/folders and GPU textures
-# center=None: file input is bottom-centered; Blocks input preserves cell coordinates
-# center=True/False explicitly selects centering for either source type
+# center=False: files and Blocks both preserve grid coordinates
+# center=True: anchor original grid bounds at their bottom-center before cull/merge
+# Blocks also offers b.spawn(gpu=1, merge=3), returning the same Actor list
 mineprep.import_block(path, asset_name='oak_stairs', reload=False)
 mineprep.import_item(path)
 mineprep.resolve_block_json_path('oak_stairs')  # models/block/*.json
@@ -278,6 +279,14 @@ mineprep.get_all_blocks(r'^(campfire|cobblestone)$')  # re.search; '' = all
 `get_all_blocks` lists **model JSON stems**, not NBT. Vanilla cell names (`lilac` + `half=lower`, `oak_fence` + NESW) still go through `structure_parts` → stems like `lilac_bottom` / `oak_fence_post`. JSON exists ≠ it was placed.
 
 NBT→mesh details (coords, stairs/fence multipart, uvlock): [structure.md](structure.md).
+`blocks.bake(...)` creates one reusable StaticMesh without placing Actors;
+see [baking options, cell-center pivot and asset reuse](structure.md#blocksbake-one-reusable-model).
+
+Pure batch math is available offline as `mc_math.boxes_to_packed(coords, sizes=1,
+rot=0, origin=(0,0,0))`; editor alias: `mineprep.boxes_to_packed`. It returns a
+float32 dict of instance **centers**, encoded rotation and local scale. The
+fixed model pivot is MC `(8,8,8)`, not each model's actual bounds center.
+See the [offline example](structure.md#offline-batch-math).
 
 For procedural structures, use a supplied file or `Blocks` → `spawn_structure(source=...)`; do not assume a matching tree/house NBT is bundled. Generator presets are a separate UI feature, not a file source for `spawn_structure`.
 
@@ -309,7 +318,7 @@ ISM-only alternative: `for mesh, transforms in b.types(): mineprep.spawn_blocks(
 
 Houses / wells can use `Blocks` + loops; choose geometry for the requested design. Oriented blocks below; roof example in [structure.md](structure.md). Use a visual reference if it helps resolve the design.
 
-**Oriented blocks** (stairs, fence, pane, door): vanilla properties on `Blocks.add`. Do not guess yaw.
+**Oriented blocks** (stairs, fence, pane, door, logs): vanilla properties on `Blocks.add`. Do not guess yaw. Logs and the other column blocks (`axis` / Bedrock `pillar_axis`) keep their end grain: `y` upright, `z` along UE Y, `x` along UE X. Standing signs, banners and heads use `rotation` 0–15 as a 22.5° yaw (0 faces south).
 
 ```python
 b.add('oak_stairs', 0, 0, 0, facing='east', shape='straight', half='bottom')

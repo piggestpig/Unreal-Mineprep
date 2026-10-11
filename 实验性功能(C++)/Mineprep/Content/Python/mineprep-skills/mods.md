@@ -7,7 +7,7 @@ Templates: `mods/template.py`, `mods/minimal.py`. Reference package: `mods/VAT_T
 
 This file covers kept toolbar / Mod Manager tools. One-shot panels can use `mineprep.ui` — [ui.md](ui.md). Public API changes also require checking and updating affected callers in `mods/`; scope guidance: [SKILL.md](SKILL.md).
 
-**Sizing:** If the user only needs a one-shot panel (pick assets → click Run), use `mineprep.ui`. Create a Mod when they want a **kept** toolbar / Mod Manager entry. Prefer a **single-file** mod before a VAT_Tools-style folder package. Before writing a new folder mod, skim an existing one (`mods/minimal.py`, `mods/template.py`, `VAT_Tools` for layout, or `Skin_Editor` for a paint RT / page switcher).
+**Sizing:** Use `mineprep.ui` for a one-shot panel and a Mod for a kept tool. Start from `mods/minimal.py` or `mods/template.py`; split into a folder package when complexity warrants it.
 
 ## Package shapes
 
@@ -47,11 +47,6 @@ Keep package imports free of panel opening/registration side effects.
 
 Document only the necessary public entrypoints beside the mod: a minimal script example,
 inputs/results, UE or panel prerequisites, side effects and sync/async behavior.
-Existing mods illustrate individual patterns, not universal architecture:
-VanillaMobLoader exposes `importer.create_assets`/`place`; VAT Tools accepts direct
-assets in `bake_anim_ops.bake_animation`; WorldGenerator separates pure planning
-but still has import scheduling in its panel. Improve affected paths when in
-scope; this guidance does not require migrating unrelated existing mods.
 
 ### Single file (`mods/my_mod.py`) - complete example
 
@@ -113,6 +108,8 @@ Enable via Mod Manager, `EnabledByDefault`, or `mineprep.mods.register(module)`.
 | Member | Role |
 |--------|------|
 | `_label_` | Tab / menu display name |
+| `_public_` | Default `False`. Panel cache only when this is true or `DebugMode` — [remote.md](remote.md) § panel |
+| `_menu_` | Toolbar section. Default `'mods'`. `register` and `unregister` both use it |
 | `_unique_` | `True` → one Editor tab, requested ID = class name. UE's registered ID differs; see lifecycle below. Default `False` → new random requested ID each open |
 | `_root_` | Child widget name on template (default `'Root'`) |
 | `_template_` | EUW asset to copy under `/Game/mc/mods/{ClassName}` |
@@ -154,11 +151,11 @@ self._log = layout.text(..., align=(1, 3), padding=6, fill=1)
 
 See [ui.md](ui.md) § fill.
 
-**Page switcher** (Skin Editor): top tab buttons + `layout.switcher(align=(0, 0), fill=1)` then `pages.col(align=(0, 0))`. `functools.partial(self.show_page, i)` for clicks. Dim inactive tabs (`set_render_opacity`). Paint page: left `fill` canvas (`border` + Image); right no-fill Details + action buttons.
+**Page switcher:** top tab buttons + `layout.switcher(align=(0, 0), fill=1)` then `pages.col(align=(0, 0))`. Use `functools.partial(self.show_page, i)` for clicks and `set_render_opacity` for inactive tabs. For painting, use a left fill canvas and right auto-size controls.
 
 **Mod keys / close:** override `on_key_down` / `on_key_up` / `destruct`. The EUW template looks up `mcvars.WidgetModMap[layout.outer]`. Default `on_key_down`: Pause/Break (`unreal.Key` name `Pause`) opens the folder of the Mod class's `.py`; overrides must call `super().on_key_down(key)` to keep it. Peek-original needs panel keyboard focus. Unbind selection (and similar) in `destruct` — a closed DetailsView makes `SystemLibrary.is_valid` throw instead of returning False.
 
-**Paint RT:** [ui.md](ui.md) § Sketch RT; [pitfalls/ui.md](pitfalls/ui.md). Pattern: `mods/Skin_Editor/paint.py`.
+**Paint RT:** [ui.md](ui.md) § Sketch RT; [pitfalls/ui.md](pitfalls/ui.md).
 
 **Button then fields under a footnote** (keep Details order correct):
 
@@ -237,10 +234,6 @@ Each open window is closed from its own saved id, including non-unique extras.
 An instance still in `WidgetModMap` after `close()` was not closed: Mineprep warns
 and clears that layout best-effort. The user must close that window manually.
 To use a panel after reload, reopen it from the Mineprep menu.
-
-Lifecycle guidance is based on the current Python source and Blueprint close
-callback. On 2026-10-05, three temporary panels of one class were opened and
-`unregister()` closed every saved `tab_id`; none remained in `WidgetModMap`.
 
 ## Testing
 

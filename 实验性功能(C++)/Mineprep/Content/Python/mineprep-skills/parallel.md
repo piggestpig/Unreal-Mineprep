@@ -94,7 +94,7 @@ MCP `run` does not wait for later frames. A yielding task comes back as `pending
 
 ## `until`
 
-Generator for `yield from` inside `@asynctask`. It waits `delay` seconds (default 0.1) before the first `find()`. After a miss it waits `step` seconds (default 0.1) and tries again. `timeout` (default 5s) is that polling time and does not include `delay`. `delay=0` checks on the current tick. A valid `unreal.Object` ends the wait and becomes the `yield from` result. Timeout calls `throw`. Pass `label` so the message is not a lambda's `<lambda>`.
+Generator for `yield from` inside `@asynctask`. It waits `delay` seconds (default 0.1) before the first `find()`. After a miss it waits `step` seconds (default 0.1) and tries again. `timeout` (default 5s) is that polling time and does not include `delay`. `delay=0` checks on the current tick. Any truthy result ends the wait and becomes the `yield from` result, including `True`. An invalid `unreal.Object` keeps polling. Falsy values (`None`, `False`, `0`, `''`) keep polling. Timeout calls `throw`. Pass `label` so the message is not a lambda's `<lambda>`.
 
 ```python
 cam = yield from mineprep.until(

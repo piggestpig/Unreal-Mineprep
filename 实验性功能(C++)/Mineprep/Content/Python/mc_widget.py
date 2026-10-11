@@ -467,7 +467,7 @@ def text_slot(align=(0, 1)):
     return (0, align[1]), justification
 
 
-def add_widget(root, widget: T,
+def add_widget(root, widget: T, props: dict=None,
                padding=unreal.Margin(3,1,3,1), align=(0,1), fill=False,
                clip=False, hidden=False, tooltip='', subclass=None) -> T:
     """添加子控件到根控件"""
@@ -475,6 +475,8 @@ def add_widget(root, widget: T,
         widget = subclass
     if not isinstance(widget, unreal.Object):
         widget = construct(uclass(widget), root)
+    if props:
+        widget.set_editor_properties(props)
     slot = root.add_child(widget)
 
     if hasattr(slot, 'set_padding') and not isinstance(root, unreal.ScaleBox):
@@ -667,10 +669,12 @@ class Layout():
 
 
     def prop(self, data: unreal.Object | PropertyGroup, property: str=None, text: str=None,
+             categories: list[str]=None, properties: list[str]=None, searching=False,
              on_property_changed: Callable[[str], Any]=None,
              **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
         """添加属性视图；指定 property 为单属性，否则为完整细节面板。
         data 可为 UObject 或已实例化的 PropertyGroup。
+        完整细节面板可指定 categories / properties / searching
         """
         obj = resolve_prop_object(data)
         if property:
@@ -681,6 +685,12 @@ class Layout():
                 viewer.set_name_override(text)
         else:
             viewer = add_widget(self.target, unreal.DetailsView, **kwargs)
+            if categories:
+                viewer.set_editor_property('categories_to_show', categories)
+            if properties:
+                viewer.set_editor_property('properties_to_show', properties)
+            if searching:
+                viewer.set_editor_property('allow_filtering', True)
             viewer.set_object(obj)
 
         if on_property_changed or getattr(data, '_autosave_', False):
@@ -913,13 +923,18 @@ class Layout():
         def bind_generate(fn):
             if fn is make_combo_text:
                 def wrapped(item):
-                    return make_combo_text(str(item), texts=texts, outer=box)
+                    key = str(item)
+                    if key == 'None' and key not in texts and ('' in texts or not keys):
+                        key = ''  # FName('') is NAME_None; preserve its display label.
+                    return make_combo_text(key, texts=texts, outer=box)
                 return wrapped
             def wrapped(item):
                 return _combo_widget(fn(str(item)))
             return wrapped
 
-        box = add_widget(self.target, unreal.ComboBoxKey, subclass=subclass, **kwargs)
+        widget_class = (subclass if subclass and unreal.MathLibrary.class_is_child_of(
+            uclass(subclass), uclass(unreal.ComboBoxKey)) else unreal.ComboBoxKey)
+        box = construct(uclass(widget_class), self.target)
 
         # 隐藏右侧黑色下拉箭头，避免遮挡文本
         style = box.get_editor_property('widget_style')
@@ -952,6 +967,9 @@ class Layout():
         node._combo_keys = keys
         node._combo_gen_content = gen_content
         node._combo_gen_item = gen_item
+        # Attaching to a live parent can immediately build Slate and generate content.
+        # Bind both generators and set the initial selection before that happens.
+        add_widget(self.target, box, **kwargs)
         if on_selection_changed:
             def on_sel(name, reason):
                 on_selection_changed(str(name), reason)
@@ -1171,9 +1189,36 @@ class Layout():
         return border
 
 
-    def custom(self, widget, **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
+    def carousel(self, speed=3, on_changed: Callable[[unreal.CommonWidgetCarousel, int], Any]=None,
+                **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
+        """滚动显示屏。speed为滚动速度，由于引擎内容的bug，这个值只能在构建时设置。
+        可通过carousel.page(x)设置页面索引，自动限制在有效范围内；
+        通过index()获取当前索引, prev()/next()翻页
+        """
+        widget = Layout(add_widget(self.target, unreal.CommonWidgetCarousel,
+                        props={'move_speed': speed}, **kwargs), public=self._public_)
+
+        def page(index):
+            count = widget.get_children_count()
+            if count <= 0:
+                return 0
+            index = max(0, min(int(index), count - 1))
+            widget.set_active_widget_index(index)
+            return index
+
+        widget.page = page
+        widget.index = widget.get_active_widget_index
+        widget.prev = widget.next_page
+        widget.next = widget.previous_page
+        if on_changed:
+            widget.on_current_page_index_changed.add_callable(on_changed)
+
+        return widget
+
+
+    def custom(self, widget, props: dict=None, **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
         """添加自定义控件类型或实例"""
-        return Layout(add_widget(self.target, widget, **kwargs), public=self._public_)
+        return Layout(add_widget(self.target, widget, props, **kwargs), public=self._public_)
 
 
 def _run_ui_script(script, context=None):

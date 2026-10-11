@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
-import mc_sequencer, mc_widget, mc_mod, mc_mesh, mc_material, mc_parallel, mc_bplib
+import mc_sequencer, mc_widget, mc_mod, mc_mesh, mc_material, mc_parallel, mc_bplib, mc_math
 import mc_sequencer as mcseq
 from mc_bplib import BPLibCaller, BPLib, EditorBPLib
 from mc_importer import import_block, import_item, resolve_block_json_path, get_all_blocks
@@ -28,8 +28,10 @@ from mc_localization import (localize, loctext, nsloctext, loctable_col, bilingu
 from mc_structure import (
     parse_structure, structure_to_tex, structure_parts, Blocks,
     convert_to_unreal_transforms, convert_to_packed_arrays, add_packed_instances,
+    spawn_structure,
 )
 import mcvars
+from mc_math import boxes_to_packed, encode_rotation, decode_rotation
 from mc_config import config, paths, wclass
 from mc_sequencer import keyframe, Rig
 from mc_widget import Layout, PropertyGroup, add_widget, ui, make_combo_text
@@ -341,9 +343,28 @@ class toolbar(MineprepAddonHandle):
 
 class hotkey(MineprepAddonHandle):
     def __init__(self, name = ''):
-        """调用自定义快捷键蓝图中的同名函数"""
-        target = get_hotkey_object().call_method(str(name))
-        super().__init__(target, name)
+        """执行自定义快捷键。不带名称时打印全部快捷键；有名称时优先运行保存的代码，代码为空时调用蓝图同名函数。"""
+        from mods.EditorShortcuts.ops import execute_shortcut, get_shortcuts
+        if not name:
+            lines = [str(tooltip('所有快捷键'))]
+            for shortcut_name, item in get_shortcuts().items():
+                lines.append(shortcut_name)
+                lines.append(f"  {bilingual('按键', 'Chord')}: {self._chord_label(item.get('chord_text', ''))}")
+                lines.append(f"  {bilingual('提示', 'Tooltip')}: {item.get('tooltip', '')}")
+                lines.append('')
+            prints('\n'.join(lines), duration=8)
+            return
+        execute_shortcut(str(name))
+        super().__init__(None, name)
+
+    @staticmethod
+    def _chord_label(chord_text: str) -> str:
+        if not chord_text:
+            return ''
+        chord = unreal.InputChord()
+        if not chord.import_text(chord_text):
+            return chord_text
+        return str(unreal.InputLibrary.input_chord_get_display_name(chord))
 
 ###########################################################################
 
@@ -709,10 +730,6 @@ class materials(MineprepWorldHandle):
 ###########################################################################
 
 class MineprepSequencerHandle(MineprepWorldHandle):
-    def key():
-        """⚠暂不支持"""
-        return None
-
     @staticmethod
     def frame() -> int:
         """获取当前播放头所在帧数"""
@@ -1017,93 +1034,3 @@ def spawn_blocks(mesh=None, transforms=[unreal.Transform()], loc=(0,0,0), rot=(0
     ism.add_instances(transforms, False, False, True)
     return actor
 
-
-def spawn_structure(source='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0,
-                    reload=False, name='', center=None) -> list[unreal.Actor]:
-    """生成MC结构。source 是文件路径或 Blocks；gpu=1 是 PCG，gpu=2 是粒子；
-    cull=1按类型剔除内部实心, cull=2全体实心统一剔除内部, cull=3=2+剔除AABB侧面与底面；
-    merge=0关, 1长条, 2平面, 3长方体（仅完整正方体；cull 优先于 merge）
-    """
-    if isinstance(source, Blocks):
-        filename = name or source.name or 'structure'
-        use_center = False if center is None else bool(center)
-        cells = source.copy_cells()
-    else:
-        if not source:
-            warn('spawn_structure 需要文件路径或 Blocks')
-            return []
-        loaded = Blocks.from_file(source)
-        if not loaded:
-            return []
-        filename = name or loaded.name or Path(str(source)).stem
-        use_center = True if center is None else bool(center)
-        cells = loaded._cells
-        loaded = None
-
-    cells = mc_structure._apply_cull(cells, cull)
-    payload_map = convert_to_packed_arrays(cells, center=use_center, merge=merge)
-    cells = None
-
-    inventory = loctable_col(6,2)
-    actors = []
-    meshes = []
-    spawn_jobs = []
-
-    for model_name, payload in payload_map.items():
-        path = resolve_block_json_path(model_name)
-        mesh = None
-        if path is not None:
-            mesh = import_block(path, asset_name=model_name, reload=reload)
-        else:
-            # 只接受同名或下划线后的后缀，避免 bed 匹配到 bedrock
-            candidate = next(
-                (n for n in inventory if n == model_name or n.startswith(f"{model_name}_")),
-                None,
-            )
-            path = resolve_block_json_path(candidate) if candidate else None
-            if path is not None:
-                mesh = import_block(path, asset_name=model_name, reload=reload)
-            else:
-                warn(f'未找到{model_name}模型')
-
-        meshes.append(mesh)
-        if mesh is not None and not gpu:
-            spawn_jobs.append((model_name, mesh, payload))
-
-    if not gpu:
-        loaded_class = uclass('/Game/Mineprep/MC_Blueprint/Core/实例化方块.实例化方块')
-        for model_name, mesh, payload in spawn_jobs:
-            actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
-            ism = actor.root_component
-            ism.set_editor_property('StaticMesh', mesh)
-            ism.clear_instances()
-            add_packed_instances(ism, payload)
-            actor.set_folder_path(filename)
-            actors.append(actor)
-            set_actor_label(actor, f'{filename}_{model_name}')
-
-    if gpu == 1:
-        BPT_Tex, BRT_Tex, mapping_data = structure_to_tex(payload_map, filename)
-        loaded_class = uclass('/Game/Mineprep/MC_Blueprint/PCG/PCG实例化方块.PCG实例化方块')
-        actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
-        actor.set_folder_path('Structures')
-        actors.append(actor)
-        set_actor_label(actor, f'{filename}')
-        mesh_paths = [unreal.SystemLibrary.get_soft_object_path(mesh) for mesh in meshes]
-        actor.set_editor_property('Blocks', mesh_paths)
-        actor.set_editor_property('PosTex', BPT_Tex)
-        actor.set_editor_property('RotTex', BRT_Tex)
-
-    elif gpu == 2:
-        BPT_Tex, BRT_Tex, mapping_data = structure_to_tex(payload_map, filename)
-        loaded_class = uclass('/Game/Mineprep/MC_Blueprint/Niagara/动态地形粒子/动态结构粒子.动态结构粒子')
-        actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
-        actor.set_folder_path('Structures')
-        actors.append(actor)
-        set_actor_label(actor, f'{filename}')
-        actor.set_editor_property('方块', meshes)
-        actor.root_component.set_variable_texture('方块位置纹理', BPT_Tex)
-        actor.root_component.set_variable_texture('方块旋转纹理', BRT_Tex)
-
-    select_actors(actors)
-    return actors

@@ -139,22 +139,3 @@ def refresh(mod, _selection_set=None, reset_index=True):
     _set_object(mod._head_view, head)
     _set_text(mod._body_title, actor.get_actor_label())
     _set_text(mod._head_title, head.get_name() if head else mineprep.bilingual('无头部', 'No Head'))
-
-
-def test_material_details():
-    cls = mineprep.uclass(util.MATERIAL_DETAILS)
-    parent_ok = bool(cls) and unreal.MathLibrary.class_is_child_of(cls, unreal.DetailsView)
-    selected = selected_actors()
-    actor = selected[0] if selected else None
-    skms = actor_skms(actor)
-    main = util.pick_main(skms, actor) if actor and skms else None
-    head = util.pick_head(skms, main) if actor and skms else None
-    print('CLASS', cls.get_name() if cls else 'NONE')
-    print('PARENT', int(parent_ok))
-    print('ACTOR', actor.get_actor_label() if actor else 'NONE')
-    print('SKMS', len(skms))
-    print('BODY', main.get_name() if main else 'NONE')
-    print('HEAD', head.get_name() if head else 'NONE')
-    print('SELECTED', len(selected))
-    print('MC', int(bool(main) and util.is_mc_comp(main)))
-    return cls, main, head

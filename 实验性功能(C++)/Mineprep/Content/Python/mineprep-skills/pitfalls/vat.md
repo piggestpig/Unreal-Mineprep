@@ -15,7 +15,7 @@ Layout / PropertyGroup / hide: [../ui.md](../ui.md) + [ui.md](ui.md). `force_upd
 | First bake → premul / RT sample **all black**; second run OK | CPU/Source updated; GPU Resource not ready | `unreal.LandmassBlueprintFunctionLibrary.force_update_texture(tex)` before `set_texture_parameter_value` / `draw_material_to_render_target` |
 | Cache on disk looks fine, output black | Same as above | Confirm cache assets first; then force update |
 
-Paint / sketch RTs (Skin Editor): [ui.md](ui.md) — not this bake path.
+Paint / sketch RTs: [ui.md](ui.md) — not this bake path.
 
 ## Anim / data asset sync
 

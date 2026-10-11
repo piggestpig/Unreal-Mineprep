@@ -3,6 +3,7 @@
 #include "MineprepBPLibrary.h"
 #include "Mineprep.h"
 #include "MineprepSubsystem.h"
+#include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/GameViewportClient.h"
 #include "LevelEditorViewport.h"
@@ -1833,5 +1834,42 @@ void Umineprep::ShowEditorNotification(
         }
         NotificationItem->SetCompletionState(CompletionState);
     }
+}
+
+bool Umineprep::FinishBuildTexture(UTexture* Texture)
+{
+#if WITH_EDITOR
+    if (!Texture)
+    {
+        return false;
+    }
+
+    auto NeedsRebuild = [](UTexture* InTexture)
+    {
+        if (InTexture->IsDefaultTexture())
+        {
+            return true;
+        }
+        if (UTexture2D* Texture2D = Cast<UTexture2D>(InTexture))
+        {
+            const FTexturePlatformData* PlatformData = Texture2D->GetPlatformData();
+            return PlatformData == nullptr || (PlatformData->Mips.Num() == 0 && PlatformData->VTData == nullptr);
+        }
+        return false;
+    };
+
+    Texture->BlockOnAnyAsyncBuild();
+    if (NeedsRebuild(Texture))
+    {
+        const UTexture::EUpdateResourceFlags Flags = static_cast<UTexture::EUpdateResourceFlags>(
+            static_cast<uint32>(UTexture::EUpdateResourceFlags::ForceRebuild) |
+            static_cast<uint32>(UTexture::EUpdateResourceFlags::Synchronous));
+        Texture->UpdateResourceWithParams(Flags);
+        Texture->BlockOnAnyAsyncBuild();
+    }
+    return !NeedsRebuild(Texture);
+#else
+    return false;
+#endif
 }
 

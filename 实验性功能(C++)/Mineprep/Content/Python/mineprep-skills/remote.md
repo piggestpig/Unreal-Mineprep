@@ -92,36 +92,12 @@ partial side effects. Neither Python errors nor transport failures are retried;
 after `uncertain`, inspect postconditions before deciding what to do. The default
 network timeout is 30 seconds (`--timeout`); it does not cancel editor work.
 
-Native tools remain preferred. For another client or diagnosing the helper,
-the underlying protocol is:
-
-If Codex has no native Unreal tools but local HTTP access is available, an agent
-can still use MCP at the configured URL. This is a fallback for the same server,
-not Python Remote Execution. Use a session-capable MCP client when available;
-the following sequence was verified against this UE 5.8 server's JSON responses:
-
-1. POST JSON-RPC `initialize` with `id`, `params.protocolVersion="2024-11-05"`,
-   `params.capabilities={}`, and `params.clientInfo={"name":"codex","version":"1.0"}`.
-   Send `Content-Type: application/json` and
-   `Accept: application/json, text/event-stream`; encode JSON bodies as UTF-8.
-2. Save the response's **`Mcp-Session-Id` header**. Send it on subsequent requests,
-   together with `MCP-Protocol-Version` set to the negotiated protocol version.
-3. POST `notifications/initialized` without an `id`; an empty notification
-   response is normal. Then use `tools/list` to inspect top-level schemas.
-4. POST `tools/call` with `params.name="describe_toolset"` and the discovery
-   arguments above; for execution use `params.name="call_tool"` and the complete
-   identity-check argument object above. Include an `id` on requests.
-5. Check JSON-RPC `error` and MCP `isError` before unpacking the result. For this
-   server, parse the text content block as JSON, then parse its `returnValue`
-   string as JSON to obtain `{ok, result, logs, error}`. A transport success or
-   outer MCP success does not imply the inner `ok` is true.
-
-Do not report native Codex tool registration merely because this HTTP path works.
-If a server returns `text/event-stream`, use an MCP/SSE-capable client rather than
-parsing the entire response as one JSON document. After an editor restart or an
-expired session, initialize again and recheck the project. After a mutation times
-out, query its postconditions before retrying; reconnecting does not prove the
-operation failed.
+For another client, follow the session initialization and response decoding in
+the helper rather than copying a fixed protocol version. Use an MCP/SSE-capable
+client for event-stream responses. Check JSON-RPC `error`, MCP `isError`, and the
+inner bridge `ok`; this server wraps the bridge JSON inside `returnValue`.
+HTTP success does not imply native tool registration or completed editor work.
+After a restart or expired session, reconnect and recheck project identity.
 
 ## MCP Python (`mcptools.PythonTools`)
 
@@ -136,7 +112,7 @@ arguments    = {"code": "unreal.Paths.project_dir()", "loglevel": 0}
 - `run(code, loglevel=1)` is the API signature; explicitly pass **`loglevel=0` for routine agent calls**. The namespace persists and `unreal` / `mineprep` are injected every call. Nested `def` can see prior assignments. This namespace is shared by clients in the editor process, not isolated per MCP session; use distinct variable names when coordinating agents. `reset()` clears everyone's snippet state, so avoid it as routine cleanup.
 - If the last statement is an **expression**, its value is JSON `result`. Bare assignments return `result: null` — end the snippet with the value you need (`len(actors)`, `path`, `actor`).
 - An `@asynctask` that `yield`s returns its runner before later frames run. Do not wait inside `run`: the Slate tick that resumes it happens after this call returns. The result is then `{"pending": true, "name": "<func>"}`, and the runner is stored as `_async`. A later `run` of `_async` returns `{"pending": false, "name": "...", "result": ...}` or `"error"` if the task threw. `runner.result` stays `None` until a normal finish, including a finish that returns `None`; use `pending`. A bare `runner = task()` with no trailing expression is treated the same when it starts exactly one task. See [parallel.md](parallel.md) for `yield` itself.
-- Return JSON: `{ok, result, logs, error}`. UObjects become `{"uobject": "<path>", "label": "..."}`. `print()` uses the engine `sys.stdout` wrapper (`LogPython`) so it shares a timeline with `unreal.log` / `log_warning` / C++ `UE_LOG` in `logs` (marker slice after `unreal.log_flush()`, not a game-thread sleep). `mineprep.prints` also logs: its `SystemLibrary.print_string` call uses the current default `print_to_log=True`. `warn` explicitly emits a log warning. Filtering and capture limits still apply.
+- Return JSON: `{ok, result, logs, error}`. UObjects become `{"uobject": "<path>", "label": "..."}`. A Mineprep handle becomes `{"handle": "<class>", "target": ...}`, plus `"name"` only when `.name` is truthy. That `name` is not the handle's `.label`. `print()` uses the engine `sys.stdout` wrapper (`LogPython`) so it shares a timeline with `unreal.log` / `log_warning` / C++ `UE_LOG` in `logs` (marker slice after `unreal.log_flush()`, not a game-thread sleep). `mineprep.prints` also logs: its `SystemLibrary.print_string` call uses the current default `print_to_log=True`. `warn` explicitly emits a log warning. Filtering and capture limits still apply.
 - `loglevel`: `0` recommended for agents and the HTTP helper default — only Warning/Error/Fatal; `1` API default — also keep LogPython/LogTemp/LogBlueprintUserMessages; `2` — keep engine C++ categories, drop Slate/HTTP/MCP noise; `3` — raw slice. Ordinary `print()` output is hidden at `0`; return needed values as the final expression. Use `1` for Python output, `2` for engine diagnostics, or `3` to investigate filtering; do not repeat a scene mutation just to obtain more verbose logs.
 - Levels 0/1/2 preserve Warning/Error/Fatal entries plus continuation lines of retained entries. At level 0, `LogSlate*` warnings and their continuation lines are excluded; Slate errors/fatal entries remain. Levels 1–3 include Slate warnings for UI diagnosis. Filtering is by category/severity, not semantic relevance.
 - Log discovery checks the flushed call marker to select the active file (including numbered editor log files), rather than assuming `<project>.log` is current.
@@ -242,7 +218,7 @@ Client module (shipped with Engine):
 
 ## RE client pattern
 
-Use the installed client's default command endpoint unless binding fails. On Windows, `WinError 10013` can indicate an excluded TCP port; inspect `netsh interface ipv4 show excludedportrange protocol=tcp` and select a free, non-excluded loopback port. A historical failure on port 6776 does not make port 18811 universally available. A bind failure before command submission can be retried with another port; an uncertain result after submission needs the status checks below.
+Use the installed client's default command endpoint unless binding fails. On Windows, `WinError 10013` can indicate an excluded TCP port; inspect `netsh interface ipv4 show excludedportrange protocol=tcp` and select a free, non-excluded loopback port. A bind failure before submission can be retried with another port; an uncertain result after submission needs the status checks below.
 
 ```python
 # Host Python; use the imports and engine-module setup above.
@@ -309,31 +285,19 @@ saved = unreal.mineprep.widget_screenshot(w, shot)
 after the delay (seconds) and overwrites the same path if the target is still
 visible. Read the final image after that interval; `delay=0` captures only once.
 
-## Iterative test loop
+## Verification
 
 If the file log is unavailable and the 20,000-entry engine log fallback has lost the call's start marker, `logs` is empty and marked `log_window_limit`; the original count is unknown. Do not interpret this as proof that the call emitted no warnings.
 
-[Documentation tests](../../../Tests/test_skill_examples.py) check links, Python
-syntax and repeated UI execution with substitutes; they do not render panels.
-The adjacent MCP tests cover serialization, project checks and timeout handling.
-These checks do not establish current editor connectivity or mod E2E coverage;
-record live evidence for the actual task.
-
-1. Probe one concern (path, children, signature, materials) via MCP `run` (or RE) — a tiny snippet, not the whole tool
-2. Assert with JSON `result` / `logs` (MCP) or returned `output` lines (RE). Do not treat logs alone as success
-3. Fold confirmed calls into the shipped code. Remove exploratory API guessing; retain necessary validation, cleanup and known-error handling
-4. E2E once; remove `_tmp_*` scripts and leftover probe assets
-
-For importers, keep parsing, naming, UV and bind-matrix tests independent of
-`unreal`; reserve RE/MCP checks for asset import, material slots, deformation,
-placement and lifecycle. A panel reopening test must observe a new live instance,
-not just successful registration logs ([mods.md](mods.md) § Panel lifecycle).
-When a preview export is darker than the viewport, check the render-target color
-format before changing model materials ([pitfalls/ui.md](pitfalls/ui.md) § Paint / sketch RT).
+Keep parsing, naming, UV and bind-matrix checks independent of Unreal. Reserve
+editor checks for assets, materials, deformation, placement and lifecycle; a
+panel reopening check must observe a live instance, not registration logs.
+Choose checks for the actual change; [SKILL.md](SKILL.md#testing-and-essential-boundaries)
+covers proportional validation. Documentation checks do not prove editor behavior.
 
 ## Viewport screenshot (agent can Read the png)
 
-Use **`mineprep.screenshot`** for the viewport. Capture when visual evidence helps validate requested editor work, an explicit test, or a reported visual error. Respect no-capture and code-only requests. Additional captures should answer a new question or verify a changed result; avoid repeated identical shots. Choose camera positions for the current scene rather than copying the example coordinates.
+Use **`mineprep.screenshot`** for the viewport. Small tasks do not need a screenshot. Capture only when the user asks, or for a complex visual result such as modeling or checking a program's run. Additional captures should answer a new question or verify a changed result; avoid repeated identical shots. Choose camera positions for the current scene rather than copying the example coordinates.
 
 ```python
 import os
