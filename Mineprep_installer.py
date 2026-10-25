@@ -496,7 +496,7 @@ def skip_names(opt):
     if not opt.crossplatform and HOST:
         skip.update({'Win64', 'Mac', 'Linux'} - {HOST})
     if opt.lite_on:
-        skip.update({'第三人称运动匹配', '音效', 'ffmpeg.zip', 'whisper', 'Source'})
+        skip.update({'Mover', '音效', 'ffmpeg.zip', 'whisper', 'Source'})
     if HOST and HOST != 'Win64':
         skip.add('MC_物理交互绑定.uasset')
     return skip

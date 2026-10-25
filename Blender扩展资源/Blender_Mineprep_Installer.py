@@ -473,7 +473,7 @@ def get_lite_skip():
         if system:
             skip.update(all_platforms - {system})
     if mc.lite_version:
-        skip.update({"第三人称运动匹配", "音效", "ffmpeg.zip", "whisper", "Source"})
+        skip.update({"Mover", "音效", "ffmpeg.zip", "whisper", "Source"})
     return skip
 
 def core_only_enabled():

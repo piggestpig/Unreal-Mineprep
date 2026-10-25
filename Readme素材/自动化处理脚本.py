@@ -102,7 +102,7 @@ for vscode_dir in plugin_dir.rglob(".vscode"):
 #############################################################
 # 创建 Mineprep-Lite
 
-LITE_SKIP_NAMES = {"第三人称运动匹配", "音效", "whisper", "Source", "ffmpeg"}
+LITE_SKIP_NAMES = {"Mover", "音效", "whisper", "Source", "ffmpeg"}
 
 def lite_ignore(src, names):
     ignored = {n for n in names if n in LITE_SKIP_NAMES}

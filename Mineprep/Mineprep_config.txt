@@ -24,7 +24,7 @@
         "hover_toolbar": "false",
         "tkinter_scale": "3",
         "installer_dir": "E:\\github\\Unreal-Mineprep",
-        "render_map": "/Game/mc/播片测试地图.播片测试地图",
+        "render_map": "/Game/Map.Map",
         "render_sequence": "/Game/Mineprep/Render/MC临时序列.MC临时序列",
         "render_preset": "/Game/Mineprep/Render/Mineprep自定义渲染配置.Mineprep自定义渲染配置",
         "megalights_shadow_mode": "0",
