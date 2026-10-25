@@ -120,6 +120,8 @@ class config(metaclass=ConfigMeta):
 
 paths = MCpath()
 paths.installer = config['Settings']['installer_dir']
-_mc_assets = paths.installer + '/Blender扩展资源/mc_default/assets/minecraft'
+_mc_pack = (config.config_dict['Settings'].get('texture_pack_path')
+            or paths.installer + '/Blender扩展资源/mc_default')
+_mc_assets = _mc_pack.rstrip('/\\') + '/assets/minecraft'
 paths.blocks = _mc_assets + '/models/block'
 paths.blockstates = _mc_assets + '/blockstates'

@@ -104,6 +104,13 @@ def _should_skip_dir(name, *, installer=False):
     return installer and name.lower() in _INSTALLER_SKIP_DIRS
 
 
+def _is_project_resource_pack(path):
+    parts = Path(path).parts
+    return any(parts[i:i + 3] in (('Plugins', 'Mineprep', 'mc_default'),
+                                  ('实验性功能(C++)', 'Mineprep', 'mc_default'))
+               for i in range(len(parts) - 2))
+
+
 def _is_installer_junk(name):
     ext = os.path.splitext(name)[1].lower()
     if ext in _INSTALLER_SKIP_EXTS:
@@ -145,7 +152,8 @@ def _script_skips(skip_fn, rel_path):
 
 def _iter_files(root, *, installer=False):
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [name for name in dirnames if not _should_skip_dir(name, installer=installer)]
+        dirnames[:] = [name for name in dirnames if not _should_skip_dir(name, installer=installer)
+                      and not (installer and _is_project_resource_pack(os.path.join(dirpath, name)))]
         for name in filenames:
             if installer and _is_installer_junk(name):
                 continue
@@ -323,8 +331,9 @@ def copy_stats(props, filter_props, extra_props=None, skip_fn=None):
                 same_c += 1
     extra_n = extra_rm = 0
     if not clear:
-        extra_n = len(extra_relpaths(props, installer=installer, skip_fn=skip_fn))
-        extra_rm = len(extra_to_remove(extra_props))
+        extras = set(extra_relpaths(props, installer=installer, skip_fn=skip_fn))
+        extra_n = len(extras)
+        extra_rm = len(extras.intersection(extra_to_remove(extra_props)))
     copy_n = added_c + newer_c + older_c + same_c
     skip_n = added_s + newer_s + older_s + same_s + script_s
     return {
@@ -448,6 +457,9 @@ def _copy_ignore_with_skip(project_root, skip, *, installer=False, skip_fn=None,
             if name in ignored:
                 continue
             full = os.path.join(directory, name)
+            if installer and _is_project_resource_pack(full):
+                ignored.append(name)
+                continue
             if os.path.isdir(full):
                 continue
             if installer and _is_installer_junk(name):
@@ -530,6 +542,8 @@ def _copy_pairs(pairs, *, skip=None, installer=False, skip_fn=None):
 def _remove_extra_files(extra_props, dest_root, *, installer=False):
     for key in extra_to_remove(extra_props):
         path = dest_abs(key, dest_root, installer=installer)
+        if installer and _is_project_resource_pack(path):
+            continue
         if not os.path.isfile(path):
             continue
         try:
@@ -692,10 +706,6 @@ def _write_project_ini(dest_root):
             'r.CustomDepth': '3',
             'r.PostProcessing.PropagateAlpha': 'True',
             'r.Deferred.SupportPrimitiveAlphaHoldout': 'True',
-            'r.SkinCache.SceneMemoryLimitInMB': '1024.0',
-            'rhi.Bindless.Resources': 'Enabled',
-            'rhi.Bindless.Samplers': 'Enabled',
-            'rhi.Bindless': 'Enabled',
             'r.Translucency.HeterogeneousVolumes': 'True',
             'r.Substrate': 'True',
             'r.GenerateMeshDistanceFields': 'True',

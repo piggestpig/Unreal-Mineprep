@@ -19,6 +19,10 @@
 #       例如 12、123。默认关闭。
 #   --ffmpeg <exe>
 #       使用指定的 ffmpeg 可执行文件。省略则用安装包解压出来的版本。
+#   --resource-pack [目录]
+#       自定义资源包根目录。省略目录时使用「工程/Plugins/Mineprep/mc_default」。
+#       目录不存在或为空时复制默认包；已有内容时直接引用，不覆盖。
+#       不写此选项则继续使用安装包中的资源包。
 #   --gbuffer 0|1
 #       Substrate GBuffer。1 为 Adaptive（默认，画质更好），0 为有限 Blendable（兼容性更好，性能更快）。
 #   --preload
@@ -85,6 +89,10 @@ TEXTS = {
         'size': '估算体积',
         'merge_zip': '正在合并 ffmpeg 分卷…',
         'merged': 'ffmpeg 分卷合并完成',
+        'resource_source': '资源包来源',
+        'resource_target': '资源包位置',
+        'resource_copy': '复制默认资源包',
+        'resource_use': '直接引用，不复制',
     },
     'en_US': {
         'empty': 'Install path is empty',
@@ -98,6 +106,10 @@ TEXTS = {
         'size': 'Estimated size',
         'merge_zip': 'Merging ffmpeg zip parts…',
         'merged': 'ffmpeg zip merge finished',
+        'resource_source': 'Resource pack source',
+        'resource_target': 'Resource pack location',
+        'resource_copy': 'Copy default resource pack',
+        'resource_use': 'Use existing pack without copying',
     },
     'zh_TW': {
         'empty': '安裝路徑為空',
@@ -111,6 +123,10 @@ TEXTS = {
         'size': '估算體積',
         'merge_zip': '正在合併 ffmpeg 分卷…',
         'merged': 'ffmpeg 分卷合併完成',
+        'resource_source': '資源包來源',
+        'resource_target': '資源包位置',
+        'resource_copy': '複製預設資源包',
+        'resource_use': '直接引用，不複製',
     },
 }
 TEXTS['zh_HANS'] = TEXTS['zh_CN']
@@ -126,6 +142,7 @@ class Options:
         self.crossplatform = False
         self.experimental = set()
         self.ffmpeg = ''
+        self.resource_pack = None
         self.gbuffer = 1
         self.preload = False
         self.optimize = False
@@ -273,7 +290,111 @@ def _ue_ini_map(sections):
     return out
 
 
-def patch_ue_ini_text(text, sets=None, removes=None):
+def _ue_ini_array_values(text, section, key):
+    """Read the local array in file order, including clear/remove commands."""
+    values, current = [], ''
+    for line in text.splitlines():
+        header = _UE_INI_SECTION.match(line)
+        if header:
+            current = header.group(1)
+            continue
+        if current.casefold() != section.casefold() or line.lstrip().startswith(';'):
+            continue
+        parsed = _UE_INI_KV.match(line)
+        if not parsed:
+            continue
+        _, command, name, _, value = parsed.groups()
+        if name.strip().casefold() != key.casefold():
+            continue
+        value = value.strip()
+        if command == '!':
+            values.clear()
+        elif command == '-':
+            values = [item for item in values if item != value]
+        elif command == '.':
+            values.append(value)
+        elif command == '+':
+            if value not in values:
+                values.append(value)
+        else:
+            values = [value]
+    return values
+
+
+def _ue_ini_struct_field(value, field):
+    match = re.search(r'(?:^|[,(])\s*' + re.escape(field) +
+                      r'\s*=\s*(?:"([^"]*)"|([^,)]*))', value, re.IGNORECASE)
+    return (match.group(1) if match.group(1) is not None else match.group(2).strip()) if match else ''
+
+
+def merge_ue_ini_arrays_text(text, arrays):
+    """Append missing named structs without replacing the project's entries."""
+    nl = '\r\n' if '\r\n' in text else '\n'
+    for section, keys in (arrays or {}).items():
+        additions = []
+        for key, (identity_field, entries) in keys.items():
+            existing = {
+                _ue_ini_struct_field(value, identity_field).casefold(): value
+                for value in _ue_ini_array_values(text, section, key)
+            }
+            conflict_field = {'cvarsarray': 'Type', 'gameplaytagredirects': 'NewTagName'}.get(key.casefold())
+            for value in entries:
+                identity = _ue_ini_struct_field(value, identity_field)
+                if not identity:
+                    raise ValueError(f'[{section}] {key}: missing {identity_field}: {value}')
+                old = existing.get(identity.casefold())
+                if old is not None:
+                    if conflict_field:
+                        old_field = _ue_ini_struct_field(old, conflict_field)
+                        new_field = _ue_ini_struct_field(value, conflict_field)
+                        if old_field.casefold() != new_field.casefold():
+                            print(f'Warning: {identity}: keeping existing {conflict_field}={old_field}; '
+                                  f'Mineprep template has {conflict_field}={new_field}')
+                    continue
+                additions.append(f'+{key}={value}')
+                existing[identity.casefold()] = value
+        if not additions:
+            continue
+        lines, current, insertion = text.splitlines(), '', None
+        for index, line in enumerate(lines):
+            header = _UE_INI_SECTION.match(line)
+            if header:
+                if current.casefold() == section.casefold():
+                    insertion = index
+                current = header.group(1)
+        if current.casefold() == section.casefold():
+            insertion = len(lines)
+        if insertion is None:
+            if lines and lines[-1].strip():
+                lines.append('')
+            lines.append(f'[{section}]')
+            insertion = len(lines)
+        lines[insertion:insertion] = additions
+        text = nl.join(lines) + nl
+    return text
+
+
+def write_gasp_config(dest, startup_dir):
+    # MC_Startup owns the declarations; installers only merge these three arrays.
+    cfg, template = Path(dest) / 'Config', Path(startup_dir) / 'Config'
+    sections = (
+        ('DefaultEngine.ini', '/Script/Engine.DataDrivenConsoleVariableSettings',
+         {'CVarsArray': 'Name'}),
+        ('DefaultGameplayTags.ini', '/Script/GameplayTags.GameplayTagsSettings',
+         {'GameplayTagList': 'Tag', 'GameplayTagRedirects': 'OldTagName'}),
+    )
+    for filename, section, keys in sections:
+        source = (template / filename).read_text(encoding='utf-8-sig')
+        arrays = {section: {
+            key: (identity, _ue_ini_array_values(source, section, key))
+            for key, identity in keys.items()
+        }}
+        sets = {section: {'ImportTagsFromConfig': 'True'}} if filename == 'DefaultGameplayTags.ini' else None
+        patch_ue_ini(cfg / filename, sets, arrays=arrays)
+
+
+def patch_ue_ini_text(text, sets=None, removes=None, arrays=None):
+    text = merge_ue_ini_arrays_text(text, arrays)
     want, drop = _ue_ini_map(sets), _ue_ini_map(removes)
     nl = '\r\n' if '\r\n' in text else '\n'
     ended = text.endswith('\n') or text.endswith('\r\n')
@@ -338,11 +459,11 @@ def patch_ue_ini_text(text, sets=None, removes=None):
     return body
 
 
-def patch_ue_ini(path, sets=None, removes=None):
+def patch_ue_ini(path, sets=None, removes=None, arrays=None):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     text = path.read_text(encoding='utf-8') if path.exists() else ''
-    path.write_text(patch_ue_ini_text(text, sets, removes), encoding='utf-8')
+    path.write_text(patch_ue_ini_text(text, sets, removes, arrays), encoding='utf-8')
     return path
 
 
@@ -510,6 +631,16 @@ def format_size(total):
     return f'{total / 1024:.0f} KB'
 
 
+def resource_pack_plan(opt):
+    """返回资源包绝对位置及是否需要复制，不创建目录或检查包内容。"""
+    if opt.resource_pack is None:
+        return RESOURCE_PACK, False
+    target = Path(opt.resource_pack.strip() or Path(opt.dest) / 'Plugins/Mineprep/mc_default').absolute()
+    if target.exists() and not target.is_dir():
+        raise NotADirectoryError(str(target))
+    return target, not target.exists() or not any(target.iterdir())
+
+
 def estimate_size(opt):
     skip = skip_names(opt)
     total = 0
@@ -526,6 +657,9 @@ def estimate_size(opt):
         total += dir_size(str(MATERIAL_DIR), skip)
     if opt.exp_vr3d:
         total += dir_size(str(VR3D_DIR), skip)
+    _, copy_pack = resource_pack_plan(opt)
+    if copy_pack:
+        total += dir_size(str(RESOURCE_PACK), set())
     return format_size(total)
 
 
@@ -556,7 +690,7 @@ def write_plugin_config(opt, dest):
     settings['memory_preload'] = opt.preload
     settings['installer_dir'] = os.path.normpath(str(PACKAGE_ROOT))
     settings['blender_path'] = ''
-    settings['texture_pack_path'] = os.path.normpath(str(RESOURCE_PACK))
+    settings['texture_pack_path'] = os.path.normpath(str(resource_pack_plan(opt)[0]))
     settings['init'] = 'true'
     settings['optimize_default'] = opt.optimize
     if opt.ffmpeg:
@@ -566,6 +700,7 @@ def write_plugin_config(opt, dest):
 
 
 def write_project_ini(opt, dest):
+    write_gasp_config(dest, STARTUP_DIR)
     cfg = Path(dest) / 'Config'
     bundled = ffmpeg_bundled()
     ffmpeg_path = opt.ffmpeg or (str(bundled) if bundled else '')
@@ -587,10 +722,6 @@ def write_project_ini(opt, dest):
             'r.CustomDepth': '3',
             'r.PostProcessing.PropagateAlpha': 'True',
             'r.Deferred.SupportPrimitiveAlphaHoldout': 'True',
-            'r.SkinCache.SceneMemoryLimitInMB': '1024.0',
-            'rhi.Bindless.Resources': 'Enabled',
-            'rhi.Bindless.Samplers': 'Enabled',
-            'rhi.Bindless': 'Enabled',
             'r.Translucency.HeterogeneousVolumes': 'True',
             'r.Substrate': 'True',
             'r.Substrate.ProjectGBufferFormat': '0' if opt.gbuffer == 0 else '1',
@@ -631,6 +762,7 @@ def write_project_ini(opt, dest):
     patch_ue_ini(cfg / 'DefaultEditorSettings.ini', {
         '/Script/UnrealEd.EditorPerformanceSettings': {
             'bShowFrameRateAndMemory': 'True',
+            'bThrottleCPUWhenNotForeground': 'False',
         },
     })
     # MCP「自动开启服务器」。Saved 里的用户配置会盖过 Default，已有文件时两处都写。
@@ -691,6 +823,8 @@ def install(opt):
     if opt.command == 'existing' and not has_uproject(dest):
         raise FileNotFoundError(tr(opt, 'no_uproject'))
 
+    pack_target, copy_pack = resource_pack_plan(opt)
+
     merge_ffmpeg_zip()
     extract_ffmpeg_zip()
 
@@ -724,6 +858,11 @@ def install(opt):
     if opt.exp_vr3d:
         copytree(VR3D_DIR, Path(dest) / 'Plugins' / 'MoviePipelineMaskRenderPass', general)
 
+    print(f'{tr(opt, "resource_source")}: {RESOURCE_PACK if copy_pack else pack_target}')
+    print(f'{tr(opt, "resource_target")}: {pack_target}')
+    print(tr(opt, 'resource_copy' if copy_pack else 'resource_use'))
+    if copy_pack:
+        shutil.copytree(RESOURCE_PACK, pack_target, dirs_exist_ok=True)
     write_plugin_config(opt, dest)
     write_project_ini(opt, dest)
     print(tr(opt, 'done'))
@@ -749,6 +888,10 @@ def print_plan(opt):
     print(f'  preload       {opt.preload}')
     print(f'  optimize      {opt.optimize}')
     print(f'  ffmpeg        {opt.ffmpeg or ffmpeg_bundled()}')
+    target, copy_pack = resource_pack_plan(opt)
+    print(f'  {tr(opt, "resource_source")}: {RESOURCE_PACK if copy_pack else target}')
+    print(f'  {tr(opt, "resource_target")}: {target}')
+    print(f'  {tr(opt, "resource_copy" if copy_pack else "resource_use")}')
     print(f'  {tr(opt, "size")}: {estimate_size(opt)}')
 
 
@@ -761,6 +904,9 @@ def add_shared_flags(parser):
                         metavar='DIGITS', help='1=C++ 2=material 3=VR, e.g. 123 (default off)')
     parser.add_argument('--ffmpeg', default='', metavar='EXE',
                         help='external ffmpeg executable')
+    parser.add_argument('--resource-pack', nargs='?', const='', default=None, metavar='DIR',
+                        help='resource pack directory; without DIR use project/Plugins/Mineprep/mc_default; '
+                             'copy default pack only when the directory is missing or empty')
     parser.add_argument('--gbuffer', type=parse_gbuffer, default=1, metavar='0|1',
                         help='0=blendable, 1=adaptive (default 1)')
     parser.add_argument('--preload', action='store_true', help='enable memory preload')
@@ -802,6 +948,7 @@ def options_from_args(args):
     raw_exp = args.experimental
     opt.experimental = raw_exp if isinstance(raw_exp, set) else parse_experimental(raw_exp)
     opt.ffmpeg = args.ffmpeg or ''
+    opt.resource_pack = args.resource_pack
     opt.gbuffer = args.gbuffer
     opt.preload = args.preload
     opt.optimize = args.optimize

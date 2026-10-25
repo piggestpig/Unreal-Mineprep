@@ -14,9 +14,19 @@ import subprocess
 from sys import platform
 from pathlib import Path
 
+def update_resource_pack_default(self, context):
+    previous = self.get('_resource_pack_default', '')
+    target = (os.path.abspath(join(get_abs_path(self.install_path), 'Plugins', 'Mineprep', 'mc_default'))
+              if self.install_path.strip() else '')
+    if not self.resource_pack_path or self.resource_pack_path == previous:
+        self.resource_pack_path = target
+    self['_resource_pack_default'] = target
+
 class MineprepProperties(bpy.types.PropertyGroup):
-    install_path: bpy.props.StringProperty(subtype='DIR_PATH')
+    install_path: bpy.props.StringProperty(subtype='DIR_PATH', update=update_resource_pack_default)
     ffmpeg_path: bpy.props.StringProperty(subtype='FILE_PATH')
+    ini_resource_pack: bpy.props.BoolProperty(default=False)
+    resource_pack_path: bpy.props.StringProperty(subtype='DIR_PATH')
     project_name: bpy.props.StringProperty(default="MC_Startup")
     page: bpy.props.IntProperty()
     exp_basic: bpy.props.BoolProperty(default=True)
@@ -93,7 +103,11 @@ localization = {
         35: "使用兼容性更好的有限Blendable GBuffer材质",
         36: "工程文件名称 (.uproject):",
         37: "优化性能，降低默认画质",
-        38: "仅安装核心功能（跳过90%预设素材）"
+        38: "仅安装核心功能（跳过90%预设素材）",
+        39: "自定义资源包",
+        41: "目录不存在或为空，将复制默认资源包",
+        42: "目录已有内容，直接使用",
+        43: "资源包路径需要是文件夹"
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -133,7 +147,11 @@ localization = {
         35: "Use limited Blendable GBuffer material for better compatibility",
         36: "Project name (.uproject):",
         37: "Optimize performance, reduce default image quality",
-        38: "Install core features only (skip 90% of preset assets)"
+        38: "Install core features only (skip 90% of preset assets)",
+        39: "Custom resource pack",
+        41: "Folder is missing or empty; the default pack will be copied",
+        42: "Folder contains files; use it without copying",
+        43: "Resource pack path must be a folder"
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
@@ -173,7 +191,11 @@ localization = {
         35: "使用兼容性更好的有限Blendable GBuffer材賊",
         36: "工程文件名稱 (.uproject):",
         37: "優化性能，降低默認畫質",
-        38: "僅安裝核心功能（跳過90%預設素材）"
+        38: "僅安裝核心功能（跳過90%預設素材）",
+        39: "自訂資源包",
+        41: "目錄不存在或為空，將複製預設資源包",
+        42: "目錄已有內容，直接使用",
+        43: "資源包路徑需要是資料夾"
     },
 }
 
@@ -235,7 +257,111 @@ def _ue_ini_map(sections):
             bucket['keys'][key.casefold()] = (key, value)
     return out
 
-def patch_ue_ini_text(text, sets=None, removes=None):
+def _ue_ini_array_values(text, section, key):
+    """Read the local array in file order, including clear/remove commands."""
+    values, current = [], ''
+    for line in text.splitlines():
+        header = _UE_INI_SECTION.match(line)
+        if header:
+            current = header.group(1)
+            continue
+        if current.casefold() != section.casefold() or line.lstrip().startswith(';'):
+            continue
+        parsed = _UE_INI_KV.match(line)
+        if not parsed:
+            continue
+        _, command, name, _, value = parsed.groups()
+        if name.strip().casefold() != key.casefold():
+            continue
+        value = value.strip()
+        if command == '!':
+            values.clear()
+        elif command == '-':
+            values = [item for item in values if item != value]
+        elif command == '.':
+            values.append(value)
+        elif command == '+':
+            if value not in values:
+                values.append(value)
+        else:
+            values = [value]
+    return values
+
+
+def _ue_ini_struct_field(value, field):
+    match = re.search(r'(?:^|[,(])\s*' + re.escape(field) +
+                      r'\s*=\s*(?:"([^"]*)"|([^,)]*))', value, re.IGNORECASE)
+    return (match.group(1) if match.group(1) is not None else match.group(2).strip()) if match else ''
+
+
+def merge_ue_ini_arrays_text(text, arrays):
+    """Append missing named structs without replacing the project's entries."""
+    nl = '\r\n' if '\r\n' in text else '\n'
+    for section, keys in (arrays or {}).items():
+        additions = []
+        for key, (identity_field, entries) in keys.items():
+            existing = {
+                _ue_ini_struct_field(value, identity_field).casefold(): value
+                for value in _ue_ini_array_values(text, section, key)
+            }
+            conflict_field = {'cvarsarray': 'Type', 'gameplaytagredirects': 'NewTagName'}.get(key.casefold())
+            for value in entries:
+                identity = _ue_ini_struct_field(value, identity_field)
+                if not identity:
+                    raise ValueError(f'[{section}] {key}: missing {identity_field}: {value}')
+                old = existing.get(identity.casefold())
+                if old is not None:
+                    if conflict_field:
+                        old_field = _ue_ini_struct_field(old, conflict_field)
+                        new_field = _ue_ini_struct_field(value, conflict_field)
+                        if old_field.casefold() != new_field.casefold():
+                            print(f'Warning: {identity}: keeping existing {conflict_field}={old_field}; '
+                                  f'Mineprep template has {conflict_field}={new_field}')
+                    continue
+                additions.append(f'+{key}={value}')
+                existing[identity.casefold()] = value
+        if not additions:
+            continue
+        lines, current, insertion = text.splitlines(), '', None
+        for index, line in enumerate(lines):
+            header = _UE_INI_SECTION.match(line)
+            if header:
+                if current.casefold() == section.casefold():
+                    insertion = index
+                current = header.group(1)
+        if current.casefold() == section.casefold():
+            insertion = len(lines)
+        if insertion is None:
+            if lines and lines[-1].strip():
+                lines.append('')
+            lines.append(f'[{section}]')
+            insertion = len(lines)
+        lines[insertion:insertion] = additions
+        text = nl.join(lines) + nl
+    return text
+
+
+def write_gasp_config(dest, startup_dir):
+    # MC_Startup owns the declarations; installers only merge these three arrays.
+    cfg, template = Path(dest) / 'Config', Path(startup_dir) / 'Config'
+    sections = (
+        ('DefaultEngine.ini', '/Script/Engine.DataDrivenConsoleVariableSettings',
+         {'CVarsArray': 'Name'}),
+        ('DefaultGameplayTags.ini', '/Script/GameplayTags.GameplayTagsSettings',
+         {'GameplayTagList': 'Tag', 'GameplayTagRedirects': 'OldTagName'}),
+    )
+    for filename, section, keys in sections:
+        source = (template / filename).read_text(encoding='utf-8-sig')
+        arrays = {section: {
+            key: (identity, _ue_ini_array_values(source, section, key))
+            for key, identity in keys.items()
+        }}
+        sets = {section: {'ImportTagsFromConfig': 'True'}} if filename == 'DefaultGameplayTags.ini' else None
+        patch_ue_ini(cfg / filename, sets, arrays=arrays)
+
+
+def patch_ue_ini_text(text, sets=None, removes=None, arrays=None):
+    text = merge_ue_ini_arrays_text(text, arrays)
     want, drop = _ue_ini_map(sets), _ue_ini_map(removes)
     nl = '\r\n' if '\r\n' in text else '\n'
     ended = text.endswith('\n') or text.endswith('\r\n')
@@ -299,11 +425,11 @@ def patch_ue_ini_text(text, sets=None, removes=None):
         return body + nl
     return body
 
-def patch_ue_ini(path, sets=None, removes=None):
+def patch_ue_ini(path, sets=None, removes=None, arrays=None):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     text = path.read_text(encoding='utf-8') if path.exists() else ''
-    path.write_text(patch_ue_ini_text(text, sets, removes), encoding='utf-8')
+    path.write_text(patch_ue_ini_text(text, sets, removes, arrays), encoding='utf-8')
     return path
 
 def get_abs_path(path):
@@ -313,6 +439,25 @@ def get_abs_path(path):
     else:
         abs_path = path
     return os.path.normpath(abs_path)
+
+def resource_pack_plan():
+    if not mc.ini_resource_pack:
+        return os.path.abspath(resource_pack_path), False
+    target = os.path.abspath(get_abs_path(mc.resource_pack_path.strip()) if mc.resource_pack_path.strip()
+                             else join(get_abs_path(mc.install_path), 'Plugins', 'Mineprep', 'mc_default'))
+    if os.path.exists(target) and not os.path.isdir(target):
+        raise NotADirectoryError(f'{loc(43)}: {target}')
+    return target, not os.path.exists(target) or not any(Path(target).iterdir())
+
+def draw_resource_pack(layout):
+    layout.prop(mc, 'ini_resource_pack', text=loc(39))
+    if mc.ini_resource_pack:
+        layout.prop(mc, 'resource_pack_path', text=loc(19))
+        try:
+            _, copy_pack = resource_pack_plan()
+            layout.label(text=loc(41 if copy_pack else 42))
+        except NotADirectoryError as err:
+            layout.label(text=str(err), icon='ERROR')
 
 def extract_zip(zip_path, extract_to):
     # 检查是否已解压（去掉.zip后缀的路径）
@@ -418,7 +563,12 @@ def get_mineprep_dir_size(path, skip):
 _size_cache = {}
 
 def est_size():
-    cache_key = (mc.lite_version, mc.core_only, mc.ini_ffmpeg, mc.skip_other_platform, mc.install_mode, mc.exp_basic, mc.exp_material, mc.exp_vr3d)
+    try:
+        pack_target, copy_pack = resource_pack_plan()
+    except NotADirectoryError:
+        return loc(43)
+    cache_key = (mc.lite_version, mc.core_only, mc.ini_ffmpeg, mc.skip_other_platform, mc.install_mode,
+                 mc.exp_basic, mc.exp_material, mc.exp_vr3d, pack_target, copy_pack)
     if cache_key in _size_cache:
         return _size_cache[cache_key]
 
@@ -435,6 +585,8 @@ def est_size():
         total += get_dir_size(material_dir, skip)
     if mc.exp_vr3d:
         total += get_dir_size(vr3d_dir, skip)
+    if copy_pack:
+        total += get_dir_size(resource_pack_path, set())
 
 
     if total >= 1024 ** 3:
@@ -497,6 +649,7 @@ def install():
     install_path = get_abs_path(mc.install_path)
     if mc.install_path == "":
         raise FileNotFoundError(loc(1, "⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠"))
+    pack_target, copy_pack = resource_pack_plan()
     if not os.path.exists(install_path):
         os.makedirs(install_path)
     
@@ -547,7 +700,10 @@ def install():
     config['Settings']['memory_preload'] = mc.ini_memory
     config['Settings']['installer_dir'] = os.path.normpath(file_dir)
     config['Settings']['blender_path'] = os.path.normpath(blender_path)
-    config['Settings']['texture_pack_path'] = os.path.normpath(resource_pack_path)
+    print(f'{loc(39)}: {pack_target} ({loc(41 if copy_pack else 42)})')
+    if copy_pack:
+        shutil.copytree(resource_pack_path, pack_target, dirs_exist_ok=True)
+    config['Settings']['texture_pack_path'] = os.path.normpath(pack_target)
     config['Settings']['init'] = "true"
     config['Settings']['optimize_default'] = mc.optimize_default
     if mc.ini_ffmpeg:
@@ -557,6 +713,7 @@ def install():
         json.dump(config, file, ensure_ascii=False, indent=4)
 
     #修改项目配置文件
+    write_gasp_config(install_path, startup_dir)
     cfg = join(install_path, 'Config')
     ExecutablePath = f'"{os.path.normpath(mc.ffmpeg_path)}"' if mc.ini_ffmpeg else f'"{ffmpeg_default}"'
     patch_ue_ini(join(cfg, 'DefaultEngine.ini'), {
@@ -576,10 +733,6 @@ def install():
             'r.CustomDepth': '3',
             'r.PostProcessing.PropagateAlpha': 'True',
             'r.Deferred.SupportPrimitiveAlphaHoldout': 'True',
-            'r.SkinCache.SceneMemoryLimitInMB': '1024.0',
-            'rhi.Bindless.Resources': 'Enabled',
-            'rhi.Bindless.Samplers': 'Enabled',
-            'rhi.Bindless': 'Enabled',
             'r.Translucency.HeterogeneousVolumes': 'True',
             'r.Substrate': 'True',
             'r.Substrate.ProjectGBufferFormat': '0' if mc.blendable_gbuffer else '1',
@@ -620,6 +773,7 @@ def install():
     patch_ue_ini(join(cfg, 'DefaultEditorSettings.ini'), {
         '/Script/UnrealEd.EditorPerformanceSettings': {
             'bShowFrameRateAndMemory': 'True',
+            'bThrottleCPUWhenNotForeground': 'False',
         },
     })
     # MCP「自动开启服务器」。Saved 里的用户配置会盖过 Default，已有文件时两处都写。
@@ -751,6 +905,7 @@ class Installer1(bpy.types.Operator):
         layout.prop(mc, "ini_ffmpeg", text=loc(18,"手动指定FFmpeg路径 (如ffmpeg.exe)"))
         if mc.ini_ffmpeg:
             layout.prop(mc, "ffmpeg_path", text=loc(19,"路径"))
+        draw_resource_pack(layout)
         layout.prop(mc, "blendable_gbuffer", text=loc(35,"使用兼容性更好的有限Blendable GBuffer材质"))
         layout.prop(mc, "optimize_default", text=loc(37,"优化性能，降低默认画质"))
         layout.prop(mc, "ini_memory", text=loc(20,"内存预加载"))
@@ -817,6 +972,7 @@ class Installer2(bpy.types.Operator):
         layout.prop(mc, "ini_ffmpeg", text=loc(18,"手动指定FFmpeg路径 (如ffmpeg.exe)"))
         if mc.ini_ffmpeg:
             layout.prop(mc, "ffmpeg_path", text=loc(19,"路径"))
+        draw_resource_pack(layout)
         layout.prop(mc, "blendable_gbuffer", text=loc(35,"使用兼容性更好的有限Blendable GBuffer材质"))
         layout.prop(mc, "optimize_default", text=loc(37,"优化性能，降低默认画质"))
         layout.prop(mc, "ini_memory", text=loc(20,"内存预加载"))
