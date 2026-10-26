@@ -231,6 +231,14 @@ img.target.set_visibility(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)
 
 `get_mouse_local` / `get_mouse_uv` / `get_local_size` call Blueprint helpers (`AbsoluteToLocal`, `GetLocalSize`) with a `UWidget*` so `FGeometry` never crosses into Python. `get_mouse_uv` is `local / size` (zero size → `(0,0)`).
 
+For empty PointerEvent data, use `mineprep.left_mouse_down()`, `middle_mouse_down()` or
+`right_mouse_down()` on the UI main thread. They query **current** button state:
+`True` = pressed, `False` = released, `None` = unavailable (not the same as released).
+Windows/macOS use native queries; Linux tries SDL3 then X11. Record the drag mode
+on Down (for example, `if mineprep.right_mouse_down() is True: ...`), then use that
+recorded mode on Move/Up. A released button cannot identify which Up event fired;
+these helpers do not expose the event's triggering button.
+
 **Return value** (wrapper in `mc_widget.border`):
 
 - `handled` means the mouse event is not passed to widgets below

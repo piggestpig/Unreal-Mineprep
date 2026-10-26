@@ -1,14 +1,17 @@
 import os
 import re
 import math
+import platform
 import subprocess
 import sys
 import traceback
 import builtins
+import ctypes
 import mcvars
 from dataclasses import dataclass, asdict
 from pprint import pformat
 from functools import lru_cache, wraps
+from weakref import finalize
 from typing import Iterable
 import operator
 
@@ -566,6 +569,7 @@ def dialog(title, message=''):
     return result == unreal.AppReturnType.YES
 
 
+
 def debug(*args, autolog=False, warning=False, error=False):
     """启用DebugMode时在日志中打印信息"""
     if mcvars.DebugMode:
@@ -703,6 +707,89 @@ def get_hotkey_object(reload=False):
 def construct(cls, outer=None):
     """构造对象实例（调用蓝图的Construct方法，垃圾回收更安全）"""
     return get_hotkey_object().call_method('Construct', (bpclass(cls), outer))
+
+
+@lru_cache(maxsize=1)
+def _mouse_button_query():
+    """Bind once; Linux falls back from the editor's SDL3 to X11."""
+    backends = {'win32': ('windows',), 'darwin': ('mac',), 'linux': ('sdl', 'x11')}
+    for backend in backends.get(sys.platform, ()):
+        try:
+            if backend == 'windows':
+                read = ctypes.WinDLL('user32', use_last_error=True).GetAsyncKeyState
+                read.argtypes = (ctypes.c_int,)
+                read.restype = ctypes.c_short
+                return lambda index: read((0x01, 0x04, 0x02)[index]) & 0x8000
+            if backend == 'mac':
+                read = ctypes.CDLL('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics').CGEventSourceButtonState
+                read.argtypes = (ctypes.c_int32, ctypes.c_uint32)
+                read.restype = ctypes.c_bool
+                return lambda index: read(0, (0, 2, 1)[index])
+            if backend == 'sdl':
+                read = ctypes.CDLL(None).SDL_GetGlobalMouseState
+                read.argtypes = (ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float))
+                read.restype = ctypes.c_uint32
+                return lambda index: read(None, None) & (1 << index)
+
+            library = ctypes.CDLL('libX11.so.6')
+            library.XInitThreads.argtypes = ()
+            library.XInitThreads.restype = ctypes.c_int
+            library.XOpenDisplay.argtypes = (ctypes.c_char_p,)
+            library.XOpenDisplay.restype = ctypes.c_void_p
+            library.XDefaultRootWindow.argtypes = (ctypes.c_void_p,)
+            library.XDefaultRootWindow.restype = ctypes.c_ulong
+            library.XCloseDisplay.argtypes = (ctypes.c_void_p,)
+            library.XCloseDisplay.restype = ctypes.c_int
+            read = library.XQueryPointer
+            read.argtypes = (ctypes.c_void_p, ctypes.c_ulong,
+                            ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_ulong),
+                            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+                            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+                            ctypes.POINTER(ctypes.c_uint))
+            read.restype = ctypes.c_int
+            library.XInitThreads()
+            display = library.XOpenDisplay(None)
+            if not display:
+                continue
+            root = library.XDefaultRootWindow(display)
+
+            def query(index):
+                parent, child = ctypes.c_ulong(), ctypes.c_ulong()
+                rx, ry, x, y = (ctypes.c_int() for _ in range(4))
+                mask = ctypes.c_uint()
+                if not read(display, root, ctypes.byref(parent), ctypes.byref(child),
+                            ctypes.byref(rx), ctypes.byref(ry), ctypes.byref(x), ctypes.byref(y), ctypes.byref(mask)):
+                    raise OSError('XQueryPointer failed')
+                return mask.value & (1 << (8 + index))
+
+            finalize(query, library.XCloseDisplay, display)
+            return query
+        except Exception:
+            continue
+    return None
+
+
+def _mouse_button_down(index):
+    query = _mouse_button_query()
+    try:
+        return None if query is None else bool(query(index))
+    except Exception:
+        return None
+
+
+def left_mouse_down():
+    """当前左键是否按下；无法查询时返回 None。UI 回调在主线程调用。"""
+    return _mouse_button_down(0)
+
+
+def middle_mouse_down():
+    """当前中键是否按下；无法查询时返回 None。UI 回调在主线程调用。"""
+    return _mouse_button_down(1)
+
+
+def right_mouse_down():
+    """当前右键是否按下；无法查询时返回 None。UI 回调在主线程调用。"""
+    return _mouse_button_down(2)
 
 
 def get_tex_size(tex: unreal.Texture2D) -> tuple[int, int]:

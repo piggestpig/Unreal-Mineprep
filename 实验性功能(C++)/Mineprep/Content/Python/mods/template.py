@@ -4,7 +4,7 @@ import mineprep
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep import Lazy as unreal
 
 
 # 在此填写模组相关信息，设置EnabledByDefault=True会在引擎启动时自动加载模组

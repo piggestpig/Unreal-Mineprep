@@ -20,7 +20,8 @@ from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw,
                       enum, askopenfilename, send2trash, set_actor_label, select_actors,
                       undo, open_main_panel, get_hotkey_object, construct, uasset, copy,
                       List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
-                      askdirectory, asksaveasfilename, startfile, screenshot)
+                      askdirectory, asksaveasfilename, startfile, screenshot, Lazy,
+                      left_mouse_down, middle_mouse_down, right_mouse_down)
 from mc_parallel import (
     delay, tick, asynctask, thread, asyncthread, until,
     DelayRunner, TickRunner, AsyncTaskRunner, ThreadRunner,

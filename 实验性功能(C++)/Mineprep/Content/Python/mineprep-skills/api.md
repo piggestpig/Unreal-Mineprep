@@ -28,6 +28,7 @@ Outside Unreal, the public modules use `mc_utils.Lazy` as an `unreal` placeholde
 | Assets & Config | `uasset`, `uclass`, `bpclass`, `construct`, `copy`, `config`, `paths` |
 | Blueprint libs | `BPLib`, `EditorBPLib`, `BPLibCaller` — call a Blueprint function library by function, attribute, or subscript. Not `unreal.mineprep` |
 | Utils | `prints`, `warn`, `throw`, `panic`, `undo`, `world`, `cast`, `enum`, `startfile`, `dialog`, file dialogs, `send2trash`, `screenshot` |
+| Mouse state | `left_mouse_down()`, `middle_mouse_down()`, `right_mouse_down()` → `bool` or unavailable `None`; current state, UI main thread; [drag usage](ui.md#border--mouse) |
 | Parallel | `delay`, `tick`, `asynctask`, `thread`, `asyncthread`, `until` — [parallel.md](parallel.md) |
 | Prep & Textures | `prep_texture`, `colorize_material`, `load_mcprep_data`, `tex_to_color`, `color_to_tex`, `ColorList`, `tex_source_files`, `export_tex_cache`, `import_data_tex`, `register_biome_tex`, `clear_biome_tex` |
 | Experimental C++ | `unreal.mineprep.*` — last resort after `mineprep.*`; [cpp.md](cpp.md) |

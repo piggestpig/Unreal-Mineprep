@@ -138,7 +138,7 @@ Super Resolution/Ray Reconstruction/DLAA`和`Movie Render Queue DLSS/DLAA Suppor
 
 
 ## 系统要求
-Mineprep 0.6-pre2 使用 Windows + UE5.8 开发，建议在此环境下使用。其他平台或引擎版本将会有一些功能不可用。
+Mineprep 0.7-pre1 使用 Windows + UE5.8 开发，建议在此环境下使用。其他平台或引擎版本将会有一些功能不可用。
 
 除了[虚幻引擎官方文档](https://dev.epicgames.com/documentation/zh-cn/unreal-engine/hardware-and-software-specifications-for-unreal-engine)中的最低要求之外，渲染动画还需要更高的配置和更多的显存：
 
@@ -156,7 +156,7 @@ Mineprep的绝大部分功能都用蓝图和Python编写，旨在支持不同的
 
 | Mineprep<br>版本 | Python<br>API 版本 | 引擎版本 | Windows<br>实验性功能 | Mac/Linux<br>实验性功能 |
 | :---: | :---: | :---: | :---: | :---: |
-| 最新快照 | 2.0 | 5.8 | ✅ | - |
+| 0.7-pre1 | 2.0 | 5.8 | ✅ | - |
 | 0.6-pre1 | 1.0 | 5.7 | ✅ | ℹ️ |
 | 0.5 | 0.1 | 5.7 | ✅ | ✅ |
 |  |  |  |  |  |
@@ -174,10 +174,11 @@ Mineprep的绝大部分功能都用蓝图和Python编写，旨在支持不同的
 > [!WARNING]  
 > 请勿在不兼容的环境（比如高版本引擎）勾选实验性功能，否则工程文件打都打不开，一上来就报错！！
 
-Mineprep 0.6-pre1 只在 Windows 上编译了最新的实验性功能。我们保留了来自0.5版本的二进制文件，Mac和Linux用户可以尝试安装，但不保证能正常运行
 
 <details>
 <summary> *展开细节 </summary>
+
+Mineprep 0.6-pre1 只在 Windows 上编译了最新的实验性功能。我们保留了来自0.5版本的二进制文件，Mac和Linux用户可以尝试安装，但不保证能正常运行
 
 <img src="https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/Mac%26Linux%E5%90%88%E5%BD%B1%E7%95%99%E5%BF%B5.jpg" alt="Mac&Linux合影留念">
 <sup><i> ↑ Mineprep 0.5 在 MacOS 和 Linux 运行的纪念照 </i></sup>
@@ -248,21 +249,25 @@ Mineprep提供了可拓展的多语言翻译，目前支持中文/英文/繁体�
 - 能自动保存属性集
 - 适合Agent迭代开发
 
-使用方法：在 `顶部菜单栏 → MC → 模组管理器` 中安装、卸载、启用、禁用模组。  
-Mineprep 0.6-pre2有以下内置模组（目前仍处于早期开发阶段，可能存在bug）：
+使用方法：在 `顶部菜单栏 → MC → 模组管理器` 中安装、卸载、启用、禁用、打包模组。  
+Mineprep 0.7-pre1有以下内置模组（目前仍处于早期开发阶段，可能存在bug）：
 
 | 模组名称 | 版本 | 简介 | 源码参考 |
 | :--- | :---: | :--- | :--- |
-| [模组管理器](<./实验性功能(C++)/Mineprep/Content/Python/mods/ModManager>) | 2.0 | 启用、禁用、安装和卸载模组 | |
+| [模组管理器](<./实验性功能(C++)/Mineprep/Content/Python/mods/ModManager>) | 2.0 | 启用、禁用、安装、卸载、打包模组 | [Blender](https://github.com/blender/blender/blob/main/scripts/addons_core/bl_pkg/cli/blender_ext.py) |
+| [自定义快捷键](<./实验性功能(C++)/Mineprep/Content/Python/mods/EditorShortcuts>) | 2.0 | 编辑自定义快捷键 | |
+| | | | |
 | [VAT顶点动画工具](<./实验性功能(C++)/Mineprep/Content/Python/mods/VAT_Tools>) | 2.0 | 烘焙顶点动画纹理，用于大型群体粒子 | [Anim To Texture Helpers](https://github.com/kromond/AnimToTextureHelpers) |
 | [皮肤&表情编辑器](<./实验性功能(C++)/Mineprep/Content/Python/mods/Skin_Editor>) | 2.0 | 编辑选中Actor的皮肤与头部材质；绘制纹理 | [MC Skin Converter](https://util.gflash.eu/mcskinconverter/) |
-| [MC原版生物加载器](<./实验性功能(C++)/Mineprep/Content/Python/mods/VanillaMobLoader>) | 2.0 | 浏览、导入并放置MC生物模型（需要联网） | [CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/) |
+| [MC原版生物加载器](<./实验性功能(C++)/Mineprep/Content/Python/mods/VanillaMobLoader>) | 2.0 | 浏览、导入并放置MC生物模型（下载资源需联网） | [CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/) |
 | [基岩版动画转换器](<./实验性功能(C++)/Mineprep/Content/Python/mods/BedrockAnimator>) | 2.0 | 把基岩版 animation.json 转换为动画序列 | |
+| [像素标题生成器](<./实验性功能(C++)/Mineprep/Content/Python/mods/TitleGenerator>) | 2.0 | 生成大标题（下载资源需联网） | [Minecraft Title Generator](https://github.com/ewanhowell5195/MinecraftTitleGenerator) |
+| [MC世界生成器](<./实验性功能(C++)/Mineprep/Content/Python/mods/MC_WorldGenerator>) | 0.64.7 | 高性能的世界生成器，支持多种地形和生物群系 | [Minecraft](https://www.minecraft.net/en-us/article/removing-obfuscation-in-java-edition), [Mineways](https://github.com/erich666/Mineways) |
 | | | | |
 | [插件更新与迁移工具](<./实验性功能(C++)/Mineprep/Content/Python/mods/VersionControl>) | 2.0 | 迁移Mineprep插件至其他工程文件或安装包仓库 | |
 | [本地化翻译控制板](<./实验性功能(C++)/Mineprep/Content/Python/mods/LocalizationBoard>) | 2.0 | 扫描资产并整理变量显示名 CSV（需要实验性功能）| |
 | [自动化测试](<./实验性功能(C++)/Mineprep/Content/Python/mods/AutomationTest>) | 2.0 | 运行编辑器自动化测试项目 | |
-| [Mod模板](<./实验性功能(C++)/Mineprep/Content/Python/mods/template.py>) | 1.0 | 面向开发者的普通mod模板 | |
+| [Mod模板](<./实验性功能(C++)/Mineprep/Content/Python/mods/template.py>) | 2.0 | 面向开发者的普通mod模板 | |
 | [minimal](<./实验性功能(C++)/Mineprep/Content/Python/mods/minimal.py>) | - | 最小示例 | |
 
 
@@ -275,11 +280,33 @@ Mineprep 0.6-pre2有以下内置模组（目前仍处于早期开发阶段，可
 
 ## 版本更新
 
+### 0.7-pre1
+
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.7-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
+
+
+
+
 #### 26w42a
 - Mineprep 0.7-pre1即将发布，这里记录了最后的更新内容
+- `MC世界生成器`模组已合并进主分支！
+- 导入MC结构时新增`分组`参数，解决了单个PCG actor最多支持256种方块的限制，还能减少Niagara粒子的实例总数，大幅提高渲染性能
+- 优化了导入大型结构的性能和内存占用，实测速度快至6倍
+- 新增`群系颜色纹理`(BCT)，目前由“MC世界生成器”模组绘制，推荐用于PCG实例化方块与动态结构粒子
+  - 每个Actor能使用独立的群系纹理，在平移、旋转、缩放时保持整体着色
+  - 群系纹理目前有两种模式：正数表示RGB倍率，负数绝对值表示HSV偏移
+  - 默认用于染色的树叶和草，可以通过“重载生物群系ID”变量的小数部分叠加到整个材质
+  - 实际上，你可以手绘群系贴图，甚至换成视频纹理/可变的渲染目标！
 - 所有NPC生物已升级为mover pawn，并更新了来自UE5.8的运动匹配官方示例
-  - 新一代NPC兼容以前的绝大多数功能，但是尚未在实际动画项目中
-- 改进了安装程序，现在会写入DDCVar和GameplayTag
+  - 新一代mover pawn兼容以前的绝大多数功能，但是尚未经过充分测试，暂时没适配可变重力方向。
+  - 只有安装了实验性功能后，才能把骨骼网格体参数显示在整个actor的细节面板中。这一功能早在UE5.7就做好了，目的是让模型保持一致，并且能直接调整头部的动画和材质
+  - 未来会改进NPC参数，并尝试利用官方提供的行为树、智能对象、Ragdoll等示例内容
+- 新增`像素标题生成器`模组，从Blockbench的Minecraft Title Generator插件下载资源，用于生成大标题。0.7-pre1的封面图完全在虚幻引擎中制作！
+- 改进了安装程序，现在会写入DDCVar和GameplayTag，能设置自定义资源包路径（勾选后默认把素材复制到工程文件里），并关闭后台CPU节能
+- 改进了Mineprep Python API，最大的亮点之一是能离线调用函数，在没有unreal模块的情况下进行测试了
+- 改进了模组管理器，现在能打包模组了
+- 模仿Blender制作了`mod_manifest.toml`，可配置paths_exclude_pattern等高级元数据，便于打包和迁移
+- 更新了本地化翻译；接下来会重构整个Python API的本地化系统
 - 修复了自定义快捷键在垃圾回收后失效的bug
 - 修复了镜头试拍录制器启动后立即中止的bug
 
