@@ -1,8 +1,4 @@
-"""Optional image decoding and cancellable, standard-library network workers.
-
-Catalog and renders originate from Ewan Howell's CEM Template Loader / wynem.
-No Blender modules or bundled third-party code are required.
-"""
+"""生物模型目录、缩略图与皮肤贴图的后台下载与本地缓存管理。"""
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -98,7 +94,7 @@ class AssetStore:
         return catalog, saved
 
     def png_path(self, ident):
-        # Quote the entire upstream identifier, never use it as an unchecked path.
+        # 对条目 ID 做 URL 转义，避免特殊字符影响本地缓存路径
         return self.cache / 'resources/thumbnails' / (quote(ident, safe='') + '.png')
 
     def cached_png(self, ident):
@@ -121,7 +117,7 @@ class AssetStore:
             return self._image
 
     def thumbnail(self, ident):
-        # Cache hits need neither network access nor the optional WebP decoder.
+        # 已缓存 PNG 时直接返回，无需联网或调用 WebP 解码
         if self.closed.is_set():
             return None
         cached = self.cached_png(ident)
@@ -150,7 +146,7 @@ class AssetStore:
         return self.cache / 'resources/skins' / (quote(ident, safe='') + '.png')
 
     def skin(self, ident):
-        """Read/download the selected entity's primary skin, never its render."""
+        """读取或下载生物的主皮肤 PNG（位于 entities/ 目录，而非预览渲染图）。"""
         path = self.skin_path(ident)
         from .skin import alpha_reader
         try:

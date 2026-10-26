@@ -1,4 +1,4 @@
-"""Dependency-free rigid skin GLB writer. Matrices act on column vectors."""
+"""将生物网格与刚体蒙皮骨骼编码为二进制 GLB 格式（无第三方库依赖）。"""
 import json
 import re
 import struct
@@ -16,7 +16,7 @@ def column_major(m):
 
 
 def binding_matrices(parts):
-    # Model pixels -> glTF metres, a proper rotation followed by uniform scale.
+    # 将模型像素坐标转换为 glTF 米制坐标（正交旋转 + 1/16 均匀缩放）
     basis = ((0.,0.,-1.,0.), (0.,1.,0.,0.), (1.,0.,0.,0.), (0.,0.,0.,1.))
     inverse = inverse_rigid(basis)
     result = [IDENTITY]

@@ -1,15 +1,18 @@
-"""安装/卸载模组；文件选择、确认和面板刷新由调用方负责。"""
+"""模组的安装、卸载与打包操作。"""
 import importlib
 import keyword
 import shutil
 import sys
+import tempfile
+import os
 import zipfile
 from pathlib import Path
 
 import mineprep
-from mc_mod import unregister_mod
+from mc_mod import unregister_mod, MANIFEST_NAME, read_manifest, PathPatternMatch
 
 MODS_DIR = Path(__file__).resolve().parent.parent
+SKIP_DIRS = {'.git', '.hg', '.svn', '__pycache__', '.pytest_cache'}
 
 
 def _stem(name):
@@ -29,8 +32,100 @@ def _target(root, relative):
     return target
 
 
+def package_mod(name, output, *, mods_dir=MODS_DIR, overwrite=False):
+    """根据模组清单规则将模组打包为 .zip 压缩包。"""
+    stem, root = _stem(name), Path(mods_dir).resolve()
+    candidates = [_target(root, stem + '.py'), _target(root, stem)]
+    existing = [p for p in candidates if p.exists()]
+    if len(existing) != 1:
+        raise ValueError(f'需有唯一的模组文件或目录: {stem}')
+    source, output = existing[0], Path(output).absolute()
+    if output.suffix.lower() != '.zip':
+        raise ValueError('输出文件须为 .zip')
+    if output.is_symlink() or output.resolve() != output:
+        raise ValueError(f'输出路径包含链接: {output}')
+    if output.is_relative_to(source):
+        raise ValueError('压缩包须保存在模组目录外')
+    if output.exists() and not overwrite:
+        raise FileExistsError(f'文件已存在: {output}')
+
+    files = []
+    if source.is_file():
+        files.append((source, source.name))
+    else:
+        manifest_path = _target(source, MANIFEST_NAME)
+        data = read_manifest(manifest_path)
+        build = data.get('build', {}) if data is not None else {}
+        matcher = PathPatternMatch(build.get('paths_exclude_pattern', []))
+
+        def skipped(relative):
+            return (bool(set(relative.parts) & SKIP_DIRS)
+                    or relative.suffix.lower() in ('.pyc', '.pyo'))
+
+        def scan(folder):
+            for path in sorted(folder.iterdir()):
+                relative = path.relative_to(source)
+                if skipped(relative):
+                    continue
+                is_dir = path.is_dir()
+                if matcher.test_path(relative.as_posix() + ('/' if is_dir else '')):
+                    continue
+                path = _target(source, relative.as_posix())
+                if is_dir:
+                    scan(path)
+                elif path.is_file():
+                    files.append((path, stem + '/' + relative.as_posix()))
+
+        if 'paths' in build:
+            for relative in build['paths']:
+                if skipped(Path(relative)):
+                    continue
+                path = _target(source, relative)
+                if not path.is_file():
+                    raise ValueError(f'paths 须列出已有文件，不展开目录或通配符: {relative}')
+                files.append((path, stem + '/' + relative))
+        else:
+            scan(source)
+        if data is not None:
+            files.append((manifest_path, stem + '/' + MANIFEST_NAME))
+        if not any(path == source / '__init__.py' for path, _ in files):
+            raise ValueError('打包结果缺少 __init__.py，请检查构建规则')
+
+    unique = {}
+    for path, relative in files:
+        key = relative.casefold()
+        if key in unique and unique[key][0] != path:
+            raise ValueError(f'压缩包路径重名: {relative}')
+        unique[key] = (path, relative)
+    files = sorted(unique.values(), key=lambda item: item[1])
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=output.parent, prefix=output.stem + '.', suffix='.tmp', delete=False) as f:
+            temporary = Path(f.name)
+        with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED) as archive:
+            for path, relative in files:
+                archive.write(path, relative)
+        # 未开启覆盖时先独占创建目标文件，防止覆盖已有文件
+        reserved = False
+        try:
+            if not overwrite:
+                with output.open('xb'):
+                    reserved = True
+            os.replace(temporary, output)
+        except OSError:
+            if reserved:
+                output.unlink()
+            raise
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+    return dict(path=str(output), files=[relative for _, relative in files],
+                source_bytes=sum(path.stat().st_size for path, _ in files), archive_bytes=output.stat().st_size)
+
+
 def install_mod(path, *, mods_dir=MODS_DIR, overwrite=False):
-    """安装 .py 或 .zip；默认拒绝同名覆盖，不导入或启用模组。"""
+    """从 .py 或 .zip 安装模组到 mods 目录（默认不覆盖同名模组）。"""
     src, root = Path(path).resolve(), Path(mods_dir).resolve()
     if not src.is_file():
         raise FileNotFoundError(src)
@@ -58,7 +153,7 @@ def install_mod(path, *, mods_dir=MODS_DIR, overwrite=False):
                      if (root / name).exists() or (root / (name + '.py')).exists()]
         if conflicts and not overwrite:
             raise FileExistsError('同名模组已存在: ' + ', '.join(conflicts))
-        # 校验完整个压缩包后才写文件；overwrite 保留原先的合并覆盖行为。
+        # 全部条目校验通过后再解压写入文件
         written = []
         for target, info in targets:
             if info and info.is_dir():
@@ -80,7 +175,7 @@ def install_mod(path, *, mods_dir=MODS_DIR, overwrite=False):
 
 
 def uninstall_mod(name, *, mods_dir=MODS_DIR):
-    """注销并移除模组；移除失败抛异常，保留模块缓存供诊断。"""
+    """注销模组并将其文件移至回收站，同时清理已加载的模块缓存。"""
     stem, root = _stem(name), Path(mods_dir).resolve()
     module_name = 'mods.' + stem
     candidates = [_target(root, stem + '.py'), _target(root, stem)]

@@ -1,4 +1,4 @@
-"""Skin & Face Editor panel."""
+"""皮肤与表情编辑器面板。"""
 import unreal
 import mineprep
 from functools import partial

@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""EditorShortcuts 纯 Slate 表现层：以左栏名称直接作为唯一主键。
-
-采用双行折叠卡片布局（第一行操作主控，第二行按需展开代码框），
-提供紧凑正方形按钮、按键选择器与底部缩放/管理工具。
-"""
+"""自定义快捷键管理面板：支持快捷键绑定、提示说明编辑与内联 Python 代码折叠框。"""
 from functools import partial
 import unreal
 import mineprep
@@ -49,6 +45,11 @@ class EditorShortcuts(mineprep.Mod):
         layout = self.layout
         scalebox = layout.scalebox(scale=self.settings.scale)
         table = scalebox.col(fill=True)
+        if ops.get_subsystem() is None:
+            table.text(mineprep.bilingual(
+                '未启用 Mineprep C++ 插件，无法绑定全局快捷键；仍可编辑并手动执行 Python 代码。',
+                'Global hotkeys require the Mineprep C++ plugin; editing and manually running Python code remain available.',
+            ), size=10, wrap=True, padding=5)
 
         # -------------------------------------------------------------
         # 1. 表头行

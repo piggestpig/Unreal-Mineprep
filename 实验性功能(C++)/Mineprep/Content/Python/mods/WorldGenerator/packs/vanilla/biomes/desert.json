@@ -1,0 +1,49 @@
+{
+  "id": "desert",
+  "name": {"zh": "沙漠", "en": "Desert"},
+  "color": "#DAC17E",
+  "vegetation_tint": [1.45, 0.90, 0.65],
+  "vegetation_hsv": [0.88, 0.85, 1.00],
+  "climate": [{"temperature": [0.2, null], "humidity": [null, -0.2]}],
+  "surface": [
+    {"when": {"surface_rock": {"min": 0}}, "top": "sandstone", "under": "sandstone"},
+    {"top": "sand", "under": "sand", "deep": "sandstone"}
+  ],
+  "features": {
+    "cactus": {
+      "surface": ["sand"],
+      "density": "$vegetation.cactus_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "bush_simple": {
+      "surface": ["sand"],
+      "density": "$vegetation.bush_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "short_dry_grass": {
+      "surface": ["sand"],
+      "density": "$vegetation.dry_grass_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "tall_dry_grass": {
+      "surface": ["sand"],
+      "density": "$vegetation.dry_grass_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "bush": {
+      "surface": ["sand"],
+      "density": "$vegetation.bush_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    }
+  }
+}

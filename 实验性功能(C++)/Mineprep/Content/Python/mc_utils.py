@@ -1,4 +1,3 @@
-import unreal
 import os
 import re
 import math
@@ -15,30 +14,118 @@ import operator
 
 HotkeyObjCache = None
 
-libs = {
-    'np': 'numpy',
-    'numpy': 'numpy',
-    'cv2': 'cv2',
-    'plt': 'matplotlib.pyplot',
-}
+class LazyMeta(type):
+    # 任意不存在的属性
+    def __getattr__(cls, name):
+        return cls
 
-def lazy_import(func):
-    """函数装饰器，自动扫描函数内部引用的全局名称，并导入libs中匹配的库"""
-    referenced_names = func.__code__.co_names
-    # 只处理 libs 中登记的库
-    detected_dependencies = {name: libs[name] for name in referenced_names if name in libs}
+    # 下标访问
+    def __getitem__(cls, key):
+        return cls
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        # 调用函数时再导入依赖
-        for alias, real_lib_name in detected_dependencies.items():
-            if alias not in func.__globals__:
-                # fromlist 使 matplotlib.pyplot 等子模块返回自身
-                module = __import__(real_lib_name, fromlist=['*'] if '.' in real_lib_name else [])
-                # 按别名写入函数的全局命名空间
-                func.__globals__[alias] = module
-        return func(*args, **kwargs)
-    return wrapper
+    def __setitem__(cls, key, value):
+        pass
+
+    def __delitem__(cls, key):
+        pass
+
+    # 函数调用（不创建实例）
+    def __call__(cls, *args, **kwargs):
+        return cls
+
+    # 通用操作
+    def _self(cls, *args, **kwargs):
+        return cls
+
+    # 算术运算
+    __add__ = __radd__ = __iadd__ = _self
+    __sub__ = __rsub__ = __isub__ = _self
+    __mul__ = __rmul__ = __imul__ = _self
+    __truediv__ = __rtruediv__ = __itruediv__ = _self
+    __floordiv__ = __rfloordiv__ = __ifloordiv__ = _self
+    __mod__ = __rmod__ = __imod__ = _self
+    __pow__ = __rpow__ = __ipow__ = _self
+    __matmul__ = __rmatmul__ = __imatmul__ = _self
+
+    # 位运算
+    __and__ = __rand__ = __iand__ = _self
+    __or__ = __ror__ = __ior__ = _self
+    __xor__ = __rxor__ = __ixor__ = _self
+    __lshift__ = __rlshift__ = __ilshift__ = _self
+    __rshift__ = __rrshift__ = __irshift__ = _self
+
+    # 一元运算
+    __neg__ = __pos__ = __abs__ = __invert__ = _self
+
+    # 比较运算
+    def __lt__(cls, other):
+        return False
+
+    __le__ = __gt__ = __ge__ = __lt__
+
+    def __eq__(cls, other):
+        return cls is other
+
+    def __ne__(cls, other):
+        return cls is not other
+
+    __hash__ = type.__hash__
+
+    # 布尔值
+    def __bool__(cls):
+        return False
+
+    # 数值转换
+    def __int__(cls):
+        return 0
+
+    def __float__(cls):
+        return 0.0
+
+    def __complex__(cls):
+        return 0j
+
+    def __index__(cls):
+        return 0
+
+    __trunc__ = __index__
+
+    def __round__(cls, ndigits=None):
+        return 0
+
+    def __divmod__(cls, other):
+        return cls, cls
+
+    __rdivmod__ = __divmod__
+
+    def __format__(cls, spec):
+        return str(cls)
+
+    # 长度
+    def __len__(cls):
+        return 0
+
+    # 迭代
+    def __iter__(cls):
+        return iter(())
+
+    # 成员判断
+    def __contains__(cls, item):
+        return False
+
+    __enter__ = _self
+
+    def __exit__(cls, exc_type, exc_value, traceback):
+        return False
+
+
+class Lazy(metaclass=LazyMeta):
+    """通用占位符，允许各种调用不报错，例如在离线测试时顶替unreal模块。调用属于未定义行为"""
+
+try:
+    import unreal
+except ModuleNotFoundError:
+    unreal = Lazy
 
 
 def iscollection(obj):
@@ -348,12 +435,14 @@ def reload(*args):
     enabled_names = {
         mod.__name__
         for mod in reloadable
-        if (getattr(mod, 'mod_info', None) or {}).get('EnabledByDefault')
+        if mod.__name__ in mcvars.EnabledMods
     }
     reloadable_names = [mod.__name__ for mod in reloadable]
 
     for mod in reversed(reloadable):
-        mc_mod.unregister_mod(mod)
+        if not mc_mod.unregister_mod(mod):
+            mcvars.ModsInitialized = True
+            raise RuntimeError(f'注销失败，停止重载: {mod.__name__}')
 
     import mineprep as old_mineprep
     import mc_widget
@@ -397,12 +486,9 @@ def reload(*args):
     for mod_name in reloadable_names:
         try:
             mod = importlib.import_module(mod_name)
+            mc_mod._sync_mod_info(mod)
             if mod_name in enabled_names:
-                info = getattr(mod, 'mod_info', None)
-                if info is None:
-                    mod.mod_info = info = {}
-                info['EnabledByDefault'] = True
-            mc_mod.register_mod(mod)
+                mc_mod.register_mod(mod)
             unreal.log(f'重新加载 {mod_name}')
         except Exception as e:
             warn(f'重新加载 {mod_name} 时出错: {e}')
@@ -480,9 +566,17 @@ def dialog(title, message=''):
     return result == unreal.AppReturnType.YES
 
 
-def debug(*args):
+def debug(*args, autolog=False, warning=False, error=False):
     """启用DebugMode时在日志中打印信息"""
     if mcvars.DebugMode:
+        text = '\n'.join(str(arg) if isinstance(arg, (str, unreal.Text)) else pformat(arg, sort_dicts=False) for arg in args)
+        if error:
+            throw(text)
+        elif warning:
+            warn(text)
+        else:
+            unreal.log(text)
+    elif autolog:
         text = '\n'.join(str(arg) if isinstance(arg, (str, unreal.Text)) else pformat(arg, sort_dicts=False) for arg in args)
         unreal.log(text)
 

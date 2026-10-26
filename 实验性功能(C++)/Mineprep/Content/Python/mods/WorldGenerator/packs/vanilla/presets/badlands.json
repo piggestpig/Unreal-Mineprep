@@ -1,0 +1,51 @@
+{
+  "name": {
+    "zh": "恶地",
+    "en": "Badlands"
+  },
+  "params": {
+    "climate.single_biome": "badlands",
+    "caves.enabled": false,
+    "terrain.flat": false,
+    "terrain.mountain_height": 18,
+    "terrain.detail_strength": 1,
+    "terrain.continental_curve": [
+      [
+        -1,
+        3
+      ],
+      [
+        -0.45,
+        4
+      ],
+      [
+        0,
+        6
+      ],
+      [
+        0.5,
+        9
+      ],
+      [
+        1,
+        12
+      ]
+    ],
+    "terrain.lowland_strength": 0.8,
+    "terrain.lowland_height": 6,
+    "islands.enabled": false,
+    "hydrology.enabled": false,
+    "river.enabled": false,
+    "lakes.enabled": false,
+    "ponds.enabled": false,
+    "water.generate": true,
+    "badlands.enabled": true,
+    "cold.enabled": false,
+    "cold.freeze": false,
+    "frozen_ocean.enabled": false,
+    "ice_spikes.enabled": false,
+    "badlands.coverage": 1,
+    "climate.temperature_offset": 1.5,
+    "climate.humidity_offset": -1.5
+  }
+}

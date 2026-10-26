@@ -99,6 +99,22 @@ for vscode_dir in plugin_dir.rglob(".vscode"):
         shutil.rmtree(vscode_dir)
         print("已删除 .vscode 文件夹：", vscode_dir)
 
+def remove_empty_dirs(root):
+    """删除不含任何文件的文件夹，并删除子目录中的 .git。保留 root 自己的 .git。"""
+    root_git = root / ".git"
+    nested_gits = [p for p in root.rglob(".git") if p.is_dir() and p != root_git]
+    for path in sorted(nested_gits, key=lambda p: len(p.parts)):
+        if path.is_dir():
+            shutil.rmtree(path)
+            print("已删除子目录 .git：", path)
+    dirs = [p for p in root.rglob("*") if p.is_dir() and p != root_git and root_git not in p.parents]
+    for path in sorted(dirs, key=lambda p: len(p.parts), reverse=True):
+        if path.is_dir() and not any(path.iterdir()):
+            path.rmdir()
+            print("已删除空文件夹：", path)
+
+remove_empty_dirs(plugin_dir)
+
 #############################################################
 # 创建 Mineprep-Lite
 
@@ -109,6 +125,28 @@ def lite_ignore(src, names):
     for n in ignored:
         print(f"[lite] 跳过: {src}\\{n}")
     return ignored
+
+def files_under(root):
+    if not root.exists():
+        return set()
+    return {p.relative_to(root).as_posix() for p in root.rglob("*")
+            if p.is_file() and ".git" not in p.relative_to(root).parts}
+
+def print_lite_extras():
+    """打印精简版里有、完整包对应位置已经没有的文件。"""
+    pairs = [
+        (plugin_dir / "Mineprep", lite_dir / "Mineprep"),
+        (plugin_dir / "MC_Startup", lite_dir / "MC_Startup"),
+        (plugin_dir / "实验性功能(C++)", lite_dir / "实验性功能(C++)"),
+        (plugin_dir / "Blender扩展资源" / "mc_default", lite_dir / "Blender扩展资源" / "mc_default"),
+        (self_dir / "ResourceLicenses", lite_dir / "Readme素材" / "ResourceLicenses"),
+    ]
+    extras = []
+    for src, dst in pairs:
+        extras.extend(dst / rel for rel in sorted(files_under(dst) - files_under(src)))
+    print(f"Lite 多余文件：{len(extras)}")
+    for path in extras:
+        print(" ", path)
 
 lite_dir = plugin_dir.parent / "Mineprep-Lite"
 lite_dir.mkdir(exist_ok=True)
@@ -149,6 +187,14 @@ if mc_default_src.exists():
 else:
     print(f"跳过（不存在）: {mc_default_src}")
 
+licenses_src = self_dir / "ResourceLicenses"
+licenses_dst = lite_dir / "Readme素材" / "ResourceLicenses"
+if licenses_src.exists():
+    shutil.copytree(licenses_src, licenses_dst, dirs_exist_ok=True)
+    print(f"已复制: {licenses_src} -> {licenses_dst}")
+else:
+    print(f"跳过（不存在）: {licenses_src}")
+
 lite_ffmpeg_dir = lite_dir / "Mineprep" / "Render" / "ffmpeg"
 if lite_ffmpeg_dir.exists():
     shutil.rmtree(lite_ffmpeg_dir)
@@ -158,6 +204,9 @@ lite_ffmpeg_zip = lite_dir / "Mineprep" / "Render" / "ffmpeg.zip"
 if lite_ffmpeg_zip.exists():
     lite_ffmpeg_zip.unlink()
     print("已删除 ffmpeg.zip：", lite_ffmpeg_zip)
+
+remove_empty_dirs(lite_dir)
+print_lite_extras()
 
 print("Mineprep-Lite 创建完成：", lite_dir)
 

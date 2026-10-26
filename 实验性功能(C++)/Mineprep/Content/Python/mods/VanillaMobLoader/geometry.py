@@ -1,9 +1,7 @@
-"""Independent CEM template geometry adapter (no Unreal or Blender dependency).
+"""CEM 生物模板几何解析器（不依赖 Unreal 或 Blender）。
 
-Format reference: Blockbench js/formats/optifine/optifine_jem.js.
-Templates retain Ewan Howell's upstream rights. This adapter consumes the
-Blockbench-exported template dialect, not arbitrary OptiFine runtime models.
-All matrices below act on column vectors; angles use intrinsic ZYX.
+格式参考：Blockbench js/formats/optifine/optifine_jem.js。
+矩阵作用于列向量，旋转顺序采用内旋 ZYX。
 """
 from dataclasses import dataclass, field
 import hashlib
@@ -93,7 +91,7 @@ class MeshData:
 
 
 def named_delta(name, amount):
-    """Deterministic [-amount, amount] from a part name; 0 when amount is 0."""
+    """根据部位名称哈希生成稳定的 [-amount, amount] 微小外扩量，避免共面闪烁。"""
     if not amount:
         return 0.
     n = int.from_bytes(hashlib.sha256(str(name).casefold().encode('utf-8')).digest()[:8], 'big')
@@ -101,13 +99,7 @@ def named_delta(name, amount):
 
 
 def build_geometry(model, alpha=None, expansion=0., random_scale=0.):
-    """Bake the default editor pose; optional alpha(rect, texture_size) tests paint.
-
-    Each face owns its vertices, preserving UV seams and hard edges. Thin
-    cuboids retain painted faces with the default two-sided material. Opposite
-    painted faces get a tiny separation, as in Blockbench's zero-size display.
-    random_scale adds a name-stable extra inflate/deflate per part.
-    """
+    """将 CEM 模型解析为绑定姿态下的网格顶点、UV、法线与骨骼层级数据。"""
     result = MeshData()
     if not math.isfinite(expansion) or expansion < 0:
         raise ValueError('Expansion must be finite and non-negative')

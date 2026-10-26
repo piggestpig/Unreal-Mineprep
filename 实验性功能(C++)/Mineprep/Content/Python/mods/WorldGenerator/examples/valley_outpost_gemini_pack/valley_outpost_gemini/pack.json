@@ -1,0 +1,21 @@
+{
+  "format_version": 2,
+  "id": "valley_outpost_gemini",
+  "name": "山谷驿站（精修版）",
+  "extends": "vanilla",
+  "modules": ["landscape"],
+  "params": {
+    "outpost.size": {"type": "int", "default": 256, "min": 128, "max": 256, "label": {"zh": "场景大小", "en": "Scene size"}}
+  },
+  "surface_overrides": [
+    {"when": {"outpost_path_core": {"min": 0.5}}, "top": [["coarse_dirt", 4], ["gravel", 2], ["andesite", 1]], "under": "dirt", "deep": "stone"},
+    {"when": {"outpost_path_edge": {"min": 0.5}}, "top": [["coarse_dirt", 3], ["outpost_grass", 2], ["gravel", 1]], "under": "dirt", "deep": "stone"},
+    {"when": {"outpost_shore": {"min": 0.5}}, "top": [["gravel", 4], ["coarse_dirt", 2], ["mossy_cobblestone", 1]], "under": "gravel", "deep": "stone"},
+    {"when": {"outpost_alpine": {"min": 0.5}}, "top": [["snow_block", 5], ["stone", 1]], "under": "stone", "deep": "stone"},
+    {"when": {"outpost_cliff": {"min": 0.5}}, "top": [["stone", 4], ["andesite", 2], ["tuff", 1]], "under": "stone", "deep": "stone"},
+    {"when": {"outpost_clearing": {"min": 0.5}}, "top": "outpost_grass", "under": "dirt", "deep": "stone"}
+  ],
+  "surface_processors": [
+    {"id": "yard_grass", "function": "landscape:yard_grass", "blocks": ["short_grass"], "radius": 0, "sky_only": true, "category": "vegetation"}
+  ]
+}

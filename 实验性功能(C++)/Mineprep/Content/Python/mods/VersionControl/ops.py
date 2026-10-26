@@ -7,6 +7,7 @@ from pathlib import Path
 
 import unreal
 import mineprep
+from mc_mod import MANIFEST_NAME, PathPatternMatch, read_manifest
 
 _SKIP_COPY = frozenset({'Intermediate', 'Saved'})
 _INSTALLER_SKIP_DIRS = frozenset({'intermediate', 'saved', '__pycache__', 'cache', '.vscode'})
@@ -26,10 +27,12 @@ _FILTER_FIELDS = (
     ('FilterOlder', 'OlderFiles'),
 )
 _MAP_FIELDS = frozenset(field for _, field in _FILTER_FIELDS)
+_MODS_KEY = '/Plugins/Mineprep/Content/Python/mods/'
+_MOD_SKIP_DIRS = frozenset({'.git', '.hg', '.svn', '__pycache__', '.pytest_cache'})
 
 
 def _filter_entry_defaults(filter_props):
-    """LightingChannels 0/1/2 → 新增/变新/变旧 字典条目默认勾选。"""
+    """从 LightingChannels 通道 0/1/2 读取新增、变新、变旧文件列表的默认勾选状态。"""
     ch = getattr(filter_props, 'EntryDefault', None)
     if isinstance(ch, bool):
         v = bool(ch)
@@ -119,26 +122,37 @@ def _is_installer_junk(name):
 
 
 def load_skip_fn(script_props):
-    """从脚本里取出 skip(path)->bool；无效则返回 None。"""
+    """组合文件夹和脚本过滤；目录路径以 / 结尾，脚本只接收文件路径。"""
     if not script_props:
         return None
+    folders = set(getattr(script_props, 'SkipFolders', ())) - {''}
     text = str(getattr(script_props, 'Script', '') or '')
-    if not text.strip():
+    fn = None
+    if text.strip():
+        ns = {'__name__': 'versioncontrol_skip'}
+        try:
+            exec(text, ns)
+            fn = ns.get('skip')
+            if not callable(fn):
+                mineprep.warn(mineprep.bilingual(
+                    '过滤脚本需要 def skip(path:str)->bool',
+                    'Filter script needs def skip(path:str)->bool',
+                ))
+                fn = None
+        except Exception as extra:
+            mineprep.warn(mineprep.bilingual('过滤脚本无效', 'Invalid filter script'), extra)
+    if not folders and fn is None:
         return None
-    ns = {'__name__': 'versioncontrol_skip'}
-    try:
-        exec(text, ns)
-    except Exception as extra:
-        mineprep.warn(mineprep.bilingual('过滤脚本无效', 'Invalid filter script'), extra)
-        return None
-    fn = ns.get('skip')
-    if not callable(fn):
-        mineprep.warn(mineprep.bilingual(
-            '过滤脚本需要 def skip(path:str)->bool',
-            'Filter script needs def skip(path:str)->bool',
-        ))
-        return None
-    return fn
+
+    def skip(path):
+        parts = path.replace('\\', '/').split('/')
+        if folders.intersection(parts[:-1]):
+            return True
+        if not parts[-1] or fn is None:
+            return False
+        return fn(path)
+
+    return skip
 
 
 def _script_skips(skip_fn, rel_path):
@@ -150,14 +164,87 @@ def _script_skips(skip_fn, rel_path):
         return False
 
 
-def _iter_files(root, *, installer=False):
+def _mod_manifest_filter(props):
+    """解析各模组的 mod_manifest.toml 打包规则，返回路径过滤函数 skips(key, is_dir)。"""
+    if not getattr(props, 'UseModManifest', False):
+        return None
+    mods = Path(_project_root()) / _MODS_KEY.strip('/')
+    rules = {}
+    if not mods.is_dir():
+        return None
+    for folder in sorted(mods.iterdir()):
+        if not folder.is_dir() or not (folder / '__init__.py').is_file():
+            continue
+        try:
+            data = read_manifest(folder / MANIFEST_NAME)
+            if data is None:
+                continue
+            build = data.get('build', {})
+            paths = None
+            if 'paths' in build:
+                paths = {MANIFEST_NAME}
+                for raw in build['paths']:
+                    relative = raw.replace('\\', '/')
+                    parts = relative.split('/')
+                    if any(p in ('', '.', '..') or ':' in p or p.endswith((' ', '.')) for p in parts):
+                        raise ValueError(f'无效相对路径: {raw}')
+                    if set(parts) & _MOD_SKIP_DIRS or Path(relative).suffix.lower() in ('.pyc', '.pyo'):
+                        continue
+                    path = folder.joinpath(*parts)
+                    if path.resolve() != path or not path.is_file():
+                        raise ValueError(f'paths 须列出模组内已有文件，不展开目录或通配符: {raw}')
+                    paths.add(relative)
+            rules[folder.name] = (paths, PathPatternMatch(build.get('paths_exclude_pattern', [])))
+        except (ValueError, OSError) as err:
+            raise ValueError(f'{folder.name}: {err}') from err
+
+    def skips(key, is_dir=False):
+        if not key.startswith(_MODS_KEY):
+            return False
+        name, _, relative = key[len(_MODS_KEY):].partition('/')
+        if name not in rules or not relative:
+            return False
+        parts = relative.split('/')
+        if (set(parts) & _MOD_SKIP_DIRS
+                or (not is_dir and Path(relative).suffix.lower() in ('.pyc', '.pyo'))):
+            return True
+        if relative == MANIFEST_NAME:
+            return False
+        paths, matcher = rules[name]
+        if paths is not None:
+            return (not any(p.startswith(relative + '/') for p in paths) if is_dir
+                    else relative not in paths)
+        # 同时检查父目录是否被排除，与目录遍历剪枝规则保持一致
+        return (any(matcher.test_path('/'.join(parts[:i]) + '/') for i in range(1, len(parts)))
+                or matcher.test_path(relative + ('/' if is_dir else '')))
+
+    for name in rules:
+        if skips(_MODS_KEY + name + '/__init__.py'):
+            raise ValueError(f'{name}: 筛选结果缺少 __init__.py，请检查构建规则')
+    return skips
+
+
+def _iter_files(root, *, installer=False, manifest_skip=None, key_prefix=None, skip_fn=None):
+    project_root = _project_root()
+
+    def key(path):
+        if key_prefix is not None:
+            return key_prefix + '/' + os.path.relpath(path, root).replace('\\', '/')
+        return _rel_key(path, project_root)
+
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [name for name in dirnames if not _should_skip_dir(name, installer=installer)
-                      and not (installer and _is_project_resource_pack(os.path.join(dirpath, name)))]
+        dirnames[:] = [name for name in dirnames
+                      if not _should_skip_dir(name, installer=installer)
+                      and not (installer and _is_project_resource_pack(os.path.join(dirpath, name)))
+                      and not _script_skips(skip_fn, key(os.path.join(dirpath, name)) + '/')
+                      and not (manifest_skip and manifest_skip(
+                          key(os.path.join(dirpath, name)), True))]
         for name in filenames:
             if installer and _is_installer_junk(name):
                 continue
-            yield os.path.join(dirpath, name)
+            path = os.path.join(dirpath, name)
+            if not (manifest_skip and manifest_skip(key(path))):
+                yield path
 
 
 def _source_trees():
@@ -230,11 +317,12 @@ def filter_counts(filter_props):
 def classify_files(props, *, installer=False, skip_fn=None):
     dest_root = target_dir(props)
     project = _project_root()
+    manifest_skip = _mod_manifest_filter(props)
     added, newer, older = [], [], []
     if not dest_root or not os.path.isdir(dest_root):
         return added, newer, older
     for src_root, _rel in _source_trees():
-        for src in _iter_files(src_root, installer=installer):
+        for src in _iter_files(src_root, installer=installer, manifest_skip=manifest_skip, skip_fn=skip_fn):
             key = _rel_key(src, project)
             if _script_skips(skip_fn, key):
                 continue
@@ -251,11 +339,11 @@ def classify_files(props, *, installer=False, skip_fn=None):
     return added, newer, older
 
 
-def _source_relpaths(*, installer=False, skip_fn=None):
+def _source_relpaths(*, installer=False, skip_fn=None, manifest_skip=None):
     project = _project_root()
     keys = set()
     for src_root, _rel in _source_trees():
-        for src in _iter_files(src_root, installer=installer):
+        for src in _iter_files(src_root, installer=installer, manifest_skip=manifest_skip, skip_fn=skip_fn):
             key = _rel_key(src, project)
             if _script_skips(skip_fn, key):
                 continue
@@ -263,18 +351,21 @@ def _source_relpaths(*, installer=False, skip_fn=None):
     return keys
 
 
-def extra_relpaths(props, *, installer=False, skip_fn=None):
+def extra_relpaths(props, *, installer=False, skip_fn=None, manifest_skip=None):
     """目标有、当前工程没有的文件（工程相对路径）。"""
     dest_root = target_dir(props)
     extras = []
     if not dest_root or not os.path.isdir(dest_root):
         return extras
-    source = _source_relpaths(installer=installer, skip_fn=skip_fn)
+    manifest_skip = manifest_skip or _mod_manifest_filter(props)
+    source = _source_relpaths(installer=installer, skip_fn=skip_fn, manifest_skip=manifest_skip)
     for rel in _TREES:
         dst_root = dest_abs('/' + rel, dest_root, installer=installer)
         if not os.path.isdir(dst_root):
             continue
-        for dst in _iter_files(dst_root, installer=installer):
+        # 使用源工程的规则和相对路径，不读取目标中的清单。
+        for dst in _iter_files(dst_root, installer=installer, manifest_skip=manifest_skip,
+                               key_prefix='/' + rel, skip_fn=skip_fn):
             file_rel = os.path.relpath(dst, dst_root).replace('\\', '/')
             key = f'/{rel}/{file_rel}' if file_rel not in ('.', '') else f'/{rel}'
             if _script_skips(skip_fn, key):
@@ -290,17 +381,18 @@ def extra_to_remove(extra_props):
     return [key for key, on in _map_items(extra_props.ExtraFiles).items() if on]
 
 
-def copy_stats(props, filter_props, extra_props=None, skip_fn=None):
+def copy_stats(props, filter_props, extra_props=None, skip_fn=None, *, manifest_skip=None):
     """按实际复制语义统计：新增/变新/变旧/相同、脚本跳过、多余文件。"""
     installer = bool(getattr(props, 'UpdateInstaller', False))
     clear = bool(getattr(props, 'ClearDest', False))
     skip_keys = set() if clear else skipped_relpaths(filter_props)
     dest_root = target_dir(props)
     project = _project_root()
+    manifest_skip = manifest_skip or _mod_manifest_filter(props)
     added_c = added_s = newer_c = newer_s = older_c = older_s = same_c = same_s = 0
     script_s = 0
     for src_root, _rel in _source_trees():
-        for src in _iter_files(src_root, installer=installer):
+        for src in _iter_files(src_root, installer=installer, manifest_skip=manifest_skip, skip_fn=skip_fn):
             key = _rel_key(src, project)
             if _script_skips(skip_fn, key):
                 script_s += 1
@@ -331,7 +423,8 @@ def copy_stats(props, filter_props, extra_props=None, skip_fn=None):
                 same_c += 1
     extra_n = extra_rm = 0
     if not clear:
-        extras = set(extra_relpaths(props, installer=installer, skip_fn=skip_fn))
+        extras = set(extra_relpaths(props, installer=installer, skip_fn=skip_fn,
+                                   manifest_skip=manifest_skip))
         extra_n = len(extras)
         extra_rm = len(extras.intersection(extra_to_remove(extra_props)))
     copy_n = added_c + newer_c + older_c + same_c
@@ -371,7 +464,13 @@ def refresh_filters(filter_props, props, name=None, skip_fn=None):
             setattr(filter_props, field, {})
         return
 
-    added, newer, older = classify_files(props, installer=bool(props.UpdateInstaller), skip_fn=skip_fn)
+    try:
+        added, newer, older = classify_files(props, installer=bool(props.UpdateInstaller), skip_fn=skip_fn)
+    except (ValueError, OSError) as err:
+        for _, field in need:
+            setattr(filter_props, field, {})
+        mineprep.warn('模组清单筛选失败 / Mod manifest filtering failed', err)
+        return
     bucket = {'FilterNew': added, 'FilterNewer': newer, 'FilterOlder': older}
     defaults = _filter_entry_defaults(filter_props)
     for flag, field in need:
@@ -394,18 +493,33 @@ def refresh_extras(extra_props, props, name=None, skip_fn=None):
     if not dest or not os.path.isdir(dest):
         extra_props.ExtraFiles = {}
         return
-    extras = extra_relpaths(props, installer=bool(props.UpdateInstaller), skip_fn=skip_fn)
+    try:
+        extras = extra_relpaths(props, installer=bool(props.UpdateInstaller), skip_fn=skip_fn)
+    except (ValueError, OSError) as err:
+        extra_props.ExtraFiles = {}
+        mineprep.warn('模组清单筛选失败 / Mod manifest filtering failed', err)
+        return
     extra_props.ExtraFiles = {key: bool(extra_props.EntryDefault) for key in sorted(extras)}
 
 
-def confirm_copy(props, filter_props, extra_props=None, skip_fn=None):
-    stats = copy_stats(props, filter_props, extra_props, skip_fn=skip_fn)
+def confirm_copy(props, filter_props, extra_props=None, skip_fn=None, *, manifest_skip=None):
+    stats = copy_stats(props, filter_props, extra_props, skip_fn=skip_fn, manifest_skip=manifest_skip)
     lines = []
     if stats['clear']:
         lines.append(str(mineprep.bilingual(
             '将清空目标路径再复制。',
             'Destination trees will be cleared then copied.',
         )))
+    if getattr(props, 'UseModManifest', False):
+        lines.append(str(mineprep.bilingual(
+            '已按模组清单筛选复制内容。',
+            'Files to copy are filtered using mod manifests.',
+        )))
+        if stats['clear']:
+            lines.append(str(mineprep.bilingual(
+                '清空目标仍会移除其中的原有文件，包括被清单排除的文件。',
+                'Clearing the destination also removes existing files excluded by manifests.',
+            )))
     lines.append(str(mineprep.bilingual(
         f"新增：复制 {stats['added_c']}，跳过 {stats['added_s']}",
         f"New: copy {stats['added_c']}, skip {stats['added_s']}",
@@ -448,7 +562,8 @@ def confirm_copy(props, filter_props, extra_props=None, skip_fn=None):
     )
 
 
-def _copy_ignore_with_skip(project_root, skip, *, installer=False, skip_fn=None, src_root=None, dst_root=None):
+def _copy_ignore_with_skip(project_root, skip, *, installer=False, skip_fn=None,
+                           src_root=None, dst_root=None, manifest_skip=None):
     skip = skip or set()
 
     def ignore(directory, names):
@@ -460,12 +575,17 @@ def _copy_ignore_with_skip(project_root, skip, *, installer=False, skip_fn=None,
             if installer and _is_project_resource_pack(full):
                 ignored.append(name)
                 continue
+            key = _rel_key(full, project_root)
+            if manifest_skip and manifest_skip(key, os.path.isdir(full)):
+                ignored.append(name)
+                continue
             if os.path.isdir(full):
+                if _script_skips(skip_fn, key + '/'):
+                    ignored.append(name)
                 continue
             if installer and _is_installer_junk(name):
                 ignored.append(name)
                 continue
-            key = _rel_key(full, project_root)
             if _script_skips(skip_fn, key):
                 ignored.append(name)
                 continue
@@ -485,13 +605,14 @@ def _copy_ignore_with_skip(project_root, skip, *, installer=False, skip_fn=None,
     return ignore
 
 
-def _copy_tree(src, dst, label, skip=None, project_root=None, installer=False, skip_fn=None):
+def _copy_tree(src, dst, label, skip=None, project_root=None, installer=False, skip_fn=None,
+               manifest_skip=None):
     if not os.path.isdir(src):
         mineprep.panic(f'工程缺少源文件夹: {label}', src)
         return False
     ignore = _copy_ignore_with_skip(
         project_root or _project_root(), skip, installer=installer, skip_fn=skip_fn,
-        src_root=src, dst_root=dst,
+        src_root=src, dst_root=dst, manifest_skip=manifest_skip,
     )
     try:
         shutil.copytree(src, dst, dirs_exist_ok=True, ignore=ignore)
@@ -521,7 +642,7 @@ def _trash_dir(path):
     return not os.path.exists(path)
 
 
-def _copy_pairs(pairs, *, skip=None, installer=False, skip_fn=None):
+def _copy_pairs(pairs, *, skip=None, installer=False, skip_fn=None, manifest_skip=None):
     project = _project_root()
     for src, dst, label in pairs:
         if not os.path.isdir(src):
@@ -535,15 +656,15 @@ def _copy_pairs(pairs, *, skip=None, installer=False, skip_fn=None):
             continue
         _copy_tree(
             src, dst, label, skip=skip, project_root=project,
-            installer=installer, skip_fn=skip_fn,
+            installer=installer, skip_fn=skip_fn, manifest_skip=manifest_skip,
         )
 
 
-def _remove_extra_files(extra_props, dest_root, *, installer=False):
+def _remove_extra_files(extra_props, dest_root, *, installer=False, allowed):
     for key in extra_to_remove(extra_props):
-        path = dest_abs(key, dest_root, installer=installer)
-        if installer and _is_project_resource_pack(path):
+        if key not in allowed:
             continue
+        path = dest_abs(key, dest_root, installer=installer)
         if not os.path.isfile(path):
             continue
         try:
@@ -552,17 +673,24 @@ def _remove_extra_files(extra_props, dest_root, *, installer=False):
             mineprep.panic(f'删除多余文件失败: {key}', extra)
 
 
-def _sync_trees(props, filter_props, extra_props, dest_root, *, installer=False, skip_fn=None):
+def _sync_trees(props, filter_props, extra_props, dest_root, *, installer=False, skip_fn=None,
+                manifest_skip=None):
+    # 先验证所有源清单，再触碰目标目录。
+    manifest_skip = manifest_skip or _mod_manifest_filter(props)
     pairs = _tree_pairs(dest_root, installer=installer)
     if getattr(props, 'ClearDest', False):
         for dst in _dest_tree_paths(dest_root, installer=installer):
             _trash_dir(dst)
-        _copy_pairs(pairs, installer=installer, skip_fn=skip_fn)
+        _copy_pairs(pairs, installer=installer, skip_fn=skip_fn, manifest_skip=manifest_skip)
         return
+    extras = (set(extra_relpaths(props, installer=installer, skip_fn=skip_fn,
+                                manifest_skip=manifest_skip))
+              if extra_to_remove(extra_props) else set())
     _copy_pairs(
         pairs, skip=skipped_relpaths(filter_props), installer=installer, skip_fn=skip_fn,
+        manifest_skip=manifest_skip,
     )
-    _remove_extra_files(extra_props, dest_root, installer=installer)
+    _remove_extra_files(extra_props, dest_root, installer=installer, allowed=extras)
 
 
 def _has_uproject(folder):
@@ -791,12 +919,18 @@ def update_installer(props, filter_props=None, extra_props=None, script_props=No
             mineprep.panic(f'仓库缺少 {label}', path)
 
     skip_fn = load_skip_fn(script_props)
-    if not confirm_copy(props, filter_props, extra_props, skip_fn=skip_fn):
+    try:
+        manifest_skip = _mod_manifest_filter(props)
+    except (ValueError, OSError) as err:
+        mineprep.warn('模组清单筛选失败 / Mod manifest filtering failed', err)
+        return ''
+    if not confirm_copy(props, filter_props, extra_props, skip_fn=skip_fn,
+                        manifest_skip=manifest_skip):
         return ''
 
     _sync_trees(
         props, filter_props, extra_props, installer,
-        installer=True, skip_fn=skip_fn,
+        installer=True, skip_fn=skip_fn, manifest_skip=manifest_skip,
     )
     if getattr(props, 'RunScript', True):
         _run_installer_script(installer)
@@ -843,12 +977,18 @@ def migrate_plugin(props, filter_props=None, extra_props=None, script_props=None
         return ''
 
     skip_fn = load_skip_fn(script_props)
-    if not confirm_copy(props, filter_props, extra_props, skip_fn=skip_fn):
+    try:
+        manifest_skip = _mod_manifest_filter(props)
+    except (ValueError, OSError) as err:
+        mineprep.warn('模组清单筛选失败 / Mod manifest filtering failed', err)
+        return ''
+    if not confirm_copy(props, filter_props, extra_props, skip_fn=skip_fn,
+                        manifest_skip=manifest_skip):
         return ''
 
     _sync_trees(
         props, filter_props, extra_props, dest,
-        installer=False, skip_fn=skip_fn,
+        installer=False, skip_fn=skip_fn, manifest_skip=manifest_skip,
     )
     if getattr(props, 'CopyPythonLib', False):
         _copy_python_libs(dest)

@@ -1,5 +1,12 @@
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
+
 import mcvars
+import sys
+from pathlib import Path
+from mc_utils import prints
 from contextlib import contextmanager
 
 
@@ -24,10 +31,11 @@ def loctable_col(block=1, lang=None):
         return []
 
 
-def bilingual(chinese: str, english: str):
+def bilingual(chinese: str, english: str=''):
     """双语文本"""
     text = unreal.TextLibrary.find_text_in_live_table_advanced('UObjectDisplayNames', chinese, chinese)
     if not text or mcvars.DebugMode:
+        english = english or chinese
         lang = unreal.InternationalizationLibrary.get_current_language()
         polyglot = unreal.PolyglotTextData(category = unreal.LocalizedTextSourceCategory.EDITOR,
                                    namespace = 'UObjectDisplayNames',
@@ -79,3 +87,4 @@ class tooltip(str):
             f'No widget found for "{x}", run mineprep.panel() to print all available widgets'),
         '你可能在寻找': lambda x: bilingual('你可能在寻找:', 'You may be looking for:')
     }
+

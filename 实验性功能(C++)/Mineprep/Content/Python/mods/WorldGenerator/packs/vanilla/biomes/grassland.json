@@ -1,0 +1,65 @@
+{
+  "id": "grassland",
+  "name": {"zh": "草原", "en": "Grassland"},
+  "color": "#5B9143",
+  "vegetation_tint": [1.00, 1.00, 1.00],
+  "fallback": true,
+  "climate": [],
+  "notes": "Used only outside every ordinary climate box, independent of fallback position.",
+  "surface": [
+    {"when": {"surface_rock": {"min": 0}}, "top": "stone", "under": "stone"},
+    {"when": {"shore_depth": {"min": 0, "max": "$surface.shallow_depth"}}, "top": "dirt", "under": "dirt", "deep": "stone"},
+    {"top": "grass_block", "under": "dirt", "deep": "stone"}
+  ],
+  "features": {
+    "rocks": {
+      "surface": ["grass_block", "stone", "andesite"],
+      "density": "$decorations.rock_density",
+      "patch_scale": "$decorations.patch_scale",
+      "max_slope": "$decorations.max_slope",
+      "enabled_param": "decorations.enabled"
+    },
+    "fallen_logs": {
+      "surface": ["grass_block"],
+      "density": "$decorations.log_density",
+      "patch_scale": "$decorations.patch_scale",
+      "max_slope": "$decorations.max_slope",
+      "enabled_param": "decorations.enabled"
+    },
+    "grass_simple": {
+      "surface": ["grass_block"],
+      "density": "$vegetation.grass_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "grass": {
+      "surface": ["grass_block"],
+      "density": "$vegetation.grass_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "oak": {
+      "surface": ["grass_block"],
+      "density": "$trees.plains_density",
+      "patch_scale": "$trees.patch_scale",
+      "max_slope": "$trees.max_slope",
+      "enabled_param": "trees.enabled"
+    },
+    "tall_grass": {
+      "surface": ["grass_block"],
+      "density": "$vegetation.tall_grass_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "tall_flowers": {
+      "surface": ["grass_block"],
+      "density": "$vegetation.tall_flower_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    }
+  }
+}

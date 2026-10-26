@@ -1,0 +1,1 @@
+{"name": {"zh": "所有群系", "en": "All biomes"}, "params": {"soul.enabled": true, "crimson.enabled": true, "warped.enabled": true, "basalt.enabled": true, "soul.biome_threshold": 0.2, "crimson.biome_threshold": 0.16, "warped.biome_threshold": 0.1, "basalt.biome_threshold": -0.01}}

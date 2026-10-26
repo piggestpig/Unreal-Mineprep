@@ -5,6 +5,7 @@ mod_info = {
     "Description": bilingual("用于启用/禁用模组", "Used for enabling/disabling mods"),
     "Version": "2.0",
     "CreatedBy": "Pig",
+    "Credits": "Blender",
     "EnabledByDefault": True,
     "ReloadWithMineprep": True,
     "Priority": 100,

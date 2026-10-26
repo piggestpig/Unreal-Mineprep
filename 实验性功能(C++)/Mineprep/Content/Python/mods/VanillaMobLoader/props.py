@@ -1,4 +1,4 @@
-"""Entity import options. Scale applies to instances, not saved geometry."""
+"""生物模型导入与放置选项。"""
 import mineprep
 
 
@@ -6,9 +6,11 @@ class LoaderOptions(mineprep.PropertyGroup):
     ShowDetails: bool = False
     SavePath: str = '/Game/mc/mob/'
     SaveName: str = ''
-    LayerExpansion: float = (0.01, {'ClampMin': 0.0, 'UIMax': 0.2, 'EditCondition':"ShowDetails", 'EditConditionHides':True})
-    RandomScale: float = (0.001, {'ClampMin': 0.0, 'UIMax': 0.01, 'EditCondition':"ShowDetails", 'EditConditionHides':True})
-    ModelScale: float = (1.0, {'ClampMin': 0.01, 'UIMax': 100.0, 'EditCondition':"ShowDetails", 'EditConditionHides':True})
+    LayerExpansion: float = (0.01, {'ClampMin': 0.0, 'UIMax': 0.2, 'EditCondition': "ShowDetails", 'EditConditionHides': True,
+        'ToolTip': '组合多个模型时按选择顺序逐层向外微扩，避免不同模型层贴图闪烁 / Expand each selected model layer outward in selection order to avoid z-fighting'})
+    RandomScale: float = (0.001, {'ClampMin': 0.0, 'UIMax': 0.01, 'EditCondition': "ShowDetails", 'EditConditionHides': True,
+        'ToolTip': '按部位名称固定生成微小扩缩偏移（可正可负），避免同一模型内部共面闪烁 / Deterministic per-part tiny inflate/deflate offset to avoid coplanar z-fighting'})
+    ModelScale: float = (1.0, {'ClampMin': 0.01, 'UIMax': 100.0, 'EditCondition': "ShowDetails", 'EditConditionHides': True})
 
 
 LoaderOptions.localize('LoaderOptions', '导入选项', 'Import Options', '導入選項')

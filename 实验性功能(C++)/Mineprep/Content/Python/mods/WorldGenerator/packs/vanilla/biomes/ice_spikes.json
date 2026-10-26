@@ -1,0 +1,16 @@
+{
+  "id": "ice_spikes",
+  "name": {"zh": "冰刺之地", "en": "Ice spikes"},
+  "color": "#CAD9EA",
+  "vegetation_tint": [0.75, 0.85, 1.05],
+  "vegetation_hsv": [1.04, 0.65, 1.05],
+  "climate": [{"snow_cover": [0.5, null], "ice_region": [0.25, null]}],
+  "surface": [
+    {"when": {"surface_rock": {"min": 0}}, "top": "stone", "under": "stone"},
+    {"when": {"shore_depth": {"min": 0, "max": "$surface.shallow_depth"}}, "top": "dirt", "under": "dirt", "deep": "stone"},
+    {"top": "grass_block", "under": "dirt", "deep": "stone"}
+  ],
+  "features": {
+    "ice_spike": {"surface": ["grass_block"], "density": "$ice_spikes.density", "patch_scale": "$ice_spikes.patch_scale", "max_slope": "$ice_spikes.max_slope", "enabled_param": "ice_spikes.enabled"}
+  }
+}

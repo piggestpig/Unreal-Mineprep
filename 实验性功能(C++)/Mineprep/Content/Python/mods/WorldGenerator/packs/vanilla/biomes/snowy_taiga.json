@@ -1,0 +1,18 @@
+{
+  "id": "snowy_taiga",
+  "name": {"zh": "覆雪针叶林", "en": "Snowy taiga"},
+  "color": "#B7CBC6",
+  "vegetation_tint": [0.75, 0.85, 1.05],
+  "vegetation_hsv": [1.04, 0.65, 1.05],
+  "climate": [{"snow_cover": [0.5, null], "humidity": [-0.2, null], "forest_region": [-0.5, null]}],
+  "surface": [
+    {"when": {"surface_rock": {"min": 0}}, "top": "stone", "under": "stone"},
+    {"when": {"shore_depth": {"min": 0, "max": "$surface.shallow_depth"}}, "top": "dirt", "under": "dirt", "deep": "stone"},
+    {"top": "grass_block", "under": "dirt", "deep": "stone"}
+  ],
+  "features": {
+    "spruce": {"surface": ["grass_block"], "density": "$forest.spruce_density", "patch_scale": "$trees.patch_scale", "max_slope": "$trees.max_slope", "enabled_param": "trees.enabled"},
+    "rocks": {"surface": ["grass_block", "stone", "andesite"], "density": "$decorations.rock_density", "patch_scale": "$decorations.patch_scale", "max_slope": "$decorations.max_slope", "enabled_param": "decorations.enabled"},
+    "fallen_logs": {"surface": ["grass_block"], "density": "$decorations.log_density", "patch_scale": "$decorations.patch_scale", "max_slope": "$decorations.max_slope", "enabled_param": "decorations.enabled"}
+  }
+}

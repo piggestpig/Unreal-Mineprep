@@ -1,0 +1,17 @@
+{
+  "id": "small_end_islands",
+  "name": {
+    "zh": "小型空岛",
+    "en": "Small End islands"
+  },
+  "color": "#D4D4A3",
+  "climate": [],
+  "surface": [
+    {
+      "top": "end_stone",
+      "under": "end_stone",
+      "deep": "end_stone"
+    }
+  ],
+  "fallback": true
+}

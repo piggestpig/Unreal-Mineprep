@@ -1,21 +1,94 @@
-"""方块朝向的编码。本模块不依赖 Unreal，结构导入和 GPU 纹理共用。
+"""方块结构的数学计算工具（不依赖 Unreal），负责旋转编码、实例坐标批量转换与 GPU 类型分组。
 
-0 到 23 表示把方块摆进格子的 24 种直角朝向，编号是 id = up * 4 + twist。
-up 看未旋转时的顶面（局部 +Z）最后朝哪：0 朝上，1 朝下，2 朝 +Y，3 朝 −Y，4 朝 +X，5 朝 −X。
-twist 是绕这根轴再转 0°、90°、180° 或 270°，取 0 到 3。
-
-水平方向上不是 90° 倍数的角度写成负数，绝对值就是绕世界 Z 的偏航角（度），俯仰和滚转都是 0。
-正好 0° 仍用编号 0，不写成负数。
+为了让 PCG 和 Niagara 用单个浮点数记录方块朝向，这里将旋转压缩为一个编码值：
+1. 直角朝向 (0~23)：对应正方体在三维网格里的 24 种 90 度朝向，满足 id = up * 4 + twist。
+   其中 up 表示方块原本的顶面 (+Z) 旋转后的朝向 (0:+Z, 1:-Z, 2:+Y, 3:-Y, 4:+X, 5:-X)，
+   twist 表示绕该轴自转的角度 (0~3 分别对应 0/90/180/270 度)。
+2. 任意水平偏航角（负数）：像告示牌、头颅这类非 90 度倍数的纯水平旋转（俯仰和翻滚均为零），
+   直接记录为偏航角的相反数 -yaw（例如 22.5 度记为 -22.5, 0 度仍记为 0）。
 """
 import math
+import operator
 
 import numpy as np
 
 BLOCK_SIZE = 100.0
 MODEL_FRAME = 'cell-center-1'
 _ANGLE_EPS = 0.001
+TYPE_GROUP_VERSION = 'type-groups-2'
 
-# 规范欧拉角 (pitch, yaw, roll)。与 Rotation[24] 同一顺序。
+
+def partition_types(names, counts, groups=1, *, max_types=None):
+    """按实例数量对方块类型分组，最小化 Niagara 渲染代价 sum(每组类型数 * 每组实例总数)。
+
+    返回 ((原始类型索引, ...), 该组实例总数) 元组，组内保持原调色板顺序。
+    将类型按实例数降序排列后，最优划分必为连续区间，使用分治动态规划求解。
+    max_types 可限制每组的最大类型数（例如单 Actor 最多 256 种模型），超出时自动增加分组数。
+    """
+    if type(groups) is not int or groups < 1:
+        raise ValueError('groups must be a positive integer')
+    if max_types is not None and (type(max_types) is not int or max_types < 1):
+        raise ValueError('max_types must be a positive integer or None')
+    names, counts = tuple(names), tuple(counts)
+    if len(names) != len(counts) or any(not isinstance(n, str) for n in names):
+        raise ValueError('names and counts must have equal length; names must be strings')
+    weights = []
+    for count in counts:
+        try:
+            if isinstance(count, (bool, np.bool_)):
+                raise TypeError
+            value = operator.index(count)
+        except TypeError:
+            raise ValueError('counts must be nonnegative integers') from None
+        if value < 0:
+            raise ValueError('counts must be nonnegative integers')
+        weights.append(int(value))
+    total = sum(weights)
+    if not total:
+        return ()
+    if groups == 1 and (max_types is None or len(names) <= max_types):
+        return ((tuple(range(len(names))), total),)
+    order = sorted((i for i, w in enumerate(weights) if w),
+                   key=lambda i: (-weights[i], names[i], i))
+    size = len(order)
+    capacity = size if max_types is None else max_types
+    k = min(size, max(groups, (size + capacity - 1) // capacity))
+    if k == size:
+        return tuple(((i,), weights[i]) for i in order)
+    prefix = [0]
+    for i in order:
+        prefix.append(prefix[-1] + weights[i])
+    infinity = size * total + 1
+    previous = [j * prefix[j] if j <= capacity else infinity for j in range(size + 1)]
+    parents = [[0] * (size + 1)]
+    for g in range(2, k + 1):
+        current = [infinity] * (size + 1)
+        parent = [-1] * (size + 1)
+
+        def solve(left, right, opt_left, opt_right):
+            if left > right:
+                return
+            j = (left + right) // 2
+            best, split = infinity, -1
+            for i in range(max(opt_left, j - capacity), min(opt_right, j - 1) + 1):
+                cost = previous[i] + (j - i) * (prefix[j] - prefix[i])
+                if cost < best:  # 代价相同时优先取靠前的切分点
+                    best, split = cost, i
+            current[j], parent[j] = best, split
+            solve(left, j - 1, opt_left, split)
+            solve(j + 1, right, split, opt_right)
+
+        solve(g, min(size, g * capacity), g - 1, size - 1)
+        previous = current
+        parents.append(parent)
+    result, end = [], size
+    for g in range(k - 1, -1, -1):
+        start = parents[g][end]
+        result.append((tuple(sorted(order[start:end])), prefix[end] - prefix[start]))
+        end = start
+    return tuple(reversed(result))
+
+# 24 种直角朝向对应的 UE 欧拉角 (pitch, yaw, roll)，顺序与材质/粒子中的 Rotation[24] 一致
 _ROT_EULER = (
     (0.0, 0.0, 0.0),
     (0.0, 90.0, 0.0),
@@ -45,7 +118,7 @@ _ROT_EULER = (
 
 
 def rotator_quaternion(pitch, yaw, roll):
-    """Unreal FRotator 四元数 (x, y, z, w)。"""
+    """将 UE 欧拉角 (pitch, yaw, roll) 转为四元数 (x, y, z, w)。"""
     def sc(deg):
         half = math.radians(float(deg)) * 0.5
         return math.sin(half), math.cos(half)
@@ -62,7 +135,7 @@ def rotator_quaternion(pitch, yaw, roll):
 
 
 def yaw_quaternion(degrees):
-    """绕世界 Z 的偏航，与 HLSL 负角度分支同一公式。"""
+    """计算绕世界 Z 轴偏航角的四元数，与 HLSL 负角度分支一致。"""
     half = math.radians(abs(float(degrees))) * 0.5
     return (0.0, 0.0, math.sin(half), math.cos(half))
 
@@ -108,7 +181,7 @@ def _fold360(deg):
 
 
 def _nearest_right(deg):
-    """离 0/90/180/270 不超过 _ANGLE_EPS 时返回该直角，否则 None。"""
+    """若角度与 0/90/180/270 度的误差不超过 _ANGLE_EPS 则返回该直角，否则返回 None。"""
     folded = _fold360(deg)
     target = (int(round(folded / 90.0)) % 4) * 90.0
     distance = abs(folded - target)
@@ -125,7 +198,7 @@ def _near_zero(deg):
 
 
 def encode_rotation(pitch, yaw, roll):
-    """欧拉角 → 0..23，或纯 yaw 的相反数。无法表示时抛 ValueError。"""
+    """将欧拉角编码为单个浮点数：直角朝向编码为 0~23，纯水平旋转编码为 -yaw；其余情况抛出 ValueError。"""
     try:
         pitch, yaw, roll = float(pitch), float(yaw), float(roll)
     except (TypeError, ValueError, OverflowError) as exc:
@@ -150,7 +223,7 @@ def encode_rotation(pitch, yaw, roll):
 
 
 def decode_rotation(rot):
-    """0..23 → 规范欧拉角；负数 → (0, abs(rot), 0)。"""
+    """将旋转编码还原为 (pitch, yaw, roll) 欧拉角：0~23 查表还原，负数还原为 (0.0, abs(rot), 0.0)。"""
     try:
         rot = float(rot)
     except (TypeError, ValueError, OverflowError) as exc:
@@ -198,7 +271,7 @@ def _points(value, name):
 
 
 def model_vertices_to_ue(points, *, block_size=BLOCK_SIZE):
-    """JSON model vertices (MC 0..16) → UE cm about the fixed cell center."""
+    """将 MC JSON 模型顶点坐标 (0~16) 转换为以格子中心为原点的 UE 厘米坐标。"""
     vertices = _points(points, 'model vertices')
     return (vertices[:, (0, 2, 1)] - 8.0) * (_block_size(block_size) / 16.0)
 
@@ -217,7 +290,7 @@ def _rotation_codes(value, count):
 
 
 def validate_packed(payload):
-    """Validate before writes; return contiguous float32 pos/rot/scale arrays."""
+    """校验打包后的实例数据，返回连续的 float32 格式 pos/rot/scale 数组。"""
     if not isinstance(payload, dict) or not {'pos', 'rot'} <= payload.keys():
         raise ValueError('packed payload: pos and rot required')
     pos = _numbers(payload['pos'], 'pos')
@@ -243,11 +316,13 @@ def validate_packed(payload):
 
 
 def boxes_to_packed(coords, sizes=1, rot=0, *, origin=(0, 0, 0), block_size=BLOCK_SIZE):
-    """MC minimum corners/world extents → center positions/local scales in UE.
+    """将 MC 方块格点坐标与尺寸批量转换为 UE 实例中心坐标、旋转编码与局部缩放。
 
-    coords: triple or [N,3]; sizes: scalar, triple or [N,3]; rot: scalar or [N].
-    origin is a UE XYZ translation in cm. All outputs are contiguous float32.
-    A negative yaw represents an unmerged unit cell, not a world-aligned box.
+    coords: 单个 (x, y, z) 或 [N, 3] 数组（MC 坐标，表示方块或合并盒的最小角）。
+    sizes: 标量、(sx, sy, sz) 或 [N, 3] 数组（沿 MC 各轴跨越的格数）。
+    rot: 标量或 [N] 旋转编码数组（0~23，或未合并单格方块的负偏航角）。
+    origin: UE 坐标系下的整体偏移量（厘米）。
+    返回包含连续 float32 数组 pos、rot、scale 的字典。
     """
     coords = _points(coords, 'coords')
     count = len(coords)

@@ -1,0 +1,81 @@
+{
+  "id": "mountains",
+  "name": {"zh": "山地", "en": "Mountains"},
+  "color": "#897D6E",
+  "vegetation_tint": [0.85, 0.92, 0.88],
+  "vegetation_hsv": [1.02, 0.90, 0.95],
+  "climate": [{"altitude": ["$climate.mountain_height", null]}],
+  "surface": [
+    {"when": {"foothill_rock": {"min": 0}}, "top": [["stone", 5], ["andesite", 1]], "under": "stone", "deep": "stone"},
+    {"when": {"foothill_temperature": {"min": 0.2}, "humidity": {"max": -0.2}, "surface_rock": {"min": 0}}, "top": "sandstone", "under": "sandstone", "deep": "sandstone"},
+    {"when": {"foothill_temperature": {"min": 0.2}, "humidity": {"max": -0.2}}, "top": "sand", "under": "sand", "deep": "sandstone"},
+    {"when": {"surface_rock": {"min": 0}}, "top": [["stone", 5], ["andesite", 1]], "under": "stone", "deep": "stone"},
+    {"when": {"shore_depth": {"min": 0, "max": "$surface.shallow_depth"}}, "top": "dirt", "under": "dirt", "deep": "stone"},
+    {"top": "grass_block", "under": "dirt", "deep": "stone"}
+  ],
+  "features": {
+    "rocks": {
+      "surface": ["grass_block", "stone", "andesite"],
+      "density": "$decorations.rock_density",
+      "patch_scale": "$decorations.patch_scale",
+      "max_slope": "$decorations.max_slope",
+      "enabled_param": "decorations.enabled"
+    },
+    "fallen_logs": {
+      "surface": ["grass_block"],
+      "density": "$decorations.log_density",
+      "patch_scale": "$decorations.patch_scale",
+      "max_slope": "$decorations.max_slope",
+      "enabled_param": "decorations.enabled"
+    },
+    "grass_simple": {
+      "surface": ["grass_block"],
+      "density": "$vegetation.grass_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "grass": {
+      "surface": ["grass_block"],
+      "density": "$vegetation.grass_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "oak": {
+      "surface": ["grass_block"],
+      "density": "$trees.density",
+      "patch_scale": "$trees.patch_scale",
+      "max_slope": "$trees.max_slope",
+      "enabled_param": "trees.enabled"
+    },
+    "birch": {
+      "surface": ["grass_block"],
+      "density": "$trees.birch_density",
+      "patch_scale": "$trees.patch_scale",
+      "max_slope": "$trees.max_slope",
+      "enabled_param": "trees.enabled"
+    },
+    "spruce": {
+      "surface": ["grass_block"],
+      "density": "$trees.spruce_density",
+      "patch_scale": "$trees.patch_scale",
+      "max_slope": "$trees.max_slope",
+      "enabled_param": "trees.enabled"
+    },
+    "tall_grass": {
+      "surface": ["grass_block"],
+      "density": "$vegetation.tall_grass_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    },
+    "tall_flowers": {
+      "surface": ["grass_block"],
+      "density": "$vegetation.tall_flower_density",
+      "patch_scale": "$vegetation.patch_scale",
+      "max_slope": "$vegetation.max_slope",
+      "enabled_param": "vegetation.enabled"
+    }
+  }
+}

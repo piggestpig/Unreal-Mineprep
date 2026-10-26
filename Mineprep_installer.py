@@ -690,7 +690,7 @@ def write_plugin_config(opt, dest):
     settings['memory_preload'] = opt.preload
     settings['installer_dir'] = os.path.normpath(str(PACKAGE_ROOT))
     settings['blender_path'] = ''
-    settings['texture_pack_path'] = os.path.normpath(str(resource_pack_plan(opt)[0]))
+    settings['default_resource_pack'] = os.path.normpath(str(resource_pack_plan(opt)[0]))
     settings['init'] = 'true'
     settings['optimize_default'] = opt.optimize
     if opt.ffmpeg:

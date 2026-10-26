@@ -1,10 +1,10 @@
-"""Mineprep EditorShortcuts mod package."""
+"""Mineprep 自定义快捷键模组。"""
 import mineprep
 
 mod_info = {
     "Name": mineprep.bilingual("自定义快捷键", "Editor Shortcuts"),
     "Description": mineprep.bilingual("Mineprep自定义快捷键编辑面板", "Manage and customize Mineprep editor shortcuts"),
-    "Version": "1.0.0",
+    "Version": "2.0",
     "CreatedBy": "Pig",
     "EnabledByDefault": True,
     "ReloadWithMineprep": True,

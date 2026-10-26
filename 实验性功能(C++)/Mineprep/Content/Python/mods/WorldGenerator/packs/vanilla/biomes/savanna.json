@@ -1,0 +1,22 @@
+{
+  "id": "savanna",
+  "name": {"zh": "热带草原", "en": "Savanna"},
+  "color": "#B4B65D",
+  "vegetation_tint": [1.45, 0.95, 0.70],
+  "vegetation_hsv": [0.90, 0.90, 1.00],
+  "climate": [{"savanna_mask": [0.5, null], "water_kind": [0, 0], "snow_cover": [0, 0]}],
+  "surface": [
+    {"when": {"surface_rock": {"min": 0}}, "top": "stone", "under": "stone"},
+    {"when": {"shore_depth": {"min": 0, "max": "$surface.shallow_depth"}}, "top": "dirt", "under": "dirt", "deep": "stone"},
+    {"when": {"savanna_bare": {"min": "$savanna.bare_threshold"}}, "top": "coarse_dirt", "under": "dirt", "deep": "stone"},
+    {"top": "grass_block", "under": "dirt", "deep": "stone"}
+  ],
+  "features": {
+    "rocks": {"surface": ["grass_block", "stone", "andesite", "coarse_dirt"], "density": "$decorations.rock_density", "patch_scale": "$decorations.patch_scale", "max_slope": "$decorations.max_slope", "enabled_param": "decorations.enabled"},
+    "fallen_logs": {"surface": ["grass_block"], "density": "$decorations.log_density", "patch_scale": "$decorations.patch_scale", "max_slope": "$decorations.max_slope", "enabled_param": "decorations.enabled"},
+    "acacia": {"surface": ["grass_block", "coarse_dirt"], "density": "$trees.acacia_density", "patch_scale": "$trees.patch_scale", "max_slope": "$trees.max_slope", "enabled_param": "trees.enabled"},
+    "grass_simple": {"surface": ["grass_block"], "density": "$vegetation.grass_density", "patch_scale": "$vegetation.patch_scale", "max_slope": "$vegetation.max_slope", "enabled_param": "vegetation.enabled"},
+    "grass": {"surface": ["grass_block"], "density": "$vegetation.grass_density", "patch_scale": "$vegetation.patch_scale", "max_slope": "$vegetation.max_slope", "enabled_param": "vegetation.enabled"},
+    "tall_grass": {"surface": ["grass_block"], "density": "$vegetation.tall_grass_density", "patch_scale": "$vegetation.patch_scale", "max_slope": "$vegetation.max_slope", "enabled_param": "vegetation.enabled"}
+  }
+}

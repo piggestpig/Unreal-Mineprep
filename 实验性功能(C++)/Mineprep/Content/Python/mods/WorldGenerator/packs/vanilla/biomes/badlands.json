@@ -1,0 +1,17 @@
+{
+  "id": "badlands",
+  "name": {"zh": "恶地", "en": "Badlands"},
+  "color": "#BA673E",
+  "vegetation_tint": [1.45, 0.90, 0.65],
+  "vegetation_hsv": [0.88, 0.85, 1.00],
+  "climate": [{"badlands_mask": [0.5, null]}],
+  "surface": [
+    {"when": {"surface_rock": {"min": 0}}, "top": "terracotta", "under": "terracotta", "deep": "terracotta"},
+    {"top": "red_sand", "under": "red_sandstone", "deep": "terracotta"}
+  ],
+  "features": {
+    "bush": {"surface": ["red_sand"], "density": "$vegetation.bush_density",
+             "patch_scale": "$vegetation.patch_scale", "max_slope": "$vegetation.max_slope",
+             "enabled_param": "vegetation.enabled"}
+  }
+}

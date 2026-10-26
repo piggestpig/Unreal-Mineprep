@@ -1,8 +1,4 @@
-"""CEM catalog adapter. Format/source: Ewan Howell's CEM Template Loader.
-
-https://github.com/ewanhowell5195/blockbenchPlugins/tree/main/cem_template_loader
-Independent Mineprep implementation; downloaded data retains its upstream rights.
-"""
+"""CEM 生物模板目录解析与检索（数据格式来自 Ewan Howell 的 CEM Template Loader）。"""
 from dataclasses import dataclass
 from html import unescape
 from html.parser import HTMLParser

@@ -6,7 +6,7 @@ mod_info = {
         '迁移Mineprep插件至其他工程文件或安装包仓库',
         'Migrate Mineprep plugins to other projects or the installer',
     ),
-    'Version': '1.0',
+    'Version': '2.0',
     'CreatedBy': 'Pig',
     'EnabledByDefault': False,
     'ReloadWithMineprep': True,

@@ -1,6 +1,11 @@
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 import json
 import re
+from fnmatch import fnmatchcase
+from pathlib import Path
 
 from mc_config import paths
 
@@ -14,6 +19,21 @@ def load_mcprep_data():
     with open(paths.mcprep_data, 'r') as f:
         MCprepDataCache = json.load(f)
     return MCprepDataCache
+
+
+def _apply_emission_default(mat, texture_source):
+    """若贴图名称匹配 mcprep_data.json 的自发光列表，则将材质的“发光亮度”默认设为 0.1。"""
+    if texture_source is None:
+        return
+    name = str(texture_source).replace('\\', '/').lower()
+    if '/textures/' in name:
+        name = name.split('/textures/', 1)[1]
+    if name.endswith('.png'):
+        name = name[:-4]
+    candidates = (name, Path(name).name)
+    if any(fnmatchcase(candidate, str(pattern).replace('\\', '/').lower())
+           for pattern in load_mcprep_data()['blocks']['emit'] for candidate in candidates):
+        unreal.MaterialEditingLibrary.set_material_instance_scalar_parameter_value(mat, '发光亮度', 0.1)
 
 
 def prep_texture(tex, compression=unreal.TextureCompressionSettings.TC_EDITOR_ICON, detect_normal=False) -> unreal.Texture:

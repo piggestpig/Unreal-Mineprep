@@ -1,0 +1,131 @@
+{
+  "iceberg": {
+    "type": "column_field", "generator": "icebergs:columns", "blocks": ["packed_ice", "snow_block"],
+    "radius": 12, "max_height": 58, "habitat": "water_surface", "category": "icebergs"
+  },
+  "ice_spike": {
+    "type": "multi_block", "generator": "ice_spikes:build", "blocks": ["packed_ice"],
+    "bounds": [[-3, 0, -3], [4, 52, 4]], "max_blocks": 1536, "cell_size": 12,
+    "support": "footprint", "priority": 20, "category": "ice_spikes"
+  },
+  "seagrass": {
+    "enabled_when": {"vegetation.simplified": false},
+    "type": "multi_block",
+    "generator": "aquatic:build",
+    "blocks": ["seagrass", "tall_seagrass_bottom", "tall_seagrass_top"],
+    "bounds": [[0, 0, 0], [1, 2, 1]],
+    "max_blocks": 2,
+    "cell_size": 3,
+    "priority": 10,
+    "habitat": "underwater",
+    "category": "aquatic"
+  },
+  "kelp": {
+    "enabled_when": {"vegetation.simplified": false},
+    "type": "multi_block",
+    "generator": "aquatic:build",
+    "blocks": ["kelp_plant", "kelp"],
+    "bounds": [[0, 0, 0], [1, 16, 1]],
+    "max_blocks": 16,
+    "cell_size": 6,
+    "priority": 5,
+    "habitat": "underwater",
+    "category": "aquatic"
+  },
+  "rocks": {
+    "type": "multi_block",
+    "generator": "decorations:build",
+    "blocks": ["stone", "andesite", "mossy_cobblestone"],
+    "bounds": [[-1, 0, -1], [2, 2, 2]],
+    "max_blocks": 7,
+    "cell_size": 8,
+    "priority": 5,
+    "support": "footprint",
+    "category": "decorations"
+  },
+  "fallen_logs": {
+    "type": "multi_block",
+    "generator": "decorations:build",
+    "blocks": ["oak_log"],
+    "bounds": [[-2, 0, -2], [2, 1, 2]],
+    "max_blocks": 4,
+    "cell_size": 12,
+    "priority": 5,
+    "support": "footprint",
+    "category": "decorations"
+  },
+  "grass": {"type": "surface_scatter", "block": "short_grass", "category": "vegetation", "enabled_when": {"vegetation.simplified": false}},
+  "bush": {"type": "surface_scatter", "block": "dead_bush", "category": "vegetation", "enabled_when": {"vegetation.simplified": false}},
+  "bush_simple": {"type": "surface_scatter", "block": "dead_bush", "category": "vegetation", "enabled_when": {"vegetation.simplified": true}},
+  "short_dry_grass": {"type": "surface_scatter", "block": "short_dry_grass", "category": "vegetation", "enabled_when": {"vegetation.simplified": false}},
+  "tall_dry_grass": {"type": "surface_scatter", "block": "tall_dry_grass", "category": "vegetation"},
+  "cactus": {
+    "type": "multi_block", "generator": "plants:cactus", "blocks": ["cactus"],
+    "bounds": [[0, 0, 0], [1, 3, 1]], "max_blocks": 3, "cell_size": 6,
+    "category": "vegetation"
+  },
+  "grass_simple": {
+    "type": "surface_scatter", "block": "short_grass", "soft": true,
+    "allow_overlap_categories": ["trees"], "category": "vegetation",
+    "enabled_when": {"vegetation.simplified": true}
+  },
+  "seagrass_simple": {
+    "type": "surface_scatter", "block": "seagrass", "soft": true, "habitat": "underwater",
+    "allow_overlap_categories": ["trees"], "category": "aquatic", "enabled_when": {"vegetation.simplified": true}
+  },
+  "acacia": {
+    "type": "multi_block", "generator": "trees:acacia",
+    "blocks": ["acacia_log", "acacia_leaves"],
+    "bounds": [[-5, 0, -5], [6, 11, 6]], "max_blocks": 128,
+    "cell_size": 12, "category": "trees"
+  },
+  "oak": {
+    "type": "multi_block",
+    "generator": "trees:build",
+    "blocks": ["oak_log", "oak_leaves", "snow_layer_1", "snow_layer_2", "snow_layer_3", "snow_layer_4", "snow_layer_5", "snow_layer_6", "snow_layer_7", "snow_layer_8"],
+    "bounds": [[-3, 0, -3], [4, 12, 4]],
+    "max_blocks": 256,
+    "cell_size": 6,
+    "category": "trees"
+  },
+  "birch": {
+    "type": "multi_block",
+    "generator": "trees:birch",
+    "blocks": ["birch_log", "birch_leaves", "snow_layer_1", "snow_layer_2", "snow_layer_3", "snow_layer_4", "snow_layer_5", "snow_layer_6", "snow_layer_7", "snow_layer_8"],
+    "bounds": [[-2, 0, -2], [3, 12, 3]],
+    "max_blocks": 128,
+    "cell_size": 6,
+    "category": "trees"
+  },
+  "spruce": {
+    "type": "multi_block",
+    "generator": "trees:spruce",
+    "blocks": ["spruce_log", "spruce_leaves", "snow_layer_1", "snow_layer_2", "snow_layer_3", "snow_layer_4", "snow_layer_5", "snow_layer_6", "snow_layer_7", "snow_layer_8"],
+    "bounds": [[-3, 0, -3], [4, 16, 4]],
+    "max_blocks": 256,
+    "cell_size": 8,
+    "category": "trees"
+  },
+  "tall_grass": {
+    "enabled_when": {"vegetation.simplified": false},
+    "type": "multi_block",
+    "generator": "plants:build",
+    "blocks": ["tall_grass_bottom", "tall_grass_top", "large_fern_bottom", "large_fern_top"],
+    "bounds": [[0, 0, 0], [1, 2, 1]],
+    "max_blocks": 2,
+    "cell_size": 3,
+    "priority": 10,
+    "category": "vegetation"
+  },
+  "tall_flowers": {
+    "enabled_when": {"vegetation.simplified": false},
+    "type": "multi_block",
+    "generator": "plants:build",
+    "blocks": ["lilac_bottom", "lilac_top", "rose_bush_bottom", "rose_bush_top"],
+    "bounds": [[0, 0, 0], [1, 2, 1]],
+    "max_blocks": 2,
+    "cell_size": 3,
+    "priority": 10,
+    "category": "vegetation"
+  }
+}

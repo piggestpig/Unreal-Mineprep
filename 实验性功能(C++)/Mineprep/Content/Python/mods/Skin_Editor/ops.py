@@ -1,4 +1,4 @@
-"""Selection sync for Skin Editor DetailsViews."""
+"""视口选中角色与材质面板的同步逻辑。"""
 import unreal
 import mineprep
 from . import util

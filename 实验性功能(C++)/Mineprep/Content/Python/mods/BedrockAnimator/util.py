@@ -273,7 +273,7 @@ def parse_bone_map(text):
 
 
 def resolve_bone_spec(raw_bone, bone_map):
-    """Dict hit → (ue_bone, pos, rot, scale). Missing key → same name, native xyz axes."""
+    """查找骨骼映射配置 (ue_bone, pos, rot, scale)；未配置时默认使用同名骨骼与 xyz 轴。"""
     name = str(raw_bone)
     spec = bone_map.get(name.casefold().replace(' ', ''))
     if spec:

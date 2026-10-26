@@ -4,7 +4,7 @@
 
 ✨这是一个正在开发中的UE5插件，继承了 [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/) 的实用功能，并加入一些新的资产，为制作MC动画带来便利
 
-![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.7-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/%E6%8F%92%E4%BB%B6%E5%B1%95%E7%A4%BA.jpg)
 
@@ -276,6 +276,11 @@ Mineprep 0.6-pre2有以下内置模组（目前仍处于早期开发阶段，可
 ## 版本更新
 
 #### 26w42a
+- Mineprep 0.7-pre1即将发布，这里记录了最后的更新内容
+- 所有NPC生物已升级为mover pawn，并更新了来自UE5.8的运动匹配官方示例
+  - 新一代NPC兼容以前的绝大多数功能，但是尚未在实际动画项目中
+- 改进了安装程序，现在会写入DDCVar和GameplayTag
+- 修复了自定义快捷键在垃圾回收后失效的bug
 - 修复了镜头试拍录制器启动后立即中止的bug
 
 #### 26w41a
@@ -286,7 +291,7 @@ Mineprep 0.6-pre2有以下内置模组（目前仍处于早期开发阶段，可
 - 所有方块的原点改为中心，便于旋转和numpy向量化操作。现有模型可能尚未更新，导入新方块时会检查元数据并打印警告
 - 导入结构现已支持水平面上的任意角度旋转+基岩版拼图方块的24种旋转
 - 改进了LabPBR材质，现在能正确显示各自旋转后的方块实例了
-- 修复了导入纹理时 蓝图图片被错误当成法线贴图的bug。编辑器仍会弹出提示，但mineprep会自动修正
+- 修复了导入纹理时 蓝色图片被错误当成法线贴图的bug。编辑器仍会弹出提示，但mineprep会自动修正
 - 【实验性功能】修复了准备纹理时，因打断首次编译造成图像失效的bug。目前仅在“MC世界生成器”模组中复现过此现象，并为其设计了备用解决方案
 
 #### 26w40a

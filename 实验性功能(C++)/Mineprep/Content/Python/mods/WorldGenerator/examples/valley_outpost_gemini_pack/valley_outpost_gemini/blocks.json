@@ -1,0 +1,4 @@
+{
+  "outpost_grass": {"source": {"builtin": "grass_block"}, "shape": "cube", "occludes": true, "merge": "xyz"},
+  "gravel": {"source": {"builtin": "gravel"}, "shape": "cube", "occludes": true, "merge": "xyz", "color": "#908B86"}
+}

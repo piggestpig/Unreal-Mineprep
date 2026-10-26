@@ -1,4 +1,4 @@
-"""Interchange skeletal import; all Unreal operations run on the editor thread."""
+"""通过 Interchange 将生成的 GLB 导入为 UE 骨骼网格体与骨架资产（需在主线程调用）。"""
 import json
 import uuid
 import unreal
@@ -122,7 +122,7 @@ def create_assets(entry, version, target, geometry, skin_path=None, reload=False
 
 
 def reimport_asset(entry, version, target, geometry, skin_path, path, mapping, material_sources):
-    """Reimport in place so scene components and animation references survive."""
+    """原地重新导入骨骼网格体，保留场景组件与动画资产对原骨架的引用。"""
     folder, name, mesh = target
     lib = unreal.EditorAssetLibrary
     skeleton = mesh.skeleton

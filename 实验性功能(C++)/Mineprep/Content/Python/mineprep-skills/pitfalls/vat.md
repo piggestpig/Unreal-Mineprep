@@ -7,13 +7,14 @@ Layout / PropertyGroup / hide: [../ui.md](../ui.md) + [ui.md](ui.md). `force_upd
 ## Bake flow
 
 1. Temp cache DA: **one** AnimSequence per bake (do not stuff multi-clip into cache DA).
-2. Premul materials sample cache textures → must refresh GPU first (`force_update_texture` on the **source**).
+2. Premul materials sample the generated AnimToTexture cache textures; the bake
+   implementation refreshes their GPU resource first.
 3. Optional: delete `.../cache` after success when “auto clean cache” is on.
 
 | Symptom | Cause | Fix |
 |---------|--------|-----|
-| First bake → premul / RT sample **all black**; second run OK | CPU/Source updated; GPU Resource not ready | `unreal.LandmassBlueprintFunctionLibrary.force_update_texture(tex)` before `set_texture_parameter_value` / `draw_material_to_render_target` |
-| Cache on disk looks fine, output black | Same as above | Confirm cache assets first; then force update |
+| First bake → premul / RT sample **all black**; second run OK | Generated cache Source updated but GPU resource not ready | Check the refresh before sampling in `bake_anim_ops._premul_to_directory`; source Texture2D only |
+| Imported texture or painted RT is black | Different resource lifecycle | Follow [Textures / RT](common.md#textures--rt); do not apply the bake-cache refresh indiscriminately |
 
 Paint / sketch RTs: [ui.md](ui.md) — not this bake path.
 

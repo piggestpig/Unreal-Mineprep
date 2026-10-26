@@ -1,0 +1,10 @@
+{
+  "name": {
+    "zh": "默认＋洞穴",
+    "en": "Default + caves"
+  },
+  "params": {
+    "caves.enabled": true,
+    "caves.style": 0
+  }
+}

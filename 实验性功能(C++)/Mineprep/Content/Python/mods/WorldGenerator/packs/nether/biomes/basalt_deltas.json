@@ -1,0 +1,10 @@
+{
+  "id": "basalt_deltas",
+  "name": {"zh": "玄武岩三角洲", "en": "Basalt deltas"},
+  "color": "#62636A",
+  "climate": [{"basalt_region": ["$basalt.biome_threshold", 2]}],
+  "surface": [{"top": "netherrack", "under": "netherrack", "deep": "netherrack"}],
+  "features": {
+    "ceiling_glowstone": {"surface": ["basalt", "netherrack"], "density": "$glowstone.density", "patch_scale": 128, "max_slope": 0}
+  }
+}

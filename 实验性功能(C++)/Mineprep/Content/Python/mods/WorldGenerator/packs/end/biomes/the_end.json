@@ -1,0 +1,23 @@
+{
+  "id": "the_end",
+  "name": {
+    "zh": "中央末地",
+    "en": "The End"
+  },
+  "color": "#DADDA6",
+  "climate": [
+    {
+      "end_biome": [
+        0,
+        0
+      ]
+    }
+  ],
+  "surface": [
+    {
+      "top": "end_stone",
+      "under": "end_stone",
+      "deep": "end_stone"
+    }
+  ]
+}

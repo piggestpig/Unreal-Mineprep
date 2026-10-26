@@ -1,4 +1,7 @@
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 import os
 import re
 import json
@@ -15,7 +18,7 @@ from mc_bplib import BPLibCaller, BPLib, EditorBPLib
 from mc_importer import import_block, import_item, resolve_block_json_path, get_all_blocks
 from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
                       enum, askopenfilename, send2trash, set_actor_label, select_actors,
-                      lazy_import, undo, open_main_panel, get_hotkey_object, construct, uasset, copy,
+                      undo, open_main_panel, get_hotkey_object, construct, uasset, copy,
                       List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
                       askdirectory, asksaveasfilename, startfile, screenshot)
 from mc_parallel import (
@@ -23,7 +26,11 @@ from mc_parallel import (
     DelayRunner, TickRunner, AsyncTaskRunner, ThreadRunner,
 )
 from mc_prep import prep_texture, load_mcprep_data, colorize_material
-from mc_material import tex_to_color, color_to_tex, ColorList
+from mc_material import (
+    tex_to_color, color_to_tex, ColorList,
+    register_biome_tex, clear_biome_tex,
+    tex_source_files, export_tex_cache, import_data_tex,
+)
 from mc_localization import (localize, loctext, nsloctext, loctable_col, bilingual, tooltip)
 from mc_structure import (
     parse_structure, structure_to_tex, structure_parts, Blocks,
@@ -32,6 +39,7 @@ from mc_structure import (
 )
 import mcvars
 from mc_math import boxes_to_packed, encode_rotation, decode_rotation
+from mc_blockstates import rotate_state, mirror_state
 from mc_config import config, paths, wclass
 from mc_sequencer import keyframe, Rig
 from mc_widget import Layout, PropertyGroup, add_widget, ui, make_combo_text
@@ -380,13 +388,13 @@ class MineprepWorldHandle(MineprepAPIHandle):
 
     @classmethod
     def _indexed(cls, key):
-        """int/bool 列表视为对 cls() 的花式下标；否则 None。"""
+        """若传入整数或布尔列表，则作为花式索引从默认集合中取值；否则返回 None。"""
         if List._take(key) is None:
             return None
         return list(cls()[key])
 
     def __class_getitem__(cls, key):
-        """类下标：int/float/slice/numpy 多轴/花式下标取集合元素；其它参数走构造查找"""
+        """类下标访问：传入索引、切片或掩码时从集合中取值；传入名称、类型等参数时查找并返回底层 UObject。"""
         if isinstance(key, (int, slice)) or (cls._collection and isinstance(key, float)):
             return cls()[key]
         if isinstance(key, tuple) and len(key) == 2:
@@ -396,7 +404,7 @@ class MineprepWorldHandle(MineprepAPIHandle):
         return cls(key).target
 
     def __getitem__(self, key):
-        """实例下标：集合支持 int/slice/numpy 多轴；非集合返回自身 target"""
+        """实例下标访问：集合句柄支持索引、切片与掩码筛选；单对象句柄直接返回 target。"""
         if not self._collection:
             return self.target
         return self.target[key]

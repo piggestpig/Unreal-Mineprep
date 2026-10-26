@@ -1,0 +1,23 @@
+{
+  "id": "end_midlands",
+  "name": {
+    "zh": "中型空岛",
+    "en": "End midlands"
+  },
+  "color": "#CDD09C",
+  "climate": [
+    {
+      "end_biome": [
+        2,
+        2
+      ]
+    }
+  ],
+  "surface": [
+    {
+      "top": "end_stone",
+      "under": "end_stone",
+      "deep": "end_stone"
+    }
+  ]
+}

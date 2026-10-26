@@ -1,20 +1,147 @@
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 import importlib
 import sys
 import random
+import re
+import tomllib
 import mcvars
+from fnmatch import translate
 from pathlib import Path
 from mc_config import wclass
 from mc_widget import Layout, copy
 from mc_utils import uclass, startfile, warn
 from mc_localization import bilingual
 
+MODS_DIR = Path(__file__).with_name('mods')
+MANIFEST_NAME = 'mod_manifest.toml'
+DEFAULT_INFO = {
+    'Description': '', 'Version': '-', 'CreatedBy': '',
+    'EnabledByDefault': False, 'ReloadWithMineprep': False,
+    'Priority': 0, 'Advanced': False,
+}
+
 PAUSE_BREAK = unreal.Key()
 PAUSE_BREAK.import_text('Pause')
 
+
+def read_manifest(path):
+    """读取可选清单；不存在返回 None，存在但无效则报错。"""
+    path = Path(path)
+    if not path.exists():
+        return None
+    with path.open('rb') as stream:
+        data = tomllib.load(stream)
+    if type(data.get('schema_version')) is not int or data['schema_version'] != 2:
+        raise ValueError(f'{path}: schema_version 必须是整数 2')
+    for key in ('Name', 'Description'):
+        if key not in data:
+            continue
+        value = data[key]
+        valid = isinstance(value, str)
+        if isinstance(value, list):
+            valid = 1 <= len(value) <= 2 and all(isinstance(v, str) for v in value)
+        elif isinstance(value, dict):
+            valid = ('chinese' in value and value.keys() <= {'chinese', 'english'}
+                     and all(isinstance(v, str) for v in value.values()))
+        if not valid:
+            raise ValueError(f'{path}: {key} 须为字符串、双语数组或 chinese/english 字典')
+    for key, expected in (('Version', str), ('CreatedBy', str), ('Priority', int),
+                          ('EnabledByDefault', bool), ('ReloadWithMineprep', bool), ('Advanced', bool)):
+        if key in data and type(data[key]) is not expected:
+            raise ValueError(f'{path}: {key} 须为 {expected.__name__}')
+    build = data.get('build', {})
+    if not isinstance(build, dict) or build.keys() - {'paths', 'paths_exclude_pattern'}:
+        raise ValueError(f'{path}: build 只支持 paths 或 paths_exclude_pattern')
+    if 'paths' in build and 'paths_exclude_pattern' in build:
+        raise ValueError(f'{path}: paths 和 paths_exclude_pattern 不能同时声明')
+    for key, value in build.items():
+        if not isinstance(value, list) or not all(isinstance(p, str) and p for p in value):
+            raise ValueError(f'{path}: build.{key} 须为非空字符串组成的数组')
+    return data
+
+
+def manifest_info(data, name):
+    """将清单转换为 mod_info；保留额外元数据，不混入构建设置。"""
+    info = {'Name': name, **DEFAULT_INFO}
+    info.update((key, value) for key, value in data.items() if key not in ('schema_version', 'build'))
+    for key in ('Name', 'Description'):
+        value = info[key]
+        if isinstance(value, (list, dict)):
+            info[key] = bilingual(*value) if isinstance(value, list) else bilingual(**value)
+    return info
+
+
+# 以下路径匹配算法摘自 Blender scripts/addons_core/bl_pkg/cli/blender_ext.py。
+# SPDX-FileCopyrightText: 2023 Blender Foundation
+# SPDX-License-Identifier: GPL-2.0-or-later
+class PathPatternMatch:
+    """Blender 风格匹配；! 例外优先，目录剪枝由调用方负责。"""
+
+    def __init__(self, patterns):
+        self.rules = []
+        for pattern in patterns:
+            negate = pattern.startswith('!')
+            pattern = pattern.lstrip('!') if negate else pattern
+            if pattern:
+                self.rules.append((negate, re.compile(self._regex(pattern), re.MULTILINE)))
+
+    def test_path(self, path):
+        """相对路径使用 /；目录以 / 结尾。True 表示应排除。"""
+        path_test = path.rstrip('/').replace('/', '\n')
+        if path.endswith('/'):
+            path_test += '/'
+        result = False
+        for negate, regex in self.rules:
+            if regex.match(path_test):
+                if negate:
+                    return False
+                result = True
+        return result
+
+    @staticmethod
+    def _regex(pattern):
+        if pattern.startswith('\\!'):
+            pattern = pattern[1:]
+        while '//' in pattern:
+            pattern = pattern.replace('//', '/')
+        if pattern.strip('/') == '**':
+            return '(?s:.*)/\\Z' if pattern.endswith('/') else '(?s:.*)'
+        while pattern.endswith(('/**/', '/**')):
+            pattern = pattern[:-3] if pattern.endswith('/**/') else pattern[:-2]
+        while pattern.startswith(('/**/', '**/')):
+            pattern = pattern[4:] if pattern.startswith('/**/') else pattern[3:]
+        while '/**/**/' in pattern:
+            pattern = pattern.replace('/**/**/', '/**/')
+
+        any_prefix = not pattern.startswith('/')
+        only_directory = pattern.endswith('/')
+        parts = pattern.strip('/').split('/')
+        double_stars = []
+        anchor = '\\z' if sys.version_info >= (3, 14) else '\\Z'
+        for i, part in enumerate(parts):
+            if part == '**':
+                double_stars.append(i)
+                continue
+            regex = translate(part).removesuffix(anchor)
+            if regex.startswith('(?s:'):
+                regex = '(?:' + regex[4:]
+            parts[i] = regex
+        for i in reversed(double_stars):
+            before, _, after = parts[i-1:i+2]
+            del parts[i-1:i+1]
+            parts[i-1] = before + '(?:\n|\n(?s:.*)\n)?' + after
+
+        regex = '\\n'.join(parts)
+        regex = ('(?s:.*)^' if any_prefix else '\\A') + regex
+        return regex + ('[\\n/]' if only_directory else '/?\\Z')
+
+
 def _iter_mod_names():
     """扫描 mods/ 目录，产出模块名（如 mods.template）"""
-    mods_dir = Path(__file__).with_name('mods')
+    mods_dir = MODS_DIR
     if not mods_dir.is_dir():
         return
     for entry in sorted(mods_dir.iterdir()):
@@ -26,44 +153,79 @@ def _iter_mod_names():
             yield f'mods.{entry.name}'
 
 
-def _mod_priority(mod):
+def _mod_priority(info):
     """mod_info.Priority，缺省或非法时为 0。越大越先加载。"""
-    info = getattr(mod, 'mod_info', None) or {}
     try:
         return int(info.get('Priority', 0) or 0)
     except (TypeError, ValueError):
         return 0
 
 
-def iter_mod_modules(*, loaded_only=False, reverse=False):
-    """迭代 mod 模块。默认按 Priority 降序（越大越先）。reverse=True 为加载的相反顺序。
-    loaded_only=True 时只返回已在 sys.modules 中的。"""
-    modules = []
+def _module_info(mod):
+    info = getattr(mod, 'mod_info', None)
+    if not isinstance(info, dict):
+        raise ValueError(f'{mod.__name__} 必须声明字典 mod_info')
+    return info
+
+
+def _sync_mod_info(mod):
+    info = _module_info(mod)
+    source = Path(mod.__file__)
+    data = read_manifest(source.with_name(MANIFEST_NAME)) if source.name == '__init__.py' else None
+    if data is not None:
+        effective = manifest_info(data, mod.__name__.removeprefix('mods.'))
+        changes = [f'{key}: {info[key]!s} → {value!s}' for key, value in effective.items()
+                   if key in info and (str(info[key]) != str(value) if key in ('Name', 'Description')
+                                       else info[key] != value)]
+        if changes:
+            import mineprep
+            mineprep.debug(f'{mod.__name__}: 清单与 mod_info 不一致，使用清单中的值',
+                           *changes, autolog=True, warning=True)
+        info.update(effective)
+    return info
+
+
+def iter_mod_infos(*, loaded_only=False, reverse=False):
+    """按优先级返回 (模块名, 信息)；有清单的模组不因扫描而导入。"""
+    entries = []
     for name in _iter_mod_names():
         if loaded_only and name not in sys.modules:
             continue
         try:
-            modules.append((name, importlib.import_module(name)))
+            data = read_manifest(MODS_DIR / name.removeprefix('mods.') / MANIFEST_NAME)
+            info = (manifest_info(data, name.removeprefix('mods.')) if data is not None
+                    else _module_info(importlib.import_module(name)))
+            entries.append((name, info))
         except Exception as e:
-            unreal.log_warning(f'导入 mod 失败: {name}: {e}')
-    modules.sort(key=lambda item: (-_mod_priority(item[1]), item[0]), reverse=reverse)
-    yield from modules
+            unreal.log_warning(f'读取模组信息失败: {name}: {e}')
+    entries.sort(key=lambda item: (-_mod_priority(item[1]), item[0]), reverse=reverse)
+    yield from entries
 
 
-def register_mod(mod, *, force=False):
-    """注册单个 mod；默认需 EnabledByDefault 为真，成功后设置 EnabledByDefault=True"""
-    name = getattr(mod, '__name__', str(mod))
-    info = getattr(mod, 'mod_info', None)
-    if info is None:
-        mod.mod_info = info = {}
-    if not force and not info.get('EnabledByDefault'):
-        return False
-    register = getattr(mod, 'register', None)
-    if not callable(register):
-        return False
+def iter_mod_modules(*, loaded_only=False, reverse=False):
+    """显式获取模块对象；界面与启动扫描应使用 iter_mod_infos。"""
+    for name, _info in iter_mod_infos(loaded_only=loaded_only, reverse=reverse):
+        try:
+            mod = importlib.import_module(name)
+            _module_info(mod)
+            yield name, mod
+        except Exception as e:
+            unreal.log_warning(f'导入模组失败: {name}: {e}')
+
+
+def register_mod(mod):
+    """明确启用模块对象或完整模块名，不改变默认启用声明。"""
+    name = mod if isinstance(mod, str) else mod.__name__
+    if name in mcvars.EnabledMods:
+        return True
     try:
+        mod = importlib.import_module(name) if isinstance(mod, str) else mod
+        _sync_mod_info(mod)
+        register = getattr(mod, 'register', None)
+        if not callable(register):
+            raise ValueError('模组没有 register()')
         register()
-        info['EnabledByDefault'] = True
+        mcvars.EnabledMods.add(name)
         unreal.log(f'已注册 mod: {name}')
         return True
     except Exception as e:
@@ -73,19 +235,19 @@ def register_mod(mod, *, force=False):
 
 
 def unregister_mod(mod):
-    """注销单个 mod：清理 RegisteredMods/菜单，再调用模组 unregister，并设置 EnabledByDefault=False"""
-    name = getattr(mod, '__name__', str(mod))
+    """注销已启用模组，不因注销而导入程序，不改变默认声明。"""
+    name = mod if isinstance(mod, str) else mod.__name__
+    if name not in mcvars.EnabledMods:
+        return True
     try:
+        mod = sys.modules[name] if isinstance(mod, str) else mod
         for path, cls in list(mcvars.RegisteredMods.items()):
             if path == name or path.startswith(name + '.'):
                 cls.unregister()
         unregister = getattr(mod, 'unregister', None)
         if callable(unregister):
             unregister()
-        info = getattr(mod, 'mod_info', None)
-        if info is None:
-            mod.mod_info = info = {}
-        info['EnabledByDefault'] = False
+        mcvars.EnabledMods.remove(name)
         unreal.log(f'已注销 mod: {name}')
         return True
     except Exception as e:
@@ -95,29 +257,25 @@ def unregister_mod(mod):
 
 def register_all():
     """扫描 mods/，按 Priority 降序注册 EnabledByDefault 的 mod（越大越先）"""
-    for _name, mod in iter_mod_modules():
-        try:
-            register_mod(mod)
-        except Exception as e:
-            import traceback
-            unreal.log_error(f'注册 mod 异常 [{_name}]: {e}\n{traceback.format_exc()}')
+    for name, info in iter_mod_infos():
+        if info.get('EnabledByDefault'):
+            register_mod(name)
     mcvars.ModsInitialized = True
 
 
-def unregister_all(*, loaded_only=True):
+def unregister_all():
     """注销 mod；顺序与加载相反（Priority 小的先卸）。默认只处理已加载的模块"""
-    for _name, mod in iter_mod_modules(loaded_only=loaded_only, reverse=True):
-        unregister_mod(mod)
+    for name, _info in iter_mod_infos(loaded_only=True, reverse=True):
+        unregister_mod(name)
     mcvars.ModsInitialized = False
 
 
 def reloadable_mods():
     """已加载且 mod_info.ReloadWithMineprep 为真的 mod 列表"""
     result = []
-    for _name, mod in iter_mod_modules(loaded_only=True):
-        info = getattr(mod, 'mod_info', None) or {}
+    for name, info in iter_mod_infos(loaded_only=True):
         if info.get('ReloadWithMineprep'):
-            result.append(mod)
+            result.append(sys.modules[name])
     return result
 
 
@@ -125,12 +283,12 @@ class mods():
     @staticmethod
     def register(mod):
         """注册单个 mod"""
-        register_mod(mod, force=True)
+        return register_mod(mod)
 
     @staticmethod
     def unregister(mod):
         """注销单个 mod"""
-        unregister_mod(mod)
+        return unregister_mod(mod)
 
     @staticmethod
     def register_all():

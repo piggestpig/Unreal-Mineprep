@@ -1,4 +1,4 @@
-"""Pure packed-array → EXR encoding; no Unreal imports or asset operations."""
+"""将打包后的结构实例数据编码并写出为 BPT/BRT EXR 贴图与映射表（不依赖 Unreal）。"""
 from pathlib import Path
 import json
 import numpy as np
@@ -8,7 +8,8 @@ ENCODING_VERSION = 'bpt-brt-f32-3'
 
 
 def encode_arrays(payloads, max_side=16384):
-    # Check every payload before allocating or writing any result.
+    """将各模型的 pos/rot/scale 实例数组编码为正方形 BPT（位置与类型 ID）和 BRT（缩放与旋转）像素矩阵。"""
+    # 先校验所有模型数据，通过后再分配纹理内存
     payloads = {name: validate_packed(p) for name, p in payloads.items()}
     if len(payloads) > 2**24:
         raise ValueError('mesh type IDs exceed float32 texture integer precision')
@@ -35,6 +36,7 @@ def encode_arrays(payloads, max_side=16384):
 
 def write_structure_textures(payloads, directory, name='structure', fp32=True,
                              max_side=16384):
+    """将实例数据写成 {name}_BPT.exr、{name}_BRT.exr 和 {name}_names.json。"""
     import cv2
     if not name or Path(name).name != name or '/' in name or '\\' in name:
         raise ValueError('name must be a filename stem')

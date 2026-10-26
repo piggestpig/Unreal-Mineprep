@@ -32,9 +32,9 @@ class Props(mineprep.PropertyGroup):
         {'FilePathFilter': 'json'},
     )
     CreateNewSequence: bool = True
-    LevelSequenceName: str = ''
+    LevelSequenceName: str = ('', {'EditCondition': 'CreateNewSequence'})
+    StartAtPlayhead: bool = (False, {'EditCondition': '!CreateNewSequence'})
     AnimSequenceName: str = ''
-    StartAtPlayhead: bool = False
     TimeScale: float = 1.0
     BoneMap: str = (DEFAULT_BONE_MAP_TEXT, {'MultiLine': True})
 

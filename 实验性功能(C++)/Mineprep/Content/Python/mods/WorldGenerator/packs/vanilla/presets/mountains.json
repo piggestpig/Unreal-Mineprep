@@ -1,0 +1,42 @@
+{
+  "name": {
+    "zh": "山地",
+    "en": "Mountains"
+  },
+  "params": {
+    "climate.single_biome": "mountains",
+    "caves.enabled": false,
+    "terrain.flat": false,
+    "terrain.mountain_height": 120,
+    "terrain.detail_strength": 2,
+    "terrain.continental_curve": [
+      [
+        -1,
+        6
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        1,
+        16
+      ]
+    ],
+    "terrain.lowland_strength": 0.8,
+    "terrain.lowland_height": 6,
+    "islands.enabled": false,
+    "hydrology.enabled": true,
+    "river.enabled": true,
+    "lakes.enabled": false,
+    "ponds.enabled": false,
+    "water.generate": true,
+    "badlands.enabled": false,
+    "cold.enabled": true,
+    "cold.freeze": false,
+    "frozen_ocean.enabled": false,
+    "ice_spikes.enabled": false,
+    "terrain.erosion_offset": -0.6,
+    "climate.snow_height": 64
+  }
+}

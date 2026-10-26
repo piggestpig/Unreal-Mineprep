@@ -1,0 +1,17 @@
+{
+  "id": "warped_forest",
+  "name": {"zh": "诡异森林", "en": "Warped forest"},
+  "color": "#267E83",
+  "climate": [{"warped_region": ["$warped.biome_threshold", 2]}],
+  "surface": [{"top": "netherrack", "under": "netherrack", "deep": "netherrack"}],
+  "features": {
+    "warped_fungi": {"surface": ["warped_nylium"], "density": "$warped.density", "patch_scale": 96, "max_slope": 0},
+    "twisting_vines": {"surface": ["warped_nylium"], "density": "$warped.vines_density", "patch_scale": 48, "max_slope": 0},
+    "ground_warped_fungus": {"surface": ["warped_nylium"], "density": "$warped.fungus_density"},
+    "ground_warped_roots": {"surface": ["warped_nylium"], "density": "$warped.roots_density"},
+    "ground_nether_sprouts": {"surface": ["warped_nylium"], "density": "$warped.sprouts_density"},
+    "ceiling_lava": {"surface": ["netherrack"], "density": "$lava_columns.density", "patch_scale": 128, "max_slope": 0},
+    "ceiling_glowstone": {"surface": ["netherrack"], "density": "$glowstone.density", "patch_scale": 128, "max_slope": 0},
+    "floor_fire": {"surface": ["netherrack"], "density": "$fire.density"}
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "textures": {"portal": "minecraft:entity/end_portal/end_portal", "particle": "minecraft:entity/end_portal/end_portal"},
+  "elements": [
+    {"from": [0, 1, 0], "to": [16, 1, 16], "faces": {"up": {"uv": [0, 0, 16, 16], "texture": "#portal"}, "down": {"uv": [0, 0, 16, 16], "texture": "#portal"}}}
+  ]
+}

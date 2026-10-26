@@ -1,0 +1,27 @@
+{
+  "id": "pond",
+  "name": {"zh": "水塘", "en": "Pond"},
+  "color": "#538D92",
+  "climate": [{"water_kind": [4, 4]}],
+  "surface": [
+    {"when": {"surface_rock": {"min": 0}}, "top": "stone", "under": "stone", "deep": "stone"},
+    {"when": {"shore_depth": {"max": "$surface.shallow_depth"}}, "top": "dirt", "under": "dirt", "deep": "stone"},
+    {"top": [["sand", 3], ["gravel", 1]], "under": "sand", "deep": "stone"}
+  ],
+  "features": {
+    "seagrass_simple": {
+      "surface": ["sand", "gravel", "dirt"],
+      "density": "$aquatic.seagrass_density",
+      "patch_scale": "$aquatic.patch_scale",
+      "max_slope": "$aquatic.max_slope",
+      "enabled_param": "aquatic.enabled"
+    },
+    "seagrass": {
+      "surface": ["sand", "gravel", "dirt"],
+      "density": "$aquatic.seagrass_density",
+      "patch_scale": "$aquatic.patch_scale",
+      "max_slope": "$aquatic.max_slope",
+      "enabled_param": "aquatic.enabled"
+    }
+  }
+}

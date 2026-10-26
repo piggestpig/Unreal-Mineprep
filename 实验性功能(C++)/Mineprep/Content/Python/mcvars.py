@@ -2,6 +2,7 @@ SafeBroadcast = True
 DebugMode = False
 PythonTooltips = False
 ModsInitialized = False
+EnabledMods = set()
 RegisteredMods = {}
 WidgetModMap = {}
 Props = {}

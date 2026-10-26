@@ -1,20 +1,28 @@
 import mineprep
-import unreal
+
+# 从API版本2.0起，可以选用以下占位符，在unreal模块不存在时 依旧能离线测试Python代码
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
+
 
 # 在此填写模组相关信息，设置EnabledByDefault=True会在引擎启动时自动加载模组
 # Advanced=True会被模组管理器隐藏到高级选项里，开发普通模组时不用写
 # Priority影响模组加载顺序，数值越大越先加载，平时不写默认为0
+# EnabledByDefault只声明启动默认值；当前启用状态由mcvars.EnabledMods记录
+# 文件夹模组可选用mod_manifest.toml，格式见mods/ModManager/MANIFEST.md；mod_info仍须声明
 mod_info = {
     "Name": mineprep.bilingual("Mod模板", "Mod Template"),
     "Description": mineprep.bilingual("面向开发者的普通mod模板", "A simple mod template for developers"),
-    "Version": "1.0",
+    "Version": "2.0",
     "CreatedBy": "",
+    "Credits": "",
     "EnabledByDefault": False,
     "ReloadWithMineprep": True,
     "Advanced": True,
     "Priority": 0,
 }
-
 
 # mineprep.Mod在__init__中调用draw()构建界面；需要重绘时可绑定self.redraw到on_clicked等事件
 # 如果不需要UI界面，可以重载__new__，此时 self.layout 默认为 None

@@ -9,7 +9,10 @@ import fnmatch
 from collections.abc import Iterable
 from types import SimpleNamespace
 
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 from mc_utils import throw, uclass, world, undo
 
 _TIME_UNIT = unreal.MovieSceneTimeUnit.DISPLAY_RATE
@@ -451,7 +454,7 @@ def _format_key_value(value) -> str:
 
 
 def _format_key_suffix(key) -> str:
-    """关帧后缀，格式 '@帧:值'"""
+    """生成关键帧后缀，格式为 '@帧:值'"""
     frame = key.get_time().frame_number.value
     try:
         value = key.get_value()
@@ -595,7 +598,7 @@ def _filter_channels(channels, name=None, ctx=None):
 
 
 def _filter_keys(keys, name=None, ctx=None):
-    """按完整路径或后缀通配过滤关帧"""
+    """按帧号、完整路径或后缀通配过滤关键帧"""
     keys = list(keys)
     if not name:
         return keys
@@ -1171,7 +1174,7 @@ def _channel_values_for_property(value, kind):
 
 
 def _key_property_channels(section, frame, value, kind) -> bool:
-    """对属性 section 各通道打关帧"""
+    """对属性片段的各通道打关键帧"""
     values = _channel_values_for_property(value, kind)
     if not values:
         _log_skip(f'内部错误: 未知属性种类 {kind!r}')
@@ -1308,7 +1311,7 @@ def _rig_io(ctype):
 
 
 def _find_sequencer_control_rig(sequence, track, cls, skm, skm_binding):
-    """按 SKM 轨道取 Control Rig。同一 Actor 可有多套 FK，不能用 hosting actor。"""
+    """查找绑定在指定骨骼网格体轨道上的 Control Rig 实例（同一 Actor 可有多个骨骼网格体，因此按组件绑定匹配）。"""
     lib = unreal.ControlRigSequencerLibrary
     skm_id = skm_binding.get_id() if skm_binding else None
     bound_match = None

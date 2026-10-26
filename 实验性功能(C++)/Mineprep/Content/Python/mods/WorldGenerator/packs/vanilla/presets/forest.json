@@ -1,0 +1,48 @@
+{
+  "name": {
+    "zh": "混合林",
+    "en": "Mixed forest"
+  },
+  "params": {
+    "climate.single_biome": "forest",
+    "caves.enabled": false,
+    "terrain.flat": false,
+    "terrain.mountain_height": 26,
+    "terrain.detail_strength": 1.2,
+    "terrain.continental_curve": [
+      [
+        -1,
+        3
+      ],
+      [
+        -0.45,
+        4
+      ],
+      [
+        0,
+        6
+      ],
+      [
+        0.5,
+        9
+      ],
+      [
+        1,
+        12
+      ]
+    ],
+    "terrain.lowland_strength": 0.8,
+    "terrain.lowland_height": 6,
+    "islands.enabled": false,
+    "hydrology.enabled": true,
+    "river.enabled": true,
+    "lakes.enabled": false,
+    "ponds.enabled": false,
+    "water.generate": true,
+    "badlands.enabled": false,
+    "cold.enabled": false,
+    "cold.freeze": false,
+    "frozen_ocean.enabled": false,
+    "ice_spikes.enabled": false
+  }
+}

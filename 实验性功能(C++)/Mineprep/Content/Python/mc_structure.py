@@ -1,17 +1,24 @@
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 import os
 import gzip
 import struct
 import json
+import math
 import numpy as np
+import mc_blockstates
+from mc_structure_data import CellData, decode_varints
 from pathlib import Path
 from pprint import pformat
-from mc_utils import lazy_import, warn, uclass, set_actor_label, select_actors
+from mc_utils import warn, uclass, set_actor_label, select_actors
 from mc_localization import loctable_col
 from mc_config import paths
-from mc_math import boxes_to_packed, decode_rotation, encode_rotation, validate_packed
+from mc_math import boxes_to_packed, decode_rotation, encode_rotation, validate_packed, partition_types
 from mc_importer import (
     _make_import_task, _run_import_task, _load_mc_model,
+    _model_data_is_full_cube, _resolve_texture_reference,
     resolve_block_json_path, import_block,
 )
 from mc_prep import prep_texture
@@ -25,13 +32,6 @@ if __name__ == "__main__":
 # ==========================================
 # 支持 .nbt / .mcstructure / .schematic / .schem
 BLOCK_SIZE = 100.0
-_NEIGHBOR_OFFSETS = (
-    (1, 0, 0), (-1, 0, 0),
-    (0, 1, 0), (0, -1, 0),
-    (0, 0, 1), (0, 0, -1),
-)
-
-
 # ==========================================
 # 1. 解析 NBT 格式
 # ==========================================
@@ -67,7 +67,7 @@ def parse_nbt_value(stream, tag_type, endian):
     elif tag_type == 6: return read_numeric(stream, 'd', endian)
     elif tag_type == 7:
         length = read_numeric(stream, 'i', endian)
-        # 保持 bytes，避免 数百万元素 list↔bytes 往返
+        # 保持 bytes，避免数百万元素的 list 与 bytes 往返转换
         return stream.read(length) if length and length > 0 else b""
     elif tag_type == 8: return read_string(stream, endian)
     elif tag_type == 9:
@@ -158,209 +158,112 @@ def _legacy_id_to_block(block_id, meta):
     return _parse_blockstate_string(raw)
 
 
-def process_java_nbt(data):
-    """将 Java .nbt 结构转为稀疏字典 {(x,y,z): {name, properties}}。
+def _java_data(data):
+    palette = [{'name':str(c.get('id',c.get('Name','air'))).replace('minecraft:',''),
+                'properties':c.get('properties',c.get('Properties')) or {}}
+               for c in data.get('palette',[])]
+    blocks = data.get('blocks',[])
+    size = data.get('size')
+    return CellData([b.get('pos',[0,0,0]) for b in blocks],
+                    [b.get('state',0) for b in blocks], palette,
+                    tuple(map(int,size)) if size is not None else None)
 
-    26.3（DataVersion 5023）调色板字段是 id / properties；
-    旧结构仍是 Name / Properties。
-    """
+
+def _bedrock_data(data):
+    size = tuple(map(int,data.get('size',[0,0,0])))
+    structure = data.get('structure',{})
+    layers = structure.get('block_indices',[])
+    if not layers or math.prod(size) <= 0:
+        return CellData(source_size=size)
+    default = structure.get('palette',{}).get('default',{})
+    palette = [{'name':c.get('name','air').replace('minecraft:',''),
+                'properties':c.get('states') or {}} for c in default.get('block_palette',[])]
+    values = np.asarray(layers[0],np.int32).copy()
+    for key, extra in (default.get('block_position_data') or {}).items():
+        linear = int(key)
+        entity = extra.get('block_entity_data') or {}
+        if not 0 <= linear < len(values) or 'color' not in entity:
+            continue
+        t = int(values[linear])
+        if 0 <= t < len(palette) and (palette[t]['name'] == 'bed' or palette[t]['name'].endswith('_bed')):
+            cell = palette[t]
+            values[linear] = len(palette)
+            palette.append({'name':cell['name'], 'properties':{**cell['properties'],'color':entity['color']}})
+    return CellData.linear(values,size,palette,order='xyz',source_size=size)
+
+
+def _schematic_size(schem):
+    return tuple(int(schem.get(key,0) or 0) & 0xFFFF for key in ('Width','Height','Length'))
+
+
+def _byte_values(raw):
+    return (np.frombuffer(raw,np.uint8) if isinstance(raw,(bytes,bytearray))
+            else np.asarray(raw,np.int64).astype(np.uint8))
+
+
+def _classic_data(schem):
+    size = _schematic_size(schem)
+    blocks = _byte_values(schem.get('Blocks') or b'')[:math.prod(size)]
+    if math.prod(size) <= 0 or not len(blocks):
+        return CellData(source_size=size)
+    meta = _byte_values(schem.get('Data') or b'')
+    pairs = blocks.astype(np.uint16) << 4
+    count = min(len(meta),len(pairs))
+    pairs[:count] |= meta[:count] & 15
+    palette, remap = [], np.empty(4096,np.int32)
+    for pair in np.unique(pairs):
+        name, props = _legacy_id_to_block(int(pair)>>4,int(pair)&15) if pair>>4 else ('air',{})
+        remap[pair] = len(palette)
+        palette.append({'name':name,'properties':props})
+    return CellData.linear(remap[pairs],size,palette,source_size=size)
+
+
+def _sponge_data(data):
+    schem = data.get('Schematic',data)
+    size = _schematic_size(schem)
+    tag = schem.get('Blocks')
+    if isinstance(tag,dict) and ('Palette' in tag or 'Data' in tag):
+        palette_map, raw = tag.get('Palette') or {}, tag.get('Data') or b''
+    else:
+        palette_map, raw = schem.get('Palette') or {}, schem.get('BlockData') or b''
+    if not palette_map or not len(raw) or math.prod(size) <= 0:
+        return CellData(source_size=size)
+    inv = {i:state for state,i in palette_map.items()}
+    keys = np.asarray(sorted(inv),np.uint32)
     palette = []
-    for item in data.get('palette', []):
-        raw = item.get('id', item.get('Name', 'air'))
-        props = item.get('properties', item.get('Properties')) or {}
-        palette.append((str(raw).replace("minecraft:", ""), props))
-    sparse_dict = {}
-    for b in data.get('blocks', []):
-        pos = tuple(b.get('pos', [0, 0, 0]))
-        state_idx = b.get('state', 0)
-        if state_idx < len(palette):
-            name, props = palette[state_idx]
-            if name != 'air': sparse_dict[pos] = {"name": name, "properties": props}
-    return sparse_dict
+    for key in keys:
+        name, props = _parse_blockstate_string(inv[int(key)])
+        palette.append({'name':name,'properties':props})
+    values = decode_varints(_byte_values(raw).tobytes())
+    if not np.array_equal(keys,np.arange(len(keys),dtype=np.uint32)):
+        at = np.searchsorted(keys,values)
+        bounded = np.minimum(at,len(keys)-1)
+        values = np.where((at < len(keys)) & (keys[bounded] == values),bounded,-1)
+    unreal.log(f"Sponge schematic v{schem.get('Version',2)} ({size}, palette={len(palette)}, data={len(raw)}B)")
+    return CellData.linear(values,size,palette,source_size=size)
+
+
+def process_java_nbt(data):
+    """将 Java 版 .nbt 数据解析为 {(x, y, z): {'name', 'properties'}} 稀疏字典。"""
+    return _java_data(data).to_cells()
+
 
 def process_bedrock_structure(data):
-    """将基岩版 .mcstructure 转为稀疏字典 {(x,y,z): {name, properties}}"""
-    structure = data.get('structure', {})
-    block_indices = structure.get('block_indices', [])
-    if not block_indices: return {}
-    size = data.get('size', [0, 0, 0])
-    sx, sy, sz = int(size[0]), int(size[1]), int(size[2])
-    layer0 = np.asarray(block_indices[0], dtype=np.int32)
-    volume = sx * sy * sz
-    if volume <= 0 or layer0.size == 0:
-        return {}
-    if layer0.size > volume:
-        layer0 = layer0[:volume]
-    palette_data = structure.get('palette', {}).get('default', {}).get('block_palette', [])
-    palette = [(item.get('name', 'air').replace("minecraft:", ""), item.get('states', {})) for item in palette_data]
-    position_data = structure.get('palette', {}).get('default', {}).get('block_position_data') or {}
-    palette_len = len(palette)
-    stride_x = sy * sz
-
-    sparse_dict = {}
-    for linear in np.flatnonzero(layer0 != -1):
-        linear = int(linear)
-        state_idx = int(layer0[linear])
-        if state_idx < 0 or state_idx >= palette_len:
-            continue
-        name, props = palette[state_idx]
-        if name == 'air':
-            continue
-        if name == 'bed' or name.endswith('_bed'):
-            extra = position_data.get(str(linear)) or {}
-            entity = extra.get('block_entity_data') or {}
-            if 'color' in entity:
-                props = dict(props)
-                props['color'] = entity['color']
-        x = linear // stride_x
-        rem = linear % stride_x
-        y = rem // sz
-        z = rem % sz
-        sparse_dict[(x, y, z)] = {"name": name, "properties": props}
-    return sparse_dict
+    """将基岩版 .mcstructure 数据解析为稀疏方块字典。"""
+    return _bedrock_data(data).to_cells()
 
 
-def process_classic_schematic(schem):
-    """经典 MCEdit .schematic：Blocks(byte)+Data(meta)，YZX 顺序"""
-    width = int(schem.get("Width", 0) or 0)
-    height = int(schem.get("Height", 0) or 0)
-    length = int(schem.get("Length", 0) or 0)
-    blocks = schem.get("Blocks") or b""
-    data = schem.get("Data") or b""
-    if not width or not height or not length or not blocks:
-        return {}
-
-    expected = width * height * length
-    if len(blocks) < expected:
-        unreal.log_warning(
-            f"经典 schematic Blocks 长度不足: {len(blocks)} < {expected}"
-        )
-        expected = len(blocks)
-
-    # NBT ByteArray 现为 bytes；兼容旧 list
-    if isinstance(blocks, (bytes, bytearray)):
-        blocks_u8 = blocks
-    else:
-        blocks_u8 = bytes((b & 0xFF) for b in blocks)
-    if isinstance(data, (bytes, bytearray)):
-        data_u8 = data
-    elif data:
-        data_u8 = bytes((d & 0xFF) for d in data)
-    else:
-        data_u8 = b""
-
-    layer = length * width
-    data_len = len(data_u8)
-    resolve_cache = {}  # (bid, meta) -> (name, props)
-    info_cache = {}  # (bid, meta) -> 共享的 {"name","properties"}，避免每格 new dict
-    sparse_dict = {}
-    for i in range(expected):
-        bid = blocks_u8[i]
-        if bid == 0:
-            continue
-        meta = data_u8[i] & 0xF if i < data_len else 0
-        key = (bid, meta)
-        info = info_cache.get(key)
-        if info is None:
-            resolved = resolve_cache.get(key)
-            if resolved is None:
-                resolved = _legacy_id_to_block(bid, meta)
-                resolve_cache[key] = resolved
-            name, props = resolved
-            if name == "air":
-                info_cache[key] = False  # 哨兵：空气
-                continue
-            info = {"name": name, "properties": props}
-            info_cache[key] = info
-        elif info is False:
-            continue
-        # index = (Y * length + Z) * width + X
-        y, rem = divmod(i, layer)
-        z, x = divmod(rem, width)
-        sparse_dict[(x, y, z)] = info
-    return sparse_dict
+def process_classic_schematic(data):
+    """将经典 .schematic 数据解析为稀疏方块字典。"""
+    return _classic_data(data).to_cells()
 
 
 def process_sponge_schematic(data):
-    """将 Sponge .schem（v2/v3）转为稀疏字典 {(x,y,z): {name, properties}}"""
-    schem = data.get('Schematic', data) if 'Schematic' in data else data
-
-    width = int(schem.get('Width', 0) or 0)
-    height = int(schem.get('Height', 0) or 0)
-    length = int(schem.get('Length', 0) or 0)
-
-    # v3: Blocks.{Palette, Data}；v2: 顶层 Palette + BlockData
-    blocks_tag = schem.get('Blocks')
-    if isinstance(blocks_tag, dict) and (
-        blocks_tag.get('Palette') is not None or blocks_tag.get('Data') is not None
-    ):
-        palette_data = blocks_tag.get('Palette') or {}
-        block_bytes = blocks_tag.get('Data') or b""
-        version = schem.get('Version', 3)
-    else:
-        palette_data = schem.get('Palette') or {}
-        block_bytes = schem.get('BlockData') or b""
-        version = schem.get('Version', 2)
-
-    if isinstance(block_bytes, list):
-        block_bytes = bytes((b & 0xFF) for b in block_bytes)
-    elif not isinstance(block_bytes, (bytes, bytearray)):
-        unreal.log_warning(
-            f"Sponge schematic BlockData 类型异常: {type(block_bytes).__name__}"
-        )
-        return {}
-
-    if not palette_data or not block_bytes:
-        unreal.log_warning(
-            f"Sponge schematic 缺少 Palette/Data "
-            f"(v{version}, {width}x{height}x{length}, keys={list(schem.keys())[:20]})"
-        )
-        return {}
-
-    unreal.log(
-        f"Sponge schematic v{version} "
-        f"({width}x{height}x{length}, palette={len(palette_data)}, data={len(block_bytes)}B)"
-    )
-
-    inv_palette = {v: k.replace("minecraft:", "") for k, v in palette_data.items()}
-
-    varints = []
-    idx, n = 0, len(block_bytes)
-    while idx < n:
-        value, shift = 0, 0
-        while True:
-            b = block_bytes[idx]
-            idx += 1
-            value |= (b & 0x7F) << shift
-            if not (b & 0x80):
-                break
-            shift += 7
-        varints.append(value)
-
-    sparse_dict = {}
-    v_idx = 0
-    expected = width * height * length
-    for y in range(height):
-        for z in range(length):
-            for x in range(width):
-                if v_idx >= len(varints):
-                    break
-                val_id = varints[v_idx]
-                v_idx += 1
-                raw_string = inv_palette.get(val_id, 'air')
-                name, props = _parse_blockstate_string(raw_string)
-                if name == 'air':
-                    continue
-                sparse_dict[(x, y, z)] = {"name": name, "properties": props}
-
-    if v_idx < expected:
-        unreal.log_warning(
-            f"Sponge BlockData 方块数不足: {v_idx} < {expected}"
-        )
-    return sparse_dict
+    """将 Sponge .schem 数据解析为稀疏方块字典。"""
+    return _sponge_data(data).to_cells()
 
 # ==========================================
-# 3. 虚幻引擎数据结构组装逻辑 (新增 center 参数)
+# 3. 方块状态映射与虚幻引擎数据结构组装
 # ==========================================
 
 # 高草/大型花卉：half=lower|upper → *_bottom / *_top
@@ -368,16 +271,11 @@ _DOUBLE_PLANT_NAMES = frozenset({
     "tall_grass", "large_fern", "sunflower", "lilac", "rose_bush", "peony",
     "pitcher_plant",
 })
-_DOUBLE_SLAB_MODEL_CACHE = {}
 
 
 def _double_slab_model_name(slab_name):
     """type=double 时查 blockstate，多数映射到完整方块（stone_bricks 等）"""
     name = str(slab_name).lower().replace("minecraft:", "")
-    cached = _DOUBLE_SLAB_MODEL_CACHE.get(name)
-    if cached is not None:
-        return cached
-
     result = f"{name}_double"
     try:
         bs_path = Path(paths.blockstates) / f"{name}.json"
@@ -392,7 +290,6 @@ def _double_slab_model_name(slab_name):
     except (OSError, json.JSONDecodeError, TypeError, AttributeError):
         pass
 
-    _DOUBLE_SLAB_MODEL_CACHE[name] = result
     return result
 
 
@@ -573,7 +470,7 @@ def _door_half_hinge_open(props):
 
 
 def _bed_facing(props):
-    """基岩 direction 0–3 或 Java facing → north/east/south/west"""
+    """基岩 direction 0~3 或 Java facing -> north/east/south/west"""
     props = props or {}
     if "direction" in props and not props.get("facing"):
         try:
@@ -629,7 +526,7 @@ def _structure_model_name(name, props):
         half = str(props.get("half", "lower")).lower()
         return f"{name}_top" if half in {"upper", "top"} else f"{name}_bottom"
 
-    # 玻璃板：multipart，见 _structure_parts（不再回退成整块玻璃）
+    # 玻璃板属于多部件模型，在 _structure_parts 中展开
 
     if name.endswith("_pressure_plate"):
         return _pressure_plate_model_name(name, props)
@@ -697,9 +594,20 @@ def _dir_connected(props, direction):
 
 
 def _structure_parts(raw_name, props):
-    """一个 NBT 方块拆成 [(模型名, pitch, yaw, roll), ...]；栅栏/玻璃板为 multipart"""
+    """一个 MC 格子拆成 [(模型名, pitch, yaw, roll), ...]。"""
     name = str(raw_name).lower().replace("minecraft:", "")
     props = props or {}
+
+    if name == 'chorus_plant':
+        parts = []
+        # 对应原版模型首个变体；MC 绕 X 轴旋转对应 UE Roll
+        for direction, cap, yaw, roll in (
+                ('north', 'noside', 0, 0), ('east', 'noside1', 90, 0),
+                ('south', 'noside2', 180, 0), ('west', 'noside3', 270, 0),
+                ('up', 'noside', 0, 90), ('down', 'noside3', 0, 270)):
+            suffix = 'side' if _dir_connected(props, direction) else cap
+            parts.append(('chorus_plant_' + suffix, 0., float(yaw), float(roll)))
+        return parts
 
     if name.endswith("_fence"):
         parts = [(f"{name}_post", *_yaw_rot(0.0))]
@@ -711,11 +619,37 @@ def _structure_parts(raw_name, props):
     if name.endswith("_pane"):
         parts = [(f"{name}_post", *_yaw_rot(0.0))]
         for direction, conn_sfx, disc_sfx, conn_yaw, disc_yaw in _PANE_DIR_PARTS:
-            connected = str(props.get(direction, "false")).lower() == "true"
+            connected = _dir_connected(props, direction)
             if connected:
                 parts.append((f"{name}_{conn_sfx}", *_yaw_rot(conn_yaw)))
             else:
                 parts.append((f"{name}_{disc_sfx}", *_yaw_rot(disc_yaw)))
+        return parts
+
+    if name == 'iron_bars':
+        parts = [('iron_bars_post_ends', *_yaw_rot(0))]
+        links = [d for d, _ in _FENCE_SIDE_YAW if _dir_connected(props, d)]
+        if not links:
+            parts.append(('iron_bars_post', *_yaw_rot(0)))
+        for direction, yaw in _FENCE_SIDE_YAW:
+            if direction not in links:
+                continue
+            suffix = '_alt' if direction in ('south', 'west') else ''
+            angle = yaw % 180
+            if len(links) == 1:
+                parts.append(('iron_bars_cap' + suffix, *_yaw_rot(angle)))
+            parts.append(('iron_bars_side' + suffix, *_yaw_rot(angle)))
+        return parts
+
+    if name.endswith('_wall') and any(k in props for k in ('up', 'north', 'east', 'south', 'west')):
+        parts = []
+        if str(props.get('up', 'true')).lower() == 'true':
+            parts.append((name + '_post', *_yaw_rot(0)))
+        for direction, yaw in _FENCE_SIDE_YAW:
+            side = props.get(direction, 'none')
+            if side in ('low', 'tall'):
+                suffix = '_side_tall' if side == 'tall' else '_side'
+                parts.append((name + suffix, *_yaw_rot(yaw)))
         return parts
 
     pitch, yaw, roll = _block_rotation(raw_name, props)
@@ -723,10 +657,9 @@ def _structure_parts(raw_name, props):
 
 
 def structure_parts(name, properties=None):
-    """MC blockstate → [(model_name, pitch, yaw, roll), ...]。
+    """将单个方块的名称与状态属性展开为 [(模型名, pitch, yaw, roll), ...]。
 
-    与 spawn_structure 同一套展开：楼梯用 facing/shape/half；
-    栅栏/玻璃板用 north/east/south/west（同格 multipart，不是自己摆 side 网格）。
+    楼梯等单模型方块返回单个元素；栅栏、玻璃板、铁栏杆、石墙等多部件方块会在同一格内拆分为柱体与各方向连接面。
     """
     return _structure_parts(name, properties or {})
 
@@ -792,7 +725,7 @@ def _column_euler(raw_name, props):
 
 
 def _is_standing_rot16(raw_name):
-    """站立告示牌、旗帜、头颅用 rotation 0–15。墙挂的走 facing。"""
+    """站立告示牌、旗帜、头颅使用 rotation (0~15)，墙挂款使用 facing。"""
     if (
         raw_name.endswith("_wall_sign") or raw_name in {"wall_sign", "wall_hanging_sign"}
         or raw_name.endswith("_wall_hanging_sign")
@@ -910,10 +843,14 @@ def _block_rotation(name, props):
 
 
 def _structure_center_offsets(sparse_dict):
-    """Logical grid bounds → bottom-center anchor translation in UE cm."""
+    """计算将结构包围盒底部中心对齐到原点的 UE 坐标偏移量（厘米）。"""
     if not sparse_dict:
         return 0.0, 0.0, 0.0
 
+    if isinstance(sparse_dict, CellData):
+        lo, hi = sparse_dict.bounds()
+        half = BLOCK_SIZE / 2
+        return (-float(lo[0]+hi[0])*half, -float(lo[2]+hi[2])*half, -float(lo[1])*BLOCK_SIZE)
     it = iter(sparse_dict)
     mx0, my0, mz0 = next(it)
     min_x = max_x = mx0
@@ -956,11 +893,6 @@ def _is_leaves_model(model_name) -> bool:
     return stem.endswith("_leaves") or stem == "leaves"
 
 
-def _is_mergeable_cube(model_name) -> bool:
-    """仅完整正方体可合并；排除树叶"""
-    return _is_solid_block(model_name) and not _is_leaves_model(model_name)
-
-
 def _greedy_merge_1d(cells):
     """merge=1：沿 X→Z→Y 贪婪拉长条"""
     remaining = set(cells)
@@ -976,6 +908,8 @@ def _greedy_merge_1d(cells):
                 if tuple(nxt) not in remaining:
                     break
                 length += 1
+            if length == 1 and axis != 1:
+                continue
             size = [1, 1, 1]
             size[axis] = length
             boxes.append((start[0], start[1], start[2], size[0], size[1], size[2]))
@@ -1055,6 +989,7 @@ def _collect_merged_boxes(sparse_dict, merge=0):
     parts_cache = {}
     mergeable = {}
     passthrough = []
+    facts = _BlockModelFacts() if merge_mode > 0 else None
 
     for (mx, my, mz), block_info in sparse_dict.items():
         props = block_info["properties"]
@@ -1071,7 +1006,8 @@ def _collect_merged_boxes(sparse_dict, merge=0):
 
         for model_name, rot in parts:
             discrete = _discrete_rot_id(rot)
-            if merge_mode > 0 and discrete is not None and _is_mergeable_cube(model_name):
+            if (facts is not None and discrete is not None
+                    and not _is_leaves_model(model_name) and facts.model(model_name)[2]):
                 mergeable.setdefault((model_name, discrete), set()).add((mx, my, mz))
             else:
                 passthrough.append((model_name, rot, mx, my, mz, 1, 1, 1))
@@ -1102,7 +1038,7 @@ def convert_to_unreal_transforms(sparse_dict, center=False, merge=0, *, origin=(
 
 
 def convert_to_packed_arrays(sparse_dict, center=False, merge=0, *, origin=(0, 0, 0)):
-    """{model: {"pos":(N,3) float32, "rot":(N,) float32, "scale":(N,3) float32}}"""
+    """将稀疏方块字典转换为按模型分组的打包数组：{模型名: {'pos': (N,3), 'rot': (N,), 'scale': (N,3)}}。"""
     if center:
         origin = np.asarray(origin, dtype=np.float64) + _structure_center_offsets(sparse_dict)
 
@@ -1148,157 +1084,75 @@ def add_packed_instances(ism, payload):
         del batch
 
 
-_CULL_FLUID_NAMES = frozenset({"water", "flowing_water"})
-_CUBE_FACE_NAMES = frozenset({"down", "up", "north", "south", "west", "east"})
-_SOLID_NAME_CACHE = {}
+class _BlockModelFacts:
+    """单次结构操作内的方块模型与贴图透明度查询缓存。"""
 
+    def __init__(self):
+        self.models, self.states, self.opacity, self.textures = {}, {}, {}, {}
 
-def _element_is_full_cube(element) -> bool:
-    """单个 element 是否为 0–16 且含六面的完整正方体"""
-    frm = element.get("from")
-    to = element.get("to")
-    if not frm or not to or len(frm) != 3 or len(to) != 3:
-        return False
-    try:
-        if any(abs(float(frm[i]) - 0.0) > 1e-6 for i in range(3)):
+    def model(self, name):
+        if name not in self.models:
+            path = resolve_block_json_path(name)
+            data = {}
+            try:
+                if path is not None:
+                    data = _load_mc_model(path)
+            except (OSError, json.JSONDecodeError):
+                pass
+            self.models[name] = path, data, _model_data_is_full_cube(data)
+        return self.models[name]
+
+    def state_model(self, name, properties):
+        key = name, frozenset(properties.items())
+        if key not in self.states:
+            parts = _structure_parts(name, properties)
+            self.states[key] = parts[0][0] if len(parts) == 1 else None
+        return self.states[key]
+
+    def full(self, name, properties):
+        model = self.state_model(name, properties)
+        return model is not None and self.model(model)[2]
+
+    def opaque(self, name, properties):
+        model = self.state_model(name, properties)
+        if model not in self.opacity:
+            self.opacity[model] = self._opaque_model(model) if model is not None else False
+        return self.opacity[model]
+
+    def _opaque_model(self, model):
+        path, data, full = self.model(model)
+        textures = data.get('textures') or {}
+        if not full or any(isinstance(v, dict) and v.get('force_translucent')
+                           for v in textures.values()):
             return False
-        if any(abs(float(to[i]) - 16.0) > 1e-6 for i in range(3)):
-            return False
-    except (TypeError, ValueError):
-        return False
-    faces = element.get("faces") or {}
-    return _CUBE_FACE_NAMES.issubset(faces.keys())
+        from PIL import Image
+        for element in data.get('elements') or ():
+            for face in (element.get('faces') or {}).values():
+                reference = face.get('texture')
+                if not reference or reference in ('#overlay', 'overlay'):
+                    continue  # 与导入器一致，跳过 #overlay 层
+                texture = _resolve_texture_reference(path, textures, reference)
+                if texture not in self.textures:
+                    try:
+                        with Image.open(texture) as image:
+                            self.textures[texture] = image.convert('RGBA').getchannel('A').getextrema()[0] == 255
+                    except OSError:
+                        self.textures[texture] = False
+                if not self.textures[texture]:
+                    return False
+        return True
 
 
-def _model_is_full_cube(model_data) -> bool:
-    """合并 parent 后的模型是否含完整正方体（可有 overlay 等额外 element）"""
-    elements = model_data.get("elements") or []
-    return any(_element_is_full_cube(el) for el in elements)
 
 
-def _is_water_block(block_name) -> bool:
-    """判断是否为水流方块名"""
-    return str(block_name).lower() in _CULL_FLUID_NAMES
-
-
-def _is_solid_block(block_name) -> bool:
-    """可剔除实心：对应 block 模型含 0–16 六面正方体（按方块名缓存）"""
-    name = str(block_name).lower().replace("minecraft:", "")
-    cached = _SOLID_NAME_CACHE.get(name)
-    if cached is not None:
-        return cached
-
-    result = False
-    try:
-        path = resolve_block_json_path(name)
-        if path is not None:
-            result = _model_is_full_cube(_load_mc_model(path))
-    except (OSError, json.JSONDecodeError, ValueError, TypeError, KeyError):
-        result = False
-
-    _SOLID_NAME_CACHE[name] = result
-    return result
-
-
-def _is_internal_block(pos, occupied) -> bool:
-    """六邻域均被占用时视为内部方块"""
-    return all(
-        (pos[0] + dx, pos[1] + dy, pos[2] + dz) in occupied
-        for dx, dy, dz in _NEIGHBOR_OFFSETS
-    )
-
-
-def _cull_internal_blocks_per_type(sparse_dict):
-    """按方块类型分别剔除内部实心块（cull=1）"""
-    positions_by_name = {}
-    for pos, block_info in sparse_dict.items():
-        name = block_info["name"]
-        if not (_is_solid_block(name) or _is_water_block(name)):
-            continue
-        positions_by_name.setdefault(name, set()).add(pos)
-
-    culled = {}
-    for pos, block_info in sparse_dict.items():
-        name = block_info["name"]
-        if name not in positions_by_name:
-            culled[pos] = block_info
-            continue
-        if _is_internal_block(pos, positions_by_name[name]):
-            continue
-        culled[pos] = block_info
-    return culled
-
-
-def _cull_internal_blocks_unified_solids(sparse_dict):
-    """全体实心块统一剔除内部，保留流体外壳（cull=2）"""
-    solid_positions = set()
-    water_positions = set()
-    for pos, block_info in sparse_dict.items():
-        name = block_info["name"]
-        if _is_water_block(name):
-            water_positions.add(pos)
-        elif _is_solid_block(name):
-            solid_positions.add(pos)
-
-    culled = {}
-    for pos, block_info in sparse_dict.items():
-        name = block_info["name"]
-        if _is_water_block(name):
-            occupied = water_positions
-        elif _is_solid_block(name):
-            occupied = solid_positions
-        else:
-            culled[pos] = block_info
-            continue
-        if _is_internal_block(pos, occupied):
-            continue
-        culled[pos] = block_info
-    return culled
-
-
-def _cull_bbox_sides_and_bottom(sparse_dict):
-    """剔除结构 AABB 的四个侧面与底面方块，保留顶面（cull=3 第二步）"""
-    if not sparse_dict:
-        return sparse_dict
-
-    it = iter(sparse_dict)
-    x0, y0, z0 = next(it)
-    min_x = max_x = x0
-    min_y = y0
-    min_z = max_z = z0
-    for x, y, z in it:
-        if x < min_x:
-            min_x = x
-        elif x > max_x:
-            max_x = x
-        if y < min_y:
-            min_y = y
-        if z < min_z:
-            min_z = z
-        elif z > max_z:
-            max_z = z
-
-    culled = {}
-    for (x, y, z), block_info in sparse_dict.items():
-        if y == min_y:
-            continue
-        if x == min_x or x == max_x or z == min_z or z == max_z:
-            continue
-        culled[(x, y, z)] = block_info
-    return culled
-
-
-def _fix_open_trapdoor_facings(sparse_dict):
+def _fix_open_trapdoor_facings(sparse_dict, *, positions=None, facts=None):
     """修正错误 facing：开启活板门若恰有一个完整方块邻居，facing 应背离该邻居
     （与 test.schematic 灯柱一致；部分 .schem 导出 facing 错乱）。
     """
     if not sparse_dict:
         return sparse_dict
 
-    solids = {
-        pos for pos, info in sparse_dict.items()
-        if _is_solid_block(info["name"])
-    }
+    facts = facts or _BlockModelFacts()
     # (邻格相对位移) → 背离该邻格时应有的 facing
     away_facing = {
         (1, 0, 0): "west",
@@ -1308,7 +1162,8 @@ def _fix_open_trapdoor_facings(sparse_dict):
     }
 
     fixed = 0
-    for pos, info in list(sparse_dict.items()):
+    for pos in sparse_dict if positions is None else positions:
+        info = sparse_dict[pos]
         name = str(info["name"]).lower().replace("minecraft:", "")
         if not name.endswith("_trapdoor"):
             continue
@@ -1319,7 +1174,8 @@ def _fix_open_trapdoor_facings(sparse_dict):
         hits = []
         for delta, facing in away_facing.items():
             npos = (pos[0] + delta[0], pos[1] + delta[1], pos[2] + delta[2])
-            if npos in solids:
+            neighbour = sparse_dict.get(npos)
+            if neighbour and facts.full(neighbour['name'], neighbour.get('properties') or {}):
                 hits.append(facing)
         if len(hits) != 1:
             continue
@@ -1335,20 +1191,12 @@ def _fix_open_trapdoor_facings(sparse_dict):
     return sparse_dict
 
 
-# 玻璃板 NESW → 邻格相对位移（MC）
-_PANE_CONNECT_DIRS = (
-    ("north", (0, 0, -1)),
-    ("east", (1, 0, 0)),
-    ("south", (0, 0, 1)),
-    ("west", (-1, 0, 0)),
-)
-
-
-def _sync_bedrock_door_halves(sparse_dict):
+def _sync_bedrock_door_halves(sparse_dict, *, positions=None):
     """下门的朝向为准（上门常被写成 south）。合页记在上门，抄到下门。"""
     if not sparse_dict:
         return sparse_dict
-    for pos, info in list(sparse_dict.items()):
+    for pos in sparse_dict if positions is None else positions:
+        info = sparse_dict[pos]
         name = str(info["name"]).lower().replace("minecraft:", "")
         if not name.endswith("_door"):
             continue
@@ -1380,78 +1228,17 @@ def _sync_bedrock_door_halves(sparse_dict):
     return sparse_dict
 
 
-def _fix_pane_connections(sparse_dict):
-    """部分 .schem 玻璃板无 NESW，按邻格（板条/实心）补全连接。已有任一连接则跳过。"""
-    if not sparse_dict:
-        return sparse_dict
-
-    attach = set()
-    panes = []
-    for pos, info in sparse_dict.items():
-        name = str(info["name"]).lower().replace("minecraft:", "")
-        if name.endswith("_pane") or name == "iron_bars":
-            attach.add(pos)
-            if name.endswith("_pane"):
-                panes.append((pos, info))
-        elif _is_solid_block(info["name"]):
-            attach.add(pos)
-
-    if not panes:
-        return sparse_dict
-
-    fixed = 0
-    for pos, info in panes:
-        props = info.get("properties") or {}
-        if any(str(props.get(d, "false")).lower() == "true" for d, _ in _PANE_CONNECT_DIRS):
-            continue
-        new_props = dict(props)
-        any_true = False
-        for direction, (dx, dy, dz) in _PANE_CONNECT_DIRS:
-            connected = (pos[0] + dx, pos[1] + dy, pos[2] + dz) in attach
-            new_props[direction] = "true" if connected else "false"
-            any_true = any_true or connected
-        if not any_true:
-            continue
-        sparse_dict[pos] = {"name": info["name"], "properties": new_props}
-        fixed += 1
-
-    if fixed:
-        unreal.log(f"已补全 {fixed} 个玻璃板的 NESW 连接（按邻格）")
-    return sparse_dict
-
-
-def _is_fence_cell_name(name):
-    raw = str(name).lower().replace("minecraft:", "")
-    return raw.endswith("_fence") and "gate" not in raw
-
-
-def _is_pane_cell_name(name):
-    raw = str(name).lower().replace("minecraft:", "")
-    return raw.endswith("_pane") or raw == "iron_bars"
-
-
-def _connect_fences_and_panes(sparse_dict):
-    """按邻格重写栅栏/玻璃板 NESW（compose 用；总是覆盖已有连接）。"""
-    if not sparse_dict:
-        return sparse_dict
-    for pos, info in list(sparse_dict.items()):
-        name = info["name"]
-        if _is_fence_cell_name(name):
-            props = dict(info.get("properties") or {})
-            for direction, (dx, dy, dz) in _PANE_CONNECT_DIRS:
-                nbr = sparse_dict.get((pos[0] + dx, pos[1] + dy, pos[2] + dz))
-                props[direction] = "true" if nbr and _is_fence_cell_name(nbr["name"]) else "false"
-            sparse_dict[pos] = {"name": name, "properties": props}
-            continue
-        if str(name).lower().replace("minecraft:", "").endswith("_pane"):
-            props = dict(info.get("properties") or {})
-            for direction, (dx, dy, dz) in _PANE_CONNECT_DIRS:
-                nbr = sparse_dict.get((pos[0] + dx, pos[1] + dy, pos[2] + dz))
-                connected = bool(
-                    nbr and (_is_pane_cell_name(nbr["name"]) or _is_solid_block(nbr["name"]))
-                )
-                props[direction] = "true" if connected else "false"
-            sparse_dict[pos] = {"name": name, "properties": props}
+def _fix_pane_connections(sparse_dict, *, facts=None):
+    """只补全完全缺少连接属性的玻璃板；保留明确写入的 false。"""
+    keys = tuple(k for d in mc_blockstates.DIRECTIONS
+                 for k in (d, 'minecraft:connection_' + d, 'connection_' + d))
+    def missing(cell):
+        return (str(cell['name']).endswith('_pane')
+                and not any(k in (cell.get('properties') or {}) for k in keys))
+    pending = (sparse_dict.positions(missing) if isinstance(sparse_dict, CellData)
+               else (p for p,cell in sparse_dict.items() if missing(cell)))
+    mc_blockstates.connect(sparse_dict, is_full_cube=(facts or _BlockModelFacts()).full,
+                           families=('pane',), positions=pending)
     return sparse_dict
 
 
@@ -1469,27 +1256,23 @@ def _copy_sparse_cells(sparse_dict):
 
 
 def _apply_cull(sparse_dict, cull=0):
-    """cull 标志与 parse_structure / spawn_structure 相同；返回新 dict 或原引用（cull=0）。"""
-    cull_mode = int(cull)
-    if cull_mode == 1:
-        return _cull_internal_blocks_per_type(sparse_dict)
-    if cull_mode in (2, 3):
-        culled = _cull_internal_blocks_unified_solids(sparse_dict)
-        if cull_mode == 3:
-            culled = _cull_bbox_sides_and_bottom(culled)
-        return culled
-    return sparse_dict
+    """按模式剔除被遮挡的内部方块（兼容稀疏字典与 CellData）。"""
+    mode = int(cull)
+    if mode not in (1,2,3):
+        return sparse_dict
+    numeric = isinstance(sparse_dict, CellData)
+    data = sparse_dict if numeric else CellData.from_cells(sparse_dict)
+    data.cull(mode, _BlockModelFacts())
+    return data if numeric else data.to_cells()
 
 
-def _load_structure_sparse(filepath):
-    """文件 → 稀疏格子（含活板门/玻璃板修正）。不做 cull/merge。"""
+def _load_structure_data(filepath, *, repair_trapdoors=False):
+    """读取结构文件，并执行玻璃板连接补全与基岩版上下门同步。"""
     if not filepath or not os.path.exists(filepath):
         unreal.log_error(f"未能找到结构文件: {filepath}")
-        return {}
+        return CellData()
 
     ext = os.path.splitext(filepath)[1].lower()
-    sparse_dict = {}
-
     if ext in ['.nbt', '.schematic', '.schem']:
         with gzip.open(filepath, 'rb') as f:
             nbt_data = load_nbt_file(f, endian='>')
@@ -1498,41 +1281,49 @@ def _load_structure_sparse(filepath):
             nbt_data = load_nbt_file(f, endian='<')
     else:
         unreal.log_warning(f"不支持的文件格式: {ext}")
-        return {}
+        return CellData()
 
     if ext == '.nbt':
-        sparse_dict = process_java_nbt(nbt_data)
+        data = _java_data(nbt_data)
     elif ext == '.schematic':
-        schem = nbt_data.get('Schematic', nbt_data) if isinstance(nbt_data, dict) and 'Schematic' in nbt_data else nbt_data
-        unreal.log(
-            f"经典 MCEdit schematic "
-            f"({schem.get('Width')}x{schem.get('Height')}x{schem.get('Length')})"
-        )
-        sparse_dict = process_classic_schematic(schem)
+        data = _classic_data(nbt_data.get('Schematic',nbt_data))
     elif ext == '.schem':
-        sparse_dict = process_sponge_schematic(nbt_data)
+        data = _sponge_data(nbt_data)
     else:
-        sparse_dict = process_bedrock_structure(nbt_data)
+        data = _bedrock_data(nbt_data)
 
-    sparse_dict = _fix_open_trapdoor_facings(sparse_dict)
-    sparse_dict = _fix_pane_connections(sparse_dict)
-    sparse_dict = _sync_bedrock_door_halves(sparse_dict)
-    return sparse_dict
+    facts = _BlockModelFacts()
+    if repair_trapdoors:
+        positions = data.positions(lambda c:c['name'].endswith('_trapdoor'))
+        _fix_open_trapdoor_facings(data, positions=positions, facts=facts)
+    _fix_pane_connections(data, facts=facts)
+    positions = data.positions(lambda c:c['name'].endswith('_door')
+                               and 'upper_block_bit' in c['properties'])
+    _sync_bedrock_door_halves(data, positions=positions)
+    return data
+
+
+def _load_structure_sparse(filepath, *, repair_trapdoors=False):
+    data = _load_structure_data(filepath,repair_trapdoors=repair_trapdoors)
+    return data.to_cells(), data.source_size
 
 
 # ==========================================
 # 结构解析入口
 # ==========================================
 
-def parse_structure(filepath='', center=False, cull=0, packed=False, merge=0):
+def parse_structure(filepath='', center=False, cull=0, packed=False, merge=0, *, repair_trapdoors=False):
     """解析 .nbt/.schem/.mcstructure。
     packed=False → {方块名: [Transform]}（ISM）
     packed=True  → {方块名: {"pos":[...], "rot":[...], "scale":[...]}}（PCG/粒子）
-    cull=1 按类型剔除内部；cull=2 全体实心统一剔除内部；
+    cull=1 按类型剔除内部；cull=2 不透明完整块统一遮挡，透明完整块只遮挡同类；
     cull=3 在 2 基础上再剔除 AABB 侧面与底面（保留顶面）
     merge=0 关；1 长条；2 平面；3 长方体（仅完整正方体；cull 优先于 merge）
+    repair_trapdoors=True 才按邻居猜测开启活板门朝向；默认保留文件原状态。
     """
-    sparse_dict = _load_structure_sparse(filepath)
+    from time import perf_counter
+    started = perf_counter()
+    sparse_dict = _load_structure_data(filepath, repair_trapdoors=repair_trapdoors)
     if not sparse_dict:
         return {}
 
@@ -1548,7 +1339,8 @@ def parse_structure(filepath='', center=False, cull=0, packed=False, merge=0):
 
     unreal.log(
         f"结构解析完成: {len(ue_data)} 种方块, {total} 个实例 "
-        f"(文件 {os.path.basename(filepath)}, packed={packed}, cull={int(cull)}, merge={merge_mode})"
+        f"(文件 {os.path.basename(filepath)}, packed={packed}, cull={int(cull)}, merge={merge_mode}, "
+        f"CPU {perf_counter()-started:.3f}s)"
     )
     if total <= 200 and not packed:
         unreal.log(pformat(ue_data))
@@ -1566,6 +1358,28 @@ class Blocks:
         else:
             self._cells = cells if cells is not None else {}
         self._mesh_cache = {}
+        self._source_size = None
+
+    @property
+    def source_size(self):
+        """从结构文件加载时的原始尺寸 (X, Y, Z)；手动创建的实例为 None。"""
+        return self._source_size
+
+    def bounds(self):
+        """实时计算当前非空气方块的坐标范围 (lo, hi)，hi 为开区间上界；为空时返回 None。"""
+        positions = (p for p, cell in self._cells.items()
+                     if cell['name'].removeprefix('minecraft:') not in ('air', 'cave_air', 'void_air'))
+        first = next(positions, None)
+        if first is None:
+            return None
+        lo, hi = list(first), list(first)
+        for point in positions:
+            for axis in range(3):
+                if point[axis] < lo[axis]:
+                    lo[axis] = point[axis]
+                if point[axis] > hi[axis]:
+                    hi[axis] = point[axis]
+        return tuple(map(int, lo)), tuple(int(v) + 1 for v in hi)
 
     def _pos(self, x, y, z):
         return (int(x), int(y), int(z))
@@ -1588,7 +1402,23 @@ class Blocks:
         return info["name"], dict(info.get("properties") or {})
 
     def connect_fences(self):
-        _connect_fences_and_panes(self._cells)
+        """兼容旧接口：仅重新计算栅栏、玻璃板与铁栏杆的连接状态。"""
+        return self.connect(families=('fence', 'pane'))
+
+    def connect(self, *, families=None, positions=None):
+        """根据邻接关系更新栅栏、玻璃板、铁栏杆、石墙、栅栏门和楼梯的连接状态。"""
+        mc_blockstates.connect(self._cells, is_full_cube=_BlockModelFacts().full,
+                               families=families, positions=positions)
+        return self
+
+    def rotate(self, rotation=90, *, pivot=(0, 0, 0)):
+        """绕 pivot（MC 格子中心坐标）顺时针旋转结构（90 度的倍数），同步更新坐标与朝向。"""
+        self._cells = mc_blockstates.rotate_cells(self._cells, rotation, pivot=pivot)
+        return self
+
+    def mirror(self, axis='x', *, pivot=0):
+        """沿 MC 的 X 或 Z 轴镜像翻转结构，同步更新坐标与朝向。"""
+        self._cells = mc_blockstates.mirror_cells(self._cells, axis, pivot=pivot)
         return self
 
     def copy_cells(self):
@@ -1606,22 +1436,27 @@ class Blocks:
         return iter(self._cells)
 
     @classmethod
-    def from_file(cls, filepath):
-        cells = _load_structure_sparse(filepath)
-        return cls(name=Path(filepath).stem, cells=cells, copy=False)
+    def from_file(cls, filepath, *, repair_trapdoors=False):
+        """从结构文件（.nbt / .schem / .schematic / .mcstructure）加载可编辑的 Blocks 实例。"""
+        cells, source_size = _load_structure_sparse(filepath, repair_trapdoors=repair_trapdoors)
+        result = cls(name=Path(filepath).stem, cells=cells, copy=False)
+        result._source_size = source_size
+        return result
 
     def bake(self, *, destination_path="/Game/mc/baked", asset_name=None,
-             pivot=(0, 0, 0), cull="opaque", merge_faces=True, reload=False):
-        """Bake cells into one StaticMesh; pivot is a cell center in MC coordinates.
+             pivot=(0, 0, 0), cull="opaque", merge_faces=True, reload=False,
+             two_sided=None):
+        """将当前方块烘焙并保存为单个 StaticMesh 资产，不向场景放置 Actor。
 
-        Does not place Actors. cull='same' also removes faces between identical
-        complete transparent blocks. Changed recipes require reload=True.
-        Culling uses double-sided materials; cull='none' keeps single-sided ones.
+        pivot 为模型轴心所在的 MC 格子中心坐标。
+        cull 可选 'opaque'（默认，剔除不透明邻格遮挡面）、'same'（同时剔除同类透明方块的相邻面）或 'none'。
+        two_sided 可显式指定双面或单面材质；默认 None 在 cull='same' 时使用双面材质。
+        目标路径已存在不同配方的网格时需传入 reload=True 覆盖。
         """
         from mc_mesh import bake_blocks
         return bake_blocks(self, destination_path=destination_path,
                            asset_name=asset_name, pivot=pivot, cull=cull,
-                           merge_faces=merge_faces, reload=reload)
+                           merge_faces=merge_faces, reload=reload, two_sided=two_sided)
 
     def types(self, merge=0, center=False, reload=False):
         """展开 structure_parts → 按模型分组，yield (StaticMesh, [Transform])。"""
@@ -1639,18 +1474,31 @@ class Blocks:
             yield mesh, transforms
 
     def spawn(self, *, loc=(0, 0, 0), rot=(0, 0, 0), gpu=0, cull=0, merge=0,
-              reload=False, name='', center=False):
-        """Place in UE through this module's shared pipeline; returns Actor list."""
+              reload=False, name='', center=False, groups=1):
+        """将当前 Blocks 生成到关卡中，参数与 spawn_structure 一致，返回生成的 Actor 列表。"""
         return spawn_structure(self, loc=loc, rot=rot, gpu=gpu, cull=cull,
-                               merge=merge, reload=reload, name=name, center=center)
+                               merge=merge, reload=reload, name=name, center=center, groups=groups)
 
 
 def spawn_structure(source='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0,
-                    reload=False, name='', center=False) -> list[unreal.Actor]:
-    """生成MC结构。source 是文件路径或 Blocks；gpu=1 是 PCG，gpu=2 是粒子；
-    cull=1按类型剔除内部实心, cull=2全体实心统一剔除内部, cull=3=2+剔除AABB侧面与底面；
-    merge=0关, 1长条, 2平面, 3长方体（仅完整正方体；cull 优先于 merge）
+                    reload=False, name='', center=False, *, groups=1,
+                    repair_trapdoors=False) -> list[unreal.Actor]:
+    """在关卡中生成 MC 结构。source 可为文件路径或 Blocks 实例。
+    gpu=0 使用实例化静态网格体 (ISM)，gpu=1 使用 PCG，gpu=2 使用 Niagara 粒子。
+    cull=1 按同类剔除内部；cull=2 不透明完整块统一遮挡、透明完整块仅遮挡同类；
+    cull=3 在 2 的基础上继续剔除包围盒侧面与底面（仅保留顶面）。
+    merge=0 不合并，1 合并长条，2 合并平面，3 合并长方体（仅合并完整正方体，在 cull 之后执行）。
+    groups 指定 GPU 模式的分组数（单组最多 256 种模型，超出时自动增加分组并发出警告；后续 Actor 自动挂载到首个 Actor 下）。
+    repair_trapdoors=True 时按邻接实心方块修正旧版导出中错乱的开启活板门朝向。
     """
+    from time import perf_counter
+    started = perf_counter()
+    if type(groups) is not int or groups < 1:
+        raise ValueError('groups must be a positive integer')
+    if not gpu and groups != 1:
+        raise ValueError('groups > 1 requires PCG (gpu=1) or Niagara (gpu=2)')
+    if gpu not in (0, 1, 2):
+        raise ValueError('gpu must be 0, 1 or 2')
     if isinstance(source, Blocks):
         filename = name or source.name or 'structure'
         cells = source.copy_cells()
@@ -1658,82 +1506,153 @@ def spawn_structure(source='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0,
         if not source:
             warn('spawn_structure 需要文件路径或 Blocks')
             return []
-        loaded = Blocks.from_file(source)
+        loaded = _load_structure_data(source, repair_trapdoors=repair_trapdoors)
         if not loaded:
             return []
-        filename = name or loaded.name or Path(str(source)).stem
-        cells = loaded._cells
-        loaded = None
+        filename = name or Path(str(source)).stem
+        cells = loaded
 
+    read_done = perf_counter()
     origin = _structure_center_offsets(cells) if center else (0, 0, 0)
     cells = _apply_cull(cells, cull)
     payload_map = convert_to_packed_arrays(cells, merge=merge, origin=origin)
     cells = None
+    process_done = perf_counter()
     if not any(len(p['pos']) for p in payload_map.values()):
         return []
 
     inventory = loctable_col(6,2)
     actors = []
-    meshes = []
-    spawn_jobs = []
+    meshes = {}
+    available = {}
 
     for model_name, payload in payload_map.items():
-        path = resolve_block_json_path(model_name)
-        mesh = None
-        if path is not None:
-            mesh = import_block(path, asset_name=model_name, reload=reload)
-        else:
-            # 只接受同名或下划线后的后缀，避免 bed 匹配到 bedrock
-            candidate = next(
-                (n for n in inventory if n == model_name or n.startswith(f"{model_name}_")),
-                None,
-            )
-            path = resolve_block_json_path(candidate) if candidate else None
+        if not len(payload['pos']):
+            continue
+        try:
+            path = resolve_block_json_path(model_name)
+            if path is None:
+                # 只接受同名或下划线后的后缀，避免 bed 匹配到 bedrock
+                candidate = next((n for n in inventory if n == model_name or n.startswith(f'{model_name}_')), None)
+                path = resolve_block_json_path(candidate) if candidate else None
             if path is not None:
                 mesh = import_block(path, asset_name=model_name, reload=reload)
             else:
                 warn(f'未找到{model_name}模型')
-
-        meshes.append(mesh)
-        if mesh is not None and not gpu:
-            spawn_jobs.append((model_name, mesh, payload))
+                continue
+            if mesh is None:
+                warn(f'导入{model_name}模型失败，已跳过')
+                continue
+        except Exception as exc:
+            warn(f'导入{model_name}模型失败，已跳过: {exc}')
+            continue
+        meshes[model_name] = mesh
+        available[model_name] = payload
+    payload_map = available
+    if not payload_map:
+        return []
+    models_done = perf_counter()
 
     if not gpu:
         loaded_class = uclass('/Game/Mineprep/MC_Blueprint/Core/实例化方块.实例化方块')
-        for model_name, mesh, payload in spawn_jobs:
+        for model_name, payload in payload_map.items():
             actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
             ism = actor.root_component
-            ism.set_editor_property('StaticMesh', mesh)
+            ism.set_editor_property('StaticMesh', meshes[model_name])
             ism.clear_instances()
             add_packed_instances(ism, payload)
             actor.set_folder_path(filename)
             actors.append(actor)
             set_actor_label(actor, f'{filename}_{model_name}')
 
-    if gpu == 1:
-        BPT_Tex, BRT_Tex, mapping_data = structure_to_tex(payload_map, filename)
-        loaded_class = uclass('/Game/Mineprep/MC_Blueprint/PCG/PCG实例化方块.PCG实例化方块')
-        actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
-        actor.set_folder_path('Structures')
-        actors.append(actor)
-        set_actor_label(actor, f'{filename}')
-        mesh_paths = [unreal.SystemLibrary.get_soft_object_path(mesh) for mesh in meshes]
-        actor.set_editor_property('Blocks', mesh_paths)
-        actor.set_editor_property('PosTex', BPT_Tex)
-        actor.set_editor_property('RotTex', BRT_Tex)
-
-    elif gpu == 2:
-        BPT_Tex, BRT_Tex, mapping_data = structure_to_tex(payload_map, filename)
-        loaded_class = uclass('/Game/Mineprep/MC_Blueprint/Niagara/动态地形粒子/动态结构粒子.动态结构粒子')
-        actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
-        actor.set_folder_path('Structures')
-        actors.append(actor)
-        set_actor_label(actor, f'{filename}')
-        actor.set_editor_property('方块', meshes)
-        actor.root_component.set_variable_texture('方块位置纹理', BPT_Tex)
-        actor.root_component.set_variable_texture('方块旋转纹理', BRT_Tex)
+    else:
+        names = tuple(payload_map)
+        counts = [len(payload_map[n]['pos']) for n in names]
+        if gpu == 1:
+            # PCG 按模型种类数均分即可，无需像 Niagara 那样按实例数优化渲染代价
+            count = min(len(names), max(groups, (len(names) + 255) // 256))
+            size, extra = divmod(len(names), count)
+            layouts, start = [], 0
+            for i in range(count):
+                end = start + size + (i < extra)
+                layouts.append((tuple(range(start, end)), sum(counts[start:end])))
+                start = end
+        else:
+            layouts = partition_types(names, counts, groups, max_types=256)
+        if len(layouts) > groups:
+            warn(f'{"PCG" if gpu == 1 else "Niagara"}: {len(names)} 种模型，单个 Actor 最多 256 种；'
+                 f'groups 已自动从 {groups} 提高到 {len(layouts)}')
+            groups = len(layouts)
+        limit = (unreal.SystemLibrary.get_console_variable_int_value('fx.MaxNiagaraGPUParticlesSpawnPerFrame')
+                 if gpu == 2 else 0)
+        # 写入纹理前先校验各组的纹理尺寸与 Niagara 单帧粒子上限
+        for i, (ids, count) in enumerate(layouts, 1):
+            side = math.isqrt(count - 1) + 1
+            if side > 16384:
+                raise ValueError(f'group {i}: texture dimension capacity exceeded; types are indivisible')
+            if limit > 0 and side * side > limit:
+                raise ValueError(f'Niagara group {i}: {count} instances require {side*side} spawn slots; '
+                                 f'fx.MaxNiagaraGPUParticlesSpawnPerFrame={limit}; types are indivisible')
+        loaded_class = uclass('/Game/Mineprep/MC_Blueprint/PCG/PCG实例化方块.PCG实例化方块' if gpu == 1 else
+                              '/Game/Mineprep/MC_Blueprint/Niagara/动态地形粒子/动态结构粒子.动态结构粒子')
+        if loaded_class is None:
+            raise RuntimeError('structure Actor class missing')
+        prepared = []
+        for i, (ids, _) in enumerate(layouts, 1):
+            label = filename if groups == 1 else f'{filename}_{i}'
+            payloads = {names[t]: payload_map[names[t]] for t in ids}
+            bpt, brt, _ = structure_to_tex(payloads, label)
+            if bpt is None or brt is None:
+                raise RuntimeError('structure texture import failed: ' + label)
+            prepared.append((label, [meshes[n] for n in payloads], bpt, brt))
+        # 将所有分组 Actor 的生成与父子挂载合并到同一个撤销事务中
+        with unreal.ScopedEditorTransaction('Mineprep: place ' + filename) as transaction:
+            try:
+                for label, palette, bpt, brt in prepared:
+                    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(loaded_class, loc, rot)
+                    if actor is None:
+                        raise RuntimeError('structure Actor creation failed')
+                    actors.append(actor)
+                    actor.modify()
+                    actor.set_folder_path('Structures')
+                    set_actor_label(actor, label)
+                    if gpu == 1:
+                        actor.set_editor_properties(dict(
+                            Blocks=[unreal.SystemLibrary.get_soft_object_path(m) for m in palette],
+                            PosTex=bpt, RotTex=brt))
+                    else:
+                        actor.set_editor_property('方块', palette)
+                        actor.root_component.set_variable_texture('方块位置纹理', bpt)
+                        actor.root_component.set_variable_texture('方块旋转纹理', brt)
+                if len(actors) > 1:
+                    keep = unreal.AttachmentRule.KEEP_WORLD
+                    actors[0].root_component.modify()
+                    for actor in actors[1:]:
+                        actor.root_component.modify()
+                        if not actor.attach_to_actor(parent_actor=actors[0], socket_name='',
+                                location_rule=keep, rotation_rule=keep, scale_rule=keep,
+                                weld_simulated_bodies=False):
+                            raise RuntimeError('structure Actor attachment failed')
+            except Exception as exc:
+                subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+                residual = []
+                for actor in reversed(actors):
+                    if not unreal.SystemLibrary.is_valid(actor):
+                        continue
+                    try:
+                        if not subsystem.destroy_actor(actor):
+                            residual.append(actor.get_path_name())
+                    except Exception:
+                        residual.append(actor.get_path_name())
+                if residual:
+                    raise RuntimeError(f'{exc}; residual Actors: {residual}') from exc
+                transaction.cancel()
+                raise
 
     select_actors(actors)
+    unreal.log(f'结构提交耗时: 源数据 {read_done-started:.3f}s; '
+               f'剔除/合并 {process_done-read_done:.3f}s; 模型 {models_done-process_done:.3f}s; '
+               f'输出 {perf_counter()-models_done:.3f}s; 总计 {perf_counter()-started:.3f}s')
     return actors
 
 
@@ -1746,7 +1665,7 @@ def _is_packed_structure_data(ue_data) -> bool:
 
 
 def import_structure_textures(files, destination=None):
-    """Import prepared EXRs on the editor thread; encoding performs no UE calls."""
+    """将生成的 BPT/BRT EXR 贴图导入为 UE 资产并写入方块映射元数据。"""
     destination = destination or paths.game + 'mc/structure'
     textures = []
     for key in ('BPT', 'BRT'):
@@ -1764,7 +1683,7 @@ def import_structure_textures(files, destination=None):
 
 
 def structure_to_tex(ue_data, name='structure', fp32=True):
-    """Compatibility entry: encode then import. Supports Transform or packed data."""
+    """将结构数据编码为 BPT/BRT 贴图并导入到 UE（支持 Transform 列表或打包数组格式）。"""
     from mc_structure_tex import write_structure_textures
     if not ue_data:
         unreal.log_warning('ue_data 为空，取消贴图导出。')

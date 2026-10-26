@@ -1,0 +1,1 @@
+{"name": {"zh": "下界混合群系", "en": "Mixed Nether biomes"}, "params": {"soul.enabled": true, "crimson.enabled": true, "warped.enabled": true, "basalt.enabled": true, "soul.biome_threshold": 0.08, "crimson.biome_threshold": 0.1, "warped.biome_threshold": 0.1, "basalt.biome_threshold": 0.1}}

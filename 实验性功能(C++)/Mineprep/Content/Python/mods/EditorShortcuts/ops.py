@@ -3,12 +3,19 @@
 
 配置持久化、按键冲突检测、静态语法校验、C++ 子系统事件总线桥接与代码执行。
 """
+from __future__ import annotations
+
 import json
 import os
 import unreal
 import mineprep
 
 from . import snippets
+
+_CPP_REQUIRED = mineprep.bilingual(
+    '此操作需要启用 Mineprep C++ 实验性功能插件。',
+    'This operation requires the Mineprep experimental C++ plugin.',
+)
 
 # 默认预设快捷键清单 (name, chord_text, tooltip)
 DEFAULT_SHORTCUTS = [
@@ -20,7 +27,7 @@ DEFAULT_SHORTCUTS = [
     ('高亮选中项', '(Key=Five,bShift=False,bCtrl=True,bAlt=True,bCmd=False)', '【预设】高亮选中项'),
     ('移动选中项到面前', '(Key=Six,bShift=False,bCtrl=True,bAlt=True,bCmd=False)', '【预设】移动选中项到面前'),
     ('设置可视性关键帧', '(Key=Seven,bShift=False,bCtrl=True,bAlt=True,bCmd=False)', '【预设】设置可视性关键帧'),
-    ('刷选选中项，重新编译蓝图', '(Key=Eight,bShift=False,bCtrl=True,bAlt=True,bCmd=False)', '【预设】刷新选中项，重新编译蓝图'),
+    ('刷新选中项，重新编译蓝图', '(Key=Eight,bShift=False,bCtrl=True,bAlt=True,bCmd=False)', '【预设】刷新选中项，重新编译蓝图'),
     ('交换选中对象位置', '(Key=Nine,bShift=False,bCtrl=True,bAlt=True,bCmd=False)', '【预设】交换选中对象的位置'),
     ('进入摄像机视图', '(Key=NumPadZero,bShift=False,bCtrl=False,bAlt=False,bCmd=False)', '进入摄像机视图'),
     ('对齐摄像机至视图', '(Key=NumPadZero,bShift=False,bCtrl=True,bAlt=True,bCmd=False)', '对齐摄像机至视图'),
@@ -42,18 +49,28 @@ SHORTCUTS_CACHE = {}
 # 自动注入的基础前置代码
 AUTO_IMPORT_HEADER = "import unreal\nimport mineprep\n"
 
-# 委托监听标记
-_subsystem_delegate_bound = False
+# 保留委托包装对象，让 UE 的 GC 能追踪到 Python 回调代理。
+_hotkey_delegate = None
 
 
-def get_subsystem() -> unreal.MineprepSubsystem:
-    """获取 UMineprepSubsystem 实例。"""
+def get_subsystem() -> unreal.MineprepSubsystem | None:
+    """获取快捷键子系统；未安装 C++ 插件时返回 None。"""
+    cls = getattr(unreal, 'MineprepSubsystem', None)
+    if cls is None:
+        return None
     try:
         if hasattr(unreal, 'get_editor_subsystem'):
-            return unreal.get_editor_subsystem(unreal.MineprepSubsystem)
-        return unreal.EditorSubsystemBlueprintLibrary.get_editor_subsystem(unreal.MineprepSubsystem)
+            return unreal.get_editor_subsystem(cls)
+        return unreal.EditorSubsystemBlueprintLibrary.get_editor_subsystem(cls)
     except Exception:
         return None
+
+
+def _cpp_function(name):
+    fn = getattr(getattr(unreal, 'mineprep', None), name, None)
+    if fn is None:
+        raise RuntimeError(f'{_CPP_REQUIRED} ({name})')
+    return fn
 
 
 def get_config_path() -> str:
@@ -240,6 +257,10 @@ def execute_shortcut(name: str) -> None:
             exec(compiled, globals())
             unreal.log(f"[Mineprep] 执行快捷键: [{name}]")
         except Exception as e:
+            if (isinstance(e, AttributeError) and getattr(e, 'obj', None) is unreal
+                    and e.name in ('mineprep', 'MineprepSubsystem', 'EditorNotificationState', 'MineprepPostProcessStage')):
+                mineprep.warn(_CPP_REQUIRED)
+                return
             mineprep.warn(
                 mineprep.bilingual(f"快捷键 [{name}] 报错", f"Shortcut [{name}] error"),
                 e,
@@ -247,7 +268,7 @@ def execute_shortcut(name: str) -> None:
     else:
         # 代码留空：在蓝图中直接调用名称对应的函数
         subsystem = get_subsystem()
-        hotkey_obj = subsystem.get_hotkey_object() if subsystem else None
+        hotkey_obj = subsystem.get_hotkey_object() if subsystem else mineprep.get_hotkey_object()
         if not hotkey_obj:
             mineprep.warn(
                 mineprep.bilingual("无法获取自定义快捷键蓝图对象", "Failed to get hotkey blueprint object")
@@ -312,30 +333,30 @@ def on_subsystem_hotkey_pressed(command_name: str) -> None:
 
 def bind_hotkey_delegate() -> None:
     """绑定 C++ OnHotkeyPressed 委托。"""
-    global _subsystem_delegate_bound
-    if _subsystem_delegate_bound:
+    global _hotkey_delegate
+    if _hotkey_delegate is not None:
         return
     subsystem = get_subsystem()
     if subsystem and hasattr(subsystem, 'on_hotkey_pressed'):
         try:
-            subsystem.on_hotkey_pressed.add_callable(on_subsystem_hotkey_pressed)
-            _subsystem_delegate_bound = True
+            delegate = subsystem.on_hotkey_pressed
+            delegate.add_callable_unique(on_subsystem_hotkey_pressed)
+            _hotkey_delegate = delegate
         except Exception as e:
             mineprep.warn("绑定 UMineprepSubsystem 快捷键委托失败", e)
 
 
 def unbind_hotkey_delegate() -> None:
     """解绑 C++ OnHotkeyPressed 委托。"""
-    global _subsystem_delegate_bound
-    if not _subsystem_delegate_bound:
+    global _hotkey_delegate
+    if _hotkey_delegate is None:
         return
-    subsystem = get_subsystem()
-    if subsystem and hasattr(subsystem, 'on_hotkey_pressed'):
-        try:
-            subsystem.on_hotkey_pressed.remove_callable(on_subsystem_hotkey_pressed)
-            _subsystem_delegate_bound = False
-        except Exception:
-            pass
+    try:
+        _hotkey_delegate.remove_callable(on_subsystem_hotkey_pressed)
+    except Exception as e:
+        mineprep.warn("解绑 UMineprepSubsystem 快捷键委托失败", e)
+    finally:
+        _hotkey_delegate = None
 
 
 def is_valid_chord(chord: unreal.InputChord) -> bool:
@@ -364,6 +385,10 @@ def register_all_hotkeys() -> None:
     """将所有快捷键注册到 C++ UMineprepSubsystem。"""
     subsystem = get_subsystem()
     if not subsystem:
+        unreal.log_warning(str(mineprep.bilingual(
+            '未启用 Mineprep C++ 插件，无法绑定全局快捷键；仍可编辑并手动执行 Python 代码。',
+            'Global hotkeys require the Mineprep C++ plugin; editing and manually running Python code remain available.',
+        )))
         return
 
     bind_hotkey_delegate()

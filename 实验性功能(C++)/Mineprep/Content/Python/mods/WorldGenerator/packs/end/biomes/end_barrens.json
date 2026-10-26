@@ -1,0 +1,23 @@
+{
+  "id": "end_barrens",
+  "name": {
+    "zh": "边缘荒地",
+    "en": "End barrens"
+  },
+  "color": "#C3C595",
+  "climate": [
+    {
+      "end_biome": [
+        3,
+        3
+      ]
+    }
+  ],
+  "surface": [
+    {
+      "top": "end_stone",
+      "under": "end_stone",
+      "deep": "end_stone"
+    }
+  ]
+}

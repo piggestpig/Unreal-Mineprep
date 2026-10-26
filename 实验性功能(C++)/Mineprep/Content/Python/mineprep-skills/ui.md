@@ -1,7 +1,5 @@
 # Layout & PropertyGroup
 
-Examples marked complete include their setup. Other snippets are API or callback fragments: names such as `self`, `layout`, `mesh` and `anim` come from the surrounding task. Syntax validation alone does not make a fragment standalone.
-
 Source: `mc_widget.py`. Export: `mineprep.Layout`, `mineprep.PropertyGroup`, `mineprep.ui`.
 
 ## Delivery: `ui` vs `Layout` vs Mod
@@ -84,7 +82,7 @@ Unknown names forward to the UWidget: `pages.set_active_widget_index(i)`, not `p
 | `spinbox` | `on_value_changed` / `on_value_committed`; default `EditorUtilitySpinBox` |
 | `textbox` | `hint` / `on_text_changed` / `on_text_committed`; default `EditorUtilityMultiLineEditableTextBox` (multiline widget type) |
 | `combo` | ComboBoxKey; `options` is a list (`key=str(item)`) or `{key: text}`; a label may be `unreal.Text`; generate defaults to `make_combo_text`; callbacks get `str`; `on_selection_changed` / `on_opening`; default `EditorUtilityComboBoxKey`; the down arrow is hidden |
-| `prop(data, property=None, text=None, categories=None, properties=None, searching=False, on_property_changed=None)` | Omit `property` → full DetailsView. Set `property` → `SinglePropertyView` (**scalars only** — not `list` / `Array` / `set` / `map`). `categories` / `properties` / `searching` apply only to the full view; see **prop** below |
+| `prop(data, property=None, text=None, categories=None, properties=None, searching=False, on_property_changed=None, pass_rootname=False)` | Omit `property` → full DetailsView. Set `property` → SinglePropertyView for a simple value or supported struct header; use full Details for containers and paired inline toggles. Filters/search apply only to the full view; see **prop** below |
 | `row` / `col` / `column` | Boxes |
 | `splitter` | Draggable two-pane layout; add content to `.first` / `.second`, not the returned container. See below |
 | `carousel` | `speed=3` sets `move_speed` and is applied only at build. `page(i)` clamps and returns the index; `index()`, `prev()`, `next()`. `next` is bound to `previous_page` and `prev` to `next_page` because the engine page direction is reversed — call these wrappers, do not rebind them to the engine names. `on_changed(carousel, index)` runs when the slide starts. Size each page; the carousel slot ignores padding and align |
@@ -95,9 +93,9 @@ Unknown names forward to the UWidget: `pages.set_active_widget_index(i)`, not `p
 | `get` / `set` | Editor properties on the widget |
 | `parent` / `outer` / `children` / `path` | Hierarchy |
 
-Interactive builders default to **Editor Utility** subclasses (`EditorUtilityButton`, `EditorUtilityCheckBox`, `EditorUtilitySpinBox`, `EditorUtilityMultiLineEditableTextBox`, `EditorUtilityComboBoxKey`). They use the editor Slate style. For `layout.custom`, pick `unreal.EditorUtility…` over the raw UMG type when it exists (`EditorUtilityMultiLineEditableTextBox` not `MultiLineEditableTextBox`, `EditorUtilityComboBoxKey` not `ComboBoxKey` / `ComboBoxString`). Do not restyle EU widgets to look like raw UMG unless the user asks. Override with `subclass=` only when needed.
+Interactive builders default to **Editor Utility** subclasses (`EditorUtilityButton`, `EditorUtilityCheckBox`, `EditorUtilitySpinBox`, `EditorUtilityMultiLineEditableTextBox`, `EditorUtilityComboBoxKey`). They use the editor Slate style. For `layout.custom`, pick `unreal.EditorUtility…` over the raw UMG type when it exists. Override with `subclass=` only when needed.
 
-Localized combo labels belong on `layout.combo` (`{key: unreal.Text}`). `EditorUtilityComboBoxString` stores plain strings: `add_option` / `get_selected_option` do not follow the editor language, because the built-in label is `FText::FromString`. A Python `construct` is not an editor widget, so its `foreground_color` starts black `(0,0,0)` while `item_style.text_color` is already the editor gray `0.527`. Put `font` and `foreground_color` in `props`. `default_options` is consumed only in `PostInitProperties`, so call `add_option` before `custom`; `selected_option` may be in `props`. The color is copied once in `RebuildWidget`; changing it later needs `remove_from_parent` and add again.
+Prefer `layout.combo` (`{key: unreal.Text}`) for localized combo labels. If you must construct `EditorUtilityComboBoxString` via `layout.custom`, call `add_option` before parenting and pass `font`, `foreground_color`, and `selected_option` in `props=`.
 
 ### Common kwargs (`**kwargs` → `add_widget`)
 
@@ -111,6 +109,8 @@ Localized combo labels belong on `layout.combo` (`{key: unreal.Text}`). `EditorU
 | `hidden` | Initial visibility (int → `SlateVisibility`) |
 
 `add_widget(..., props=None)` and `layout.custom` apply `props` with `set_editor_properties` after construct and before `add_child`. Use it for values the slate widget copies only while being built (`Carousel.move_speed`, `ComboBoxString.foreground_color`, etc.). `clip` still overwrites a `clipping` entry in `props`.
+
+Text sharing a row with other controls should be vertically centered; use `align=(1, 2)` for a left-aligned label.
 
 For a pinned footer, use `align=(1, 3)` on the one vertical filler (`fill=1`).
 
@@ -140,9 +140,8 @@ It only changes pane-container visibility; visibility inside each pane is kept.
 
 ### fill (Slate FILL weights)
 
-`fill` is **not** “make this widget look bigger”. `mc_widget.add_widget` maps a truthy `fill` to `SlateChildSize(float(fill), SlateSizeRule.FILL)`. Leftover space in **that parent only** is split among FILL children by weight (`True` ≡ `1`). Children of `left` never compete with children of `right`.
-
-Use several fills **only when you want that split**. One parent, one leftover pool.
+`fill` shares the leftover space in the widget's immediate parent by weight
+(`True` ≡ `1`). Children in different parents do not compete for that space.
 
 | Intent | How |
 |--------|-----|
@@ -152,26 +151,15 @@ Use several fills **only when you want that split**. One parent, one leftover po
 | Tight stack | Omit `fill` on everyone |
 
 ```python
-# Vertical — one filler: Details packed, log pinned bottom-left
+# Packed Details with a footer pinned to the bottom-left
 layout.prop(self.props)
-layout.text(..., align=(1, 3), padding=6, fill=1)
+layout.text('Ready', align=(1, 3), padding=6, fill=1)
 
-# WRONG — two fillers split leftover height → large blank above the log
-layout.prop(self.props, fill=1)
-layout.text(..., align=(1, 3), fill=1)
-
-# WRONG — no filler: log hugs the Details instead of the bottom-left corner
-layout.prop(self.props)
-layout.text(..., align=(1, 3), padding=6)
-
-# Horizontal — several fillers: even columns (wanted)
+# Equal-width columns
 row = layout.row()
 left = row.col(fill=1, padding=3)
 right = row.col(fill=1, padding=3)
-# props inside left/right omit fill unless that column itself needs a footer
 ```
-
-VAT Tools: the **row** has two `col(fill=1)`; the Details inside those cols omit `fill`. On the root `layout`, only `AutoCleanCache` is `fill=1` (`HideInitSkm` under it has none).
 
 `overlay(..., fill=True)` defaults to FILL so it covers the parent — that is a single child, not a split.
 
@@ -199,17 +187,14 @@ Keep a **Python reference** to the `Layout` node (`right`) from `draw()`; callba
 
 ### Cached browser / selection panels
 
-Create cards and detail widgets once per data revision. Search, selection and
-variant expansion update existing text, brush resources, colors and `hide()`;
-rebuild when the underlying entries change. Keep ordered selection keys separate
-from visible rows: whether filtering clears selection is a product decision,
-not a consequence of hiding a widget. Use stable identities, not display names.
+For a small browser, search and selection can update existing widgets with
+`set_text`, brush changes and `hide()` instead of rebuilding the form. Rebuild
+regions when their structure changes. Hiding a row does not clear selection.
 
 Clear the previous image resource and its visibility when the next selection
 has no texture; updating the label alone leaves a stale preview. Preserve aspect
-ratio with `set_desired_size_override`. Reset any transparent placeholder tint
-when assigning a valid image. Collapsed cards still exist in memory; this is
-widget reuse, not virtualization.
+ratio with `set_desired_size_override`, and reset any transparent placeholder tint
+when assigning a valid image.
 
 For Shift-click with `button(on_clicked=...)`, read modifier state inside the
 callback:
@@ -219,9 +204,8 @@ state = unreal.InputLibrary.get_modifier_keys_state()
 shift = unreal.InputLibrary.modifier_keys_state_is_shift_down(state)
 ```
 
-Programmatic PropertyGroup updates and user edits should share a state-update
-helper when dependent fields or persistence must also change. Do not assume a
-Python assignment fires the DetailsView's user-edit delegate.
+Python assignment does not fire the DetailsView's user-edit delegate. If related
+values must change too, call the same update helper from both paths.
 
 ### border / mouse
 
@@ -241,7 +225,7 @@ def move(w):
 
 border = layout.border(fill=1, align=(0, 0),
     on_mouse_button_down=down, on_mouse_button_up=up, on_mouse_move=move)
-img = border.image(rt, size=unreal.Vector2D(1024, 1024), padding=0, align=(0, 0), fill=1)
+img = border.image(rt, size=unreal.Vector2D(1024, 1024), padding=0, fill=1)
 img.target.set_visibility(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)
 ```
 
@@ -301,10 +285,32 @@ Full DetailsView filters are set before the object is assigned. A non-empty `cat
 layout.prop(component, categories=['Materials'], fill=1)
 ```
 
-The category filter is installed when the details widget is first built. Set it through `prop`, or assign `categories_to_show` before `set_object`. Changing the array after that first build does not add the filter.
+Category/property filters are installed when the details widget is first built.
+Set them through `prop`, before object assignment. Changing either array later
+does not refresh existing rows; assigning the same object again is a no-op.
+Use native conditions or retained containers for interaction; see
+[property metadata](property-metadata.md#conditions-and-inline-toggles).
 
-- Full Details (`layout.prop(props)`): `on_property_changed` receives the **property name** (`'SKM'`, `'DataAsset'`, …).
-- Single-property view (`layout.prop(props, 'Field')`): same; compare against the annotation name. **Only scalars** (bool, str, int, float, object references). `list[T]` / `unreal.Array` / set / map → 「不支持的属性」.
+For native visibility changes, check actual rows and enabled states; metadata,
+whitelist arrays and widget identity alone do not prove the rendered result.
+
+- Full Details callbacks may report a struct member (`X`, `R`, `FilePath`), or
+  an inline toggle's dependent field. For top-level PropertyGroup names, use:
+
+```python
+layout.prop(props, pass_rootname=True, on_property_changed=changed)
+```
+
+This reports `Offset.X` as `Offset` and `Points[3].X` as `Points`, once per
+changed top-level field. Full-view root mode requires a PropertyGroup;
+`pass_rootname=False` (default) preserves native names.
+
+- Single-property views (`layout.prop(props, 'Field')`) already report `Field`.
+  Use full Details for arrays, sets, maps and paired inline toggles.
+- With root mode active, call `props.sync_property_changes()` after in-place
+  array/struct edits or direct writes to `props.uobject`. This synchronizes
+  silently; ordinary top-level assignment and `load()` do so automatically.
+
 - Two columns of arrays: **two PropertyGroups**, each shown as a whole DetailsView:
 
 ```python
@@ -323,16 +329,22 @@ right.prop(head)
   explicit inputs; see [Callable operations](mods.md#callable-operations).
 
 ```python
-# Named single field (footer checkbox) — scalar only; does not dump entire Details
-layout.prop(self.options, 'AutoCleanCache', localize(...), align=(1, 3), fill=1)
+# Named single field
+layout.prop(self.options, 'HideRight', on_property_changed=self.on_options_changed)
 
-# Whole PropertyGroup as DetailsView (required for arrays)
-left.prop(self.bake_props, on_property_changed=lambda n: ops.on_bake_props_changed(self, n))
+# Whole PropertyGroup as DetailsView
+left.prop(self.props, on_property_changed=self.on_props_changed)
 ```
 
-**Optional split:** when fields should stay out of the main Details, use a separate `PropertyGroup` (e.g. VAT Tools `VATToolsOptions`), not on the bake/init props shown as a full DetailsView.
+When fields belong outside the main Details, give them a separate PropertyGroup
+or use a fixed property filter when creating the view.
+
+If a callback writes values that can trigger itself, guard against recursion.
 
 ## PropertyGroup
+
+Prefer direct, readable declarations. See [native property metadata](property-metadata.md) for
+conditions, inline toggles, numeric controls, pickers and their Python boundaries.
 
 ```python
 class Props(mineprep.PropertyGroup):
@@ -353,18 +365,18 @@ p = Props()   # REQUIRED
 p.Mesh = skm
 ```
 
-`save()` / `load(path='')` dump fields to JSON, best-effort (failures `debug`, no throw). Empty path uses `inspect.getfile(type(self))` → `{source directory}/__pycache__/{ClassName}.json` (`mkdir` on save). Ordinary `ui()` classes belong to `mc_widget`, so their default is the plugin Python directory's `__pycache__`, not a no-op. A console class with no resolvable source file has no default path. Explicit path always selects that file for the call. Soft/struct fields go through `export_text` / `import_text`; UObject refs as asset paths.
+`save(path='')` / `load(path='')` persist fields to JSON (best-effort; failures log via `debug`). When `path` is omitted, the file is `{source directory}/__pycache__/{ClassName}.json` (for `ui()` classes, `{plugin Python dir}/__pycache__/{ClassName}.json`; console classes with no source file require an explicit `path`). Because `__pycache__` can hold saved `.json` configurations, do not blindly delete the entire `__pycache__` directory.
 
-`_autosave_ = True` → `load()` on instantiate (default json); `save()` on Python setattr and on `layout.prop` Details edits. `load()` writes via `set_editor_property`, so it does not re-save. Default `_autosave_ = False`. `str` fields stay strings even if they look like `/Game/...` — do not `load_asset` those (would nativize a Texture2D into `SavePath`). Object fields still restore from asset paths.
-
-`dict[K, V]` is saved as a JSON list of pairs, `[[key, value], ...]`. An empty Map is `[]`. `list` and `set` stay JSON arrays; load tells them apart by the property annotation, or by a live `unreal.Map` when the field has no annotation. Keys may be `str`, `int`, `bool`, or `float`. Values use the same conversion as list elements. A key or value annotated as `str` stays text, including strings that start with `/Game/`. Do not nest containers — `dict[str, list[int]]` is not a legal Map property. Struct keys are not restored.
+- **Default `_autosave_ = False`**. Setting `_autosave_ = True` loads the default JSON on instantiation and saves on Python `setattr` and `layout.prop` Details edits.
+- **Saved fields**: all declared PropertyGroup fields (including hidden helper bools) are saved; Python-only instance attributes are not.
+- **Types**: `str` fields (even strings starting with `/Game/...`) remain strings; UObject/soft fields store asset paths. `dict[K, V]` supports `str`/`int`/`bool`/`float` keys and primitive/UObject values (do not nest containers like `dict[str, list[int]]`, and do not use struct keys).
 
 ### Persistence in a temporary panel
 
 For ordinary `ui()` panels, `_autosave_ = True` uses the existing default
 `__pycache__` file. Two classes with the same name and source directory share
 that filename even if their UE class GUIDs differ. Choose distinct descriptive
-class names when settings should differ. No settings migration is needed.
+class names when settings should differ.
 
 For an explicitly chosen file, pass the same path to `load` and `save`, keep
 `_autosave_` off (it would still use the default file), and wire saves to Details
@@ -417,13 +429,19 @@ class MyProps(mineprep.PropertyGroup):
 sp = unreal.SoftObjectPath()
 sp.import_text(asset.get_path_name())
 props.uobject.set_editor_property('Data', sp)
-# VAT Tools helper pattern: util.assign_soft_prop(props, 'DataAsset', asset)
 ```
 
 5. Renaming a field: update **all** `props.OldName`, `assign_soft_prop(..., 'OldName')`, and `on_property_changed` string compares — mismatches fail silently.
 6. Access underlying UObject via `props.uobject` when UE APIs need it.
 
 ### Localization
+
+`localize` is a **class method**, not a metadata key. Call the concrete group
+class's method, for example `Options.localize('Speed', '速度', 'Speed', '速度')`,
+before displaying the field. Do not write `{'localize': ...}`. The helper uses
+the generated UE class name and field name as the translation key
+(`GeneratedClass_GUID…:Speed`); category translations use `UObjectCategory`.
+Let the helper construct these identities rather than guessing the generated name.
 
 ```python
 Cls.localize('Field', zh, en, zh_tw)           # property
@@ -434,9 +452,7 @@ Cls.localize('ClassDisplay', zh, en, zh_tw)  # category-ish when not a prop name
 
 ```python
 def __init__(self, context=None):
-    self.bake_props = BakeAnimProps()
-    self.init_props = InitSkmProps()
-    self.options = VATToolsOptions()
+    self.props = Props()
     super().__init__(context)   # calls draw()
 
 def draw(self, context=None):

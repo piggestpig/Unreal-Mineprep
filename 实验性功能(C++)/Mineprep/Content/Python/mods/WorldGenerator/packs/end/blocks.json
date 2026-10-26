@@ -1,0 +1,8 @@
+{
+  "end_stone": {"source": {"builtin": "end_stone"}, "shape": "cube", "occludes": true, "merge": "xyz", "color": "#EEF1BD"},
+  "obsidian": {"source": {"builtin": "obsidian"}, "shape": "cube", "occludes": true, "merge": "xyz", "color": "#4B4257"},
+  "bedrock": {"source": {"builtin": "bedrock"}, "shape": "cube", "occludes": true, "merge": "xyz", "color": "#858585"},
+  "chorus_plant": {"source": {"builtin": "chorus_plant"}, "shape": "decor", "occludes": false, "merge": "none", "color": "#A17AA5"},
+  "chorus_flower": {"source": {"builtin": "chorus_flower"}, "shape": "decor", "occludes": false, "merge": "none", "color": "#D4A9CE"},
+  "end_portal_surface": {"source": {"json": "models/portal.json"}, "shape": "surface", "occludes": false, "merge": "none", "color": "#231B32", "material": {"emission": 0.5}}
+}

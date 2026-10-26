@@ -1,4 +1,4 @@
-"""Static asset creation and placement. Call only from the editor/game thread."""
+"""生物材质、静态网格资产创建与关卡视口放置辅助（需在主线程调用）。"""
 import hashlib
 import json
 import math
@@ -73,7 +73,7 @@ def composition_target(entry, folder, name, reload=False):
 
 
 def skin_name(entry, folder, base, reserved=()):
-    """Reuse owned names; allocate a readable numeric suffix on collision."""
+    """生成皮肤纹理与材质实例的资产名；发生命名冲突时自动追加数字后缀。"""
     lib = unreal.EditorAssetLibrary
     suffix = 0
     while True:
@@ -130,7 +130,7 @@ def skin_material(entry, folder, name, skin_path, created, warnings):
         raise RuntimeError('Failed to duplicate skin material')
     created.append(material)
 
-    # UE 5.7's setter always returns false; verify the actual parameter.
+    # UE 5.7+ 的 setter 可能恒返回 False，需通过回读参数确认是否绑定成功
     unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(material, '纹理贴图', texture)
     if unreal.MaterialEditingLibrary.get_material_instance_texture_parameter_value(material, '纹理贴图') != texture:
         raise RuntimeError('Failed to assign skin texture')
@@ -183,8 +183,7 @@ def create_assets(entry, version, target, geometry, skin_path=None):
                 raise RuntimeError('Failed to save ' + asset.get_path_name())
         return static_mesh, warnings
     except Exception:
-        # Paths were checked absent before construction. Only this transaction's
-        # newly created assets can be removed; pre-existing assets are untouched.
+        # 仅清理本次新建的资产，保留原有的同名资产
         for path in (paths[0], paths[3], paths[2], paths[1]):
             if path in owned and unreal.EditorAssetLibrary.does_asset_exist(path):
                 unreal.EditorAssetLibrary.delete_asset(path)

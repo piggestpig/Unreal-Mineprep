@@ -8,6 +8,7 @@ mod_info = {
     ),
     'Version': '2.0',
     'CreatedBy': 'Pig',
+    'Credits': '[AnimToTextureHelpers](https://github.com/kromond/AnimToTextureHelpers)',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
     'Priority': 1,

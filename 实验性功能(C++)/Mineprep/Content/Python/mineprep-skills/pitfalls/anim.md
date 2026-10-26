@@ -10,7 +10,7 @@ Mineprep `sequencer` / `keyframe` / `Rig` edit **Level Sequence**. Skeletal curv
 |------|----|--------|
 | List track names | `unreal.AnimationLibrary.get_animation_track_names(anim)` | |
 | Clip key count | `unreal.AnimationLibrary.get_num_keys(anim)` (whole clip, not per-bone) | |
-| Delete the whole bone track | `AnimationLibrary.remove_bone_animation(anim, bone_name=..., include_children=False, finalize=True)` then `anim.modify()` | |
+| Delete the whole bone track | `unreal.AnimationLibrary.remove_bone_animation(anim, bone_name=..., include_children=False, finalize=True)` | |
 | Clear keys but keep CONTROL channels / constant defaults | Remove keys on MovieScene channels; if `not ch.has_default()`, `ch.set_default(keys[0].get_value())` | `remove_bone_animation` — track gone, bone count drops, defaults vanish |
 | Per-bone keys with `AnimationSequencerDataModel` | `asd = unreal.load_object(None, anim.data_model_interface.get_path_name())`; ControlRig section channels `"{bone}_CONTROL.*"` → `ch.get_num_keys()` | Raw bone-track reads when the asset is backed by Sequencer controls |
 
@@ -44,8 +44,6 @@ root movement according to whether the requested animation uses root motion.
 | Path treated as component name | `rig('/Game/.../IK')` fills `target` | `rig(rig_class='/Game/.../IK')` |
 | Head “yaw” nods / tilts | Bone/control local axes differ from world axes | Inspect the selected rig's gizmo and local axes |
 | Retimed clip still hits old extremes | Leftover keys on the channel | `ch.remove_key(k)` on those controls, then re-`key` |
-| Walk looks like a march | Same-side arm and leg share roll sign | Contralateral: `upperarm_r` opposite `thigh_r` |
-| Loop pops | Boundary pose or timing discontinuity | Match the intended loop boundary pose/timing; choose cycle length and repeated cycles for the animation |
 
 Inspect installed control-type enums instead of assuming their names. Use
 `pitch=` / `yaw=` / `roll=` for `Rotator`.

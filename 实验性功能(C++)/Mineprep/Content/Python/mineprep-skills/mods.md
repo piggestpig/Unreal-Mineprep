@@ -1,11 +1,14 @@
 # Authoring Mineprep Mods
 
-Examples marked complete include their setup. Other snippets are API or callback fragments: names such as `self`, `layout`, `mesh` and `anim` come from the surrounding task. Syntax validation alone does not make a fragment standalone.
-
 Mods live in `Plugins/Mineprep/Content/Python/mods/`.  
 Templates: `mods/template.py`, `mods/minimal.py`. Reference package: `mods/VAT_Tools/`.
 
-This file covers kept toolbar / Mod Manager tools. One-shot panels can use `mineprep.ui` — [ui.md](ui.md). Public API changes also require checking and updating affected callers in `mods/`; scope guidance: [SKILL.md](SKILL.md).
+Every mod declares `mod_info`. Folder mods may add a manifest; the canonical
+format and build rules are in [Mod manifest](../mods/ModManager/MANIFEST.md).
+Manifest-backed disabled mods are listed without importing their code; enabling
+syncs `mod_info` from the manifest.
+
+This file covers kept toolbar / Mod Manager tools. One-shot panels can use `mineprep.ui` — [ui.md](ui.md). Public API changes also require checking and updating affected callers in `mods/`.
 
 **Sizing:** Use `mineprep.ui` for a one-shot panel and a Mod for a kept tool. Start from `mods/minimal.py` or `mods/template.py`; split into a folder package when complexity warrants it.
 
@@ -13,40 +16,12 @@ This file covers kept toolbar / Mod Manager tools. One-shot panels can use `mine
 
 ### Callable operations
 
-Expose only operations with a concrete external use, such as useful domain-specific
-conversions or complete automation steps. Not every function needs a friendly
-public interface. Keep internal helpers simple and tailored to the mod; do not
-add wrappers, configuration types, compatibility layers or extensibility hooks
-solely to make them reusable. A short README using existing tools may be enough.
+When a mod has operations useful from scripts as well as UI, share the core implementation between the panel and direct callers:
 
-For operations chosen for external use, UI and scripts should share the core
-implementation where practical. The following guidance applies to those public
-operations, not every helper or UI callback:
-
-- Accept explicit arguments or a plain configuration object. The panel converts
-  its PropertyGroup values into inputs; core operations do not require a Mod
-  instance, widgets, an open tab, or simulated clicks. UI callbacks may receive
-  `self` to collect inputs and display results.
-- Keep public operations few and complete: callers should not reproduce the
-  panel's internal orchestration. Separate pure computation from UE operations;
-  calling without a panel does not make `unreal.*` available outside the editor
-  or safe on worker threads.
-- Return an Actor/asset for simple operations, or a small result object for
-  multiple outputs, created/reused state and warnings. Preserve exception details;
-  a notification or boolean alone is insufficient for diagnosing a failed workflow.
-- For long operations, put scheduling in a UI-independent job with queryable
-  status/result/error and cancellation. Use optional progress callbacks; marshal
-  UI updates to the game thread. Define cleanup on cancellation and who owns the
-  job when the panel closes; reuse [parallel.md](parallel.md) where suitable.
-
-Use functions in the single mod file, `ops.py`, `importer.py`, or another focused
-module directly when that is clear. Add a thin **optional** `api.py` only when it
-organizes several implementation modules or preserves a stable caller interface.
-Do not create it just to forward every function or standardize folder layouts.
-Keep package imports free of panel opening/registration side effects.
-
-Document only the necessary public entrypoints beside the mod: a minimal script example,
-inputs/results, UE or panel prerequisites, side effects and sync/async behavior.
+- **Explicit inputs**: the panel reads its `PropertyGroup` and passes plain arguments/config to the core operation. Core operations must not require a `Mod` instance, live widgets, an open tab, or simulated button clicks.
+- **Return useful results**: return created Actors, assets, or job handles. Separate pure-Python computation from `unreal.*` game-thread calls.
+- **Async work**: expose completion/result and cancellation behavior (reusing [parallel.md](parallel.md) where suitable).
+- **Module layout**: put operations in the single mod file, `ops.py`, or `importer.py`. Add an optional `api.py` only when coordinating multiple submodules. Keep package imports free of panel-opening side effects.
 
 ### Single file (`mods/my_mod.py`) - complete example
 
@@ -102,6 +77,10 @@ def unregister():
 ```
 
 Enable via Mod Manager, `EnabledByDefault`, or `mineprep.mods.register(module)`.
+`register` / `unregister` also accept a full name such as `"mods.WorldGenerator"`
+and return success. `EnabledByDefault` is a startup default; query
+`name in mcvars.EnabledMods` for current enabled state. Full `mineprep.reload()`
+preserves the currently enabled set.
 
 ## Mod class notes
 
@@ -126,52 +105,31 @@ directly. Minimal UI mods can use `mineprep.ui(...)` in `register()`.
 
 ## UI composition patterns
 
-**Two-column tool** (VAT Tools):
+Keep PropertyGroup instances on the Mod, and retain Layout nodes when callbacks
+need to update them. For example, a two-column form can hide one column directly:
 
 ```python
 row = layout.row()
 left = row.col(fill=1, padding=3)
 right = row.col(fill=1, padding=3)
-left.prop(self.bake_props, on_property_changed=...)
-right.prop(self.init_props, on_property_changed=...)
-# footer options on separate PropertyGroup:
-layout.prop(self.options, 'AutoCleanCache', localize(...), align=(1, 3), fill=1)
-layout.prop(self.options, 'HideInitSkm', localize(...), align=(1, 3),
-            on_property_changed=lambda _: right.hide(self.options.HideInitSkm))
+left.prop(self.left_props)
+right.prop(self.right_props)
+layout.prop(self.options, 'HideRight',
+            on_property_changed=lambda _: right.hide(self.options.HideRight))
 ```
 
-`left`/`right` both `fill=1` → equal **horizontal** split. Footer `fill=1` is the **only** vertical filler on `layout` (the two-column `row` and `HideInitSkm` omit `fill`). Do not also `fill=1` the Details `prop`s in that same vertical box.
+Sizing, footers and page containers: [Layout](ui.md#layout).
+Build the required structure in `draw()`; update existing controls when the
+structure has not changed. A full redraw remains appropriate for a real rebuild.
 
-**Pinned footer in one column:** Details omit `fill`; only the footer is `fill=1` + `align=(1, 3)`.
-
-```python
-layout.prop(self.props, on_property_changed=...)
-self._log = layout.text(..., align=(1, 3), padding=6, fill=1)
-```
-
-See [ui.md](ui.md) § fill.
-
-**Page switcher:** top tab buttons + `layout.switcher(align=(0, 0), fill=1)` then `pages.col(align=(0, 0))`. Use `functools.partial(self.show_page, i)` for clicks and `set_render_opacity` for inactive tabs. For painting, use a left fill canvas and right auto-size controls.
-
-**Mod keys / close:** override `on_key_down` / `on_key_up` / `destruct`. The EUW template looks up `mcvars.WidgetModMap[layout.outer]`. Default `on_key_down`: Pause/Break (`unreal.Key` name `Pause`) opens the folder of the Mod class's `.py`; overrides must call `super().on_key_down(key)` to keep it. Peek-original needs panel keyboard focus. Unbind selection (and similar) in `destruct` — a closed DetailsView makes `SystemLibrary.is_valid` throw instead of returning False.
+**Mod keys / close:** override `on_key_down` / `on_key_up` / `destruct` as needed.
+Default `on_key_down` opens the Mod folder on Pause/Break; call
+`super().on_key_down(key)` to retain that shortcut. Key events need panel focus.
+Unbind any owned selection callbacks in `destruct` before their widgets disappear.
 
 **Paint RT:** [ui.md](ui.md) § Sketch RT; [pitfalls/ui.md](pitfalls/ui.md).
 
-**Button then fields under a footnote** (keep Details order correct):
-
-```python
-left.prop(self.bake_props, ...)           # DataAsset / AnimSeq
-left.text('0: Idle, 1: Walk, 2: Run', ...)
-left.button('复制数据集', on_clicked=self.on_copy_clicked)  # UI adapter to the operation
-left.prop(self.copy_props)                # separate PG — NOT fields on bake_props
-```
-
-For this VAT layout, a second `PropertyGroup` puts TargetPath/NewName below the footnote. Other tools should group fields for their own workflow.
-
-**State:** keep PropertyGroup instances on `self`, not shared mutable state on the
-PropertyGroup class. Pass operation inputs as described in [Callable operations](#callable-operations).
-
-**VAT-specific sync example** on Soft path change (DataAsset → AnimSeq / TargetPath / NewName): handle in `on_property_changed` when `name == 'DataAsset'`. After programmatic `assign_soft_prop`, also call the same sync helpers. TargetPath defaults to `/Game/mc/VAT/{strippedName}`.
+VAT Tools' asset synchronization rules belong in [pitfalls/vat.md](pitfalls/vat.md).
 
 ## Localization
 
@@ -204,44 +162,15 @@ For a custom unload/re-import workflow outside full `mineprep.reload()`, clear a
 
 ### Panel lifecycle — UE 5.8
 
-`Mod.unregister()` calls `close()` on each mapped instance of that class.
-`close()` uses the `tab_id` saved in `__new__` and `unregister_tab_by_id`.
-On window close the current Blueprint template
-removes the widget's instance from `WidgetModMap`, then calls its `destruct()`:
-
-```python
-# Blueprint close-event fragment; `this` is that event's widget.
-import mcvars
-mod = mcvars.WidgetModMap.pop(this, None)
-if mod:
-    mod.destruct()
-```
-
-`tab_id` is the blueprint `RegistrationName` captured when that window opened,
-not a later `get_tab_id_from_blueprint` lookup. After `spawn_and_register_tab_with_id`
-the ID is `bp.get_path_name() + str(requested_id)`, and asking again returns only
-the last registration for that asset. It also stays set after the user closes the tab.
-`None` from that lookup means this session never registered that blueprint.
-Do not hardcode the prefixed path; close a specific window with its saved `tab_id`.
-
-For mods owning callbacks/tasks, keep `destruct()` idempotent: mark closed,
-unregister tick/delegates, cancel pending work and discard late results before
-they access widgets. Cancellation does not forcibly stop a running worker. UE
-objects and UI remain main-thread work. Reuse `mc_parallel` where appropriate;
-do not assume its handles are automatically owned by the Mod.
-
-Each open window is closed from its own saved id, including non-unique extras.
-An instance still in `WidgetModMap` after `close()` was not closed: Mineprep warns
-and clears that layout best-effort. The user must close that window manually.
-To use a panel after reload, reopen it from the Mineprep menu.
+- **Closing & `destruct()`**: `Mod.unregister()` calls `close()` on each open instance (using its saved `tab_id`), and the widget's Blueprint close event pops `mcvars.WidgetModMap` and calls `mod.destruct()`.
+- **Cleanup in `destruct()`**: release owned tick/delegate handles and pending tasks in `destruct()`. Any callback that can outlive the panel must guard against destroyed widgets. Note that `mc_parallel` handles are not auto-destroyed by `Mod`, and `runner.destroy()` on a `@thread` cancels the game-thread callback/polling without stopping the background worker thread itself.
+- **Unclosed windows on reload**: if an instance remains in `WidgetModMap` after `close()`, Mineprep warns and clears its layout best-effort; ask the user to close that leftover window manually and reopen from the Mineprep menu.
 
 ## Testing
 
-Test a public operation directly without opening/registering its panel, then
-verify the UI delegates to that same operation. Keep pure-data tests independent
-of Unreal; editor checks should inspect actual assets/actors and warnings. For
-jobs, cover completion, failure, cancellation and panel-close cleanup. Scale
-tests to the changed behavior; no mandatory `run_test()` API is needed. A minimal
-script example should use the real public entrypoint, not a test-only wrapper.
+Choose checks for the change: pure-data logic outside Unreal, public operations
+without a panel, and UI behavior in the editor when relevant. For changed async
+lifecycle code, include failure/cancellation and panel-close cleanup. No mandatory
+test API or full suite is required. Examples should use the real public entrypoint.
 
 Agent iterative in-editor runs (MCP / Remote Execution): [remote.md](remote.md) + policy in [SKILL.md](SKILL.md). Open Mod tab: [remote.md](remote.md) § panel.

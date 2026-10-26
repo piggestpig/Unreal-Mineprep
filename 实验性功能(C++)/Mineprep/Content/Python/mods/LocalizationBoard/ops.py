@@ -59,26 +59,28 @@ PROMPT_TEMPLATE = """请翻译虚幻引擎插件（Minecraft风格）的变量�
 ### 1. 文件与列定义
 - **本地化表**：`{old_csv}`
 - **临时工作表**：`{new_csv}`
-- **待翻译表**：`{todo_csv}`（从工作表中提取的任一语言列为空的行）
+- **待翻译表**：`{todo_csv}`（从临时工作表中提取的任一语言列为空的行，仅供速览定位）
 - **列顺序（固定）**：`Namespace, Key, Source String, zh-Hans, en, zh-Hant`
 
 ### 2. 基本原则
-- **严禁修改前三列**：`Namespace`、`Key`、`Source String` 必须保持原样（包括空格、大小写及特殊符号，源自引擎 `FName::NameToDisplayString`）。
-- **严禁改动文件结构**：不得增减列、修改列名、新建文件或改动已有列顺序。
-- **补全空白列**：只针对 `zh-Hans`、`en`、`zh-Hant` 等空白单元格翻译，已有译文若有明显错译也可改动。
+- **严禁修改前三列**：`Namespace`、`Key`、`Source String` 必须保持原样（包括空格、大小写、特殊符号及结构体 GUID 后缀，源自引擎 `FName::NameToDisplayString`）。
+- **严禁改动文件结构**：不得增减列、修改列名、新建文件或改动已有列顺序；保持 `UTF-8 with BOM (utf-8-sig)` 编码，若译文内含英文逗号 `,` 须用双引号包裹单元格。
+- **补全空白列**：直接在**临时工作表**中补全 `zh-Hans`、`en`、`zh-Hant` 空白单元格（新增待翻译行通常位于文件末尾）；已有译文若有明显错译也可修正。
 
 ### 3. 翻译规范
-- **上下文对齐**：先参考工作表中已有译文对齐风格后再翻译。全表同类概念尽可能统一。
+- **上下文对齐**：先参考工作表中已有译文对齐风格后再翻译，全表同类概念与同名属性保持统一。
 - **英文 (`en`)**：使用简短 Title Case，符合 UE 引擎习惯（如 Camera, Post Process, Skeleton, Material, Niagara, Sequencer）；专有名词/缩写保留原样（如 DLSS, FSR, Actor, Debug, CSV, RT）。
-- **格式保留**：
+- **特殊前后缀与格式保留**：
   - `/` 连接的并列项逐段翻译并保留 `/`（如 `待机/走路/跑步` → `Idle/Walk/Run`）。
-  - 括号内的单位和类型提示原样保留，如 `(m)`, `(m/s)`, `(Actor)`, `(类)`。
+  - 括号内的单位和类型提示原样保留或按对应语言翻译，如 `(m)`, `(m/s)`, `(Actor)`, `(类)` → `(Class)`。
+  - 开头的装饰或分类符号（如 `◆`、`↻`、`💡`、`*`、`→`）在各语言译文中原样保留；蓝图 Setter 前缀（如 `Set右手物品`）中文保留 `Set` 前缀，英文译为 `Set Right Hand Item`。
+  - 若 `Source String` 含结构体内部后缀（如 `Ragdoll_Speed_2_63FE...`）或布尔前缀 `B `，译文列中应去掉后缀或前缀（如译为 `布娃娃速度` / `Ragdoll Speed`），但第 3 列 `Source String` 严禁改动。
 
 ### 4. 执行流程
-- 请自己生成/填充**临时工作表**的翻译内容（不要写机械的脚本进行批量翻译）。
-- 翻译完成后，把原始**本地化表**移至回收站，**临时工作表**重命名为“变量显示名_VariableDisplayNames.csv”，成为新的本地化表，最后把临时工作表和待翻译表也移至回收站
+- 请直接编辑**临时工作表**填充翻译内容（不要写机械的词典替换脚本进行批量硬翻）。
+- 翻译并校验所有行均无空单元格后，把原始**本地化表**和**待翻译表**移至回收站，再将**临时工作表**重命名为 `变量显示名_VariableDisplayNames.csv`。
 
-Token 足够，条目多时可以开多个子agent"""
+Token 足够，条目多时可以开多个子 agent 并行处理。"""
 
 
 def make_prompt(csv_root=None) -> str:
@@ -167,7 +169,7 @@ def load_working(csv_root=None) -> dict[str, list[str]]:
 
 def merge_entry(working: dict[str, list[str]], old_by_key: dict[str, list[str]],
                 key: str, source: str) -> str:
-    """Update working table. Returns 'added' or 'reused'."""
+    """合并单条翻译记录到工作表，返回 'added' 或 'reused'。"""
     if key in working:
         working[key][2] = source
         return 'reused'
@@ -272,7 +274,7 @@ def gather_names(obj, set_enum_key: bool) -> tuple[list[str], list[str], list[st
 
 
 def iter_gather(props, on_status, is_closed, out=None):
-    """兼容原调用；关闭不提交，主动 close 且面板未关闭时保留阶段结果。"""
+    """兼容旧版生成器调用接口。"""
     return (yield from _iter_gather(
         str(props.ScanPath or ''), bool(props.SetEnumKey), None, on_status,
         is_closed, lambda: not is_closed(), out))
@@ -353,7 +355,7 @@ _jobs = set()
 
 
 class GatherJob:
-    """UE 主线程任务；status() 查询结果，cancel(False) 丢弃本轮未提交数据。"""
+    """按帧推进的资产变量名扫描任务句柄，可通过 status() 查询进度或调用 cancel() 取消。"""
 
     def __init__(self, scan_path, set_enum_key, csv_root, on_progress, on_done):
         self.state, self.result, self.error = 'running', {}, None
@@ -364,7 +366,7 @@ class GatherJob:
         @mineprep.asynctask
         def run():
             try:
-                # 先返回句柄，空扫描也在 UI 完成赋值后触发 on_done。
+                # 首帧先让出，确保调用方先拿到任务句柄再触发完成回调
                 yield
                 yield from _iter_gather(
                     scan_path, set_enum_key, csv_root, on_progress or (lambda text: None),
@@ -400,7 +402,7 @@ class GatherJob:
 
 def start_gather(scan_path, *, set_enum_key=True, csv_root=None,
                  on_progress=None, on_done=None):
-    """无需面板收集变量名；csv_root 默认使用原模组目录。回调在主线程运行。"""
+    """启动异步变量显示名收集任务；csv_root 默认为工程的 Content/Mineprep/插件贴图 目录。"""
     return GatherJob(str(scan_path), bool(set_enum_key), csv_paths(csv_root)['folder'],
                      on_progress, on_done)
 

@@ -1,0 +1,389 @@
+"""山谷驿站（精修版）：有机山脊高度图、高拱石桥、老虎窗客栈、歇脚凉亭与散点路标。--output 指定新目录。"""
+import argparse
+from dataclasses import replace
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import sys
+from time import perf_counter
+from types import MappingProxyType
+
+PYTHON_DIR = Path(__file__).resolve().parents[3]
+PROJECT_DIR = Path(__file__).resolve().parents[7]
+sys.path[:0] = [str(PYTHON_DIR), str(PROJECT_DIR/'Intermediate/PipInstall/Lib/site-packages')]
+os.environ.setdefault('OPENCV_IO_ENABLE_OPENEXR', '1')
+
+import cv2
+import numpy as np
+from mods.WorldGenerator import api
+from mods.WorldGenerator.examples.valley_outpost_gemini_pack.valley_outpost_gemini.layout import (
+    heights, pad_distance, sites, support_pads,
+)
+
+PACK_SOURCE = Path(__file__).with_name('valley_outpost_gemini_pack')/'valley_outpost_gemini'
+
+
+def inn():
+    b = api.builder((27, 30, 29), origin=(-13, 0, -14))
+    b.box('stone_bricks', (-10, 0, -6), (11, 3, 8))
+    b.box('oak_planks', (-9, 3, -5), (10, 12, 7), hollow=True)
+    b.box('air', (-8, 4, -4), (9, 11, 6))
+    for x in (-10, 0, 10):
+        for z in (-6, 7):
+            b.box('stripped_spruce_log', (x, 2, z), (x+1, 13, z+1), axis='y')
+    for y in (3, 11):
+        for z in (-6, 7):
+            b.box('spruce_log', (-10, y, z), (11, y+1, z+1), axis='x')
+        for x in (-10, 10):
+            b.box('spruce_log', (x, y, -6), (x+1, y+1, 8), axis='z')
+    for x in (-6, 5):
+        b.box('air', (x, 6, -6), (x+3, 9, -4))
+        b.box('glass_pane', (x, 6, -5), (x+3, 9, -4))
+        b.box('spruce_slab', (x-1, 5, -7), (x+4, 6, -5), type='top')
+        b.set('lantern', (x+1, 8, -3), hanging=True)
+    for z in (-2, 3):
+        b.box('air', (9, 6, z), (11, 9, z+2))
+        b.box('glass_pane', (9, 6, z), (10, 9, z+2))
+    b.box('air', (-1, 3, -6), (2, 6, -4))
+    for half, y in (('lower', 3), ('upper', 4)):
+        b.set('spruce_door', (0, y, -5), half=half, facing='north', hinge='left')
+    b.box('spruce_log', (-1, 5, -5), (2, 6, -4), axis='x')
+
+    # Gable walls + dark oak roof with contrasting spruce gable fascia trim.
+    for z in (-6, 7):
+        b.extrude('oak_planks', [(-11, 0), (12, 0), (.5, 11.5)], (0, 12, z), 1, direction='z')
+    for rise in range(13):
+        for x, facing in ((-12+rise, 'east'), (12-rise, 'west')):
+            b.box('dark_oak_stairs', (x, 12+rise, -7), (x+1, 13+rise, 9), facing=facing)
+            for z_trim in (-8, 9):
+                b.set('spruce_stairs', (x, 12+rise, z_trim), facing=facing)
+    b.box('spruce_slab', (0, 25, -8), (1, 26, 10), type='bottom')
+
+    # Front dormer window above the porch for a richer roofline silhouette.
+    b.box('stripped_spruce_log', (-2, 14, -7), (3, 18, -5), axis='y')
+    b.box('glass_pane', (-1, 15, -7), (2, 17, -6))
+    for dx, facing in ((-2, 'east'), (2, 'west')):
+        b.box('spruce_stairs', (dx, 18, -8), (dx+1, 19, -4), facing=facing)
+    b.box('spruce_slab', (-1, 19, -8), (2, 20, -4), type='bottom')
+
+    # Covered front porch with stone-footed posts and lanterns.
+    b.box('oak_planks', (-10, 2, -11), (11, 3, -6))
+    for x in (-9, 9):
+        for z in (-10, -7):
+            b.set('cobblestone', (x, 0, z))
+            b.box('spruce_log', (x, 1, z), (x+1, 10, z+1), axis='y')
+    b.box('air', (-2, 2, -11), (3, 3, -10))
+    for z, y in ((-12, 0), (-11, 1), (-10, 2)):
+        b.box('spruce_stairs', (-2, y, z), (3, y+1, z+1), facing='south')
+    for z, y in ((-12, 9), (-11, 9), (-10, 10), (-9, 10), (-8, 11), (-7, 11)):
+        b.box('dark_oak_slab', (-11, y, z), (12, y+1, z+1), type='bottom')
+    for a, c in ((-9, -2), (3, 10)):
+        b.box('spruce_fence', (a, 3, -11), (c, 5, -10))
+    b.set('lantern', [(-6, 8, -9), (6, 8, -9)], hanging=True)
+
+    # Brick chimney with stone collar and flue cap.
+    b.box('bricks', (6, 12, 2), (8, 27, 4))
+    b.box('stone_brick_slab', (5, 27, 1), (9, 28, 5), type='bottom')
+    b.set('stone_brick_wall', [(6, 28, 2), (7, 28, 3)])
+
+    b.paint([('stone_bricks', 5), ('mossy_stone_bricks', 2), ('andesite', 1)],
+            b.select(blocks='stone_bricks'), mode='noise', scale=4.5, salt='inn/stone')
+    return b.connect().freeze('ValleyInn')
+
+
+def woodshed():
+    b = api.builder((15, 13, 17), origin=(-7, 0, -8))
+    b.box('cobblestone', (-6, 0, -5), (7, 1, 6))
+    b.box('oak_planks', (-6, 1, 4), (7, 7, 6))
+    for x in (-6, 6):
+        for z in (-5, 5):
+            b.box('spruce_log', (x, 1, z), (x+1, 8, z+1), axis='y')
+    # Stepped timber roof with contrasting dark oak trim.
+    for z in range(-6, 7):
+        y = 9 - (z+6)//3
+        b.box('spruce_slab', (-6, y, z), (7, y+1, z+1), type='bottom')
+        b.set('dark_oak_slab', [(-7, y, z), (7, y, z)], type='bottom')
+    for y in range(1, 4):
+        for x in range(-4, 2, 2):
+            block = 'birch_log' if (x+y) % 4 == 0 else 'oak_log'
+            b.box(block, (x, y, 0), (x+1, y+1, 4), axis='z')
+    b.set('barrel', [(4, 1, 1), (4, 1, 3), (4, 2, 2)], facing='north')
+    # Curved timber hoist arm built with tube() holding a work lantern.
+    b.tube('stripped_spruce_log', [(5, 4, -4), (5, 8, -5), (5, 10, -7)], radii=[.8, .7, .6], axis='z')
+    b.set('lantern', (5, 8, -7), hanging=True)
+    b.paint([('cobblestone', 4), ('mossy_cobblestone', 2)],
+            b.select(blocks='cobblestone'), mode='noise', scale=4, salt='shed/cobble')
+    return b.connect().freeze('ValleyWoodshed')
+
+
+def rest_deck():
+    """Covered wayside timber pavilion (fixes the flat wooden raft appearance)."""
+    b = api.builder((19, 15, 17), origin=(-9, 0, -8))
+    for x in (-7, 7):
+        for z in (-5, 5):
+            b.set('mossy_stone_bricks', (x, 0, z))
+            b.box('spruce_log', (x, 1, z), (x+1, 9, z+1), axis='y')
+    b.box('spruce_planks', (-8, 2, -6), (9, 3, 7))
+    for step, z in enumerate((-8, -7, -6)):
+        b.box('spruce_stairs', (-2, step, z), (3, step+1, z+1), facing='south')
+    for z in (-4, 3):
+        b.box('oak_stairs', (2, 3, z), (6, 4, z+1), facing='north' if z > 0 else 'south')
+    b.box('oak_fence', (-1, 3, -1), (0, 4, 0))
+    b.box('oak_pressure_plate', (-2, 4, -2), (1, 5, 1))
+    b.box('spruce_fence', (-8, 3, 6), (9, 5, 7))
+    for x in (-8, 8):
+        b.box('spruce_fence', (x, 3, -6), (x+1, 5, 7))
+    # Hipped pavilion roof above the corner columns.
+    for layer, (rx, rz) in enumerate(((9, 7), (7, 5), (5, 4), (3, 2))):
+        y = 9 + layer
+        b.box('dark_oak_slab', (-rx, y, -rz), (rx+1, y+1, rz+1), type='bottom')
+    b.box('spruce_slab', (-2, 13, -1), (3, 14, 2), type='bottom')
+    b.set('lantern', (0, 8, 0), hanging=True)
+    return b.connect().freeze('ValleyRestDeck')
+
+
+def bridge():
+    """Arched stone bridge with open parabolic vault, cutwater piers and four bridge lanterns."""
+    b = api.builder((43, 14, 13), origin=(-21, 0, -6))
+    profile = [(-20, 7), (21, 7)]
+    profile += [(x, 5.2*(1-((x-.5)/17.5)**2)) for x in range(21, -21, -1)]
+    b.extrude('stone_bricks', profile, (0, 0, -3), 7, direction='z')
+    # Clear anything outside the two end abutments at y=0..1 so only piers touch riverbed.
+    b.box('air', (-15, 0, -4), (16, 2, 5))
+    # Pointed triangular cutwaters on the two river piers.
+    for x in (-19, -18, 18, 19):
+        b.box('stone_bricks', (x, 0, -4), (x+1, 5, 5))
+    for x in (-18, 18):
+        b.box('stone_bricks', (x, 0, -5), (x+1, 4, 6))
+    # Roadway deck and parapet walls with 4 timber lamp standards.
+    b.box('andesite', (-20, 6, -3), (21, 7, 4))
+    for z in (-4, 4):
+        b.box('stone_brick_wall', (-20, 7, z), (21, 8, z+1))
+        for x in (-20, -10, 0, 10, 20):
+            b.box('stone_bricks', (x, 7, z), (x+1, 8, z+1))
+            b.set('stone_brick_slab', (x, 8, z), type='bottom')
+        for x in (-14, 14):
+            b.box('stripped_spruce_log', (x, 7, z), (x+1, 11, z+1), axis='y')
+            inward = 1 if z < 0 else -1
+            b.set('spruce_fence', (x, 10, z+inward))
+            b.set('lantern', (x, 9, z+inward), hanging=True)
+    b.paint([(0, 'mossy_cobblestone'), (3, 'mossy_stone_bricks'), (7, 'stone_bricks')],
+            b.select(blocks='stone_bricks'), mode='height', blend=1., seed=42, salt='bridge/moss')
+    b.paint([('andesite', 4), ('cobblestone', 2), ('stone_bricks', 1)],
+            b.select(blocks='andesite'), mode='noise', scale=4.5, salt='bridge/deck')
+    return b.connect().freeze('ValleyBridge')
+
+
+def cargo():
+    b = api.builder((5, 5, 5), origin=(-2, 0, -2))
+    b.box('spruce_planks', (-2, 0, -2), (3, 3, 3))
+    for x in (-2, 2):
+        b.box('stripped_spruce_log', (x, 0, -2), (x+1, 3, 3), axis='z')
+    top = b.select((-2, 0, -2), (3, 3, 3), surface='top')
+    caps = top.shift(dy=1) & b.select(blocks='air')
+    b.set('spruce_slab', caps, type='bottom')
+    b.set('barrel', (-1, 0, -2), facing='north')
+    return b.freeze('ValleyCargo')
+
+
+def waystone():
+    """Roadside stone cairn with hanging lantern, placed via api.scatter()."""
+    b = api.builder((3, 6, 3), origin=(-1, 0, -1))
+    b.set('mossy_cobblestone', [(0, 0, 0), (-1, 0, 0), (0, 0, 1)])
+    b.set('stone_bricks', (0, 1, 0))
+    b.box('spruce_fence', (0, 2, 0), (1, 5, 1))
+    b.set('spruce_fence', (1, 4, 0))
+    b.set('lantern', (1, 3, 0), hanging=True)
+    return b.connect().freeze('ValleyWaystone')
+
+
+LOADER = '''"""Load the outpost from this directory; no editor operations on import."""
+import json
+from pathlib import Path
+from mods.WorldGenerator import api
+
+def load_scene(root=None):
+    root = Path(root) if root is not None else Path(__file__).parent
+    api.register_pack_root(root/'packs')
+    spec = api.WorldSpec.from_json((root/'terrain_spec.json').read_text(encoding='utf-8'))
+    spec = api.with_heightmap(spec, root/'heightmap.png', output_range=(0, 128))
+    world = api.generate(spec)
+    models = {p.stem: api.Structure.load(p) for p in (root/'models').glob('*.json')}
+    rows = json.loads((root/'placements.json').read_text(encoding='utf-8'))
+    parts = [models[r['model']].at(r['position'], r['rotation']) for r in rows]
+    return api.compose(world, *parts)
+'''
+
+EDITOR = '''"""在 UE 的 Python 控制台用 runpy.run_path 运行此文件。"""
+from pathlib import Path
+import runpy
+import uuid
+from mods.WorldGenerator import api
+
+root = Path(__file__).parent
+scene = runpy.run_path(str(root/'load_scene.py'))['load_scene'](root)
+name = 'ValleyOutpostGemini_' + uuid.uuid4().hex[:8]
+
+def ready(job):
+    if job.state != 'completed':
+        print(job.status())
+        return
+    global place_job
+    place_job = api.place(job.result, name=name, on_done=lambda done: print(done.status()))
+
+prepare_job = api.prepare(scene, name=name, backend='pcg', on_done=ready)
+'''
+
+
+def signature(scene):
+    """Compare generated cells and recipes without embedding filesystem paths."""
+    w = scene.terrain
+    h = hashlib.sha256()
+    for a in (w.heights, w.biome_ids, w.water_mask, w.arrays.xyz, w.arrays.types):
+        h.update(np.ascontiguousarray(a).tobytes())
+    records = (w.arrays.names, [(m.template.id, m.anchor, m.rotation) for m in w.model_instances],
+               [(p.structure.key, p.position, p.rotation) for p in scene.placements])
+    h.update(json.dumps(records, sort_keys=True).encode())
+    return h.hexdigest()
+
+
+def preview_colors(scene):
+    """Door/wall model stems have no top-texture average; colours are preview-only."""
+    colors = {'stone_brick_wall': (133, 135, 120), 'spruce_door': (112, 83, 51)}
+    definitions = MappingProxyType({n: replace(d, color=colors[n]) if n in colors else d
+                                    for n, d in scene.world.pack.block_defs.items()})
+    return replace(scene, world=replace(scene.world, pack=replace(scene.world.pack, block_defs=definitions)))
+
+
+def site_preview(scene, path, x, z):
+    """A temporary display crop; keep the placed scene and terrain untouched."""
+    world = scene.world
+    points = world.arrays.xyz
+    inside = ((np.abs(points[:, 0]+world.arrays.region.x0-x) <= 30) &
+              (np.abs(points[:, 2]+world.arrays.region.z0-z) <= 30))
+    arrays = replace(world.arrays, xyz=points[inside], types=world.arrays.types[inside])
+    models = tuple(m for m in world.model_instances
+                   if abs(m.anchor[0]-x) <= 30 and abs(m.anchor[2]-z) <= 30)
+    view = replace(scene, world=replace(world, arrays=arrays, model_instances=models))
+    api.snapshot(preview_colors(view), path, box=800, views=('isometric', 'front'))
+
+
+def deliver(output, size=256, seed=42):
+    output = Path(output).resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    started = perf_counter()
+    pack_id = 'valley_outpost_gemini_' + hashlib.sha256(str(output).encode()).hexdigest()[:8]
+    pack = output/'packs'/pack_id
+    shutil.copytree(PACK_SOURCE, pack, ignore=shutil.ignore_patterns('__pycache__'))
+    data = json.loads((pack/'pack.json').read_text(encoding='utf-8'))
+    data['id'] = pack_id
+    (pack/'pack.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    api.register_pack_root(output/'packs')
+    pixels = np.rint(heights(size, seed)/128*65535).astype(np.uint16)
+    if not cv2.imwrite(str(output/'heightmap.png'), pixels):
+        raise OSError('无法保存高度图')
+    spec = api.spec(pack_id, seed=seed, region=(-size//2, -size//2, size, size), params={
+        'outpost.size': size, 'world.y_min': 16, 'world.y_max': 144, 'world.sea_level': 32.,
+        'hydrology.enabled': False, 'caves.enabled': False, 'cold.enabled': False,
+        'aquatic.enabled': False, 'decorations.enabled': False,
+        'climate.temperature_offset': .2, 'climate.humidity_offset': .35,
+    })
+    spec = api.with_heightmap(spec, output/'heightmap.png', output_range=(0, 128))
+    t = perf_counter()
+    world = api.generate(spec, keep_fields=('outpost_clearing', 'outpost_path_core', 'slope'))
+    seconds = dict(generate=perf_counter()-t)
+    t = perf_counter()
+    models = dict(inn=inn(), shed=woodshed(), rest=rest_deck(), bridge=bridge(),
+                  cargo=cargo(), waystone=waystone())
+    layout = sites(size)
+    placements = []
+    for name in ('inn', 'shed', 'rest'):
+        x, z, _, _, _ = layout[name]
+        placements.append(api.ground(world, models[name].at((x, 0, z))))
+    crossing = api.ground(world, models['bridge'].at((0, 0, 0)))
+    placements.append(crossing)
+    ix, iz, _, _, _ = layout['inn']
+    for x, z, rotation in ((ix+12, iz+10, 0), (ix+6, iz+11, 90),
+                            (layout['shed'][0]+4, layout['shed'][1]-8, 180)):
+        placements.append(api.ground(world, models['cargo'].at((x, 0, z), rotation)))
+    # Scatter roadside waystones along the valley floor without colliding with buildings or roads.
+    lanterns = api.scatter(
+        world, models['waystone'], spacing=34, density=.75, seed=seed, salt='outpost/waystones',
+        where={'outpost_clearing': {'min': .5}, 'outpost_path_core': {'max': .4},
+               'height': {'min': 35., 'max': 46.}, 'slope': {'max': .85}},
+        existing=placements, max_depth=3,
+    )
+    placements.extend(lanterns.placements)
+    footing = api.foundation(world, *placements, block='mossy_stone_bricks', max_depth=8)
+    if footing.count:
+        models['foundation'] = footing
+        placements.append(footing.at((0, 0, 0)))
+    scene = api.compose(world, *placements)
+    seconds['build_and_compose'] = perf_counter()-t
+    t = perf_counter()
+    check = api.check(scene)
+    seconds['check'] = perf_counter()-t
+    z, x = np.indices(world.heights.shape)
+    x, z = x+spec.region.x0, z+spec.region.z0
+    aprons, surroundings = {}, {}
+    for name, (cx, cz, rx, rz, level) in zip(
+            ('inn', 'cargo_inn_1', 'cargo_inn_2', 'shed', 'cargo_shed', 'rest'), support_pads(size)):
+        edge = pad_distance(x, z, cx, cz, rx, rz)
+        ring = (edge > 0) & (edge <= 4)
+        aprons[name] = float(world.heights[ring].max()-level)
+        if name in ('inn', 'shed'):
+            ring = (edge > 0) & (edge <= 12)
+            surroundings[name] = float(world.heights[ring].max()-level)
+    by_key = {s.key: name for name, s in models.items()}
+    (output/'models').mkdir()
+    for name, model in models.items():
+        model.save(output/'models'/f'{name}.json')
+        assert api.Structure.load(output/'models'/f'{name}.json').key == model.key
+    rows = [dict(model=by_key[p.structure.key], position=p.position, rotation=p.rotation) for p in placements]
+    (output/'placements.json').write_text(json.dumps(rows, indent=2), encoding='utf-8')
+    (output/'terrain_spec.json').write_text(spec.to_json(), encoding='utf-8')
+    (output/'load_scene.py').write_text(LOADER, encoding='utf-8')
+    (output/'place_in_editor.py').write_text(EDITOR, encoding='utf-8')
+    api.snapshot(preview_colors(scene), output/'scene.png', box=900, views=('isometric', 'top', 'front'))
+    details = preview_colors(api.compose(None, *[p for p in placements if p.structure.key != footing.key]))
+    api.snapshot(details, output/'buildings.png', box=800, views=('isometric', 'front'))
+    api.snapshot(preview_colors(api.compose(None, models['inn'].at((0, 0, 0)))), output/'inn.png', box=640)
+    api.snapshot(preview_colors(api.compose(None, models['bridge'].at((0, 0, 0)))), output/'bridge.png', box=640)
+    for name in ('inn', 'shed'):
+        site_preview(scene, output/f'{name}_site.png', *layout[name][:2])
+    seconds['total'] = perf_counter()-started
+    report = dict(size=size, seed=seed, signature=signature(scene), seconds=seconds,
+                  check=check, terrain_cells=world.arrays.count, trees=len(world.model_instances),
+                  structure_instances=len(placements), structure_templates=scene.world.stats['structure_templates'],
+                  scattered_waystones=len(lanterns.placements), foundation_cells=footing.count, bridge_y=crossing.position[1],
+                  apron_max_rise=aprons,
+                  surroundings_max_rise=surroundings,
+                  water_levels=np.unique(world.water_levels[world.water_mask]).tolist())
+    (output/'checks.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+    (output/'README.md').write_text(
+        '# 山谷驿站（Gemini版）\n\n'
+        '群山、河谷、木石驿站和桥头凉亭，沿路有零散灯柱。\n\n'
+        '图片是离线配色预览，实际贴图和光照请在UE查看。'
+        '先移除旧版生成组，或在单独关卡运行，避免地形重叠。\n\n'
+        '在UE输出日志中切换到Python，运行（换成当前文件夹位置）：\n\n'
+        '```python\nimport runpy\n'
+        "runpy.run_path(r'输出目录/place_in_editor.py')\n```\n\n"
+        '脚本通过PCG创建独立场景组，不保存关卡。整个文件夹可以一起移动。\n', encoding='utf-8')
+    if not check['ok']:
+        raise RuntimeError(f'场景存在碰撞，请查看 {output / "checks.json"}')
+    if max(aprons.values()) > 2:
+        raise RuntimeError(f'院子周围地形过高，请查看 {output / "checks.json"}')
+    if max(surroundings.values()) > 3.5:
+        raise RuntimeError(f'屋舍周围坡面过高，请查看 {output / "checks.json"}')
+    return report
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--size', type=int, choices=(128, 256), default=256)
+    parser.add_argument('--seed', type=int, default=42)
+    args = parser.parse_args()
+    print(json.dumps(deliver(args.output, args.size, args.seed), ensure_ascii=False))

@@ -109,27 +109,11 @@ tool_name    = "run"
 arguments    = {"code": "unreal.Paths.project_dir()", "loglevel": 0}
 ```
 
-- `run(code, loglevel=1)` is the API signature; explicitly pass **`loglevel=0` for routine agent calls**. The namespace persists and `unreal` / `mineprep` are injected every call. Nested `def` can see prior assignments. This namespace is shared by clients in the editor process, not isolated per MCP session; use distinct variable names when coordinating agents. `reset()` clears everyone's snippet state, so avoid it as routine cleanup.
-- If the last statement is an **expression**, its value is JSON `result`. Bare assignments return `result: null` — end the snippet with the value you need (`len(actors)`, `path`, `actor`).
-- An `@asynctask` that `yield`s returns its runner before later frames run. Do not wait inside `run`: the Slate tick that resumes it happens after this call returns. The result is then `{"pending": true, "name": "<func>"}`, and the runner is stored as `_async`. A later `run` of `_async` returns `{"pending": false, "name": "...", "result": ...}` or `"error"` if the task threw. `runner.result` stays `None` until a normal finish, including a finish that returns `None`; use `pending`. A bare `runner = task()` with no trailing expression is treated the same when it starts exactly one task. See [parallel.md](parallel.md) for `yield` itself.
-- Return JSON: `{ok, result, logs, error}`. UObjects become `{"uobject": "<path>", "label": "..."}`. A Mineprep handle becomes `{"handle": "<class>", "target": ...}`, plus `"name"` only when `.name` is truthy. That `name` is not the handle's `.label`. `print()` uses the engine `sys.stdout` wrapper (`LogPython`) so it shares a timeline with `unreal.log` / `log_warning` / C++ `UE_LOG` in `logs` (marker slice after `unreal.log_flush()`, not a game-thread sleep). `mineprep.prints` also logs: its `SystemLibrary.print_string` call uses the current default `print_to_log=True`. `warn` explicitly emits a log warning. Filtering and capture limits still apply.
-- `loglevel`: `0` recommended for agents and the HTTP helper default — only Warning/Error/Fatal; `1` API default — also keep LogPython/LogTemp/LogBlueprintUserMessages; `2` — keep engine C++ categories, drop Slate/HTTP/MCP noise; `3` — raw slice. Ordinary `print()` output is hidden at `0`; return needed values as the final expression. Use `1` for Python output, `2` for engine diagnostics, or `3` to investigate filtering; do not repeat a scene mutation just to obtain more verbose logs.
-- Levels 0/1/2 preserve Warning/Error/Fatal entries plus continuation lines of retained entries. At level 0, `LogSlate*` warnings and their continuation lines are excluded; Slate errors/fatal entries remain. Levels 1–3 include Slate warnings for UI diagnosis. Filtering is by category/severity, not semantic relevance.
-- Log discovery checks the flushed call marker to select the active file (including numbered editor log files), rather than assuming `<project>.log` is current.
-- The returned JSON string is limited to 200,000 characters (not bytes or tokens).
-  Lists/tuples/sets and dictionaries keep at most 80 items; composite values at
-  depth 5 become repr previews (up to 2,000 characters). Logs keep up to 2,000
-  lines / 80,000 characters before total-response limiting. Every applied limit
-  marks its field in `truncated`; `truncation_details` gives paths (field name +
-  JSON Pointer segments), reasons and available counts/units. Details are capped
-  at 32 records plus an omitted-count summary; paths at 256 characters are marked
-  `path_truncated`. Existing in-result omission messages remain. Count metadata
-  excludes those messages. Total-size trimming can replace a result's original
-  type with text. Non-finite floats become strings (`"nan"`, `"inf"`, `"-inf"`).
-  These flags describe serialization/capture trimming, not whether a query
-  covered every actor or whether log filtering retained all engine messages.
+- **Session & `loglevel`**: `run(code, loglevel=1)` shares one namespace across the editor process (`unreal` and `mineprep` are updated each call; avoid `reset()` during shared sessions). Pass **`loglevel=0` for routine agent calls** (`0` = Warning/Error/Fatal excluding `LogSlate*` warnings; `1` = adds `LogPython`/`LogTemp`/`LogBlueprintUserMessages` so `print()` appears; `2` = drops Slate/HTTP/MCP noise; `3` = unfiltered). Return needed values via the **last expression** rather than relying on `print()` at level 0.
+- **Yielding `@asynctask`**: returns `{"pending": true, "name": "<func>"}` immediately and stores the runner in `_async`. Query `_async` in a later `run` call (`{"pending": false, "name": "...", "result": ...}` or `"error"`); never wait inside `run`. See [parallel.md](parallel.md).
+- **Return format & truncation**: returns `{ok, result, logs, error}` (capped at 200,000 chars; sequences/maps keep at most 80 items, with `truncated` and `truncation_details` when trimmed). UObjects serialize as `{"uobject": "<path>", "label": "..."}` and handles as `{"handle": "<class>", "target": ...}`.
 
-For large results, count and slice **inside** the editor. Context fragments:
+For large collections (>80 items), store the list in the session namespace and slice in-editor:
 
 ```python
 # First call: retain the raw snapshot in the shared bridge namespace.
@@ -297,7 +281,15 @@ covers proportional validation. Documentation checks do not prove editor behavio
 
 ## Viewport screenshot (agent can Read the png)
 
-Use **`mineprep.screenshot`** for the viewport. Small tasks do not need a screenshot. Capture only when the user asks, or for a complex visual result such as modeling or checking a program's run. Additional captures should answer a new question or verify a changed result; avoid repeated identical shots. Choose camera positions for the current scene rather than copying the example coordinates.
+Prefer MCP **`EditorToolset.EditorAppToolset.CaptureViewport`** with `bShowUI=false`
+for the current viewport. Inspect the returned image; it is inline, not a saved
+file. Discover the current schema first. If the bridge requires optional
+arguments, pass the current camera transform and an `annotations` object with
+`gridSpacing=0`, `gridExtent=0`, `gridHeight=0`, `maxLabelDistance=0`,
+`maxLabels=0`, `classFilter={"refPath":"/Script/Engine.Actor"}`.
+This tool is not exposed as `unreal.EditorAppToolset.capture_viewport` in Python.
+
+For a high-resolution image or a Python-only session, use `mineprep.screenshot`:
 
 ```python
 import os
@@ -310,28 +302,45 @@ import uuid
 path = os.path.join(shot_dir, f'view_{uuid.uuid4().hex}.png')
 mineprep.screenshot(
     size=(1920, 1080),   # omit → viewport res; (1080,1080) square; (1080,1920) portrait
-    path=path,           # always set — default auto-name is hard to find
+    path=path,           # explicit path makes the new image easy to inspect
     delay=0.3,           # seconds before capture; default 0
-    pos=unreal.Vector(2100, -4400, 1600),      # optional camera location
-    lookat=unreal.Vector(100, -1600, 900),     # optional look-at; with pos sets yaw/pitch
 )
 ```
 
-| Arg | Default | Notes |
-|-----|---------|--------|
-| `size` | viewport | `(w,h)` sets aspect. Landscape `(1920,1080)`, square `(1080,1080)`, portrait `(1080,1920)`. A single int → square |
-| `path` | `Saved/Screenshots/` + auto suffix | **Pass an explicit `.png` path** so you can Read it. Reusing the path overwrites |
-| `pos` / `lookat` | current viewport | `lookat` uses `find_look_at_rotation(pos, lookat)` |
-| `delay` | `0` | Seconds before a single async capture; unlike UI capture, no immediate first image |
+The Python capture is async. Verify a fresh, decodable PNG before inspecting it;
+delay alone does not guarantee completion in a background viewport. Check Alpha
+if an image looks blank. A `.jpg` suffix does not convert PNG output to JPEG.
+Small tasks do not need screenshots; further captures should check a changed
+result or answer a new visual question. Use widget capture above for panels.
 
-The capture is async and may stall on **shader compile**. Use a new filename, or check that a reused file changed since the request. On the host, poll briefly until the new file is nonempty and can be decoded, then inspect it. If it is not ready, report that rather than treating an old PNG or RE `success` as a new screenshot.
+## Blueprint defaults and components
 
-Prefer Mineprep's capture functions. If no image arrives, try official MCP
-`EditorToolset.EditorAppToolset.CaptureEditorImage` or
-`SlateInspectorToolset.SlateInspectorToolset.Screenshot` (use a current window
-ref). If still unsuccessful, tell the user and ask them to bring UE and the
-scene viewport forward. A background/occluded viewport may stop drawing;
-neither `delay` nor `@mineprep.delay` guarantees a screenshot. Official MCP
-returns inline images, not saved files.
+Confirm `unreal.Paths.project_dir()` before writing. If `UnrealEditorSubsystem.get_game_world()` is set, PIE is running; don't reparent or compile. An editor restart clears the bridge namespace. Keep a snapshot you still need in a UTF-8 file and return a count — a large `run` result is truncated.
 
-PNG only (not EXR). `{Project}/Saved/Screenshots/` may be gitignored — use `unreal.Paths.project_saved_dir()` (there is **no** `project_saved_directory`), do not hardcode a drive letter. `os.makedirs` the folder first.
+Class defaults are on the CDO: `unreal.get_default_object(blueprint.generated_class())`. `get_editor_property` takes the variable name, including non-ASCII names. `dir()` on the CDO does not list them, and `new_variables` is not exposed on `Blueprint`. Don't `dir()` a struct or UObject to discover fields; that can freeze the editor. Use `export_text()`, or a field you already know.
+
+Components come from `SubobjectDataSubsystem.k2_gather_subobject_data_for_blueprint` and `k2_find_subobject_data_from_handle`. `get_object()` is often the parent template; writing it changes every child. `get_object_for_blueprint(data, blueprint)` is that blueprint's template — data first. Write only when the outer is this generated class (`Foo_C`) or its CDO (`Default__Foo_C`). The same object can appear twice; skip duplicates by identity. `get_components_by_class` on a child CDO is often empty, and `is_editor_property_overridden` often has no archetype value. Neither means the component is missing.
+
+```python
+sub = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
+lib = unreal.SubobjectDataBlueprintFunctionLibrary
+cls_name = blueprint.generated_class().get_name()
+for handle in sub.k2_gather_subobject_data_for_blueprint(blueprint):
+    data = sub.k2_find_subobject_data_from_handle(handle)
+    component = lib.get_object_for_blueprint(data, blueprint)
+    if component is None:
+        continue
+    outer = component.get_outer().get_name()
+    if outer not in (cls_name, 'Default__' + cls_name):
+        continue  # parent template
+```
+
+A native mesh or capsule sits on the CDO (`CharacterMesh0`, `CollisionCylinder`). A Blueprint component is `Name_GEN_VARIABLE` on the class. After a reparent, the same role can switch between those; match the role, not the old name. The skeletal mesh property is `skeletal_mesh_asset`. An empty `override_materials` list means the mesh default. A null mesh on a child template usually means inherit — don't clear a mesh because the source template is null.
+
+If the viewport shows a mesh the template doesn't store, the construction script is copying an actor variable onto it. Set that variable on the CDO. If this class has no such variable, set the asset on this blueprint's own component.
+
+Across editors, serialize a struct with `export_text()`, an object as its path, and an enum as `.name` (`int(enum)` fails). Walk maps and arrays the same way. Apply with `import_text`, then `set_editor_property`. Edit an existing map in place: drop extra keys, copy an existing value to insert a missing key, then `import_text` each value and assign it back. Enum keys come from `for member in type(sample)`. Two rotators can be one orientation; compare quaternion dot products before writing, or a later compile will normalize the Euler and look like a mismatch. Set capsule size with `set_capsule_size(radius, half_height)`. Rotator argument order: [pitfalls/common.md](pitfalls/common.md).
+
+`BlueprintEditorLibrary.reparent_blueprint`, `get_blueprint_parent_class`, and `compile_blueprint`. A class path ends in `.Name_C`; the blueprint asset path does not. The hierarchy-changing log is expected. Reparenting drops per-child overrides, so snapshot first and put each blueprint back on its own parent. Don't export every `*_GEN_VARIABLE` on a parent template; that can crash the editor.
+
+Compile can rebuild the CDO and drop a default you just set. Set, compile, read back. If the value is gone, set it again and save without compiling a second time. Take one asset through that check before a folder. Batch with `@mineprep.asynctask` and `yield` between assets. Keep progress in a list the next `run` can read. The runner has `done`, `result`, and `error`, not `is_running`. Save with `EditorAssetLibrary.save_loaded_asset` only after the re-read matches.

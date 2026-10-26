@@ -3,7 +3,7 @@
 Implementation: `Plugins/Mineprep/Content/Python/mc_parallel.py`  
 Public names: `mineprep.delay`, `tick`, `asynctask`, `thread`, `asyncthread`, `until` (and the runner classes). After editing `mc_*.py`, `mineprep.reload()` is enough.
 
-Worker threads must not call `unreal.*` or `mineprep.prints`. `callback` runs on the game thread and may touch UE. Crashes go through `mineprep.warn` (on-screen + traceback).
+Worker threads must not call `unreal.*` or `mineprep.prints`. `callback` runs on the game thread and may touch UE. Runner exceptions are reported through `mineprep.warn` (on-screen + traceback).
 
 There is no thread pool: each `@thread` / `@asyncthread` start creates a new daemon thread. `concurrent.futures.Future` is only a result box, not a `ThreadPoolExecutor`.
 
@@ -20,7 +20,9 @@ There is no thread pool: each `@thread` / `@asyncthread` start creates a new dae
 
 ## `@delay`
 
-Runs once, then ends. `@delay` / `@delay()` / `@delay(0)` = next ticker fire (treat as next frame). Timed waits use `register_ticker_callback` (one-shot; the callback returns `False`).
+Runs once on a later ticker dispatch. `@delay` / `@delay()` / `@delay(0)` use zero delay;
+that is not proof another engine frame has completed. For frame-by-frame stepping,
+use `@asynctask` with `yield`.
 
 ```python
 @mineprep.delay
@@ -103,15 +105,17 @@ cam = yield from mineprep.until(
 )
 ```
 
-Objects spawned or selected by a Blueprint, and sequence bindings just opened, are often missing on the same editor tick. Do not check once before yielding.
+Blueprint-created objects and newly opened sequence bindings may need another
+editor frame. Use `until` when readiness is asynchronous; an already available
+object needs no wait. Keep `step > 0` when relying on `until`'s timeout: its
+internal counter adds `step` after each miss, so `step=0` never advances it.
 
 ## Re-entrancy (same thread)
 
-Slate post-tick / FTSTicker can fire **again** while a step is still on the stack (`spawn_structure`, `spawn_mob`, Blueprint Execute Python, viewport refresh). That is nested callbacks, not a second thread.
-
-CPython generators allow only one `next()` at a time. A nested tick calling `next()` on the same `@asynctask` raises `ValueError: generator already executing`. Regular `@tick` functions can nest and run twice in one frame.
-
-Runners skip the nested callback (`AsyncTaskRunner.advancing`, `TickRunner.ticking`, `DelayRunner.fired`, `ThreadRunner` sets `cancelled` before collecting). The in-flight step still finishes; the skipped tick is not a dropped `yield`. `yield` between UE calls still only yields **between** steps — it does not make a single `spawn_*` non-reentrant.
+Some UE calls re-enter Slate/ticker callbacks on the same thread. A nested
+`next()` on an active generator raises `ValueError: generator already executing`.
+Mineprep's runners guard against this; custom runners must avoid advancing the
+same generator recursively. A `yield` separates steps, not callbacks inside one UE call.
 
 ## `@thread`
 

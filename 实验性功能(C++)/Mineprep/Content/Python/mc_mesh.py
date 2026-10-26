@@ -6,7 +6,10 @@ import json
 import math
 from pathlib import Path
 from mc_math import _rotate, rotator_quaternion
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 from mc_utils import warn
 
 
@@ -266,7 +269,7 @@ def merge_skm(root: unreal.SkeletalMeshComponent, save_path: str = None,
             root_skm, body_dm, from_opts, lod
         )
         mats = list(root_mats)
-    # Always bind skeleton bones onto the working mesh (empty OK for items-only)
+    # 将骨架骨骼信息拷贝到工作网格（仅合并静态物品时同样需要骨架）
     body_dm = _unwrap(unreal.GeometryScript_BoneWeights.copy_bones_from_skeleton(
         skeleton, body_dm, bone_opts
     ))
@@ -326,8 +329,8 @@ def merge_skm(root: unreal.SkeletalMeshComponent, save_path: str = None,
     return _save_skm(body_dm, skeleton, mats, out_path, existing=existing)
 
 
-# Blocks baking: source faces, tiled rectangles and StaticMesh asset reuse.
-BAKE_VERSION = "blocks-bake-2"
+# 方块结构烘焙：面剔除、同材质矩形合批与静态网格资产生成
+BAKE_VERSION = "blocks-bake-3"
 RECIPE_TAG = "Mineprep.BakeRecipe"
 STATS_TAG = "Mineprep.BakeStats"
 _DIRECTIONS = {
@@ -339,7 +342,7 @@ _DIRECTIONS = {
 
 @dataclass(frozen=True)
 class Face:
-    points: tuple                 # UE axes, cell-centered, in block units
+    points: tuple                 # UE 坐标系，以格子中心为原点，单位为格 (1 格 = 100cm)
     uvs: tuple
     texture: str
     direction: str | None = None
@@ -356,14 +359,14 @@ class Prototype:
 
 @dataclass
 class BakeGeometry:
-    quads: list                   # (points in cm, explicit UVs, texture path)
+    quads: list                   # [(顶点厘米坐标, UV 坐标, 贴图路径), ...]
     textures: list
     recipe: str
     stats: dict
 
 
 def _axis_face(points):
-    """Boundary direction; winding is checked separately by source parsing."""
+    """判断面是否贴合单格边界（坐标位于 ±0.5），返回朝向名称或 None。"""
     for name, normal in _DIRECTIONS.items():
         axis = next(i for i, n in enumerate(normal) if n)
         if all(abs(p[axis] - normal[axis] * .5) < 1e-6 for p in points):
@@ -372,7 +375,7 @@ def _axis_face(points):
 
 
 def _normal_direction(points):
-    """Axis direction, including internal faces of slabs/stairs."""
+    """根据顶点顺序计算轴对齐法线方向（含半砖、楼梯等位于格子内部的面）。"""
     u = tuple(points[1][i] - points[0][i] for i in range(3))
     v = tuple(points[2][i] - points[0][i] for i in range(3))
     normal = (v[1]*u[2]-v[2]*u[1], v[2]*u[0]-v[0]*u[2], v[0]*u[1]-v[1]*u[0])
@@ -402,7 +405,7 @@ def _within_cell_face(points, direction):
 
 
 def _affine_uv(points, uvs, axes):
-    """Return UV origin and two gradients, or None for a non-affine quad."""
+    """求解面内 UV 对平面坐标的仿射梯度，非仿射四边形返回 None。"""
     a, b = axes
     x1, y1 = points[1][a] - points[0][a], points[1][b] - points[0][b]
     x2, y2 = points[2][a] - points[0][a], points[2][b] - points[0][b]
@@ -431,7 +434,7 @@ def _repeat_frame(face):
     if frame is None:
         return None
     origin, gradients = frame
-    # Only one full tile, with a signed axis permutation. No atlas rectangles.
+    # 仅当 UV 恰好覆盖整张 0~1 贴图且方向轴对齐时，才允许跨格重复拼接
     flat = tuple(round(v, 6) for row in gradients for v in row)
     if (any(v not in (-1, 0, 1) for v in flat)
             or any(sum(abs(v) for v in row) != 1 for row in gradients)
@@ -444,7 +447,7 @@ def _repeat_frame(face):
 
 
 def _rectangles(pairs):
-    """Deterministic greedy rectangles, without repeated min(set) scans."""
+    """将共面相邻的单位格贪婪合并为矩形 (u, v, width, height)。"""
     remaining = set(pairs)
     for u, v in sorted(remaining):
         if (u, v) not in remaining:
@@ -476,10 +479,10 @@ def _validate_options(pivot, cull, merge_faces):
 
 def build_geometry(cells, resolve, *, pivot=(0, 0, 0), cull="opaque",
                    merge_faces=True, dependencies=()):
-    """Pure geometry path; resolve(name, properties) returns a Prototype.
+    """将稀疏方块字典烘焙为合并后的几何面数据（纯几何计算，不依赖 Unreal）。
 
-    Dependency digests supplement the resolved geometry in the recipe. Each
-    unique state is resolved once per bake, not once per cell.
+    resolve(name, properties) 负责解析每种方块状态的几何原型（每种状态只解析一次）。
+    支持邻格遮挡剔除 (cull) 与共面同材质贪婪合批 (merge_faces)，并生成用于校验资产复用的配方哈希。
     """
     pivot = _validate_options(pivot, cull, merge_faces)
     if not cells:
@@ -499,13 +502,16 @@ def build_geometry(cells, resolve, *, pivot=(0, 0, 0), cull="opaque",
         states[pos] = key
         normalized.append((pos, key))
 
+    prepared = {key: tuple((face, _repeat_frame(face) if merge_faces else None)
+                           for face in proto.faces)
+                for key, proto in prototypes.items()}
     quads, groups = [], defaultdict(dict)
     raw_count = visible_count = 0
     ue_pivot = pivot[0], pivot[2], pivot[1]
     for pos, key in states.items():
         proto = prototypes[key]
         center = pos[0], pos[2], pos[1]
-        for face in proto.faces:
+        for face, frame in prepared[key]:
             raw_count += 1
             if cull != "none" and face.cullable and face.direction:
                 n = _DIRECTIONS[face.direction]
@@ -516,7 +522,6 @@ def build_geometry(cells, resolve, *, pivot=(0, 0, 0), cull="opaque",
                             (cull == "same" and proto.full and key[0] == neighbor[0])):
                         continue
             visible_count += 1
-            frame = _repeat_frame(face) if merge_faces else None
             if frame is not None:
                 a, b = _tangents(face.direction)
                 normal_axis = next(i for i, v in enumerate(_DIRECTIONS[face.direction]) if v)
@@ -525,8 +530,7 @@ def build_geometry(cells, resolve, *, pivot=(0, 0, 0), cull="opaque",
                 if pair not in groups[group]:
                     groups[group][pair] = face
                     continue
-                # Preserve authored layers; a set of rectangles cannot encode
-                # multiple coplanar source faces at the same grid coordinate.
+                # 同一格同一朝向若有多个共面图层，多余图层直接保留，避免被集合去重覆盖
             points = tuple(tuple(100 * (p[i] + center[i] - ue_pivot[i])
                                  for i in range(3)) for p in face.points)
             quads.append((points, face.uvs, face.texture))
@@ -566,7 +570,7 @@ def build_geometry(cells, resolve, *, pivot=(0, 0, 0), cull="opaque",
 
 
 def _canonical_uv(direction, p):
-    # Same unrotated full-face UV convention as mc_importer (including down).
+    # 与 mc_importer 一致的未旋转整面标准 UV 映射
     x, y, z = (v + .5 for v in p)
     return {"north": (x, 1-z), "south": (x, 1-z),
             "east": (1-y, 1-z), "west": (y, 1-z),
@@ -574,9 +578,9 @@ def _canonical_uv(direction, p):
 
 
 def _locked_uvs(original, transformed, uvs, source_dir, target_dir):
-    """Convert blockstate uvlock into UVs, not per-instance shader markers."""
+    """烘焙模型时直接将 uvlock 变换写入顶点 UV，无需依赖实例材质的顶点色标记。"""
     source = [_canonical_uv(source_dir, p) + (0,) for p in original]
-    # _affine_uv uses +.5; remove it here to express the canonical [0,1] frame.
+    # _affine_uv 内部对坐标加了 0.5，这里先减 0.5 对齐到 [0, 1] 范围
     shifted = [(p[0] - .5, p[1] - .5, 0) for p in source]
     frame = _affine_uv(shifted, uvs, (0, 1))
     if frame is None:
@@ -588,7 +592,7 @@ def _locked_uvs(original, transformed, uvs, source_dir, target_dir):
 
 
 class _SourceResolver:
-    """Per-call source/texture reuse. No module-global source cache."""
+    """单次烘焙的模型、贴图与方块状态解析器，同时记录依赖文件的哈希值。"""
     def __init__(self):
         import mc_importer
         import mc_structure
@@ -665,8 +669,7 @@ class _SourceResolver:
                 collected = self.importer._collect_block_model(path, data, model)
                 if not collected or collected[0] != "block":
                     raise ValueError(f"Baking requires JSON elements: {model}")
-                # Explicit translucency is also non-occluding, even with an
-                # all-opaque PNG. Be conservative for any such model texture.
+                # 标记了 force_translucent 的贴图按半透明处理，不遮挡邻格
                 translucent = any(isinstance(value, dict) and value.get("force_translucent")
                                   for value in (data.get("textures") or {}).values())
                 self.models[model] = collected[2], bool(translucent)
@@ -683,7 +686,7 @@ class _SourceResolver:
                     uvs = _locked_uvs(original, points, uvs, source_dir, target_dir)
                 texture, (opaque, repeatable) = self._texture(source["texture_file"])
                 full = _full_face(points, direction)
-                # A declared cullface must be the actual boundary face after rotation.
+                # 旋转后仍贴合单格边界的 cullface 面才允许被相邻完整方块剔除
                 declared = (source.get("cullface") == source_dir and source_dir is not None
                             and direction == target_dir and _within_cell_face(points, direction))
                 faces.append(Face(points, uvs, texture, direction,
@@ -699,7 +702,7 @@ class _SourceResolver:
 
 def resolve_geometry(cells, **options):
     resolver = _SourceResolver()
-    # Resolve before hashing; dependency collection is populated during traversal.
+    # 解析过程中会收集依赖文件哈希，完成后将其一并混入配方签名
     geometry = build_geometry(cells, resolver, **options)
     geometry.recipe = sha256((geometry.recipe + json.dumps(sorted(resolver.files.items()),
                                                           separators=(",", ":"))).encode()).hexdigest()
@@ -722,7 +725,7 @@ def _dynamic_mesh(geometry):
             length = math.sqrt(sum(n*n for n in cross))
             if length < 1e-8:
                 raise ValueError("Degenerate source face")
-            # UE's clockwise face convention uses the negative Cartesian cross.
+            # UE 左手系顺时针正面对应笛卡尔叉积的反方向
             normal = unreal.Vector(*(-n / length for n in cross))
             vertices.extend(unreal.Vector(*p) for p in points)
             normals.extend([normal] * 4)
@@ -739,17 +742,25 @@ def _dynamic_mesh(geometry):
 
 
 def bake_blocks(blocks, *, destination_path="/Game/mc/baked", asset_name=None,
-                pivot=(0, 0, 0), cull="opaque", merge_faces=True, reload=False):
-    """Create/reuse one saved mesh. Asset reuse is guarded by a source recipe."""
+                pivot=(0, 0, 0), cull="opaque", merge_faces=True, reload=False,
+                two_sided=None):
+    """将 Blocks 烘焙并保存为单个 StaticMesh 资产；若目标路径已存在相同配方的资产则直接复用。"""
     import mc_importer
     if not isinstance(reload, bool):
         raise ValueError("reload must be bool")
+    if two_sided is not None and type(two_sided) is not bool:
+        raise ValueError("two_sided must be bool or None")
+    legacy_sidedness = cull == "same"
+    two_sided = legacy_sidedness if two_sided is None else two_sided
     destination_path = str(destination_path).rstrip("/")
     if not re.fullmatch(r"/Game(?:/\w+)*", destination_path):
         raise ValueError("destination_path must be a /Game package directory")
     asset_name = mc_importer._sanitize_asset_name(asset_name or blocks.name)
     asset_path = destination_path + "/" + asset_name
     geometry = resolve_geometry(blocks.copy_cells(), pivot=pivot, cull=cull, merge_faces=merge_faces)
+    if two_sided != legacy_sidedness:
+        # 默认材质单双面策略未改变时保持原配方哈希兼容
+        geometry.recipe = sha256(json.dumps((geometry.recipe, "two-sided-1", two_sided)).encode()).hexdigest()
     existing = unreal.load_asset(asset_path) if unreal.EditorAssetLibrary.does_asset_exist(asset_path) else None
     if existing is not None:
         if not isinstance(existing, unreal.StaticMesh):
@@ -760,15 +771,15 @@ def bake_blocks(blocks, *, destination_path="/Game/mc/baked", asset_name=None,
         if not reload:
             raise ValueError(f"Different bake recipe at {asset_path}; use reload=True to replace")
     dynamic_mesh = _dynamic_mesh(geometry)
-    # Validate first; only now create material/texture packages and the mesh.
+    # 几何校验通过后再创建材质、贴图与静态网格资产
     materials = mc_importer._materials_for_files(
-        [Path(p) for p in geometry.textures], destination_path, two_sided=cull == "same")
+        [Path(p) for p in geometry.textures], destination_path, two_sided=two_sided, reload=reload)
     if any(material is None for material in materials):
         raise RuntimeError("Baking failed to resolve a material")
     if not unreal.EditorAssetLibrary.does_directory_exist(destination_path):
         if not unreal.EditorAssetLibrary.make_directory(destination_path):
             raise RuntimeError(f"Cannot create asset directory: {destination_path}")
-    # Use the importer's creator for new assets; explicitly check write outcomes.
+    # 新建或覆写目标静态网格资产，并检查写入结果
     if existing is None:
         mesh, outcome = unreal.GeometryScript_NewAssetUtils.create_new_static_mesh_asset_from_mesh(
             dynamic_mesh, asset_path, unreal.GeometryScriptCreateNewStaticMeshAssetOptions())

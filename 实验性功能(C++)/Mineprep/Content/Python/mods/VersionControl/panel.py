@@ -26,7 +26,7 @@ class VersionControl(mineprep.Mod):
         split = self._split = layout.splitter(ratio=0.4, fill=1)
 
         left = split.first.col(padding=3)
-        left.prop(self.props, on_property_changed=self.on_props)
+        left.prop(self.props, on_property_changed=self.on_props, pass_rootname=True)
         self._hint = left.text('', size=10, color=_HINT_YELLOW, padding=(6, 2))
         self._btn_update = left.button(
             bilingual('更新安装包', 'Update Installer'),
@@ -68,7 +68,7 @@ class VersionControl(mineprep.Mod):
         if name == 'ClearDest':
             self._sync_right()
         self._sync_hint()
-        if name in ('TargetDir', 'UpdateInstaller'):
+        if name in ('TargetDir', 'UpdateInstaller', 'UseModManifest'):
             self._refresh_maps(name)
 
     def on_script(self, name):

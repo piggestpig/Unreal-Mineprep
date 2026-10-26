@@ -25,4 +25,4 @@ CSV 保留原来的文件名、列序、已有译文复用和中文填充规则�
 
 可选的 `on_progress(text)` 和 `on_done(job)` 回调都在 UE 主线程调用。任务先返回句柄再扫描，即使目录为空也会正常通知完成。一个 CSV 目录同一时间只运行一个收集或刷新操作。
 
-面板的“取消”保留阶段结果，关闭面板或卸载模组丢弃未提交的 CSV。原 `iter_gather(props, on_status, is_closed, out=None)` 仍可用；新脚本直接使用上面的入口即可。
+面板的“取消”按钮保留已收集的阶段结果，关闭面板或卸载模组则丢弃本轮未提交的 CSV。兼容接口 `iter_gather(props, on_status, is_closed, out=None)` 继续可用；脚本调用推荐使用 `start_gather`。

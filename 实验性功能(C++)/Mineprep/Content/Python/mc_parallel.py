@@ -1,5 +1,8 @@
 import threading
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 from concurrent.futures import Future
 from functools import wraps
 from mc_utils import throw, warn

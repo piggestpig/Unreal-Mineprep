@@ -9,8 +9,8 @@ class BakeAnimProps(mineprep.PropertyGroup):
     """左栏：已有 MC_VAT 时烘焙动画组。数组下标即动画组索引。"""
     DataAsset: unreal.SoftObjectPath = (None, {'AllowedClasses': MC_VAT_CLASS_PATH})
     AnimSeq: list[unreal.AnimSequence] = [None, None, None]
-    bOverrideFramerate: bool = False
-    Framerate: int = (60, {'UIMin': 24, 'UIMax': 120, 'ClampMin': 1, 'EditCondition':"bOverrideFramerate", 'EditConditionHides':True})
+    bOverrideFramerate: bool = (False, {'InlineEditConditionToggle': True})
+    Framerate: int = (60, {'UIMin': 24, 'UIMax': 120, 'ClampMin': 1, 'EditCondition': 'bOverrideFramerate'})
 
 BakeAnimProps.localize('BakeAnimProps', '烘焙动画', 'Bake Anim', '烘焙動畫')
 BakeAnimProps.localize('DataAsset', '动画数据集', 'Anim Data Asset', '動畫數據集')

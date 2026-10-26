@@ -1,4 +1,4 @@
-"""Pure template composition, naming, identities and rigid bone remapping."""
+"""多生物模板合并、自动命名、配方标识与骨骼映射。"""
 from collections import Counter
 from dataclasses import replace
 import hashlib
@@ -51,7 +51,7 @@ def aggregate_entry(entries, name, expansion, random_scale=0.):
 
 
 def combine(entries, models, skins, expansion, random_scale=0.):
-    """First occurrence owns each bone. Caller must approve returned conflicts."""
+    """按选择顺序合并多个生物模板的几何与骨骼；同名骨骼优先保留首个模板的定义，并返回冲突列表。"""
     recipe(entries, expansion, random_scale)
     if not entries or len(entries) != len(models) or len(entries) != len(skins):
         raise ValueError('Composition requires one model and skin per selection')
@@ -65,7 +65,7 @@ def combine(entries, models, skins, expansion, random_scale=0.):
             leaf = part['name'].casefold()
             path = paths.get(part['parent'], ()) + (leaf,)
             paths[i] = path
-            # A duplicated name inside one source must never collapse.
+            # 同一模板内若存在同名部位，按完整层级路径与出现次序区分
             identity = ('name',leaf) if counts[leaf] == 1 else ('path',path)
             occurrence = occurrences.get(identity, 0)
             occurrences[identity] = occurrence+1

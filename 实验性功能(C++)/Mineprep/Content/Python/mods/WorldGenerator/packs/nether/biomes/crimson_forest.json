@@ -1,0 +1,15 @@
+{
+  "id": "crimson_forest",
+  "name": {"zh": "绯红森林", "en": "Crimson forest"},
+  "color": "#992E36",
+  "climate": [{"crimson_region": ["$crimson.biome_threshold", 2]}],
+  "surface": [{"top": "netherrack", "under": "netherrack", "deep": "netherrack"}],
+  "features": {
+    "crimson_fungi": {"surface": ["crimson_nylium"], "density": "$crimson.density", "patch_scale": 96, "max_slope": 0},
+    "ceiling_lava": {"surface": ["netherrack"], "density": "$lava_columns.density", "patch_scale": 128, "max_slope": 0},
+    "ceiling_glowstone": {"surface": ["netherrack"], "density": "$glowstone.density", "patch_scale": 128, "max_slope": 0},
+    "floor_fire": {"surface": ["netherrack"], "density": "$fire.density"},
+    "ground_crimson_fungus": {"surface": ["crimson_nylium"], "density": "$crimson.fungus_density"},
+    "ground_crimson_roots": {"surface": ["crimson_nylium"], "density": "$crimson.roots_density"}
+  }
+}

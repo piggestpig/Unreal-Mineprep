@@ -1,8 +1,12 @@
 import json
 import inspect
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 import uuid
 import random
+import weakref
 import mcvars
 from pathlib import Path
 from mc_utils import (construct, uasset, enum, uclass, copy, debug, SafeList,
@@ -187,6 +191,91 @@ def _from_jsonable(group, name, raw, hint=None, *, expected_type=None, live_map=
     return raw
 
 
+def _property_sample(value):
+    """将属性值包装为可比较的对象，并返回是否需要拷贝保存快照。"""
+    if isinstance(value, (unreal.StructBase, unreal.Text)):
+        # 部分 UE 结构体未实现 Python 判等，放入单元素 Array 后可借助底层 FProperty::Identical 比较
+        return unreal.Array.cast(type(value), (value,)), False
+    if isinstance(value, (unreal.Array, unreal.FixedArray, unreal.Set, unreal.Map)):
+        return value, True
+    if value is None or isinstance(value, (bool, int, float, str, unreal.Name,
+                                           unreal.EnumBase, unreal.Object)):
+        return value, False
+    raise TypeError(f'unsupported property value: {type(value).__name__}')
+
+
+class _RootPropertyState:
+    """记录 PropertyGroup 各顶层字段的快照，用于在 DetailsView 修改子属性时识别实际发生变化的顶层字段。"""
+    def __init__(self, group):
+        self.names = tuple(type(group)._schema_[3])
+        self.values = {}
+        self.dispatching = False
+        self.sync(group)
+
+    def sync(self, group, names=None):
+        changed, updates = [], {}
+        for name in self.names if names is None else names:
+            try:
+                value, needs_copy = _property_sample(group.uobject.get_editor_property(name))
+                if (name not in self.values or type(value) is not type(self.values[name])
+                        or value != self.values[name]):
+                    changed.append(name)
+                    updates[name] = value.copy() if needs_copy else value
+            except Exception as exc:
+                raise TypeError(f'cannot track property {name}: {exc}') from exc
+        # 所有字段均读取成功后再更新快照，避免中途异常导致状态不一致
+        self.values.update(updates)
+        return changed
+
+
+def _release_property_state(group_ref):
+    group = group_ref()
+    if group is not None and not any(binding.root for binding in group._prop_view_bindings):
+        object.__setattr__(group, '_prop_change_state', None)
+
+
+class _PropertyViewBinding:
+    def __init__(self, group, user, *, root=False, fixed_name=None):
+        self.group, self.user, self.root, self.fixed_name = group, user, root, fixed_name
+        if root and getattr(group, '_prop_change_state', None) is None:
+            state = _RootPropertyState(group)  # 在创建控件前先校验并初始化属性快照
+            object.__setattr__(group, '_prop_change_state', state)
+        bindings = getattr(group, '_prop_view_bindings', None)
+        if bindings is None:
+            bindings = weakref.WeakSet()
+            object.__setattr__(group, '_prop_view_bindings', bindings)
+        bindings.add(self)
+        if root:
+            weakref.finalize(self, _release_property_state, weakref.ref(group))
+
+    def __call__(self, name=None):
+        group = self.group
+        state = getattr(group, '_prop_change_state', None)
+        if state is not None and state.dispatching:
+            return
+        if state is not None:
+            state.dispatching = True
+        try:
+            roots = state.sync(group) if state is not None else ()
+            if getattr(group, '_autosave_', False):
+                group.save()
+            if self.user:
+                if self.root:
+                    for root in roots:
+                        self.user(root)
+                else:
+                    event_name = self.fixed_name
+                    if event_name is None:
+                        event_name = str(name) if name else ''
+                    self.user(event_name)
+        finally:
+            if state is not None:
+                try:
+                    state.sync(group)
+                finally:
+                    state.dispatching = False
+
+
 class PropertyGroup:
     """自定义属性集，需要实例化再引用成员变量"""
     _unique_ = False
@@ -200,6 +289,8 @@ class PropertyGroup:
     _ue_class_name_ = None
     _schema_ = None  # (properties, defaults, metas, ordered)
     _instance_ = None  # _unique_ 单例
+    _prop_change_state = None  # 启用 pass_rootname 时按需创建的属性快照
+    _prop_view_bindings = None  # 活跃属性视图的弱引用集合，不参与持久化
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -375,8 +466,17 @@ class PropertyGroup:
             elif isinstance(value, str):
                 value = unreal.SoftObjectPath(value)
         self._uobj.set_editor_property(name, value)
+        state = getattr(self, '_prop_change_state', None)
+        if state is not None:
+            state.sync(self, (name,))
         if type(self)._autosave_:
             self.save()
+
+    def sync_property_changes(self):
+        """在原地修改数组/结构体或直接写入 uobject 后，同步属性变更快照（不触发回调）。"""
+        state = getattr(self, '_prop_change_state', None)
+        if state is not None:
+            state.sync(self)
 
     def _json_path(self, path=''):
         if path:
@@ -431,6 +531,8 @@ class PropertyGroup:
                     self, name, raw, expected_type=expected, live_map=True))
             except Exception as exc:
                 debug(f'{cls_name}.{name}: {exc}')
+
+        self.sync_property_changes()
 
     @classmethod
     def localize(cls, source: str, *args, **kwargs):
@@ -547,6 +649,9 @@ class Layout():
     """
     target = None
     _public_ = False
+
+    first: 'Layout' = None
+    second: 'Layout' = None
 
     def __str__(self):
         return f"{self.target.get_name() if self.target else 'None'}"
@@ -671,12 +776,24 @@ class Layout():
     def prop(self, data: unreal.Object | PropertyGroup, property: str=None, text: str=None,
              categories: list[str]=None, properties: list[str]=None, searching=False,
              on_property_changed: Callable[[str], Any]=None,
+             pass_rootname: bool=False,
              **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
         """添加属性视图；指定 property 为单属性，否则为完整细节面板。
         data 可为 UObject 或已实例化的 PropertyGroup。
-        完整细节面板可指定 categories / properties / searching
+        完整细节面板可指定 categories / properties / searching。
+        pass_rootname=True 时，PropertyGroup 完整视图按值变化回传顶层字段名。
         """
+        if not isinstance(pass_rootname, bool):
+            raise TypeError('pass_rootname must be bool')
         obj = resolve_prop_object(data)
+        is_group = any(base.__name__ == 'PropertyGroup' for base in type(data).__mro__)
+        if pass_rootname and not property and not is_group:
+            raise TypeError('pass_rootname requires a PropertyGroup for a full DetailsView')
+        binding = None
+        if is_group:
+            binding = _PropertyViewBinding(data, on_property_changed,
+                root=bool(pass_rootname and not property and on_property_changed),
+                fixed_name=str(property) if pass_rootname and property else None)
         if property:
             viewer = add_widget(self.target, unreal.SinglePropertyView, **kwargs)
             viewer.set_object(obj)
@@ -693,12 +810,15 @@ class Layout():
                 viewer.set_editor_property('allow_filtering', True)
             viewer.set_object(obj)
 
-        if on_property_changed or getattr(data, '_autosave_', False):
+        if binding is not None:
+            # 即使当前视图未开启 pass_rootname，修改后也需同步同一 PropertyGroup 的属性快照
+            viewer.on_property_changed.add_callable(binding)
+        elif on_property_changed or getattr(data, '_autosave_', False):
             pg, user = data, on_property_changed
             viewer.on_property_changed.add_callable(
                 lambda n=None: (
                     pg.save() if getattr(pg, '_autosave_', False) else None,
-                    user(str(n) if n else '') if user else None,
+                    user(str(property) if pass_rootname and property else str(n) if n else '') if user else None,
                 )
             )
         return Layout(viewer, public=self._public_)
@@ -729,9 +849,9 @@ class Layout():
 
 
     def image(self, image=None, color=unreal.LinearColor(1, 1, 1, 1), size=unreal.Vector2D(64, 64),
-              **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
+              padding=(1,1), **kwargs: padding_align_fill_clip_tooltip_hidden_subclass):
         """添加图片控件。不传入image为空白；标量 size 在有贴图时按比例，无贴图时为正方形。"""
-        image_widget = add_widget(self.target, unreal.Image, **kwargs)
+        image_widget = add_widget(self.target, unreal.Image, padding=padding, **kwargs)
         tex = uasset(image) if image is not None else None
         if tex:
             image_widget.set_brush_resource_object(tex)
@@ -925,7 +1045,7 @@ class Layout():
                 def wrapped(item):
                     key = str(item)
                     if key == 'None' and key not in texts and ('' in texts or not keys):
-                        key = ''  # FName('') is NAME_None; preserve its display label.
+                        key = ''  # FName('') 会变成 'None'，若选项定义了空字符串键则还原回 ''
                     return make_combo_text(key, texts=texts, outer=box)
                 return wrapped
             def wrapped(item):
@@ -967,8 +1087,7 @@ class Layout():
         node._combo_keys = keys
         node._combo_gen_content = gen_content
         node._combo_gen_item = gen_item
-        # Attaching to a live parent can immediately build Slate and generate content.
-        # Bind both generators and set the initial selection before that happens.
+        # 挂载到父控件时可能立即触发 Slate 构建，需在此之前绑定生成回调并设置初始选中项
         add_widget(self.target, box, **kwargs)
         if on_selection_changed:
             def on_sel(name, reason):

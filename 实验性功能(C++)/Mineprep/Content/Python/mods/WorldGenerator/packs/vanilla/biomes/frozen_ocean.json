@@ -1,0 +1,16 @@
+{
+  "id": "frozen_ocean", "name": {"zh": "冻洋", "en": "Frozen ocean"}, "color": "#9FC8F2",
+  "climate": [{"water_kind": [1, 1], "shore_depth": [0, null], "frozen_ocean_mask": [0.5, null]}],
+  "surface": [
+    {"when": {"surface_rock": {"min": 0}}, "top": "stone", "under": "stone", "deep": "stone"},
+    {"when": {"shore_depth": {"max": "$surface.shallow_depth"}, "seabed_deposit_kind": {"min": 0}}, "top": "gravel", "under": "sand", "deep": "stone"},
+    {"when": {"shore_depth": {"max": "$surface.shallow_depth"}}, "top": "dirt", "under": "dirt", "deep": "stone"},
+    {"top": "sand", "under": "sand", "deep": "stone"}
+  ],
+  "features": {
+    "seagrass_simple": {"surface": ["sand", "gravel", "dirt"], "density": "$aquatic.seagrass_density", "patch_scale": "$aquatic.patch_scale", "max_slope": "$aquatic.max_slope", "enabled_param": "aquatic.enabled"},
+    "seagrass": {"surface": ["sand", "gravel", "dirt"], "density": "$aquatic.seagrass_density", "patch_scale": "$aquatic.patch_scale", "max_slope": "$aquatic.max_slope", "enabled_param": "aquatic.enabled"},
+    "kelp": {"surface": ["sand", "gravel", "dirt"], "density": "$aquatic.kelp_density", "patch_scale": "$aquatic.patch_scale", "max_slope": "$aquatic.max_slope", "enabled_param": "aquatic.enabled"},
+    "iceberg": {"surface": ["water_surface"], "density": "$frozen_ocean.iceberg_density", "patch_scale": "$frozen_ocean.iceberg_patch_scale", "max_slope": 0, "enabled_param": "frozen_ocean.enabled"}
+  }
+}

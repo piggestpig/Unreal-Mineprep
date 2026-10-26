@@ -1,0 +1,22 @@
+{
+  "id": "birch_forest",
+  "name": {"zh":"白桦林","en":"Birch forest"},
+  "color": "#6D9B47",
+  "vegetation_tint": [1.00, 1.03, 0.95],
+  "vegetation_hsv": [0.99, 0.90, 1.03],
+  "climate": [{"temperature":[-0.15,null],"humidity":[-0.2,null],"forest_region":[0.25,null]}],
+  "surface": [
+    {"when":{"surface_rock":{"min":0}},"top":"stone","under":"stone"},
+    {"when":{"shore_depth":{"min":0,"max":"$surface.shallow_depth"}},"top":"dirt","under":"dirt","deep":"stone"},
+    {"top":"grass_block","under":"dirt","deep":"stone"}
+  ],
+  "features": {
+    "rocks": {"surface":["grass_block","stone","andesite"],"density":"$decorations.rock_density","patch_scale":"$decorations.patch_scale","max_slope":"$decorations.max_slope","enabled_param":"decorations.enabled"},
+    "fallen_logs": {"surface":["grass_block"],"density":"$decorations.log_density","patch_scale":"$decorations.patch_scale","max_slope":"$decorations.max_slope","enabled_param":"decorations.enabled"},
+    "grass_simple": {"surface":["grass_block"],"density":"$vegetation.grass_density","patch_scale":"$vegetation.patch_scale","max_slope":"$vegetation.max_slope","enabled_param":"vegetation.enabled"},
+    "grass": {"surface":["grass_block"],"density":"$vegetation.grass_density","patch_scale":"$vegetation.patch_scale","max_slope":"$vegetation.max_slope","enabled_param":"vegetation.enabled"},
+    "birch": {"surface":["grass_block"],"density":"$forest.birch_density","patch_scale":"$trees.patch_scale","max_slope":"$trees.max_slope","enabled_param":"trees.enabled"},
+    "tall_grass": {"surface":["grass_block"],"density":"$vegetation.tall_grass_density","patch_scale":"$vegetation.patch_scale","max_slope":"$vegetation.max_slope","enabled_param":"vegetation.enabled"},
+    "tall_flowers": {"surface":["grass_block"],"density":"$vegetation.tall_flower_density","patch_scale":"$vegetation.patch_scale","max_slope":"$vegetation.max_slope","enabled_param":"vegetation.enabled"}
+  }
+}

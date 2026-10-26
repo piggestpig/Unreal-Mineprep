@@ -1,0 +1,59 @@
+{
+  "id": "end",
+  "format_version": 2,
+  "version": 5,
+  "name": {"zh": "末地", "en": "The End"},
+  "description": {"zh": "末地石浮岛与紫颂树；完整布局保留中央岛、黑曜石柱和宽阔虚空。", "en": "Floating End-stone islands and chorus trees; full layout adds the central island and obsidian pillars."},
+  "modules": ["terrain"],
+  "height_field": "height",
+  "reference_mask_field": "island_presence",
+  "density": {"field": "end_solid", "base": "volume"},
+  "shell_materials": {"sampler": "terrain:materials", "blocks": ["obsidian", "bedrock"]},
+  "surface_processors": [
+    {"id": "end_monuments", "function": "monuments:apply", "blocks": ["end_portal_surface"], "radius": 0, "volume": true, "sky_only": true}
+  ],
+  "mask_categories": {"vegetation": ["chorus"], "clearance": ["chorus"]},
+  "biome_parameters": {"end_biome": 1},
+  "biomes": ["the_end", "end_highlands", "end_midlands", "end_barrens", "small_end_islands"],
+  "default_preset": "",
+  "preset_menu": ["full_end"],
+  "pages": {
+    "world": {"zh": "世界", "en": "World"},
+    "end": {"zh": "浮岛", "en": "Islands"},
+    "chorus": {"zh": "紫颂树", "en": "Chorus trees"},
+    "monuments": {"zh": "中央岛屿", "en": "Central island"},
+    "surface": {"zh": "地表", "en": "Surface"}
+  },
+  "ui_sections": {
+    "world": {"label": {"zh": "世界范围", "en": "World range"}, "pages": ["world"]},
+    "end": {"label": {"zh": "浮岛", "en": "Islands"}, "pages": ["end"]},
+    "chorus": {"label": {"zh": "紫颂树", "en": "Chorus trees"}, "pages": ["chorus"], "controls": ["chorus.enabled"]},
+    "monuments": {"label": {"zh": "中央岛屿", "en": "Central island"}, "pages": ["monuments"]},
+    "surface": {"label": {"zh": "地表", "en": "Surface"}, "pages": ["surface"], "editor": "surface"}
+  },
+  "params": {
+    "world.y_min": {"type": "int", "default": 0, "min": -1024, "max": 4095, "label": {"zh": "裁切下界", "en": "Crop bottom"}},
+    "world.y_max": {"type": "int", "default": 160, "min": -1023, "max": 4096, "label": {"zh": "裁切上界", "en": "Crop top"}},
+    "world.sea_level": {"type": "float", "default": 32, "advanced": true, "label": {"zh": "诊断参考高度", "en": "Diagnostic height reference"}},
+    "surface.soil_depth": {"type": "int", "default": 3, "min": 0, "max": 16, "advanced": true, "label": {"zh": "表层深度", "en": "Surface depth"}},
+    "surface.boundary_scale": {"type": "float", "default": 16, "min": 1, "max": 256, "advanced": true, "label": {"zh": "表层边界尺度", "en": "Surface boundary scale"}},
+    "surface.patch_scale": {"type": "float", "default": 16, "min": 1, "max": 256, "advanced": true, "label": {"zh": "材料斑块尺度", "en": "Material patch scale"}},
+    "end.layout": {"type": "str", "default": "outer", "advanced": true, "label": {"zh": "布局（outer／full）", "en": "Layout (outer/full)"}},
+    "end.center_x": {"type": "int", "default": 0, "min": -10000000, "max": 10000000, "label": {"zh": "主岛中心X（格）", "en": "Main island center X"}},
+    "end.center_z": {"type": "int", "default": 0, "min": -10000000, "max": 10000000, "label": {"zh": "主岛中心Y（格）", "en": "Main island center Y"}},
+    "end.main_radius": {"type": "float", "default": 96, "min": 64, "max": 512, "label": {"zh": "主岛半径（格）", "en": "Main island radius"}},
+    "end.outer_start": {"type": "float", "default": 1024, "min": 256, "max": 8192, "label": {"zh": "外岛起始距离（格）", "en": "Outer island start distance"}},
+    "end.scale": {"type": "float", "default": 128, "min": 48, "max": 384, "label": {"zh": "外岛尺度（格）", "en": "Outer island scale"}},
+    "end.density": {"type": "float", "default": 0.85, "min": 0, "max": 1, "label": {"zh": "外岛疏密", "en": "Outer island density"}},
+    "end.height": {"type": "float", "default": 64, "min": -512, "max": 2048, "label": {"zh": "浮岛高度（格）", "en": "Island elevation"}},
+    "end.relief": {"type": "float", "default": 12, "min": 0, "max": 64, "label": {"zh": "外岛高低变化（格）", "en": "Outer island height variation"}},
+    "end.thickness": {"type": "float", "default": 36, "min": 8, "max": 128, "label": {"zh": "浮岛厚度（格）", "en": "Island thickness"}},
+    "chorus.enabled": {"type": "bool", "default": true, "label": {"zh": "生成紫颂树", "en": "Generate chorus trees"}},
+    "chorus.whole_tree": {"type": "bool", "default": true, "enabled_param": "chorus.enabled", "label": {"zh": "整棵紫颂树", "en": "Whole chorus trees"}, "tooltip": {"zh": "关闭后逐方块输出，沿用相同的树形、选址和避让。", "en": "Disable for individual blocks with the same shapes, placement and clearance."}},
+    "chorus.density": {"type": "float", "default": 0.55, "min": 0, "max": 1, "enabled_param": "chorus.enabled", "label": {"zh": "紫颂树密度", "en": "Chorus density"}},
+    "chorus.spacing": {"type": "int", "default": 8, "min": 6, "max": 64, "enabled_param": "chorus.enabled", "label": {"zh": "候选间距（格）", "en": "Candidate spacing"}},
+    "chorus.max_slope": {"type": "float", "default": 1.4, "min": 0, "max": 8, "advanced": true, "enabled_param": "chorus.enabled", "label": {"zh": "最大坡度", "en": "Maximum slope"}},
+    "monuments.pillars": {"type": "bool", "default": true, "label": {"zh": "黑曜石柱", "en": "Obsidian pillars"}},
+    "monuments.portal": {"type": "bool", "default": true, "label": {"zh": "返回传送门祭坛", "en": "Exit portal fountain"}}
+  }
+}

@@ -1,10 +1,8 @@
 # Mineprep API reference
 
-Examples marked complete include their setup. Other snippets are API or callback fragments: names such as `self`, `layout`, `mesh` and `anim` come from the surrounding task. Syntax validation alone does not make a fragment standalone.
-
 Facade: `Plugins/Mineprep/Content/Python/mineprep.py`  
 Prefer `mineprep.*`. Use `obj.help()` / `mineprep.help()` for on-screen tips.  
-`unreal.*` class/method names: [UE5 Python API](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/) for the installed version. If a call fails or the skill is silent, read the matching source. Probe in-editor when runtime verification is in scope; keep necessary error handling, but do not hide guessed APIs behind `try/except`.
+`unreal.*` class/method names: [UE5 Python API](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/) for the installed version. If a call fails or the skill is silent, read the matching source.
 
 ```python
 import mineprep
@@ -12,24 +10,26 @@ import mineprep
 # mineprep.reload()
 ```
 
+Outside Unreal, the public modules use `mc_utils.Lazy` as an `unreal` placeholder and skip editor config loading so pure-Python helpers and tests can import them offline. Functions that touch Unreal still require the editor runtime.
+
 ## Quick map
 
 | Area | API |
 |------|-----|
 | Help | `mineprep.help()`, handle `.help()` |
-| World | `actor` / `actors`, `component` / `components`, `materials` |
+| World | `actor` / `actors`, `selected`, `component` / `components`, `materials` |
 | Sequencer | `sequencer`, `bindings`, `tracks`, `sections`, `channels`, `keys`, `keyframe`, `Rig` / `actor.rig` |
 | Plugin UI | `panel`, `toolbar`, `hotkey` |
 | Editor UI | `Layout`, `ui(...)`, `PropertyGroup`, `save` / `load`, `_autosave_` |
 | Mods | `Mod`, `mods.register` / `unregister` / `register_all` |
 | Loc | `bilingual`, `localize`, `loctext`, `tooltip` |
 | Spawn | `spawn_block/item/mob/preset`, `attach`, `spawn_blocks`, `spawn_structure`, `Blocks`, `structure_parts`, `get_all_blocks` |
-| Mesh | `merge_skm` |
-| Assets | `uasset`, `uclass`, `bpclass`, `construct`, `copy` |
+| Mesh | `merge_skm`, `Blocks.bake` |
+| Assets & Config | `uasset`, `uclass`, `bpclass`, `construct`, `copy`, `config`, `paths` |
 | Blueprint libs | `BPLib`, `EditorBPLib`, `BPLibCaller` — call a Blueprint function library by function, attribute, or subscript. Not `unreal.mineprep` |
 | Utils | `prints`, `warn`, `throw`, `panic`, `undo`, `world`, `cast`, `enum`, `startfile`, `dialog`, file dialogs, `send2trash`, `screenshot` |
 | Parallel | `delay`, `tick`, `asynctask`, `thread`, `asyncthread`, `until` — [parallel.md](parallel.md) |
-| Prep | `prep_texture`, `colorize_material`, `load_mcprep_data`, `tex_to_color`, `color_to_tex`, `ColorList` |
+| Prep & Textures | `prep_texture`, `colorize_material`, `load_mcprep_data`, `tex_to_color`, `color_to_tex`, `ColorList`, `tex_source_files`, `export_tex_cache`, `import_data_tex`, `register_biome_tex`, `clear_biome_tex` |
 | Experimental C++ | `unreal.mineprep.*` — last resort after `mineprep.*`; [cpp.md](cpp.md) |
 
 ## Handles (actors / components / materials)
@@ -153,103 +153,59 @@ mineprep.panel('渲染输出子面板.画质预设选项').select(-1)
 mineprep.panel('渲染输出子面板.ue一键渲染按钮').click(-1)
 ```
 
-Sky blueprint: `/Game/Mineprep/MC_Blueprint/Core/天空/MC天空`. The button keeps a single actor of that class. `SelectActor` can fail with invalid flags, so confirm that class count, not the current selection. `yield` (or `until`) between the quality preset and the render click. One-click render writes `Saved/MovieRenders/` (observed file `MC.mp4`).
+Sky blueprint: `/Game/Mineprep/MC_Blueprint/Core/天空/MC天空`. The button keeps a single
+actor of that class; selection alone does not prove creation. Allow an editor
+frame after changing the quality preset before starting a render. One-click
+render uses `Saved/MovieRenders/`; inspect the active output settings for filenames.
+`MoviePipelineQueueSubsystem.is_rendering() == False` means idle, not necessarily
+a successful render. Check completion/error information and the requested output.
 
 ## Spawn
 
 ### Place one mob, item or block
 
-For a simple placement request, call the matching helper directly. Example:
+Call the matching helper directly (English or Chinese names both work):
 
 ```python
 import mineprep
 
-spawned = mineprep.spawn_mob('Blaze')
+spawned = mineprep.spawn_mob('Blaze')  # or '烈焰人'
 ```
 
-The Chinese name is also accepted: `mineprep.spawn_mob('烈焰人')`.
-These are alternatives; do not execute both for a request to place one mob.
-Without `loc`, the generator Blueprint attempts placement in front of the editor
-camera. Supply `loc`, `rot` or `scale` only when the user requests a particular
-placement. Do not first calculate camera offsets, inspect panel state, enumerate
-mob options or search for Blueprint assets when the requested mob is known.
-
-Other helpers: `spawn_block('stone')`, `spawn_item('diamond')`,
-`spawn_mob('zombie', baby=True)`, `spawn_preset(name)` and `attach(name)`.
-`attach` uses the current selection. These APIs run through generator widgets;
-that dependency is a troubleshooting concern, not a mandatory preflight.
-After a successful call, use the returned actor as evidence; inspect its placement
-only when the task calls for it.
+Without `loc`, the generator places in front of the editor camera; pass `loc`, `rot`, or `scale` for explicit placement. Other helpers: `spawn_block('stone')`, `spawn_item('diamond')`, `spawn_mob('zombie', baby=True)`, `spawn_preset(name)`, `attach(name)` (attaches to current selection).
 
 ### Recover a failed placement
 
-- Missing-panel / cache errors: call `mineprep.open_main_panel()`. It reuses an
-  existing main-panel widget or opens one, but does not wait for Blueprint cache
-  registration. Let the editor run for about one second before checking the
-  specific missing widget in a subsequent call. Wait on the host or schedule a
-  game-thread callback; do not block the editor with `time.sleep()`.
-- Retry the original placement once only after confirming it did not already
-  create an actor and the missing widgets are ready. A timeout, `None` result or
-  an `不存在` warning alone does not prove that nothing spawned. If the outcome
-  is uncertain, inspect the relevant scene state before retrying; do not loop
-  through panel opening, reload or repeated spawn calls.
-- Query `mineprep.panel('生成器子面板.放置生物选项').get(list)` only when the requested name
-  is unknown or fails after the generator is ready. Known names do not require
-  option enumeration. If the ready options list lacks that species, use the
-  VanillaMobLoader fallback below. Other persistent errors need focused diagnosis.
-
-For backend debugging, `spawn_helper` reads the actor from `mcvars.ActorCache`.
-An actor can appear despite an error if a Blueprint writes `mineprep.ActorCache`
-instead. Inspect that handshake when the symptom occurs; it is not normal setup.
-
-### Mob missing from the generator
-
-The generator's list is not the full supported mob catalog. Once absence is
-confirmed and no actor was already created, use `mods.VanillaMobLoader` directly.
-The user's placement request covers this alternate route; no extra approval or
-mod-panel opening is needed. Start with these public calls and the
-[mod README](../mods/VanillaMobLoader/README.md), not a scan of its implementation.
-
-Run these stages in separate editor calls, allowing frames between them:
+1. **Missing generator panel / cache**: call `mineprep.open_main_panel()`, let the editor run ~1s in a separate call (do not block UE with `time.sleep()`), then verify the widget is cached.
+2. **Verify before retrying**: a `None` return or `不存在` warning can still happen if a Blueprint wrote `mineprep.ActorCache` instead of `mcvars.ActorCache`. Check the level before calling `spawn_*` again.
+3. **Unknown mob name**: once the generator is ready, query `mineprep.panel('生成器子面板.放置生物选项').get(list)`. If the species is not in that list and no actor was created, fall back to `mods.VanillaMobLoader` ([README](../mods/VanillaMobLoader/README.md)) across separate editor calls:
 
 ```python
+# 1. Start catalog job
 from mods.VanillaMobLoader import api as mob_api, importer as mob_importer
-mob_catalog_job = mob_api.load_catalog()  # cached catalog first
+mob_catalog_job = mob_api.load_catalog()
 ```
 
-When `mob_catalog_job.state == 'completed'`, search using the English species
-name/identifier across all categories. For example, 鹦鹉螺 is `nautilus`, not
-`parrot`. Return only matching keys/names, not the whole catalog:
-
 ```python
+# 2. When mob_catalog_job.state == 'completed', search by English name
 mob_catalog = mob_catalog_job.result['catalog']
 mob_matches = mob_catalog.search(category='ALL', query='nautilus')
 [(e.key, e.id, e.name) for e in mob_matches]
 ```
 
-Choose the actual matching entry; inspect the short list if there are variants.
-The following example assumes one unambiguous match. Do not invent catalog keys:
-
 ```python
+# 3. Build the chosen entry
 assert len(mob_matches) == 1, 'Select the intended entry from the matches first'
 mob_build_job = mob_api.build_entity(mob_catalog, [mob_matches[0].key])
 ```
 
-Once `mob_build_job.state == 'completed'`, place exactly once:
-
 ```python
+# 4. When mob_build_job.state == 'completed', place once (pass target=(loc, False) for explicit position)
 placed_mob = mob_importer.place(mob_build_job.result['mesh'])
 placed_mob
 ```
 
-Default placement uses the current viewport; provide `target=(location, False)`
-only for an explicit position. Building creates/reuses assets but does not place
-an actor. Check the returned actor and mesh as the postcondition. For running
-jobs, query only `state/error` in a later call; never block UE or restart the job
-to poll. On failure inspect its error and relevant warnings before retrying.
-If the cached catalog has no match, refresh the catalog once with
-`load_catalog(refresh=True)` and search again; do not refresh every thumbnail.
-If still absent, report that limitation rather than placing a different species.
+If the cached catalog has no match, try `mob_api.load_catalog(refresh=True)` once. Never busy-wait on running jobs.
 
 ### Structures and repeated blocks
 
@@ -259,16 +215,22 @@ These APIs still require the Unreal Editor and Mineprep assets; this is not a cl
 mineprep.spawn_blocks(mesh, transforms, loc=(0, 0, 0), rot=(0, 0, 0))
 mineprep.spawn_structure(
     r'C:\path\file.nbt', loc=(0, 0, 0), rot=(0, 0, 0),
-    gpu=0, cull=0, merge=0, reload=False, name='', center=False)
+    gpu=0, cull=0, merge=0, reload=False, name='', center=False, groups=1,
+    repair_trapdoors=False)
 # source: file path or Blocks (not filepath=)
 # gpu=0 ISM instances, 1=PCG actor, 2=Niagara actor
-# cull=0 off, 1=per-type, 2=unified interior, 3=2+AABB sides&bottom (keep top)
+# groups: PCG balances type counts; Niagara optimizes rendering cost
+# GPU palettes cap at 256 types/actor; groups increases automatically with warn
+# see structure.md for per-group texture naming/overwrite behavior
+# cull=0 off, 1=per-type, 2=opaque + same-type transparent interior,
+# 3=2+AABB sides&bottom (keep top); water keeps its same-fluid interior rule
 # merge=0 off, 1=1D runs, 2=2D quads, 3=3D boxes (full cubes only; after cull)
 # reload=True re-imports JSON meshes that already exist under /Game/mc/...
 # name overrides the source name used for actor labels/folders and GPU textures
 # center=False: files and Blocks both preserve grid coordinates
 # center=True: anchor original grid bounds at their bottom-center before cull/merge
 # Blocks also offers b.spawn(gpu=1, merge=3), returning the same Actor list
+# repair_trapdoors=True opts into neighbour-based repair for faulty file exports
 mineprep.import_block(path, asset_name='oak_stairs', reload=False)
 mineprep.import_item(path)
 mineprep.resolve_block_json_path('oak_stairs')  # models/block/*.json
@@ -288,7 +250,7 @@ float32 dict of instance **centers**, encoded rotation and local scale. The
 fixed model pivot is MC `(8,8,8)`, not each model's actual bounds center.
 See the [offline example](structure.md#offline-batch-math).
 
-For procedural structures, use a supplied file or `Blocks` → `spawn_structure(source=...)`; do not assume a matching tree/house NBT is bundled. Generator presets are a separate UI feature, not a file source for `spawn_structure`.
+For procedural structures, use a supplied file or `Blocks` → `spawn_structure(source=...)`; do not assume a matching tree/house NBT is bundled. Terrain, biomes and buildings composed with terrain use [WorldGenerator](worldgenerator.md); its presets are not file sources for `spawn_structure`.
 
 Example oak — two 5×5 canopy layers (corners off) plus two 5-leaf cross layers on top (`r=1` also skips corners). This is one composition example, not a required starting shape for other structures. Execute only when editor work is requested; otherwise provide the snippet (Output Log, console = **Python**):
 
@@ -323,10 +285,25 @@ Houses / wells can use `Blocks` + loops; choose geometry for the requested desig
 ```python
 b.add('oak_stairs', 0, 0, 0, facing='east', shape='straight', half='bottom')
 b.add('oak_fence', 1, 0, 0)
-b.connect_fences()
+b.connect()  # fences/panes/bars/walls, gate in_wall and stair corners
 ```
 
 User-supplied `.nbt` → `spawn_structure(source=path)` (or `Blocks.from_file`).
+Direct file placement uses numeric palette data; `Blocks.from_file` creates
+editable cells. See [file processing](structure.md#file-processing-and-editable-cells).
+`b.bounds()` returns current non-air `(lo, hi)` in MC XYZ (exclusive hi), or
+`None`; read-only `b.source_size` retains original file dimensions, or `None`
+for ordinary construction. See [bounds and source dimensions](structure.md#cell-bounds-and-source-dimensions).
+`Blocks.from_file`, `parse_structure` and `spawn_structure` default to
+`repair_trapdoors=False`, preserving authored trapdoor facing.
+`b.connect(families=None, positions=None)` can limit recomputation by family
+and existing cell positions while reading neighbours from the full container.
+
+`Blocks.rotate(90, pivot=(0,0,0))` and `Blocks.mirror('x', pivot=0.5)` transform
+cells and Java states in place. Positive rotation maps north to east; pivots use
+MC cell-centre coordinates. `connect_fences()` remains the fence/pane/bar-only
+entry. Full contracts, offline `mc_blockstates` and state-only
+`rotate_state` / `mirror_state`: [structure.md](structure.md#connections-and-grid-transforms).
 
 
 ## `merge_skm`
@@ -347,12 +324,13 @@ mineprep.merge_skm(root, save_path=None, name=None,
 
 Geometry Script traps (mat IDs, compact, vertex color, transforms): [pitfalls/mesh.md](pitfalls/mesh.md).
 
-## `tex_to_color` / `color_to_tex`
+## Texture utilities (`mc_material.py`)
 
-Exported as `mineprep.tex_to_color` / `mineprep.color_to_tex` / `mineprep.ColorList` (`mc_material.py`). Texture2D is blitted to a temporary `RTF_RGBA8_SRGB` target first (GPU decompress). Existing RTs are read in place. Result is a 2D `ColorList` (`[y][x]` `LinearColor` in 0–1); 8-bit RTs are divided from UE's 0–255 raw samples. Do not `force_update` a painted canvas RT after draw — this helper only force-updates the **source** Texture2D and a **fresh** temp RT.
+### `tex_to_color` / `color_to_tex` / `ColorList`
 
-Use `ColorList.from_rows(rows)` for a manually constructed 2D pixel table.
-Each row stays a row, including rows of three or four gray values:
+`mineprep.tex_to_color(tex)` reads a `Texture2D` or `TextureRenderTarget2D` into a 2D `ColorList` (`[y][x]` of `LinearColor` in `0..1`). `mineprep.color_to_tex(colors, width=0)` converts a 1D or 2D color sequence into a transient nearest-filtered sRGB `Texture2D` (2D uses row length as width; 1D uses `width=` if given, else a square or single row).
+
+Use `ColorList.from_rows(rows)` for a manually constructed 2D pixel table so 3- or 4-element grayscale rows are not treated as a single RGB/RGBA tuple:
 
 ```python
 import mineprep
@@ -364,45 +342,51 @@ grid = mineprep.ColorList.from_rows([
 grid[0, 1] = (0, 1, 0)  # RGB pixel
 ```
 
-Pixels accept gray numbers, RGB/RGBA sequences, Color or LinearColor. Rows may be
-generators and retain their lengths; strings and scalar rows are invalid.
-The original `ColorList(...)` constructor still recognizes a sequence of three
-or four numbers as one color, so `ColorList([[0,0,0,1], [1,0,0,1]])` is a 1D
-list of two colors.
-
-ColorList inherits List indexing: `grid[y, x]`, `grid[y, x:x2]` and boolean masks.
-Assigning one color to a slice broadcasts it. Float indices are UV coordinates:
-`grid[:0.5, :]` selects the top half and `grid[:, 0.5:]` the right half;
-`grid[1.25]` wraps to `grid[0.25]`. Integer `-1` selects the last item;
-float `-1.0` wraps to the first.
-
-`color_to_tex` coerces the input through `ColorList`, packs `LinearColor` into a 32-bit BMP, and uses `import_buffer_as_texture2d` (UE Python has no mip lock / `texture_set_data`). 2D arrays keep row length as width; 1D uses `width=` if given, otherwise a perfect square, otherwise a single row.
+`ColorList` supports `List` indexing: `grid[y, x]`, slices, boolean masks, and UV float indices (`grid[:0.5, :]` top half, `grid[:, 0.5:]` right half; integer `-1` is the last item, while float `-1.0` wraps to `0.0`).
 
 ```python
 grid = mineprep.tex_to_color(tex)  # ColorList of ColorList
-grid[y][x] = 1                     # gray
-grid[y, x] = (1, 0, 0)             # same, numpy-style
-grid[:0.5, :]                      # top half (UV)
-grid[:, 0.5:] = (1, 0, 0)          # paint right half
-grid[y, x:x + 2] = grid[y, x + 2]  # broadcast one pixel across a slice
-c = grid[y][x]
+grid[y, x] = (1, 0, 0)             # assign gray, RGB/RGBA tuple, Color, or LinearColor
+grid[:, 0.5:] = (1, 0, 0)          # broadcast across a slice
 tex = mineprep.color_to_tex(grid)
 tex = mineprep.color_to_tex(flat, width=64)
 ```
+
+### Source and data texture helpers
+
+Run these on the editor game thread (`mc_material.py`):
+
+| Function | Purpose & return value | Scope / notes |
+|----------|------------------------|---------------|
+| `mineprep.tex_source_files(texture)` | Returns `tuple[Path, ...]` of absolute source file paths recorded on a `Texture2D` (`()` if none) | Keeps recorded paths even if the file is missing on disk |
+| `mineprep.export_tex_cache(texture, path='')` | Exports a `Texture2D`'s source data to `.png` or `.exr` (default `<project>/cache/`) and returns its `Path` | Reuses the cached file when source data is unchanged; requires valid `TextureSource` (no virtual textures) |
+| `mineprep.import_data_tex(path)` | Imports a `.png` or `.exr` file as a transient `Texture2D` | Configured as linear (`srgb=False`), `TF_NEAREST`, `TA_CLAMP`; caller must retain a strong reference |
+
+### `register_biome_tex` / `clear_biome_tex`
+
+- `mineprep.register_biome_tex(source) -> int`: looks up `source` (`unreal.Texture`) in `/Game/Mineprep/材质/Core/生物群系纹理集合` and returns its slot index. If absent, writes into the first `None` slot or appends to the end, then saves the asset. Returns `-1` on invalid input or missing collection.
+- `mineprep.clear_biome_tex(target=None) -> bool`: cleans up the biome texture collection and saves if changed:
+  - `None`: removes empty slots and duplicates (keeps first occurrence).
+  - `int`: sets that slot index to `None` (`-1` = last slot) without shrinking.
+  - `Texture`: sets all matching slots to `None`.
+  - `True`: keeps only the first two slots (`False` is rejected).
 
 ## Localization
 
 ```python
 mineprep.bilingual('中文', 'English')                 # mod_info / short labels
 mineprep.localize(source, zh, en, zh_tw, ...)       # multi-lang UI
-# PropertyGroup fields: Cls.localize('FieldName', zh, en, zh_tw)  # key = generated UE class name (including GUID) + :prop
+# PropertyGroup fields: Cls.localize('FieldName', zh, en, zh_tw)
 ```
 
-`bilingual` / `localize` / `loctext` return **`unreal.Text`**, not `str`. Convert with `str(text)` for concatenation or `str.join`; `set_text` accepts Text directly, and ordinary f-string interpolation does not require a separate conversion. A helper accepting Text cannot rescue `text + '\n'` that fails before the helper is called.
+`bilingual` / `localize` / `loctext` return **`unreal.Text`**, not `str`:
 
-Args after `source` follow `mcvars.Languages` order. Use **Python attribute names** as keys for PropertyGroup fields (not display strings).
+```python
+message = str(label) + '\n'  # convert to str before + or join
+widget.set_text(label)       # set_text and f-strings accept unreal.Text directly
+```
 
-`loctable_col` reads **`mcvars.LocalizationCache`**. The generator Blueprint fills that table; do not assign `mineprep.LocalizationCache` after reload.
+Args after `source` follow `mcvars.Languages` order. Pass the **Python attribute name** as the field key on `Cls.localize`. `loctable_col` reads `mcvars.LocalizationCache`.
 
 ## Reload
 

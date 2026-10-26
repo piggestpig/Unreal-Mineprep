@@ -11,7 +11,7 @@ from . import util
 
 
 def apply(mod):
-    """面板适配；返回异步句柄，完成后的 result 包含实际写键信息。"""
+    """从面板属性读取参数并启动动画转换任务。"""
     props = mod.props
     had_actor = isinstance(props.Actor, unreal.Actor)
     target = util.resolve_actor(props)
@@ -46,7 +46,7 @@ def _open_sequence(sequence):
 @mineprep.asynctask
 def apply_animation(json_path, actor, *, sequence, bone_map=None, time_scale=1.0,
                     start_time=0.0, resize_playback=False, save=False):
-    """写入首个 Bedrock 动画。UE 主线程调用；时间为秒，返回 AsyncTaskRunner。"""
+    """读取 JSON 中的首个基岩版动画，并写入目标角色在关卡序列中的 Control Rig 轨道。"""
     time_scale, start_time = float(time_scale), float(start_time)
     if not math.isfinite(time_scale) or time_scale <= 0 or not math.isfinite(start_time):
         raise ValueError('time_scale 必须为正有限数，start_time 必须为有限数')

@@ -1,0 +1,807 @@
+{
+  "id": "vanilla",
+  "version": 1,
+  "name": {"zh": "主世界", "en": "Overworld"},
+  "description": {
+    "zh": "大陆度、侵蚀与峰谷耦合塑形；连接河网、湖塘与海床、普通海岛、十六群系、森林、热带草原、积雪、冻洋冰山及彩色恶地台地。",
+    "en": "Coupled terrain, connected waters, seabed and islands; sixteen biomes, forests, savanna, snow, ocean ice and colourful badlands mesas."
+  },
+  "modules": ["terrain", "water_fields", "cave_density", "iceberg_fields", "surface_fields", "islands", "badlands", "savanna"],
+  "soil_depth_field": "shore_cover_depth",
+  "planners": {"water": "water_plan:build_plan", "caves": "cave_plan:build_plan"},
+  "planning_params": {
+    "water": ["world.*", "terrain.*", "seabed.*", "islands.*", "hydrology.*", "river.*", "lakes.*", "ponds.*", "water.generate", "badlands.enabled", "badlands.coverage", "badlands.region_scale", "badlands.height", "badlands.plateau_scale", "savanna.coverage", "savanna.region_scale", "climate.single_biome", "climate.scale", "climate.warp_strength", "climate.warp_scale", "climate.temperature_offset", "climate.humidity_offset"],
+    "surface": ["world.*", "terrain.*", "seabed.*", "islands.*", "hydrology.*", "river.*", "lakes.*", "ponds.*", "water.generate", "badlands.enabled", "badlands.coverage", "badlands.region_scale", "badlands.height", "badlands.plateau_scale", "savanna.coverage", "savanna.region_scale", "climate.single_biome", "climate.scale", "climate.warp_strength", "climate.warp_scale", "climate.temperature_offset", "climate.humidity_offset"],
+    "caves": ["world.*", "terrain.*", "seabed.*", "islands.*", "hydrology.*", "river.*", "lakes.*", "ponds.*", "water.generate", "caves.*", "ravines.*", "badlands.enabled", "badlands.coverage", "badlands.region_scale", "badlands.height", "badlands.plateau_scale", "savanna.coverage", "savanna.region_scale", "climate.single_biome", "climate.scale", "climate.warp_strength", "climate.warp_scale", "climate.temperature_offset", "climate.humidity_offset"],
+    "density": ["world.*", "terrain.*", "seabed.*", "islands.*", "hydrology.*", "river.*", "lakes.*", "ponds.*", "water.generate", "caves.*", "ravines.*", "groundwater.*", "badlands.enabled", "badlands.coverage", "badlands.region_scale", "badlands.height", "badlands.plateau_scale", "savanna.coverage", "savanna.region_scale", "climate.single_biome", "climate.scale", "climate.warp_strength", "climate.warp_scale", "climate.temperature_offset", "climate.humidity_offset"]
+  },
+  "terrain_materials": {
+    "sampler": "badlands:sample", "enabled_param": "badlands.enabled",
+    "inputs": ["terracotta", "orange_terracotta", "yellow_terracotta", "brown_terracotta", "red_terracotta", "white_terracotta", "light_gray_terracotta"],
+    "blocks": ["terracotta", "orange_terracotta", "yellow_terracotta", "brown_terracotta", "red_terracotta", "white_terracotta", "light_gray_terracotta"],
+    "fields": ["badlands_band_shift"]
+  },
+  "density": {
+    "field": "cave_connected_solid",
+    "base": "height",
+    "enabled_param": "caves.enabled",
+    "bounds": "cave_plan:affected_bounds",
+    "wet_protection": "density"
+  },
+  "shell_materials": {
+    "sampler": "rock_materials:sample",
+    "enabled_param": "cave_materials.enabled",
+    "blocks": [
+      "andesite",
+      "granite",
+      "diorite",
+      "deepslate",
+      "tuff",
+      "coal_ore",
+      "iron_ore",
+      "copper_ore",
+      "gold_ore",
+      "redstone_ore",
+      "lapis_ore",
+      "diamond_ore",
+      "emerald_ore",
+      "deepslate_coal_ore",
+      "deepslate_iron_ore",
+      "deepslate_copper_ore",
+      "deepslate_gold_ore",
+      "deepslate_redstone_ore",
+      "deepslate_lapis_ore",
+      "deepslate_diamond_ore",
+      "deepslate_emerald_ore"
+    ]
+  },
+  "height_field": "height",
+  "fluids": {
+    "sampler": "groundwater:sample",
+    "block": "underground_water_surface",
+    "enabled_param": "groundwater.enabled",
+    "requires": ["water.generate", "caves.enabled"]
+  },
+  "biome_parameters": {"temperature": 1.0, "humidity": 1.0, "altitude": 64.0, "shore_depth": 8.0, "water_kind": 1.0, "snow_cover": 1.0, "forest_region": 1.0, "ice_region": 1.0, "frozen_ocean_mask": 1.0, "badlands_mask": 1.0, "savanna_mask": 1.0},
+  "biomes": ["lake", "pond", "river", "frozen_ocean", "ocean", "snowy_taiga", "ice_spikes", "snowy_plains", "badlands", "mountains", "desert", "savanna", "taiga", "birch_forest", "forest", "grassland"],
+  "surface_processors": [
+    {"id": "cold_surfaces", "function": "cold_surfaces:apply", "blocks": ["snow_layer_1", "snow_layer_2", "snow_layer_3", "snow_layer_4", "snow_layer_5", "snow_layer_6", "snow_layer_7", "snow_layer_8", "ice"], "radius": 0, "enabled_param": "cold.enabled", "sky_only": true}
+  ],
+  "default_preset": "",
+  "biome_selector": "terrain:select_biome",
+  "preset_menu": ["default_caves","grassland","forest","birch_forest","taiga","snowy_taiga","savanna","mountains","desert","badlands","snowy_plains","ice_spikes","ocean","frozen_ocean"],
+  "water": {
+    "block": "water_surface",
+    "level_field": "water_level",
+    "mask_field": "water_presence",
+    "generate_param": "water.generate",
+    "enabled_param": "water.enabled"
+  },
+  "surface_overrides": [
+    {"when": {"shore_depth": {"min": 0}, "surface_rock": {"min": 0}, "foothill_temperature": {"min": 0.2}, "humidity": {"max": -0.2}}, "top": "sandstone", "under": "sandstone", "deep": "sandstone"},
+    {"when": {"shore_depth": {"min": 0}, "surface_rock": {"min": 0}}, "top": "stone", "under": "stone", "deep": "stone"},
+    {"when": {"shore_depth": {"min": 0}, "shore_cover_weight": {"min": 0.05}, "foothill_temperature": {"min": 0.2}, "humidity": {"max": -0.2}}, "top": "sand", "under": "sand", "deep": "sandstone"},
+    {"when": {"shore_depth": {"min": 0}, "shore_cover_weight": {"min": 0.05}}, "top": "dirt", "under": "dirt", "deep": "stone"},
+    {"when": {"water_kind": {"min": 2, "max": 3}, "shore_depth": {"min": 0}}, "top": [["gravel", 5], ["dirt", 3], ["sand", 2]]},
+    {
+      "when": {"water_kind": {"min": 2}, "shore_depth": {"min": "$surface.shallow_depth"}},
+      "top": [["sand", 3], ["gravel", 1]],
+      "under": "sand",
+      "deep": "stone"
+    },
+    {
+      "when": {"water_kind": [1, 2], "shore_depth": {"min": "$surface.shallow_depth"}, "seabed_deposit": {"min": 0.25}, "seabed_deposit_kind": {"min": 0}},
+      "top": "gravel",
+      "under": "sand",
+      "deep": "stone"
+    },
+    {
+      "when": {"water_kind": [1, 2], "shore_depth": {"min": "$surface.shallow_depth"}, "seabed_deposit": {"min": 0.25}},
+      "top": "dirt",
+      "under": "sand",
+      "deep": "stone"
+    },
+    {"when": {"water_kind": [1, 2], "shore_depth": {"min": "$surface.shallow_depth"}}, "top": "sand", "under": "sand", "deep": "stone"},
+    {"when": {"island_weight": {"min": 0.01}, "shore_depth": {"max": 0}, "shore_cover_weight": {"min": 0.05}, "altitude": {"min": 0, "max": 2}, "surface_rock": {"max": 0}, "snow_cover": {"max": 0.5}}, "top": "sand", "under": "sand", "deep": "stone"}
+  ],
+  "pages": {
+    "islands": {"zh": "海岛", "en": "Islands"},
+    "groundwater": {"zh": "地下水", "en": "Underground Water"},
+    "caves": {"zh": "洞穴", "en": "Caves"},
+    "cave_tunnels": {"zh": "通道", "en": "Tunnels"},
+    "cave_rooms": {"zh": "洞室", "en": "Chambers"},
+    "cave_ravines": {"zh": "峡谷", "en": "Ravines"},
+    "cave_materials": {"zh": "岩层与岩种", "en": "Rock layers and patches"},
+    "cave_ores": {"zh": "暴露矿石", "en": "Exposed ores"},
+    "hydrology": {"zh": "水系", "en": "Water systems"},
+    "lakes": {"zh": "湖泊与水塘", "en": "Lakes & ponds"},
+    "world": {"zh": "世界", "en": "World"},
+    "terrain": {"zh": "地形形状", "en": "Terrain shape"},
+    "climate": {"zh": "气候与群系", "en": "Climate/Biome"},
+    "savanna": {"zh": "热带草原", "en": "Savanna"},
+    "cold_surfaces": {"zh": "积雪与冻结", "en": "Snow & freezing"},
+    "ice_spikes": {"zh": "冰刺之地", "en": "Ice spikes"},
+    "badlands": {"zh": "恶地", "en": "Badlands"},
+    "frozen_ocean": {"zh": "冻洋", "en": "Frozen ocean"},
+    "surface": {"zh": "地表", "en": "Surface"},
+    "seabed": {"zh": "海底", "en": "Seabed"},
+    "river": {"zh": "河流", "en": "Rivers"},
+    "water": {"zh": "水面", "en": "Water"},
+    "vegetation": {"zh": "草与灌木", "en": "Grass & bushes"},
+    "aquatic": {"zh": "水下植物", "en": "Aquatic plants"},
+    "trees": {"zh": "树木", "en": "Trees"},
+    "forest": {"zh": "森林", "en": "Forests"},
+    "decorations": {"zh": "自然装饰", "en": "Natural decorations"}
+  },
+  "ui_rows": [
+    {
+      "label": {"zh": "洞室尺寸（宽/长/高，格）", "en": "Chamber size (width/depth/height, blocks)"},
+      "keys": ["caves.chamber_width", "caves.chamber_depth", "caves.chamber_height"],
+      "components": [{"zh": "宽", "en": "Width"}, {"zh": "长", "en": "Length"}, {"zh": "高", "en": "Height"}]
+    },
+    {
+      "label": {"zh": "高度范围（格）", "en": "Height range (blocks)"},
+      "keys": ["world.y_min", "world.y_max"],
+      "components": [{"zh": "最低 Z", "en": "Min Z"}, {"zh": "最高 Z", "en": "Max Z"}]
+    },
+    {
+      "label": {"zh": "地形尺度（格）", "en": "Terrain scales (blocks)"},
+      "keys": ["terrain.continental_scale", "terrain.erosion_scale", "terrain.weirdness_scale"],
+      "components": [{"zh": "大陆", "en": "Continent"}, {"zh": "山区", "en": "Mountains"}, {"zh": "山脊", "en": "Ridges"}]
+    },
+    {
+      "label": {"zh": "气候偏移", "en": "Climate offsets"},
+      "keys": ["climate.temperature_offset", "climate.humidity_offset"],
+      "components": [{"zh": "温度", "en": "Temperature"}, {"zh": "湿度", "en": "Humidity"}]
+    },
+    {
+      "label": {"zh": "河床水深（格）", "en": "Riverbed depths (blocks)"},
+      "keys": ["river.depth", "river.edge_depth"],
+      "components": [{"zh": "中心", "en": "Center"}, {"zh": "边缘", "en": "Edge"}]
+    },
+    {
+      "label": {"zh": "河岸宽度（格）", "en": "Channel / bank widths (blocks)"},
+      "keys": ["river.width", "river.bank_width"],
+      "components": [{"zh": "河道", "en": "Channel"}, {"zh": "河岸", "en": "Bank"}]
+    },
+    {
+      "label": {"zh": "湖塘床深（格）", "en": "Lake / pond depths (blocks)"},
+      "keys": ["lakes.depth", "ponds.depth"],
+      "components": [{"zh": "湖泊", "en": "Lake"}, {"zh": "水塘", "en": "Pond"}]
+    },
+    {
+      "label": {"zh": "海床深度（格）", "en": "Seabed depths (blocks)"},
+      "keys": ["seabed.basin_depth", "seabed.trench_depth"],
+      "components": [{"zh": "盆地", "en": "Basin"}, {"zh": "槽地", "en": "Trough"}]
+    },
+    {
+      "label": {"zh": "植被密度", "en": "Vegetation densities"},
+      "keys": ["vegetation.grass_density", "vegetation.bush_density"],
+      "components": [{"zh": "草", "en": "Grass"}, {"zh": "灌木", "en": "Bush"}]
+    }
+  ],
+  "params": {
+    "islands.enabled": {"type": "bool", "default": true, "page": "islands", "label": {"zh": "生成海岛", "en": "Generate islands"}},
+    "islands.coverage": {"type": "float", "default": 0.25, "min": 0, "max": 1, "page": "islands", "label": {"zh": "海岛出现强度", "en": "Island occurrence"}, "enabled_param": "islands.enabled", "tooltip": {"zh": "调节宏观海域的出现阈值，不表示岛屿面积百分比；0关闭海岛", "en": "Controls regional thresholds, not island area percentage; zero disables islands"}},
+    "islands.scale": {"type": "float", "default": 256, "min": 128, "max": 1024, "page": "islands", "label": {"zh": "岛体尺度（格）", "en": "Island scale (blocks)"}, "enabled_param": "islands.enabled"},
+    "islands.height": {"type": "float", "default": 24, "min": 0, "max": 64, "page": "islands", "label": {"zh": "海岛名义起伏（格）", "en": "Nominal island relief (blocks)"}, "enabled_param": "islands.enabled", "tooltip": {"zh": "岛内高低由现有山体场调节，后续恶地等配方仍可改变高度；0关闭海岛", "en": "Existing massif variation sets local relief; later recipes such as badlands may modify height; zero disables islands"}},
+    "badlands.enabled": {"type": "bool", "default": true, "page": "badlands", "label": {"zh": "生成恶地", "en": "Generate badlands"}},
+    "badlands.coverage": {"type": "float", "default": 0.4, "min": 0, "max": 1, "page": "badlands", "label": {"zh": "恶地区域覆盖", "en": "Badlands region coverage"}, "enabled_param": "badlands.enabled"},
+    "badlands.region_scale": {"type": "float", "default": 768, "min": 64, "max": 2048, "page": "badlands", "advanced": true, "label": {"zh": "恶地区域尺度（格）", "en": "Region scale (blocks)"}, "enabled_param": "badlands.enabled"},
+    "badlands.height": {"type": "float", "default": 32, "min": 0, "max": 64, "page": "badlands", "label": {"zh": "台地起伏（格）", "en": "Mesa relief (blocks)"}, "enabled_param": "badlands.enabled"},
+    "badlands.plateau_scale": {"type": "float", "default": 128, "min": 32, "max": 512, "page": "badlands", "label": {"zh": "台地尺度（格）", "en": "Mesa scale (blocks)"}, "enabled_param": "badlands.enabled"},
+    "badlands.band_thickness": {"type": "int", "default": 2, "min": 1, "max": 4, "page": "badlands", "advanced": true, "label": {"zh": "色带厚度倍率", "en": "Clay band thickness"}, "enabled_param": "badlands.enabled"},
+    "frozen_ocean.enabled": {"type": "bool", "default": true, "label": {"zh": "生成冻洋", "en": "Generate frozen oceans"}},
+    "frozen_ocean.freeze": {"type": "bool", "default": true, "label": {"zh": "生成海面浮冰", "en": "Freeze ocean patches"}, "enabled_param": "frozen_ocean.enabled", "tooltip": {"zh": "同时受气候页的积雪与冻结总开关控制；关闭后仍保留冰山", "en": "Also requires Enable snow and freezing; disabling floes retains icebergs"}},
+    "frozen_ocean.ice_coverage": {"type": "float", "default": 0.6, "min": 0, "max": 1, "label": {"zh": "浮冰覆盖率", "en": "Floe coverage"}, "enabled_param": "frozen_ocean.enabled"},
+    "frozen_ocean.ice_scale": {"type": "float", "default": 96, "min": 16, "max": 512, "label": {"zh": "浮冰斑块尺度（格）", "en": "Floe scale (blocks)"}, "enabled_param": "frozen_ocean.enabled"},
+    "frozen_ocean.iceberg_density": {"type": "float", "default": 0.65, "min": 0, "max": 1, "label": {"zh": "冰体密度", "en": "Ice body density"}, "tooltip": {"zh": "调节连续冰体区域阈值与独立候选概率；0关闭全部冰体", "en": "Controls body threshold and independent candidate probability; zero disables both"}, "enabled_param": "frozen_ocean.enabled"},
+    "frozen_ocean.iceberg_height": {"type": "int", "default": 16, "min": 6, "max": 16, "label": {"zh": "冰体基础高度（格）", "en": "Base ice body height (blocks)"}, "tooltip": {"zh": "共同控制连续冰体与独立宽丘／脊线的高度", "en": "Scales continuous bodies and independent mounds or ridges"}, "enabled_param": "frozen_ocean.enabled"},
+    "frozen_ocean.large_chance": {"type": "float", "default": 0.30, "min": 0, "max": 1, "label": {"zh": "高冰体区域／大型比例", "en": "High regions / large fraction"}, "enabled_param": "frozen_ocean.enabled"},
+    "frozen_ocean.snow_cap_chance": {"type": "float", "default": 0.3, "min": 0, "max": 1, "label": {"zh": "雪帽区域／独立雪帽比例", "en": "Snow-cap regions / independent fraction"}, "enabled_param": "frozen_ocean.enabled"},
+    "frozen_ocean.iceberg_patch_scale": {"type": "float", "default": 192, "min": 32, "max": 1024, "advanced": true, "label": {"zh": "冰山斑块尺度（格）", "en": "Iceberg patch scale (blocks)"}, "enabled_param": "frozen_ocean.enabled"},
+    "frozen_ocean.continuous_ice": {"type": "bool", "default": true, "label": {"zh": "连续冰体", "en": "Continuous ice bodies"}, "enabled_param": "frozen_ocean.enabled"},
+    "frozen_ocean.body_scale": {"type": "float", "default": 64, "min": 16, "max": 256, "advanced": true, "label": {"zh": "连续冰体尺度（格）", "en": "Ice body scale (blocks)"}, "enabled_param": "frozen_ocean.enabled"},
+    "frozen_ocean.isolated_fraction": {"type": "float", "default": 0.15, "min": 0, "max": 1, "advanced": true, "label": {"zh": "独立冰山候选保留率", "en": "Independent candidate fraction"}, "enabled_param": "frozen_ocean.enabled"},
+    "ice_spikes.enabled": {"type": "bool", "default": true, "label": {"zh": "生成冰刺之地", "en": "Generate ice-spike regions"}},
+    "ice_spikes.region_scale": {"type": "float", "default": 512, "min": 64, "max": 2048, "label": {"zh": "冰刺区域尺度（格）", "en": "Ice-region scale (blocks)"}, "enabled_param": "ice_spikes.enabled"},
+    "ice_spikes.density": {"type": "float", "default": 0.6, "min": 0, "max": 1, "label": {"zh": "冰刺密度", "en": "Ice-spike density"}, "enabled_param": "ice_spikes.enabled"},
+    "ice_spikes.height": {"type": "int", "default": 10, "min": 6, "max": 16, "label": {"zh": "冰刺基础高度（格）", "en": "Base ice-spike height (blocks)"}, "enabled_param": "ice_spikes.enabled"},
+    "ice_spikes.tall_chance": {"type": "float", "default": 0.05, "min": 0, "max": 1, "label": {"zh": "高耸冰刺比例", "en": "Tall ice-spike fraction"}, "enabled_param": "ice_spikes.enabled"},
+    "ice_spikes.patch_scale": {"type": "float", "default": 64, "min": 8, "max": 512, "advanced": true, "label": {"zh": "冰刺斑块尺度（格）", "en": "Ice-spike patch scale (blocks)"}, "enabled_param": "ice_spikes.enabled"},
+    "ice_spikes.max_slope": {"type": "float", "default": 1, "min": 0, "max": 4, "advanced": true, "label": {"zh": "冰刺最大坡度", "en": "Maximum ice-spike slope"}, "enabled_param": "ice_spikes.enabled"},
+    "cold.enabled": {"type": "bool", "default": true, "page": "cold_surfaces", "label": {"zh": "启用积雪与冻结", "en": "Enable snow and freezing"}},
+    "cold.snow_layers": {"type": "int", "default": 1, "min": 0, "max": 8, "page": "cold_surfaces", "label": {"zh": "覆雪层数（0 关闭）", "en": "Snow layers (0 disables snow)"}, "enabled_param": "cold.enabled"},
+    "cold.canopy": {"type": "bool", "default": true, "page": "cold_surfaces", "label": {"zh": "树冠覆雪", "en": "Snow on canopies"}, "enabled_param": "cold.enabled"},
+    "cold.freeze": {"type": "bool", "default": true, "page": "cold_surfaces", "label": {"zh": "冻结寒地河湖塘", "en": "Freeze cold inland water"}, "enabled_param": "cold.enabled"},
+    "aquatic.enabled": {"type": "bool", "default": true, "label": {"zh": "生成水下植物", "en": "Generate aquatic plants"}},
+    "aquatic.seagrass_density": {"type": "float", "default": 0.08, "min": 0, "max": 1, "label": {"zh": "海草密度", "en": "Seagrass density"}, "tooltip": {"zh": "简化模式按每列概率生成单格矮海草；完整模式沿用原候选密度。保存的值不自动换算", "en": "Per-column probability for short seagrass in simplified mode; original candidate density in full mode. Saved values are not converted"}, "enabled_param": "aquatic.enabled"},
+    "aquatic.kelp_density": {"type": "float", "default": 0.22, "min": 0, "max": 1, "label": {"zh": "海带密度", "en": "Kelp density"}, "enabled_param": "aquatic.enabled"},
+    "aquatic.kelp_height": {
+      "type": "int",
+      "default": 8,
+      "min": 2,
+      "max": 16,
+      "label": {"zh": "海带最大高度（格）", "en": "Maximum kelp height (blocks)"},
+      "enabled_param": "aquatic.enabled"
+    },
+    "aquatic.patch_scale": {
+      "type": "float",
+      "default": 48,
+      "min": 8,
+      "max": 512,
+      "advanced": true,
+      "label": {"zh": "水草斑块尺度（格）", "en": "Aquatic patch scale (blocks)"},
+      "enabled_param": "aquatic.enabled"
+    },
+    "aquatic.max_slope": {
+      "type": "float",
+      "default": 1.8,
+      "min": 0,
+      "max": 4,
+      "advanced": true,
+      "label": {"zh": "水草最大坡度", "en": "Aquatic maximum slope"},
+      "enabled_param": "aquatic.enabled"
+    },
+    "decorations.enabled": {"type": "bool", "default": false, "page": "decorations", "label": {"zh": "生成自然装饰", "en": "Natural decorations"}},
+    "decorations.rock_density": {
+      "type": "float",
+      "default": 0.12,
+      "min": 0,
+      "max": 1,
+      "page": "decorations",
+      "label": {"zh": "岩石密度", "en": "Rock density"},
+      "enabled_param": "decorations.enabled"
+    },
+    "decorations.log_density": {
+      "type": "float",
+      "default": 0.06,
+      "min": 0,
+      "max": 1,
+      "page": "decorations",
+      "label": {"zh": "倒木密度", "en": "Fallen log density"},
+      "enabled_param": "decorations.enabled"
+    },
+    "decorations.patch_scale": {
+      "type": "float",
+      "default": 64,
+      "min": 8,
+      "max": 512,
+      "page": "decorations",
+      "advanced": true,
+      "label": {"zh": "装饰斑块尺度（格）", "en": "Decoration patch scale (blocks)"},
+      "enabled_param": "decorations.enabled"
+    },
+    "decorations.max_slope": {
+      "type": "float",
+      "default": 0.8,
+      "min": 0,
+      "max": 4,
+      "page": "decorations",
+      "advanced": true,
+      "label": {"zh": "装饰最大坡度", "en": "Decoration maximum slope"},
+      "enabled_param": "decorations.enabled"
+    },
+    "groundwater.enabled": {"type": "bool", "default": false, "page": "groundwater", "label": {"zh": "生成地下水", "en": "Underground Water"}},
+    "groundwater.connect_surface": {"type": "bool", "default": false, "page": "groundwater", "label": {"zh": "连接湖泊与海洋", "en": "Connect Lakes and Oceans"}},
+    "groundwater.connection_amount": {"type": "float", "default": 0.15, "min": 0, "max": 1, "page": "groundwater", "label": {"zh": "连接数量", "en": "Connection Amount"}},
+    "groundwater.amount": {"type": "float", "default": 0.25, "min": 0, "max": 1, "page": "groundwater", "label": {"zh": "洞池数量", "en": "Pool Amount"}},
+    "groundwater.depth": {"type": "int", "default": 3, "min": 1, "max": 8, "page": "groundwater", "label": {"zh": "参考水深（格）", "en": "Pool Depth"}},
+    "groundwater.span": {"type": "int", "default": 32, "min": 8, "max": 96, "page": "groundwater", "label": {"zh": "参考水平范围（格）", "en": "Pool Span"}},
+    "groundwater.check_size": {
+      "type": "int",
+      "default": 64,
+      "min": 32,
+      "max": 128,
+      "page": "groundwater",
+      "advanced": true,
+      "label": {"zh": "封闭检查范围（格）", "en": "Verification Size"}
+    },
+    "cave_materials.enabled": {"type": "bool", "default": true, "page": "cave_materials", "label": {"zh": "洞壁材料总开关", "en": "Wall materials"}},
+    "cave_materials.rocks": {"type": "bool", "default": true, "page": "cave_materials", "label": {"zh": "岩层与岩种变化", "en": "Rock layers and patches"}},
+    "cave_materials.patch_scale": {"type": "float", "default": 24, "min": 4, "max": 128, "page": "cave_materials", "label": {"zh": "岩种斑块尺度（格）", "en": "Rock patch scale (blocks)"}},
+    "cave_materials.variation": {"type": "float", "default": 0.25, "min": 0, "max": 1, "page": "cave_materials", "label": {"zh": "岩种变化强度", "en": "Rock variation"}},
+    "cave_materials.deep_depth": {
+      "type": "float",
+      "default": 48,
+      "min": 0,
+      "max": 512,
+      "page": "cave_materials",
+      "label": {"zh": "深板岩起始埋深（格）", "en": "Deepslate burial depth (blocks)"}
+    },
+    "cave_materials.transition": {
+      "type": "float",
+      "default": 8,
+      "min": 0,
+      "max": 64,
+      "page": "cave_materials",
+      "advanced": true,
+      "label": {"zh": "深层过渡厚度（格）", "en": "Deep transition thickness (blocks)"}
+    },
+    "ores.enabled": {"type": "bool", "default": true, "page": "cave_ores", "label": {"zh": "生成暴露矿石", "en": "Exposed ores"}},
+    "ores.amount": {"type": "float", "default": 0.25, "min": 0, "max": 1, "page": "cave_ores", "label": {"zh": "矿石数量", "en": "Ore amount"}},
+    "ores.cluster_scale": {"type": "float", "default": 4, "min": 2, "max": 32, "page": "cave_ores", "label": {"zh": "矿簇尺度（格）", "en": "Ore patch scale (blocks)"}},
+    "ores.coal.enabled": {"type": "bool", "default": true, "page": "cave_ores", "advanced": true, "label": {"zh": "煤矿", "en": "Coal"}},
+    "ores.coal.weight": {"type": "float", "default": 8, "min": 0, "max": 100, "page": "cave_ores", "advanced": true, "label": {"zh": "煤矿相对权重", "en": "Coal weight"}},
+    "ores.iron.enabled": {"type": "bool", "default": true, "page": "cave_ores", "advanced": true, "label": {"zh": "铁矿", "en": "Iron"}},
+    "ores.iron.weight": {"type": "float", "default": 6, "min": 0, "max": 100, "page": "cave_ores", "advanced": true, "label": {"zh": "铁矿相对权重", "en": "Iron weight"}},
+    "ores.copper.enabled": {"type": "bool", "default": true, "page": "cave_ores", "advanced": true, "label": {"zh": "铜矿", "en": "Copper"}},
+    "ores.copper.weight": {"type": "float", "default": 4, "min": 0, "max": 100, "page": "cave_ores", "advanced": true, "label": {"zh": "铜矿相对权重", "en": "Copper weight"}},
+    "ores.gold.enabled": {"type": "bool", "default": true, "page": "cave_ores", "advanced": true, "label": {"zh": "金矿", "en": "Gold"}},
+    "ores.gold.weight": {"type": "float", "default": 2, "min": 0, "max": 100, "page": "cave_ores", "advanced": true, "label": {"zh": "金矿相对权重", "en": "Gold weight"}},
+    "ores.redstone.enabled": {"type": "bool", "default": true, "page": "cave_ores", "advanced": true, "label": {"zh": "红石矿", "en": "Redstone"}},
+    "ores.redstone.weight": {"type": "float", "default": 2, "min": 0, "max": 100, "page": "cave_ores", "advanced": true, "label": {"zh": "红石相对权重", "en": "Redstone weight"}},
+    "ores.lapis.enabled": {"type": "bool", "default": true, "page": "cave_ores", "advanced": true, "label": {"zh": "青金石矿", "en": "Lapis"}},
+    "ores.lapis.weight": {"type": "float", "default": 1, "min": 0, "max": 100, "page": "cave_ores", "advanced": true, "label": {"zh": "青金石相对权重", "en": "Lapis weight"}},
+    "ores.diamond.enabled": {"type": "bool", "default": true, "page": "cave_ores", "advanced": true, "label": {"zh": "钻石矿", "en": "Diamond"}},
+    "ores.diamond.weight": {"type": "float", "default": 0.5, "min": 0, "max": 100, "page": "cave_ores", "advanced": true, "label": {"zh": "钻石相对权重", "en": "Diamond weight"}},
+    "ores.emerald.enabled": {"type": "bool", "default": true, "page": "cave_ores", "advanced": true, "label": {"zh": "绿宝石矿", "en": "Emerald"}},
+    "ores.emerald.weight": {
+      "type": "float",
+      "default": 0.25,
+      "min": 0,
+      "max": 100,
+      "page": "cave_ores",
+      "advanced": true,
+      "label": {"zh": "绿宝石相对权重", "en": "Emerald weight"}
+    },
+    "caves.style": {"type": "int", "default": 0, "min": 0, "max": 1, "page": "caves", "label": {"zh": "洞穴风格", "en": "Cave style"}},
+    "caves.irregularity": {"type": "float", "default": 0.7, "min": 0, "max": 1, "page": "caves", "label": {"zh": "形状变化", "en": "Shape variation"}},
+    "caves.pillars": {"type": "float", "default": 0.35, "min": 0, "max": 1, "page": "caves", "label": {"zh": "岩柱强度", "en": "Pillar strength"}},
+    "caves.fine_passages": {"type": "bool", "default": true, "label": {"zh": "细通道", "en": "Fine passages"}},
+    "caves.enabled": {"type": "bool", "default": false, "page": "caves", "label": {"zh": "生成洞穴", "en": "Generate caves"}},
+    "caves.density": {"type": "float", "default": 0.65, "min": 0, "max": 1, "page": "caves", "label": {"zh": "洞穴密度", "en": "Cave density"}},
+    "caves.entrance_spacing": {
+      "type": "int",
+      "default": 128,
+      "min": 64,
+      "max": 384,
+      "page": "caves",
+      "advanced": true,
+      "label": {"zh": "洞口候选间距（格）", "en": "Entrance candidate spacing (blocks)"}
+    },
+    "caves.depth": {
+      "type": "float",
+      "default": 24,
+      "min": 8,
+      "max": 96,
+      "page": "caves",
+      "label": {"zh": "参考埋深（格）", "en": "Reference burial depth (blocks)"},
+      "tooltip": {"zh": "从地表向下；薄地形按洞顶和底部余量调整，容不下则跳过", "en": "Below terrain; fitted to roof/floor clearance, skipped if too thin"}
+    },
+    "caves.entrance_probability": {"type": "float", "default": 0.65, "min": 0, "max": 1, "page": "caves", "label": {"zh": "侧洞口比例", "en": "Side entrance probability"}},
+    "caves.tunnel_radius": {"type": "float", "default": 5, "min": 3, "max": 10, "page": "cave_tunnels", "label": {"zh": "通道参考半径（格）", "en": "Tunnel radius (blocks)"}},
+    "caves.entrance_length": {
+      "type": "float",
+      "default": 96,
+      "min": 32,
+      "max": 160,
+      "page": "cave_tunnels",
+      "label": {"zh": "洞口连接参考长度（格）", "en": "Entrance connection length (blocks)"}
+    },
+    "caves.chamber_width": {"type": "float", "default": 36, "min": 16, "max": 64, "page": "cave_rooms", "label": {"zh": "洞室宽度（格）", "en": "Chamber width (blocks)"}},
+    "caves.chamber_depth": {"type": "float", "default": 32, "min": 16, "max": 64, "page": "cave_rooms", "label": {"zh": "洞室纵深（格）", "en": "Chamber depth (blocks)"}},
+    "caves.chamber_height": {"type": "float", "default": 18, "min": 10, "max": 32, "page": "cave_rooms", "label": {"zh": "洞室高度（格）", "en": "Chamber height (blocks)"}},
+    "ravines.enabled": {"type": "bool", "default": true, "page": "cave_ravines", "label": {"zh": "生成峡谷", "en": "Generate ravines"}},
+    "ravines.ceiling_above_sea": {
+      "type": "int",
+      "default": 48,
+      "min": 0,
+      "max": 256,
+      "page": "cave_ravines",
+      "label": {"zh": "海平面以上开凿上限（格）", "en": "Carving ceiling above sea (blocks)"}
+    },
+    "ravines.curvature": {"type": "float", "default": 0.65, "min": 0, "max": 1, "page": "cave_ravines", "label": {"zh": "峡谷弯曲程度", "en": "Ravine curvature"}},
+    "ravines.spacing": {
+      "type": "int",
+      "default": 256,
+      "min": 128,
+      "max": 512,
+      "page": "cave_ravines",
+      "advanced": true,
+      "label": {"zh": "峡谷候选间距（格）", "en": "Ravine candidate spacing (blocks)"}
+    },
+    "ravines.density": {"type": "float", "default": 0.3, "min": 0, "max": 1, "page": "cave_ravines", "label": {"zh": "峡谷密度", "en": "Ravine density"}},
+    "ravines.length": {"type": "float", "default": 160, "min": 48, "max": 320, "page": "cave_ravines", "label": {"zh": "参考长度（格）", "en": "Reference length (blocks)"}},
+    "ravines.width": {"type": "float", "default": 12, "min": 6, "max": 32, "page": "cave_ravines", "label": {"zh": "参考宽度（格）", "en": "Reference width (blocks)"}},
+    "ravines.depth": {"type": "float", "default": 32, "min": 8, "max": 96, "page": "cave_ravines", "label": {"zh": "参考深度（格）", "en": "Reference depth (blocks)"}},
+    "river.edge_depth": {
+      "type": "float",
+      "default": 2,
+      "label": {"zh": "边缘水深（格）", "en": "Edge depth (blocks)"},
+      "min": 0,
+      "max": 16,
+      "tooltip": {"zh": "有效值不超过中心水深", "en": "Effective value is capped at center depth"}
+    },
+    "water.generate": {
+      "type": "bool",
+      "default": true,
+      "label": {"zh": "生成水体", "en": "Generate water bodies"},
+      "tooltip": {
+        "zh": "关闭后跳过水系规划与塑形，保留裸露海盆；海平面仍是地形参考海拔",
+        "en": "Skip planning and water shaping, leaving bare ocean basins; sea level remains a terrain reference"
+      }
+    },
+    "climate.snow_refinement": {"type": "bool", "default": true, "label": {"zh": "区域寒地与山顶积雪", "en": "Regional cold areas and summit snow"}, "advanced": true},
+    "climate.snow_height": {"type": "float", "default": 64, "label": {"zh": "名义雪线（海平面以上，格）", "en": "Nominal snow line above sea (blocks)"}, "min": 0, "max": 4096},
+    "climate.snow_scale": {"type": "float", "default": 768, "label": {"zh": "寒地区域尺度（格）", "en": "Cold region scale (blocks)"}, "min": 64, "max": 16384, "advanced": true},
+    "hydrology.enabled": {
+      "type": "bool",
+      "default": true,
+      "label": {"zh": "连接河流与湖塘", "en": "Connected rivers and lakes"},
+      "tooltip": {"zh": "关闭河流与湖塘规划，保留海洋；平坦模式跳过", "en": "Disable river/lake planning, retaining oceans; flat mode skips planning"}
+    },
+    "hydrology.origin_x": {"type": "int", "default": -2048, "min": -10000000, "max": 10000000, "advanced": true, "label": {"zh": "规划起点 X", "en": "Planning origin X"}},
+    "hydrology.origin_z": {"type": "int", "default": -2048, "min": -10000000, "max": 10000000, "advanced": true, "label": {"zh": "规划起点 Y", "en": "Planning origin Y"}},
+    "hydrology.size": {
+      "type": "int",
+      "default": 4096,
+      "min": 256,
+      "max": 8192,
+      "advanced": true,
+      "label": {"zh": "固定规划范围（格）", "en": "Fixed planning size (blocks)"},
+      "tooltip": {"zh": "须为16的倍数；面板越界时自动调整规划窗口，窗口改变会重新规划河湖；脚本裁切须在固定规划内", "en": "Multiple of 16; the panel fits out-of-bounds regions automatically, replanning rivers and lakes when the window changes; scripted crops must stay inside fixed bounds"}
+    },
+    "river.min_catchment_area": {
+      "type": "float",
+      "default": 16384,
+      "min": 1024,
+      "max": 1048576,
+      "page": "hydrology",
+      "label": {"zh": "成河参考面积（格²）", "en": "River reference area (blocks²)"}
+    },
+    "river.pass_cut_extra": {
+      "type": "float",
+      "default": 32,
+      "min": 0,
+      "max": 256,
+      "page": "hydrology",
+      "advanced": true,
+      "label": {"zh": "额外穿越下切预算（格）", "en": "Extra passage incision (blocks)"}
+    },
+    "river.max_width": {
+      "type": "float",
+      "default": 48,
+      "min": 2,
+      "max": 96,
+      "page": "river",
+      "advanced": true,
+      "label": {"zh": "主河最大宽度（格）", "en": "Maximum main river width (blocks)"}
+    },
+    "river.near_bank": {"type": "float", "default": 3, "min": 1, "max": 12, "advanced": true, "label": {"zh": "近水岸带（格）", "en": "Near-water bank (blocks)"}},
+    "river.mouth_length": {"type": "float", "default": 32, "min": 16, "max": 96, "advanced": true, "label": {"zh": "水体交界过渡（格）", "en": "Waterbody join transition (blocks)"}},
+    "lakes.enabled": {"type": "bool", "default": true, "label": {"zh": "生成湖泊", "en": "Generate lakes"}},
+    "lakes.min_area": {"type": "float", "default": 1024, "min": 256, "max": 65536, "label": {"zh": "湖泊最小面积（格²）", "en": "Minimum lake area (blocks²)"}},
+    "lakes.min_depression": {
+      "type": "float",
+      "default": 1,
+      "min": 0.5,
+      "max": 32,
+      "advanced": true,
+      "label": {"zh": "最小有效洼深（格）", "en": "Minimum effective depression (blocks)"}
+    },
+    "lakes.depth": {"type": "float", "default": 6, "min": 0, "max": 32, "label": {"zh": "湖床目标深度（格）", "en": "Lake bed depth (blocks)"}},
+    "ponds.enabled": {"type": "bool", "default": true, "page": "lakes", "label": {"zh": "生成水塘", "en": "Generate ponds"}},
+    "ponds.probability": {"type": "float", "default": 0.2, "min": 0, "max": 1, "page": "lakes", "label": {"zh": "水塘候选概率", "en": "Pond candidate probability"}},
+    "ponds.radius": {"type": "float", "default": 8, "min": 3, "max": 24, "page": "lakes", "label": {"zh": "水塘参考半径（格）", "en": "Reference pond radius (blocks)"}},
+    "ponds.depth": {"type": "float", "default": 2, "min": 0, "max": 8, "page": "lakes", "label": {"zh": "水塘床深（格）", "en": "Pond bed depth (blocks)"}},
+    "river.enabled": {"type": "bool", "default": true, "label": {"zh": "生成河道", "en": "Generate rivers"}},
+    "river.width": {"type": "float", "default": 12, "min": 2, "max": 32, "label": {"zh": "河道宽度（格）", "en": "Channel width (blocks)"}},
+    "river.depth": {"type": "float", "default": 6, "min": 0, "max": 16, "label": {"zh": "中心水深（格）", "en": "Center depth (blocks)"}},
+    "river.bank_width": {"type": "float", "default": 4, "min": 1, "max": 8, "label": {"zh": "河岸基础过渡宽度（格）", "en": "Base bank width (blocks)"}},
+    "river.bank_height_scale": {
+      "type": "float",
+      "default": 1,
+      "min": 0,
+      "max": 2,
+      "advanced": true,
+      "label": {"zh": "高岸过渡增幅", "en": "Bank height transition factor"},
+      "tooltip": {"zh": "岸顶越高，外侧河谷越宽，最大64格", "en": "Higher banks widen the outer valley, capped at 64 blocks"}
+    },
+    "river.bed_strength": {"type": "float", "default": 0.75, "min": 0, "max": 2, "advanced": true, "label": {"zh": "河床起伏强度（格）", "en": "Riverbed variation (blocks)"}},
+    "river.bed_scale": {"type": "float", "default": 16, "min": 4, "max": 128, "advanced": true, "label": {"zh": "河床起伏尺度（格）", "en": "Riverbed variation scale (blocks)"}},
+    "river.scale": {
+      "type": "float",
+      "default": 384,
+      "min": 128,
+      "max": 4096,
+      "advanced": true,
+      "label": {"zh": "河道弯曲尺度（格）", "en": "River bend scale (blocks)"},
+      "tooltip": {"zh": "控制连接骨架的连续弯曲；河网密度由成河参考面积控制", "en": "Controls continuous bends; river reference area controls network density"}
+    },
+    "river.warp_strength": {"type": "float", "default": 48, "min": 0, "max": 128, "advanced": true, "label": {"zh": "河道坐标扰动（格）", "en": "River warp (blocks)"}},
+    "river.max_cut": {"type": "float", "default": 32, "min": 0, "max": 512, "advanced": true, "label": {"zh": "最大下切量（格）", "en": "Maximum incision (blocks)"}},
+    "surface.foothill_height": {"type": "float", "default": 16, "min": 1, "max": 128, "label": {"zh": "山脚覆盖过渡高度（格）", "en": "Foothill cover height (blocks)"}},
+    "surface.foothill_scale": {"type": "float", "default": 32, "min": 2, "max": 1024, "advanced": true, "label": {"zh": "山脚覆盖斑块尺度（格）", "en": "Foothill cover scale (blocks)"}},
+    "surface.shallow_depth": {"type": "float", "default": 3, "min": 0, "max": 128, "label": {"zh": "浅水泥土深度（格）", "en": "Shallow soil depth (blocks)"}},
+    "seabed.scale": {"type": "float", "default": 96, "min": 8, "max": 4096, "label": {"zh": "海底起伏尺度（格）", "en": "Seabed scale (blocks)"}},
+    "seabed.strength": {"type": "float", "default": 2, "min": 0, "max": 32, "label": {"zh": "海底起伏强度（格）", "en": "Seabed strength (blocks)"}},
+    "seabed.shore_fade": {"type": "float", "default": 8, "min": 0.1, "max": 128, "advanced": true, "label": {"zh": "近岸衰减深度（格）", "en": "Shore fade depth (blocks)"}},
+    "seabed.shaping": {"type": "bool", "default": true, "advanced": true, "label": {"zh": "海床与岸带塑形", "en": "Shape seabed and coast"}},
+    "seabed.shelf_depth": {"type": "float", "default": 1, "min": 0, "max": 32, "label": {"zh": "大陆架深度（格）", "en": "Shelf depth (blocks)"}},
+    "seabed.coast_drop": {"type": "float", "default": 6, "min": 0, "max": 16, "advanced": true, "label": {"zh": "水下岸坡下潜（格）", "en": "Submerged coastal descent (blocks)"}, "tooltip": {"zh": "沿连续岸坡分配的允许下潜幅度；越大允许下降越快，不再单独挖沟。", "en": "Extra depth allowed along the continuous shore slope; larger values allow faster descent without digging a separate trench."}},
+    "seabed.slope_depth": {"type": "float", "default": 6, "min": 0.1, "max": 64, "advanced": true, "label": {"zh": "海坡过渡深度（格）", "en": "Seabed transition depth (blocks)"}},
+    "seabed.relief_height": {"type": "float", "default": 3, "min": 0, "max": 16, "label": {"zh": "沙丘与凹地起伏（格）", "en": "Sand hills and hollows (blocks)"}},
+    "seabed.relief_scale": {"type": "float", "default": 32, "min": 8, "max": 256, "advanced": true, "label": {"zh": "沙丘与凹地尺度（格）", "en": "Sand relief scale (blocks)"}},
+    "seabed.deposit_height": {"type": "float", "default": 2, "min": 0, "max": 4, "advanced": true, "label": {"zh": "沉积堆高度（格）", "en": "Deposit mound height (blocks)"}},
+    "seabed.basin_depth": {"type": "float", "default": 24, "min": 0, "max": 128, "label": {"zh": "盆地深度（格）", "en": "Basin depth (blocks)"}},
+    "seabed.ridge_height": {"type": "float", "default": 4, "min": 0, "max": 32, "advanced": true, "label": {"zh": "海底山脊高度（格）", "en": "Seabed ridge height (blocks)"}},
+    "seabed.material_scale": {
+      "type": "float",
+      "default": 128,
+      "min": 16,
+      "max": 1024,
+      "advanced": true,
+      "label": {"zh": "海床材料分区尺度（格）", "en": "Seabed material region scale (blocks)"}
+    },
+    "seabed.trench_depth": {"type": "float", "default": 6, "min": 0, "max": 64, "label": {"zh": "槽地额外深度（格）", "en": "Extra trough depth (blocks)"}},
+    "seabed.basin_scale": {"type": "float", "default": 256, "min": 32, "max": 4096, "advanced": true, "label": {"zh": "海床主体尺度（格）", "en": "Seabed body scale (blocks)"}},
+    "seabed.coast_width": {"type": "int", "default": 4, "min": 0, "max": 8, "label": {"zh": "岸带宽度（格）", "en": "Coast band width (blocks)"}},
+    "seabed.coast_strength": {"type": "float", "default": 1.5, "min": 0, "max": 2, "label": {"zh": "岸带调整幅度（格）", "en": "Coast adjustment (blocks)"}},
+    "seabed.coast_scale": {"type": "float", "default": 96, "min": 16, "max": 1024, "advanced": true, "label": {"zh": "岸带扰动尺度（格）", "en": "Coast variation scale (blocks)"}},
+    "water.enabled": {"type": "bool", "default": true, "label": {"zh": "显示水面", "en": "Show water surfaces"}},
+    "vegetation.simplified": {"type": "bool", "default": true, "page": "trees", "label": {"zh": "简化植被模型", "en": "Simplified vegetation models"}, "tooltip": {"zh": "树木使用整树模型，草和海草使用单格模型；沙漠保留单格枯木、仙人掌和高枯草丛。关闭后加入完整花草，仙人掌为1～3格。树木、陆上植物及水草仍分别启停", "en": "Whole-tree models and single-cell grass/seagrass; deserts retain single-cell dead bushes, cacti and tall dry grass. Disable for full plants and 1–3-block cacti. Tree, ground and aquatic switches remain independent"}},
+    "trees.enabled": {"type": "bool", "default": true, "label": {"zh": "生成树木", "en": "Generate trees"}},
+    "forest.region_scale": {"type": "float", "default": 512, "min": 64, "max": 16384, "page": "forest", "label": {"zh": "森林区域尺度（格）", "en": "Forest region scale (blocks)"}, "enabled_param": "trees.enabled"},
+    "forest.mixed_oak_density": {"type": "float", "default": 0.60, "min": 0, "max": 1, "page": "forest", "label": {"zh": "混合林橡树密度", "en": "Mixed forest oak density"}, "enabled_param": "trees.enabled"},
+    "forest.mixed_birch_density": {"type": "float", "default": 0.20, "min": 0, "max": 1, "page": "forest", "label": {"zh": "混合林白桦密度", "en": "Mixed forest birch density"}, "enabled_param": "trees.enabled"},
+    "forest.birch_density": {"type": "float", "default": 0.75, "min": 0, "max": 1, "page": "forest", "label": {"zh": "白桦林密度", "en": "Birch forest density"}, "enabled_param": "trees.enabled"},
+    "forest.spruce_density": {"type": "float", "default": 0.70, "min": 0, "max": 1, "page": "forest", "label": {"zh": "针叶林云杉密度", "en": "Taiga spruce density"}, "enabled_param": "trees.enabled"},
+    "trees.density": {
+      "type": "float",
+      "default": 0.3,
+      "min": 0,
+      "max": 1,
+      "label": {"zh": "山地橡树密度", "en": "Mountain oak density"},
+      "tooltip": {"zh": "候选树位的保留概率；还受地面条件和树冠间距限制", "en": "Candidate probability, further limited by surface conditions and canopy spacing"},
+      "enabled_param": "trees.enabled"
+    },
+    "trees.height": {
+      "type": "int",
+      "default": 5,
+      "min": 3,
+      "max": 8,
+      "label": {"zh": "橡树高度（格）", "en": "Oak height (blocks)"},
+      "tooltip": {"zh": "单树上下浮动1格，树冠额外向上延伸2格", "en": "Each trunk varies by one block; foliage extends two blocks higher"},
+      "enabled_param": "trees.enabled"
+    },
+    "trees.birch_density": {"type": "float", "default": 0.08, "min": 0, "max": 1, "label": {"zh": "白桦密度", "en": "Birch density"}, "enabled_param": "trees.enabled"},
+    "trees.birch_height": {
+      "type": "int",
+      "default": 6,
+      "min": 3,
+      "max": 8,
+      "label": {"zh": "白桦高度（格）", "en": "Birch height (blocks)"},
+      "tooltip": {"zh": "单树上下浮动1格", "en": "Each trunk varies by one block"},
+      "enabled_param": "trees.enabled"
+    },
+    "trees.spruce_density": {"type": "float", "default": 0.06, "min": 0, "max": 1, "label": {"zh": "云杉密度", "en": "Spruce density"}, "enabled_param": "trees.enabled"},
+    "trees.spruce_height": {
+      "type": "int",
+      "default": 8,
+      "min": 5,
+      "max": 12,
+      "label": {"zh": "云杉高度（格）", "en": "Spruce height (blocks)"},
+      "tooltip": {"zh": "单树上下浮动1格", "en": "Each trunk varies by one block"},
+      "enabled_param": "trees.enabled"
+    },
+    "trees.acacia_density": {"type": "float", "default": 0.28, "min": 0, "max": 1, "page": "trees", "label": {"zh": "金合欢密度", "en": "Acacia density"}, "tooltip": {"zh": "每12格候选树位的保留概率；仍受坡度、真实支撑及树冠间距限制", "en": "Candidate probability on a 12-block grid, further limited by slope, real support and canopy spacing"}, "enabled_param": "trees.enabled"},
+    "trees.acacia_height": {"type": "int", "default": 5, "min": 3, "max": 8, "page": "trees", "label": {"zh": "金合欢基准高度（格）", "en": "Acacia base height (blocks)"}, "tooltip": {"zh": "树干采用基准高度或加1格；平冠最高单元再高2格", "en": "Trunks use the base height or one block higher; the highest canopy cell extends two more blocks"}, "enabled_param": "trees.enabled"},
+    "trees.plains_density": {"type": "float", "default": 0.01, "min": 0, "max": 1, "page": "trees", "label": {"zh": "普通草原橡树密度", "en": "Plains oak density"}, "tooltip": {"zh": "普通草原保留极少量橡树；0为无树草原，不影响森林或山地", "en": "Rare plains oaks; zero makes treeless plains without changing forests or mountains"}, "enabled_param": "trees.enabled"},
+    "savanna.coverage": {"type": "float", "default": 0.75, "min": 0, "max": 1, "page": "savanna", "label": {"zh": "热带草原出现强度", "en": "Savanna occurrence strength"}, "tooltip": {"zh": "宏观暖干区域的出现强度，不表示面积百分比；0关闭自然热带草原", "en": "Macro warm/dry occurrence strength, not an area percentage; zero disables natural savanna"}},
+    "savanna.region_scale": {"type": "float", "default": 768, "min": 64, "max": 2048, "page": "savanna", "advanced": true, "label": {"zh": "热带草原区域尺度（格）", "en": "Savanna region scale (blocks)"}},
+    "savanna.bare_scale": {"type": "float", "default": 24, "min": 8, "max": 256, "page": "surface", "advanced": true, "label": {"zh": "热带草原裸地尺度（格）", "en": "Savanna bare-ground scale (blocks)"}},
+    "savanna.bare_threshold": {"type": "float", "default": 0.85, "min": -1.1, "max": 1.1, "page": "surface", "advanced": true, "label": {"zh": "热带草原裸地阈值", "en": "Savanna bare-ground threshold"}, "tooltip": {"zh": "越高裸地越少；大于1不出现裸地，小于-1全部满足裸地规则", "en": "Higher values mean less bare ground; above 1 selects none, below -1 selects all eligible ground"}},
+    "trees.patch_scale": {
+      "type": "float",
+      "default": 48,
+      "min": 8,
+      "max": 512,
+      "advanced": true,
+      "label": {"zh": "树林斑块尺度（格）", "en": "Forest patch scale (blocks)"},
+      "enabled_param": "trees.enabled"
+    },
+    "trees.max_slope": {
+      "type": "float",
+      "default": 0.8,
+      "min": 0,
+      "max": 4,
+      "advanced": true,
+      "label": {"zh": "树木最大坡度", "en": "Tree maximum slope"},
+      "enabled_param": "trees.enabled"
+    },
+    "vegetation.enabled": {"type": "bool", "default": true, "label": {"zh": "生成草与灌木", "en": "Generate grass & bushes"}},
+    "vegetation.grass_density": {"type": "float", "default": 0.05, "min": 0, "max": 1, "label": {"zh": "草密度", "en": "Grass density"}},
+    "vegetation.bush_density": {"type": "float", "default": 0.01, "min": 0, "max": 1, "label": {"zh": "枯萎灌木密度", "en": "Dead bush density"}},
+    "vegetation.cactus_density": {"type": "float", "default": 0.05, "min": 0, "max": 1, "label": {"zh": "仙人掌密度", "en": "Cactus density"}, "tooltip": {"zh": "每6格候选位置的保留概率；简化模式为单格，完整模式为1～3格", "en": "Probability per 6-block candidate cell; one block when simplified, 1–3 blocks otherwise"}, "enabled_param": "vegetation.enabled"},
+    "vegetation.dry_grass_density": {"type": "float", "default": 0.004, "min": 0, "max": 1, "label": {"zh": "枯草丛密度", "en": "Dry grass density"}, "tooltip": {"zh": "每种枯草的逐列概率；简化模式仅生成高枯草丛，完整模式包含高、矮两种", "en": "Per-column probability for each dry grass type; tall only when simplified, both short and tall otherwise"}, "enabled_param": "vegetation.enabled"},
+    "vegetation.tall_grass_density": {
+      "type": "float",
+      "default": 0.01,
+      "min": 0,
+      "max": 1,
+      "label": {"zh": "两格高草密度", "en": "Tall grass & fern density"},
+      "enabled_param": "vegetation.enabled"
+    },
+    "vegetation.tall_flower_density": {
+      "type": "float",
+      "default": 0.003,
+      "min": 0,
+      "max": 1,
+      "label": {"zh": "两格高花密度", "en": "Tall flower density"},
+      "enabled_param": "vegetation.enabled"
+    },
+    "vegetation.patch_scale": {"type": "float", "default": 32, "min": 2, "max": 1024, "label": {"zh": "植被斑块尺度（格）", "en": "Vegetation patch scale (blocks)"}},
+    "vegetation.max_slope": {"type": "float", "default": 0.8, "min": 0, "max": 16, "label": {"zh": "植被最大坡度", "en": "Vegetation max slope"}},
+    "world.y_min": {"type": "int", "default": 0, "min": -2048, "max": 2048, "label": {"zh": "最低 Z（含）", "en": "Minimum Z"}, "advanced": true},
+    "world.y_max": {
+      "type": "int",
+      "default": 192,
+      "min": -2047,
+      "max": 4096,
+      "label": {"zh": "最高 Z（不含）", "en": "Maximum Z"},
+      "advanced": true,
+      "tooltip": {"zh": "高于此处的地形被削平", "en": "Terrain above is clipped"}
+    },
+    "world.sea_level": {"type": "float", "default": 32.0, "min": -2048, "max": 4096, "label": {"zh": "海平面", "en": "Sea level"}},
+    "world.flat_height": {"type": "float", "default": 48.0, "min": -2048, "max": 4096, "label": {"zh": "平坦高度（仅平坦模式）", "en": "Flat height (flat mode only)"}},
+    "terrain.continental_scale": {"type": "float", "default": 1024.0, "min": 64, "max": 32768, "label": {"zh": "大陆尺度（格）", "en": "Continent scale (blocks)"}},
+    "terrain.erosion_scale": {"type": "float", "default": 512.0, "min": 32, "max": 16384, "label": {"zh": "山地区域尺度（格）", "en": "Erosion region scale (blocks)"}},
+    "terrain.weirdness_scale": {"type": "float", "default": 256.0, "min": 16, "max": 8192, "label": {"zh": "山脊谷地尺度（格）", "en": "Ridge/valley scale (blocks)"}},
+    "terrain.erosion_offset": {"type": "float", "default": 0.0, "min": -2, "max": 2, "label": {"zh": "侵蚀偏移（越高越平缓）", "en": "Erosion offset (higher is gentler)"}},
+    "terrain.mountain_height": {"type": "float", "default": 80.0, "min": 0, "max": 512, "label": {"zh": "山脉高度（格）", "en": "Mountain height (blocks)"}},
+    "terrain.massif_weight": {
+      "type": "float",
+      "default": 0.45,
+      "min": 0,
+      "max": 1,
+      "label": {"zh": "宽山体占比", "en": "Broad mountain body weight"},
+      "tooltip": {"zh": "越高越偏向宽山体，越低越突出峰谷山脊", "en": "Higher favours broad bodies over PV ridges"}
+    },
+    "terrain.warp_strength": {"type": "float", "default": 48.0, "min": 0, "max": 256, "advanced": true, "label": {"zh": "山脊坐标扰动（格）", "en": "Ridge coordinate warp (blocks)"}},
+    "terrain.detail_strength": {"type": "float", "default": 3.0, "min": 0, "max": 64, "label": {"zh": "区域细节强度（格）", "en": "Regional detail strength (blocks)"}},
+    "terrain.dune_height": {"type": "float", "default": 4, "min": 0, "max": 16, "advanced": true, "label": {"zh": "沙丘高度（格）", "en": "Dune height (blocks)"}, "tooltip": {"zh": "沙漠中的低矮沙丘；设为0关闭，河道仍沿用水系塑形", "en": "Low desert dunes; zero disables them, rivers retain water-system shaping"}},
+    "terrain.dune_scale": {"type": "float", "default": 64, "min": 16, "max": 512, "advanced": true, "label": {"zh": "沙丘间距（格）", "en": "Dune spacing (blocks)"}},
+    "terrain.lowland_height": {
+      "type": "float",
+      "default": 4,
+      "min": 1,
+      "max": 16,
+      "label": {"zh": "低地高度（格）", "en": "Lowland height (blocks)"},
+      "tooltip": {"zh": "海面以上宽缓低地的名义高度；保留细节，强山地区不压低", "en": "Nominal lowland body height above sea; detail and strong mountains are retained"}
+    },
+    "terrain.lowland_strength": {
+      "type": "float",
+      "default": 1,
+      "min": 0,
+      "max": 1,
+      "advanced": true,
+      "label": {"zh": "低地压低强度", "en": "Lowland lowering strength"},
+      "tooltip": {"zh": "0恢复原低地计算，1完整应用；平坦模式跳过", "en": "0 restores original lowlands, 1 applies fully; flat mode skips shaping"}
+    },
+    "terrain.continental_curve": {
+      "type": "curve",
+      "advanced": true,
+      "default": [[-1, -28], [-0.6, -23], [-0.25, -12], [-0.1, 0], [0.15, 14], [0.5, 24], [1, 34]],
+      "label": {"zh": "大陆高度曲线（C→海平面偏移）", "en": "Continent height curve (C to sea offset)"}
+    },
+    "terrain.erosion_curve": {
+      "type": "curve",
+      "advanced": true,
+      "default": [[-1, 1], [-0.4, 0.95], [0, 0.55], [0.4, 0.1], [0.75, 0], [1, 0]],
+      "label": {"zh": "侵蚀曲线（E→山地权重）", "en": "Erosion curve (E to mountain weight)"}
+    },
+    "terrain.peaks_curve": {
+      "type": "curve",
+      "advanced": true,
+      "default": [[-1, -0.2], [-0.6, -0.06], [-0.25, 0.1], [0.2, 0.4], [0.65, 0.85], [1, 1]],
+      "label": {"zh": "峰谷曲线（PV→山脊与谷底）", "en": "Peaks/valleys curve (PV to relief)"}
+    },
+    "terrain.detail_scale": {"type": "float", "default": 24.0, "min": 2, "max": 1024, "advanced": true, "label": {"zh": "细节尺度（格）", "en": "Detail scale (blocks)"}},
+    "terrain.flat": {"type": "bool", "default": false, "advanced": true, "label": {"zh": "精确平坦模式", "en": "Exact flat mode"}},
+    "climate.scale": {"type": "float", "default": 384.0, "min": 16, "max": 16384, "label": {"zh": "群系尺度（格）", "en": "Biome scale (blocks)"}},
+    "climate.warp_strength": {"type": "float", "default": 48, "min": 0, "max": 96, "advanced": true, "label": {"zh": "连续边界扭曲强度（格）", "en": "Climate boundary warp strength (blocks)"}},
+    "climate.warp_scale": {"type": "float", "default": 192, "min": 64, "max": 512, "advanced": true, "label": {"zh": "连续边界扭曲尺度（格）", "en": "Climate boundary warp scale (blocks)"}},
+    "climate.boundary_detail": {"type": "float", "default": 1.8, "min": 0, "max": 2, "advanced": true, "label": {"zh": "群系细边界位移（格）", "en": "Fine biome boundary displacement (blocks)"}},
+    "climate.single_biome": {"type": "str", "default": "", "advanced": true, "label": {"zh": "固定群系ID", "en": "Single biome ID"}, "tooltip": {"zh": "留空使用混合群系；整套预设会同步调整地形、水体和植被", "en": "Empty uses mixed biomes; global presets also configure terrain, water and vegetation"}},
+    "climate.temperature_offset": {"type": "float", "default": 0.0, "min": -2, "max": 2, "label": {"zh": "温度偏移", "en": "Temperature offset"}},
+    "climate.humidity_offset": {"type": "float", "default": 0.0, "min": -2, "max": 2, "label": {"zh": "湿度偏移", "en": "Humidity offset"}},
+    "climate.cooling": {"type": "float", "default": 0.5, "min": 0, "max": 4, "label": {"zh": "每升高 128 格降温", "en": "Cooling per 128 blocks"}},
+    "climate.mountain_height": {"type": "float", "default": 48.0, "min": 0, "max": 4096, "label": {"zh": "山地起始高度（海平面以上）", "en": "Mountain height above sea"}},
+    "climate.edge_noise": {
+      "type": "float",
+      "default": 0.05,
+      "min": 0,
+      "max": 0.5,
+      "advanced": true,
+      "label": {"zh": "群系边界扰动", "en": "Biome edge noise"},
+      "tooltip": {"zh": "边界曲折程度；0 为光滑等值线", "en": "Boundary wiggle; 0 gives smooth contours"}
+    },
+    "climate.edge_scale": {"type": "float", "default": 16.0, "min": 2, "max": 256, "advanced": true, "label": {"zh": "边界扰动尺度（格）", "en": "Edge noise scale (blocks)"}},
+    "surface.soil_depth": {"type": "int", "default": 3, "min": 0, "max": 32, "label": {"zh": "土层厚度", "en": "Soil depth"}},
+    "surface.shore_cover_extra": {"type": "int", "default": 4, "min": 0, "max": 8, "advanced": true, "label": {"zh": "近岸额外覆盖厚度（格）", "en": "Extra shore cover depth (blocks)"}},
+    "surface.steep_slope": {
+      "type": "float",
+      "default": 1.6,
+      "min": 0,
+      "max": 16,
+      "label": {"zh": "陡坡露岩坡度", "en": "Steep rock slope"},
+      "tooltip": {"zh": "每格升高多少格算陡坡", "en": "Rise per block that exposes rock"}
+    },
+    "surface.boundary_scale": {"type": "float", "default": 12.0, "min": 1, "max": 256, "advanced": true, "label": {"zh": "规则边界扰动尺度（格）", "en": "Rule jitter scale (blocks)"}},
+    "surface.patch_scale": {"type": "float", "default": 6.0, "min": 1, "max": 256, "advanced": true, "label": {"zh": "混合方块斑块尺度（格）", "en": "Block patch scale (blocks)"}}
+  },
+  "format_version": 2,
+  "mask_categories": {
+    "vegetation": ["trees", "vegetation", "aquatic"],
+    "clearance": ["trees", "vegetation", "aquatic", "decorations"]
+  },
+  "planner_gates": {"water": ["water.generate"], "caves": ["caves.enabled"]},
+  "feature_metrics": {
+    "tree_trunk_cells": {"category": "trees", "blocks": ["oak_log", "birch_log", "spruce_log", "acacia_log"]},
+    "tree_leaf_cells": {"category": "trees", "blocks": ["oak_leaves", "birch_leaves", "spruce_leaves", "acacia_leaves"]}
+  },
+  "ui_sections": {
+    "world": {"label": {"zh": "世界", "en": "World"}, "pages": ["world"]},
+    "terrain": {"label": {"zh": "地形形状", "en": "Terrain shape"}, "pages": ["terrain", "islands"], "groups": [
+      {"id": "islands", "label": {"zh": "海岛", "en": "Islands"}, "pages": ["islands"], "default_open": true, "fold": true}
+    ]},
+    "climate": {
+      "label": {"zh": "气候与群系", "en": "Climate/Biome"}, "pages": ["climate", "cold_surfaces", "ice_spikes", "badlands", "savanna"], "editor": "biomes",
+      "groups": [
+        {"id": "cold", "label": {"zh": "积雪与冻结", "en": "Snow & freezing"}, "pages": ["cold_surfaces"], "default_open": true, "fold": true},
+        {"id": "ice_spikes", "label": {"zh": "冰刺之地", "en": "Ice spikes"}, "pages": ["ice_spikes"], "default_open": true, "fold": true},
+        {"id": "badlands", "label": {"zh": "恶地", "en": "Badlands"}, "pages": ["badlands"], "default_open": true, "fold": true},
+        {"id": "savanna", "label": {"zh": "热带草原", "en": "Savanna"}, "pages": ["savanna"], "default_open": true, "fold": true}
+      ]
+    },
+    "surface": {"label": {"zh": "地表", "en": "Surface"}, "pages": ["surface"], "editor": "surface"},
+    "water": {
+      "label": {"zh": "水面", "en": "Water"},
+      "pages": ["hydrology", "river", "lakes", "seabed", "water", "groundwater", "frozen_ocean"],
+      "shared_group": true,
+      "controls": ["water.generate", "water.enabled"],
+      "editor": "water",
+      "groups": [
+        {"id": "frozen_ocean", "label": {"zh": "冻洋", "en": "Frozen ocean"}, "pages": ["frozen_ocean"], "default_open": true, "fold": true},
+        {"id": "river", "label": {"zh": "河流", "en": "Rivers"}, "pages": ["river"], "default_open": true, "fold": true},
+        {"id": "lakes", "label": {"zh": "湖泊与水塘", "en": "Lakes & ponds"}, "pages": ["lakes"], "default_open": false, "fold": true},
+        {"id": "seabed", "label": {"zh": "海底", "en": "Seabed"}, "pages": ["seabed", "water"], "default_open": false, "fold": true},
+        {"id": "groundwater", "label": {"zh": "地下水", "en": "Underground Water"}, "pages": ["groundwater"], "default_open": false, "fold": true}
+      ]
+    },
+    "caves": {
+      "label": {"zh": "洞穴", "en": "Caves"},
+      "pages": ["caves", "cave_tunnels", "cave_rooms", "cave_ravines", "cave_materials", "cave_ores"],
+      "shared_group": true,
+      "controls": ["caves.enabled"],
+      "groups": [
+        {"id": "cave_distribution", "label": {"zh": "洞穴", "en": "Caves"}, "pages": ["caves"], "default_open": true, "fold": true},
+        {"id": "cave_tunnels", "label": {"zh": "通道", "en": "Tunnels"}, "pages": ["cave_tunnels"], "default_open": false, "fold": true},
+        {"id": "cave_rooms", "label": {"zh": "洞室", "en": "Chambers"}, "pages": ["cave_rooms"], "default_open": false, "fold": true},
+        {"id": "cave_ravines", "label": {"zh": "峡谷", "en": "Ravines"}, "pages": ["cave_ravines"], "default_open": false, "fold": true},
+        {
+          "id": "cave_materials",
+          "label": {"zh": "岩层与岩种", "en": "Rock layers and patches"},
+          "pages": ["cave_materials"],
+          "default_open": false,
+          "fold": true
+        },
+        {"id": "cave_ores", "label": {"zh": "暴露矿石", "en": "Exposed ores"}, "pages": ["cave_ores"], "default_open": false, "fold": true}
+      ]
+    },
+    "vegetation": {
+      "label": {"zh": "植被", "en": "Vegetation"},
+      "pages": ["trees", "forest", "vegetation", "aquatic", "decorations"],
+      "shared_group": true,
+      "editor": "features",
+      "groups": [
+        {"id": "trees", "label": {"zh": "树木", "en": "Trees"}, "pages": ["trees"], "default_open": false, "fold": false},
+        {"id": "forest", "label": {"zh": "森林", "en": "Forests"}, "pages": ["forest"], "default_open": true, "fold": true},
+        {"id": "vegetation", "label": {"zh": "草与灌木", "en": "Grass & bushes"}, "pages": ["vegetation"], "default_open": false, "fold": false},
+        {"id": "aquatic", "label": {"zh": "水下植物", "en": "Aquatic plants"}, "pages": ["aquatic"], "default_open": false, "fold": false},
+        {"id": "decorations", "label": {"zh": "自然装饰", "en": "Natural decorations"}, "pages": ["decorations"], "default_open": false, "fold": false}
+      ]
+    }
+  }
+}

@@ -4,10 +4,13 @@ import math
 import re
 import struct
 
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 from mc_math import MODEL_FRAME, model_vertices_to_ue
-from mc_prep import prep_texture, colorize_material
-from mc_utils import warn, get_tex_size
+from mc_prep import prep_texture, colorize_material, _apply_emission_default
+from mc_utils import warn, debug, get_tex_size, throw
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tga", ".bmp", ".exr"}
@@ -82,11 +85,12 @@ ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面2_材�
 TWO_SIDED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR1_基础_材质实例.LabPBR1_基础_材质实例"
 TWO_SIDED_ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR2_动画_材质实例.LabPBR2_动画_材质实例"
 BASE_TEXTURE_PARAMETER_NAME = "纹理贴图"
+ANIMATION_PARAMETER_NAME = "动画速度/步长/列数/渐变"
 
 # blockstates 中出现过 uvlock:true 的模型名（不含 .json）缓存
 _UVLOCK_MODEL_NAMES_CACHE = None
 # 样式 key → 已建碰撞的原型网格路径。仅当前编辑器会话有效。
-_MESH_STYLE_VERSION = 2
+_MESH_STYLE_VERSION = 3
 _MESH_STYLE_CACHE = {}
 
 
@@ -165,8 +169,28 @@ def _normalize_source_file(filepath) -> Path:
     """规范源文件路径为 Path"""
     source = Path(filepath).expanduser()
     if not source.exists():
-        raise FileNotFoundError(f"Source file not found: {source}")
+        throw(f"Source file not found: {source}")
     return source.resolve()
+
+
+def _resolve_import_source(filepath, category, destination_path):
+    """解析文件路径或默认包中的名称，并隔离自定义命名空间的输出。"""
+    source = Path(filepath).expanduser()
+    name = source.stem
+    if isinstance(filepath, str):
+        match = re.fullmatch(r"(?:([a-z0-9_][a-z0-9_.-]*):)?([a-z0-9_-]+(?:/[a-z0-9_-]+)*)", filepath)
+        if match and (match[1] or "/" not in filepath) and not source.exists():
+            from mc_config import paths
+            namespace, relative = match[1] or "minecraft", match[2]
+            folder, suffix = ("models/block", ".json") if category == "block" else ("textures/item", ".png")
+            source = Path(paths.assets) / namespace / folder / (relative + suffix)
+            name = relative.replace("/", "_")
+            if namespace != "minecraft":
+                name = namespace + "_" + name
+                # 转义特殊字符，避免 a-b、a_b 等命名空间共用输出目录。
+                namespace_folder = namespace.replace("_", "__").replace("-", "_h").replace(".", "_d")
+                destination_path = str(destination_path).rstrip("/") + "/" + namespace_folder
+    return _normalize_source_file(source), name, destination_path
 
 
 def _normalize_package_path(destination_path) -> str:
@@ -208,12 +232,12 @@ def _mc_material_path(destination_path, category) -> str:
 
 
 def _mc_mesh_asset_name(name) -> str:
-    """网格资产名加 SM_ 前缀"""
+    """生成带 ▣ 前缀的网格资产名"""
     return f"▣{_sanitize_asset_name(name)}"
 
 
 def _mc_material_asset_name(name) -> str:
-    """材质资产名加 MI_ 前缀"""
+    """生成带 ◉ 前缀的材质资产名"""
     name = name.replace("grass_block_side_overlay", "grass_block_overlay")
     return f"◉{_sanitize_asset_name(name)}"
 
@@ -353,9 +377,16 @@ def _is_square_texture(texture_asset) -> bool:
     return width == height
 
 
-def _material_instance_path_for_texture(texture_asset, *, two_sided=False) -> str:
-    """由贴图路径推导对应材质实例路径"""
-    if _is_square_texture(texture_asset):
+def _material_instance_path_for_texture(texture_asset, *, two_sided=False, texture_source=None) -> str:
+    """根据贴图是否为正方形选择静态或序列帧母材质（优先读取源 PNG 尺寸，避免受 UE 异步编译占位尺寸影响）。"""
+    if texture_source is not None and Path(texture_source).suffix.lower() == '.png':
+        width, height = _read_png_size(Path(texture_source))
+        if min(width, height) <= 0:
+            raise ValueError(f'Invalid PNG dimensions: {texture_source}')
+        square = width == height
+    else:
+        square = _is_square_texture(texture_asset)
+    if square:
         return TWO_SIDED_MATERIAL_INSTANCE_PATH if two_sided else BASE_MATERIAL_INSTANCE_PATH
     return TWO_SIDED_ANIMATED_MATERIAL_INSTANCE_PATH if two_sided else ANIMATED_MATERIAL_INSTANCE_PATH
 
@@ -586,16 +617,120 @@ def _import_texture_asset(source, texture_package_path, asset_name=None) -> unre
     return texture_asset
 
 
-def _create_texture_material(texture_asset, destination_path, asset_name, *, two_sided=False) -> unreal.MaterialInstanceConstant:
+def _animation_step(indices, frame_count):
+    """识别序列帧是顺序循环 (1) 还是往返循环 (-1)，不支持的自定义帧序返回 None。"""
+    count = len(indices)
+    if count == frame_count and all(indices[(i+1) % count] == (value+1) % frame_count
+                                    for i, value in enumerate(indices)):
+        return 1
+    if count == 2*(frame_count-1) and indices.count(0) == 1:
+        start = indices.index(0)
+        expected = (*range(frame_count), *range(frame_count-2, 0, -1))
+        if all(indices[(start+i) % count] == value for i, value in enumerate(expected)):
+            return -1
+    return None
+
+
+def _texture_animation(texture_source):
+    """解析贴图同名 .png.mcmeta 中的动画配置，返回 (播放速度, 步长, 是否插值)，无动画或格式不支持时返回 None。"""
+    if texture_source is None:
+        return None
+    source = Path(texture_source)
+    metadata = Path(str(source) + '.mcmeta')
+    if source.suffix.lower() != '.png' or not metadata.is_file():
+        return None
+
+    def positive(value):
+        return type(value) is int and 0 < value <= 2**31-1
+
+    try:
+        raw = json.loads(metadata.read_text(encoding='utf-8-sig'))
+        if isinstance(raw, dict) and 'animation' not in raw:
+            return None
+        animation = raw.get('animation')
+        frametime = animation.get('frametime', 1)
+        interpolate = animation.get('interpolate', False)
+        width, height = _read_png_size(source)
+        # MC 规范：只指定宽或高时，另一维默认取整张贴图尺寸
+        fw = animation.get('width', width if 'height' in animation else min(width, height))
+        fh = animation.get('height', height if 'width' in animation else min(width, height))
+    except (OSError, ValueError, AttributeError) as exc:
+        debug(f'Animation metadata skipped: {metadata}: {exc}')
+        return None
+    if not all(positive(v) for v in (fw, fh, frametime)) or type(interpolate) is not bool:
+        debug(f'Animation metadata skipped: {metadata}: invalid dimensions, frametime or interpolate')
+        return None
+    if width <= 0 or height <= width or height % width or fw != width or fh != width:
+        debug(f'Animation metadata skipped: {metadata}: only vertical square-frame strips are supported')
+        return None
+
+    duration, step = frametime, 1
+    notes = []
+    if 'frames' in animation:
+        frames = animation['frames']
+        if not isinstance(frames, list) or not frames:
+            debug(f'Animation metadata: {metadata}: custom frames ignored: expected a nonempty list')
+            return 20.0/frametime, 1, int(interpolate)
+        indices, times = [], []
+        for frame in frames:
+            index = frame.get('index') if isinstance(frame, dict) else frame
+            time = frame.get('time', frametime) if isinstance(frame, dict) else frametime
+            if type(index) is not int or not 0 <= index < height//width or not positive(time):
+                debug(f'Animation metadata: {metadata}: custom frames ignored: invalid index or time')
+                return 20.0/frametime, 1, int(interpolate)
+            indices.append(index)
+            times.append(time)
+        if len(set(times)) == 1:
+            duration = times[0]
+        else:
+            notes.append('variable frame times ignored; using global frametime')
+        recognized = _animation_step(indices, height//width)
+        if recognized is None:
+            notes.append('custom frame order ignored; using forward playback')
+        else:
+            step = recognized
+    if notes:
+        debug(f'Animation metadata: {metadata}: ' + '; '.join(notes))
+    return 20.0/duration, step, int(interpolate)
+
+
+def _apply_texture_animation(material, texture_source):
+    """根据 .png.mcmeta 将序列帧动画参数写入材质实例。"""
+    values = _texture_animation(texture_source)
+    if values is None:
+        return
+    library = unreal.MaterialEditingLibrary
+    if ANIMATION_PARAMETER_NAME not in map(str, library.get_vector_parameter_names(material)):
+        debug(f'Animation parameter not found: {ANIMATION_PARAMETER_NAME}: {texture_source}')
+        return
+    current = library.get_material_instance_vector_parameter_value(material, ANIMATION_PARAMETER_NAME)
+    fps, step, interpolate = values
+    flow = Path(texture_source).stem.lower() in {'lava_flow', 'water_flow'}
+    if not library.set_material_instance_vector_parameter_value(
+            material, ANIMATION_PARAMETER_NAME,
+            unreal.LinearColor(fps, 2 if flow else step, 2 if flow else current.b, interpolate)):
+        debug(f'Could not set animation parameter: {texture_source}')
+
+
+def _create_texture_material(texture_asset, destination_path, asset_name, *, two_sided=False, texture_source=None, reload=False) -> unreal.MaterialInstanceConstant:
     """为贴图创建/更新材质实例"""
     material_name = _mc_material_asset_name(asset_name)
     material_path = _asset_path(destination_path, material_name)
-    base_material_path = _material_instance_path_for_texture(texture_asset, two_sided=two_sided)
     material = _load_asset_if_exists(material_path, unreal.MaterialInstanceConstant)
+    created = material is None
+    if not created and not reload:
+        return material
+    base_material_path = _material_instance_path_for_texture(
+        texture_asset, two_sided=two_sided, texture_source=texture_source)
     if material is None:
         material = unreal.EditorAssetLibrary.duplicate_asset(base_material_path, material_path)
         if not material:
             raise RuntimeError(f"Failed to duplicate material instance asset: {material_path}")
+    else:
+        parent = unreal.load_asset(base_material_path)
+        if parent is None:
+            raise RuntimeError(f'Failed to load material parent: {base_material_path}')
+        unreal.MaterialEditingLibrary.set_material_instance_parent(material, parent)
 
     material = unreal.MaterialInstanceConstant.cast(material)
     if material is None:
@@ -608,6 +743,9 @@ def _create_texture_material(texture_asset, destination_path, asset_name, *, two
     )
 
     colorize_material(material)
+    _apply_texture_animation(material, texture_source)
+    if created or reload:
+        _apply_emission_default(material, texture_source)
     unreal.EditorAssetLibrary.save_loaded_asset(material)
     return material
 
@@ -833,7 +971,9 @@ def _is_leaves_model(model_name) -> bool:
 
 
 def _element_is_full_cube(element) -> bool:
-    """单个 element 是否为 0–16 且含六面的完整正方体"""
+    """单个 element 是否为 0~16 且含六面的完整正方体"""
+    if float((element.get("rotation") or {}).get("angle", 0)) != 0:
+        return False
     frm = element.get("from")
     to = element.get("to")
     if not frm or not to or len(frm) != 3 or len(to) != 3:
@@ -929,12 +1069,39 @@ def _apply_uv_rect_to_triangles(mesh, triangle_ids, uv_rect, rotation_deg):
         _set_triangle_uvs(mesh, triangle_id, mapped)
 
 
-def _find_assets_root(source_file) -> Path:
-    """从模型路径向上查找 assets 根目录"""
-    for parent in source_file.parents:
+def _local_assets_dir(model_path) -> Path | None:
+    """模型文件自身的 assets 目录；不在资源包内时返回 None。"""
+    for parent in Path(model_path).parents:
         if parent.name == "assets":
-            return parent.parent
-    raise RuntimeError(f"Could not find assets root for: {source_file}")
+            return parent
+    return None
+
+
+def _with_suffix_if_missing(path: Path, suffix: str) -> Path:
+    if path.suffix:
+        return path
+    return path.with_suffix(suffix)
+
+
+def _namespaced_resource(model_path, namespace, category, relative, suffix) -> Path:
+    """先找模型自己的资源包，文件不存在时回退到 paths.assets。"""
+    from mc_config import paths
+
+    relative = str(relative).strip("/")
+    candidates = []
+    local_assets = _local_assets_dir(model_path)
+    if local_assets is not None:
+        candidates.append(local_assets / namespace / category / relative)
+    default = Path(paths.assets) / namespace / category / relative
+    if not candidates or candidates[0] != default:
+        candidates.append(default)
+
+    chosen = None
+    for candidate in candidates:
+        chosen = _with_suffix_if_missing(candidate, suffix)
+        if chosen.exists():
+            return chosen.resolve()
+    return chosen.resolve()
 
 
 def _resolve_model_reference(model_path, model_ref):
@@ -945,11 +1112,11 @@ def _resolve_model_reference(model_path, model_ref):
         namespace, relative_path = model_ref.split(":", 1)
     else:
         namespace, relative_path = "minecraft", model_ref
-    return (_find_assets_root(model_path) / "assets" / namespace / "models" / f"{relative_path}.json").resolve()
+    return _namespaced_resource(model_path, namespace, "models", relative_path, ".json")
 
 
 def _unwrap_texture_value(texture_value):
-    """MC 26.1+: textures may be a string or {"sprite": "...", "force_translucent": bool}."""
+    """提取贴图路径字符串（兼容 MC 26.1+ 的 {"sprite": "...", "force_translucent": bool} 字典格式）。"""
     if isinstance(texture_value, dict):
         sprite = texture_value.get("sprite")
         if not isinstance(sprite, str) or not sprite:
@@ -1001,23 +1168,19 @@ def _resolve_texture_key(textures, texture_key, visited=None):
 
 
 def _resolve_texture_reference(model_path, textures, texture_key):
-    """把纹理键解析为磁盘文件路径"""
+    """把纹理键解析为磁盘文件路径。相对路径不回退；命名空间路径回退到 paths.assets。"""
     raw_ref = _resolve_texture_key(textures, texture_key)
     is_relative = raw_ref.startswith(".")
     texture_ref = _normalize_texture_path(raw_ref)
 
     if is_relative:
-        texture_path = (model_path.parent / texture_ref).resolve()
-    else:
-        if ":" in texture_ref:
-            namespace, relative_path = texture_ref.split(":", 1)
-        else:
-            namespace, relative_path = "minecraft", texture_ref
-        texture_path = _find_assets_root(model_path) / "assets" / namespace / "textures" / relative_path
+        return _with_suffix_if_missing(Path(model_path).parent / texture_ref, ".png").resolve()
 
-    if texture_path.suffix:
-        return texture_path
-    return texture_path.with_suffix(".png")
+    if ":" in texture_ref:
+        namespace, relative_path = texture_ref.split(":", 1)
+    else:
+        namespace, relative_path = "minecraft", texture_ref
+    return _namespaced_resource(model_path, namespace, "textures", relative_path, ".png")
 
 
 def _load_mc_model(model_path):
@@ -1232,7 +1395,7 @@ def _build_item_dynamic_mesh(width_cm, height_cm, thickness_cm, opaque_mask) -> 
     return mesh
 
 
-def _material_context_for_texture(texture_cache, material_cache, texture_source, texture_package, material_package, *, two_sided=False):
+def _material_context_for_texture(texture_cache, material_cache, texture_source, texture_package, material_package, *, two_sided=False, reload=False):
     """缓存并返回贴图对应的材质上下文"""
     texture_key = str(texture_source).lower()
     if texture_key not in texture_cache:
@@ -1243,6 +1406,8 @@ def _material_context_for_texture(texture_cache, material_cache, texture_source,
             material_package,
             texture_source.stem,
             two_sided=two_sided,
+            texture_source=texture_source,
+            reload=reload,
         )
     return texture_cache[texture_key], material_cache[texture_key]
 
@@ -1387,12 +1552,12 @@ def _texture_files_in_slot_order(faces) -> list:
     return files
 
 
-def _materials_for_files(texture_files, destination_path, category="block", *, two_sided=False) -> list:
+def _materials_for_files(texture_files, destination_path, category="block", *, two_sided=False, reload=False) -> list:
     """按槽位顺序创建材质；已有贴图沿用现有导入缓存"""
     texture_package = _mc_texture_path(destination_path, category)
     material_package = _mc_material_path(destination_path, category)
     if two_sided:
-        # Keep names for colorize_material, but isolate from single-sided assets.
+        # 双面材质单独存放在 two_sided 子目录，同时保留原材质名以便匹配染色表
         material_package = _normalize_package_path(material_package + "/two_sided")
     imported_textures = {}
     created_materials = {}
@@ -1405,6 +1570,7 @@ def _materials_for_files(texture_files, destination_path, category="block", *, t
             texture_package,
             material_package,
             two_sided=two_sided,
+            reload=reload,
         )
         materials.append(material_asset)
     return materials
@@ -1476,7 +1642,8 @@ def _fluid_dynamic_mesh(height_ratio):
             0,
             use_down_winding=use_down_winding,
         )
-        _append_block_face(target_mesh, face_name, face_vertices, uv_corners, material_index, False, uvlock_tris_by_alpha)
+        _append_block_face(target_mesh, face_name, face_vertices, uv_corners, material_index, True, uvlock_tris_by_alpha)
+    _finish_uvlock(target_mesh, uvlock_tris_by_alpha)
     return target_mesh
 
 
@@ -1638,13 +1805,13 @@ def import_item(
     max_resolution=32,  # 默认上限设为 32x32
     reload=False,       # 是否重新导入
 ) -> unreal.StaticMesh:
-    """从贴图导入物品网格；已存在且 reload=False 时直接复用"""
-    source = _normalize_source_file(filepath)
+    """从贴图路径或默认包中的物品名称导入挤出网格；reload=False 时复用已有资产。"""
+    source, source_name, destination_path = _resolve_import_source(filepath, "item", destination_path)
     if source.suffix.lower() not in IMAGE_SUFFIXES:
         raise ValueError(f"import_item only supports image files: {source}")
 
     item_root = _mc_root_path(destination_path, "item")
-    base_name = _sanitize_asset_name(asset_name or source.stem)
+    base_name = _sanitize_asset_name(asset_name or source_name)
     
     # 提前计算目标静态网格体资产路径并检查
     target_mesh_path = _asset_path(item_root, _mc_mesh_asset_name(base_name))
@@ -1656,10 +1823,10 @@ def import_item(
 
     texture_package = _mc_texture_path(destination_path, "item")
     material_package = _mc_material_path(destination_path, "item")
-    texture_name = _sanitize_asset_name(source.stem)
+    texture_name = _sanitize_asset_name(source_name)
 
     texture_asset = _import_texture_asset(source, texture_package, texture_name)
-    material_asset = _create_texture_material(texture_asset, material_package, texture_name)
+    material_asset = _create_texture_material(texture_asset, material_package, texture_name, texture_source=source, reload=reload)
 
     dynamic_mesh = None
     try:
@@ -1693,10 +1860,10 @@ def import_block(
     reload=False,
     fluid_level=0,
 ) -> unreal.StaticMesh:
-    """从 JSON 模型或贴图导入方块网格；支持流体高度 fluid_level"""
-    source = _normalize_source_file(filepath)
+    """从模型路径或默认包中的模型名称导入方块网格；支持流体高度 fluid_level。"""
+    source, source_name, destination_path = _resolve_import_source(filepath, "block", destination_path)
     suffix = source.suffix.lower()
-    base_name = _sanitize_asset_name(asset_name or source.stem)
+    base_name = _sanitize_asset_name(asset_name or source_name)
 
     if suffix == ".json":
         try:
@@ -1741,7 +1908,7 @@ def import_block(
                 texture_files = [collected[2], collected[3]]
             else:
                 texture_files = _texture_files_in_slot_order(collected[2])
-            materials = _materials_for_files(texture_files, destination_path)
+            materials = _materials_for_files(texture_files, destination_path, reload=reload)
 
             if not reload:
                 cloned = _clone_styled_mesh(style_key, target_mesh_path, materials)

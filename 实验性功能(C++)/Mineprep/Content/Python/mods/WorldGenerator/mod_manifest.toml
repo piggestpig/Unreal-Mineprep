@@ -1,0 +1,20 @@
+schema_version = 2
+Name = ["MC世界生成器","MC World Generator"]
+Description = "Pack-driven Minecraft-style world generation: preview, prepare and place in the editor."
+Version = "0.64.7"
+CreatedBy = "Pig"
+Credits = "Minecraft, Mineways"
+EnabledByDefault = true
+ReloadWithMineprep = true
+Advanced = false
+
+[build]
+paths_exclude_pattern = [
+    "/Saved/",
+    "/tests/",
+    "/tools/",
+    "/docs/dev/",
+    "/AGENTS.md",
+    "/.gitignore",
+    "/.gitattributes",
+]

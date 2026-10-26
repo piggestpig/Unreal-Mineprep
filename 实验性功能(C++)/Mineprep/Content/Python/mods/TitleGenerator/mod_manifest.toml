@@ -1,0 +1,11 @@
+schema_version = 2
+Name = ['像素标题生成器', 'Pixel Title Generator']
+Description = '逐字生成立体标题 / Generate independently animated title letters'
+Version = '2.0'
+CreatedBy = 'Pig'
+Credits = '[Minecraft Title Generator](https://github.com/ewanhowell5195/MinecraftTitleGenerator)'
+EnabledByDefault = true
+ReloadWithMineprep = true
+
+[build]
+paths_exclude_pattern = ['/tests/', '/__pycache__/']

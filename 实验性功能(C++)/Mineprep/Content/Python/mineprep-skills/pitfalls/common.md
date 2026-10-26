@@ -64,25 +64,9 @@ for supplied structure files or composed cells; see [structure.md](../structure.
 
 ### Source Texture2D completion
 
-- Use `mc_prep.prep_texture`; optional `unreal.mineprep.finish_build_texture`
-  waits for async compilation and can rebuild invalid platform data. Check
-  availability and result; deduplicate assets before synchronous completion.
-- Texture `Modify()` and Landmass force-update can cancel unfinished compilation.
-  They are not substitutes for waiting. Preserve the texture object and its
-  material references; do not reset healthy reused textures.
-- Without native completion, yield until the real engine frame changes and
-  recheck. Unconditional save (`only_if_is_dirty=False`) invokes PreSave without
-  a preceding `modify()`. Invalid derived data may require a new build key;
-  avoid same-frame polling, fixed sleeps and bulk reimports.
-- Separate reference integrity, platform readiness and rendered correctness.
-  Check expected source dimensions and platform memory together: nonempty
-  compiler placeholders can have different dimensions. Black output alone does
-  not identify a PNG encoding or path defect. Report affected assets and the
-  caller's chosen failure policy; do not cache an unready result as successful.
-
-This applies to imported source Texture2D data, not painted canvas RTs. Paint
-coverage / `draw_line`: [../ui.md](../ui.md) § Sketch RT + [ui.md](ui.md).
-VAT bake DA: [vat.md](vat.md).
+- **Source `Texture2D` vs painted `RenderTarget2D`**: imported `Texture2D` assets may compile asynchronously on the GPU, whereas painted canvas RTs hold live GPU drawing state.
+- For pixel-art settings + build completion on a `Texture2D`, call `mineprep.prep_texture(tex)`. To finish a `Texture2D`'s async build without changing filter/compression settings, call `unreal.mineprep.finish_build_texture(tex)` on the game thread when available.
+- **Never** call `force_update_texture` on a painted canvas RT after drawing—it recreates the GPU resource from clear color and wipes the canvas. See [../ui.md](../ui.md#sketch-rt) and [ui.md](ui.md). VAT bake DA: [vat.md](vat.md).
 
 ## warn
 

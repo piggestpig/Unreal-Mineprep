@@ -18,6 +18,6 @@ copied = api.copy_dataset(dataset, '/Game/mc/VAT/Copy', 'DA_Copy', copy_dependen
 
 烘焙同步执行，返回 `ok`、`dataset`、`succeeded`、`failed`、`cleared` 和按槽位索引记录的 `errors`。输入列表顺序不变，`None` 清空对应纹理组，重复动画复用本轮纹理。单槽失败会继续其他槽；`ok` 只有全部成功才为 True。`auto_clean_cache=True` 会在结束后删除该数据集目录下的 `cache`。
 
-复制依赖包括静态网格体、材质、纹理集合和动画纹理；骨骼网格体、动画及材质普通贴图仍共享。`copy_dependencies=False` 仅复制数据集。同名目标会复用并更新引用，操作会保存资产，建议给独立数据集使用独立目录。
+复制依赖包括静态网格体、材质、纹理集合和动画纹理；骨骼网格体、动画及材质普通贴图保持共享。`copy_dependencies=False` 仅复制数据集。同名目标会复用并更新引用，操作会保存资产，建议给独立数据集使用独立目录。
 
-原面板入口仍可用；`bake_animation(...)` 保留原布尔返回规则（至少一个动画成功即 True），新脚本用 `api.bake` 获取完整结果。
+面板使用的 `bake_animation(...)` 返回布尔值（至少一个动画槽位成功即返回 `True`）；脚本调用推荐使用 `api.bake(...)` 获取包含各槽位成功与错误详情的完整字典。

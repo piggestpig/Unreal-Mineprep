@@ -1,0 +1,14 @@
+{
+  "id": "snowy_plains",
+  "name": {"zh": "雪地", "en": "Snowy plains"},
+  "color": "#E8EFF0",
+  "vegetation_tint": [0.75, 0.85, 1.05],
+  "vegetation_hsv": [1.04, 0.65, 1.05],
+  "climate": [{"snow_cover": [0.5, null]}],
+  "surface": [
+    {"when": {"surface_rock": {"min": 0}}, "top": "stone", "under": "stone"},
+    {"when": {"shore_depth": {"min": 0, "max": "$surface.shallow_depth"}}, "top": "dirt", "under": "dirt", "deep": "stone"},
+    {"top": "grass_block", "under": "dirt", "deep": "stone"}
+  ],
+  "features": {}
+}

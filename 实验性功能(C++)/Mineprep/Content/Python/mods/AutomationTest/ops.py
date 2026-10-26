@@ -1,4 +1,4 @@
-"""显式选择用例的编辑器队列，不打开面板或默认运行演示。"""
+"""自动化测试用例队列执行器。"""
 import inspect
 import time
 
@@ -133,7 +133,7 @@ class RunJob:
 
 
 def run_cases(case_ids, *, on_progress=None, on_done=None):
-    """按稳定 ID 运行，返回 RunJob；回调在 UE 主线程执行。"""
+    """按用例 ID 列表依次运行自动化测试，返回 RunJob 任务句柄。"""
     by_id = {case['id']: case for case in tests.TESTS}
     ids = [case_ids] if isinstance(case_ids, str) else list(case_ids)
     if not ids or len(set(ids)) != len(ids) or any(key not in by_id for key in ids):

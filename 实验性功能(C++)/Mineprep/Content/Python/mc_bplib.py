@@ -10,7 +10,10 @@ Mineprep 蓝图函数库 (Blueprint Function Library) 反射调用器与语法�
     - 友好纠错推荐: 调用不存在的函数时自动模糊匹配并建议正确名称
 """
 
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 import difflib
 from typing import Any, List, Optional
 from mc_utils import prints, warn, throw, world

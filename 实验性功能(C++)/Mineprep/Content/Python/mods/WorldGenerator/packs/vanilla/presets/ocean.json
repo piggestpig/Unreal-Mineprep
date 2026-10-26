@@ -1,0 +1,40 @@
+{
+  "name": {
+    "zh": "海洋",
+    "en": "Ocean"
+  },
+  "params": {
+    "climate.single_biome": "ocean",
+    "caves.enabled": false,
+    "terrain.flat": false,
+    "terrain.mountain_height": 0,
+    "terrain.detail_strength": 0,
+    "terrain.continental_curve": [
+      [
+        -1,
+        -38
+      ],
+      [
+        0,
+        -24
+      ],
+      [
+        1,
+        -12
+      ]
+    ],
+    "terrain.lowland_strength": 0.55,
+    "terrain.lowland_height": 8,
+    "islands.enabled": false,
+    "hydrology.enabled": false,
+    "river.enabled": false,
+    "lakes.enabled": false,
+    "ponds.enabled": false,
+    "water.generate": true,
+    "badlands.enabled": false,
+    "cold.enabled": false,
+    "cold.freeze": false,
+    "frozen_ocean.enabled": false,
+    "ice_spikes.enabled": false
+  }
+}

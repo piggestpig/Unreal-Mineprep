@@ -1,0 +1,76 @@
+{
+  "soul_fossil": {
+    "type": "multi_block", "generator": "fossils:build", "placement": "fossils:place",
+    "blocks": ["bone_block"], "bounds": [[-5,-3,-5],[6,5,6]], "max_blocks": 128,
+    "cell_size": "$soul.fossil_spacing", "category": "fossils", "priority": 5, "support": "footprint",
+    "enabled_when": {"soul.enabled": true, "soul.fossils_enabled": true}
+  },
+  "ceiling_glowstone": {
+    "type": "multi_block", "generator": "glowstone:build", "placement": "glowstone:place",
+    "blocks": ["glowstone"], "bounds": [[-3,-7,-3],[4,1,4]], "max_blocks": 96,
+    "cell_size": "$glowstone.spacing", "category": "glowstone", "priority": 5, "support": "ceiling",
+    "enabled_when": {"glowstone.enabled": true}
+  },
+  "floor_fire": {
+    "type": "surface_scatter", "block": "fire_floor", "placement": "volume_floor",
+    "category": "fire", "soft": true, "enabled_when": {"fire.enabled": true}
+  },
+  "floor_soul_fire": {
+    "type": "surface_scatter", "block": "soul_fire_floor", "placement": "volume_floor",
+    "category": "fire", "soft": true, "enabled_when": {"fire.soul_enabled": true}
+  },
+  "ceiling_lava": {
+    "type": "multi_block", "generator": "lava_columns:build", "placement": "lava_columns:place",
+    "blocks": ["lava"], "bounds": [[0,-2048,0],[1,1,1]], "max_blocks": 2048,
+    "cell_size": "$lava_columns.spacing", "category": "lava_columns", "priority": 10, "support": "ceiling",
+    "enabled_when": {"lava_columns.enabled": true}
+  },
+  "crimson_fungi": {
+    "type": "multi_block", "generator": "crimson:build", "placement": "crimson:place",
+    "blocks": ["crimson_stem", "nether_wart_block", "shroomlight", "weeping_vines", "weeping_vines_plant"],
+    "bounds": [[-4,0,-4],[5,27,5]], "max_blocks": 2048,
+    "cell_size": "$crimson.spacing", "category": "crimson_fungi", "priority": 20, "support": "footprint", "collision": "cells",
+    "overlap_blocks": ["nether_wart_block", "shroomlight"],
+    "enabled_when": {"crimson.enabled": true}
+  },
+  "ground_crimson_fungus": {
+    "type": "surface_scatter", "block": "crimson_fungus", "placement": "volume_floor",
+    "category": "crimson_ground", "soft": true,
+    "enabled_when": {"crimson.enabled": true, "crimson.ground_enabled": true}
+  },
+  "ground_crimson_roots": {
+    "type": "surface_scatter", "block": "crimson_roots", "placement": "volume_floor",
+    "category": "crimson_ground", "soft": true,
+    "enabled_when": {"crimson.enabled": true, "crimson.ground_enabled": true}
+  },
+  "warped_fungi": {
+    "type": "multi_block", "generator": "warped:build", "placement": "warped:place",
+    "blocks": ["warped_stem", "warped_wart_block", "shroomlight"],
+    "bounds": [[-4,0,-4],[5,27,5]], "max_blocks": 2048,
+    "cell_size": "$warped.spacing", "category": "warped_fungi", "priority": 20,
+    "support": "footprint", "collision": "cells", "overlap_blocks": ["warped_wart_block", "shroomlight"],
+    "enabled_when": {"warped.enabled": true}
+  },
+  "ground_warped_fungus": {
+    "type": "surface_scatter", "block": "warped_fungus", "placement": "volume_floor",
+    "category": "warped_ground", "soft": true,
+    "enabled_when": {"warped.enabled": true, "warped.ground_enabled": true}
+  },
+  "ground_warped_roots": {
+    "type": "surface_scatter", "block": "warped_roots", "placement": "volume_floor",
+    "category": "warped_ground", "soft": true,
+    "enabled_when": {"warped.enabled": true, "warped.ground_enabled": true}
+  },
+  "ground_nether_sprouts": {
+    "type": "surface_scatter", "block": "nether_sprouts", "placement": "volume_floor",
+    "category": "warped_ground", "soft": true,
+    "enabled_when": {"warped.enabled": true, "warped.ground_enabled": true}
+  },
+  "twisting_vines": {
+    "type": "multi_block", "generator": "twisting_vines:build", "placement": "twisting_vines:place",
+    "blocks": ["twisting_vines", "twisting_vines_plant"], "bounds": [[0,0,0],[1,16,1]], "max_blocks": 16,
+    "cell_size": "$warped.vines_spacing", "category": "twisting_vines", "priority": 30,
+    "support": "anchor", "collision": "cells",
+    "enabled_when": {"warped.enabled": true, "warped.vines_enabled": true}
+  }
+}

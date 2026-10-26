@@ -1,0 +1,34 @@
+{
+  "id": "end_highlands",
+  "name": {
+    "zh": "末地高地",
+    "en": "End highlands"
+  },
+  "color": "#D4D79D",
+  "climate": [
+    {
+      "end_biome": [
+        1,
+        1
+      ]
+    }
+  ],
+  "surface": [
+    {
+      "top": "end_stone",
+      "under": "end_stone",
+      "deep": "end_stone"
+    }
+  ],
+  "features": {
+    "chorus": {
+      "surface": [
+        "end_stone"
+      ],
+      "density": "$chorus.density",
+      "patch_scale": 48,
+      "max_slope": "$chorus.max_slope",
+      "enabled_param": "chorus.enabled"
+    }
+  }
+}

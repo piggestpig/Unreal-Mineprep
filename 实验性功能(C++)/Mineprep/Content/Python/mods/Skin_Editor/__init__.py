@@ -17,6 +17,7 @@ mod_info = {
     ),
     'Version': '2.0',
     'CreatedBy': 'Pig',
+    'Credits': '[MC Skin Converter](https://util.gflash.eu/mcskinconverter/)',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
     'Priority': 1,

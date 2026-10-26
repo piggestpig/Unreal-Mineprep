@@ -1,4 +1,4 @@
-"""Skin Editor footer options and paint page groups."""
+"""皮肤编辑器面板的属性定义。"""
 import mineprep
 import unreal
 

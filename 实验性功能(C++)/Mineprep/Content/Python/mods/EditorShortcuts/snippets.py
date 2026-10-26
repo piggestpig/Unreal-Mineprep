@@ -29,23 +29,27 @@ def deselect_half():
 
 
 def toggle_camera_preview():
-    curr = unreal.mineprep.get_project_setting('bPreviewSelectedCameras')
-    unreal.mineprep.set_project_setting('bPreviewSelectedCameras', str(curr != 'True'))
+    from mods.EditorShortcuts.ops import _cpp_function
+    curr = _cpp_function('get_project_setting')('bPreviewSelectedCameras')
+    _cpp_function('set_project_setting')('bPreviewSelectedCameras', str(curr != 'True'))
 
 
 def toggle_toolbar_icons():
-    curr = unreal.mineprep.get_project_setting('bUseSmallToolBarIcons')
-    unreal.mineprep.set_project_setting('bUseSmallToolBarIcons', str(curr != 'True'))
+    from mods.EditorShortcuts.ops import _cpp_function
+    curr = _cpp_function('get_project_setting')('bUseSmallToolBarIcons')
+    _cpp_function('set_project_setting')('bUseSmallToolBarIcons', str(curr != 'True'))
 
 
 def toggle_blueprint_components():
-    curr = unreal.mineprep.get_project_setting('bHideConstructionScriptComponentsInDetailsView')
-    unreal.mineprep.set_project_setting('bHideConstructionScriptComponentsInDetailsView', str(curr != 'True'))
+    from mods.EditorShortcuts.ops import _cpp_function
+    curr = _cpp_function('get_project_setting')('bHideConstructionScriptComponentsInDetailsView')
+    _cpp_function('set_project_setting')('bHideConstructionScriptComponentsInDetailsView', str(curr != 'True'))
 
 
 def toggle_selection_outline():
-    curr = unreal.mineprep.get_project_setting('bUseSelectionOutline')
-    unreal.mineprep.set_project_setting('bUseSelectionOutline', str(curr != 'True'))
+    from mods.EditorShortcuts.ops import _cpp_function
+    curr = _cpp_function('get_project_setting')('bUseSelectionOutline')
+    _cpp_function('set_project_setting')('bUseSelectionOutline', str(curr != 'True'))
 
 
 def move_to_front():
@@ -256,7 +260,8 @@ def show_shortcuts():
 
 
 def translate_under_mouse():
-    unreal.mineprep.loc_widget_text_under_mouse()
+    from mods.EditorShortcuts.ops import _cpp_function
+    _cpp_function('loc_widget_text_under_mouse')()
 
 
 def fly_camera():
@@ -292,7 +297,7 @@ SHORTCUTS = {
     '移动选中项到面前': move_to_front,
     '设置可视性关键帧': key_visible,
     '设置隐藏关键帧': key_hidden,
-    '刷选选中项，重新编译蓝图': recompile_blueprints,
+    '刷新选中项，重新编译蓝图': recompile_blueprints,
     '交换选中对象位置': swap_positions,
     '进入摄像机视图': pilot_camera,
     '对齐摄像机至视图': align_camera,
@@ -310,6 +315,9 @@ SHORTCUTS = {
 
 def get_snippet(name: str) -> str:
     """返回可直接 exec 的默认代码，只含函数体。"""
+    # 已保存的快捷键名称也可读取同一份预设代码。
+    if name == '刷选选中项，重新编译蓝图':
+        name = '刷新选中项，重新编译蓝图'
     fn = SHORTCUTS.get(name)
     if fn is None:
         return ''

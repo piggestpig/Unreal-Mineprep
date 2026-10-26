@@ -1,8 +1,4 @@
-"""Small PNG alpha reader for thin-face validation; no Pillow dependency.
-
-Only non-interlaced 8-bit PNG pixels are decoded here. UE handles actual texture
-import, including images outside this reader's subset.
-"""
+"""轻量级 8-bit PNG Alpha 通道解析器，用于判断零厚度薄面是否有非透明像素（不依赖 Pillow）。"""
 import math
 import struct
 import zlib

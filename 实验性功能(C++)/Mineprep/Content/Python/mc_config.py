@@ -1,4 +1,7 @@
-import unreal
+try:
+    import unreal
+except ModuleNotFoundError:
+    from mc_utils import Lazy as unreal
 import json
 from dataclasses import dataclass, asdict
 
@@ -17,9 +20,13 @@ class _LazyUClass:
 
 @dataclass
 class MCpath:
-    """各种路径"""
+    """各种路径。assets 是资源包的 assets 目录，其余原版路径由它推导。"""
     def __str__(self):
-        return str(asdict(self))
+        data = asdict(self)
+        data['textures'] = self.textures
+        data['blocks'] = self.blocks
+        data['blockstates'] = self.blockstates
+        return str(data)
 
     project: str = unreal.Paths.project_dir()
     game: str = unreal.Paths.project_content_dir()
@@ -28,10 +35,24 @@ class MCpath:
     mineprep: str = game + 'Mineprep/'
     config: str = mineprep + 'Mineprep_config.txt'
     installer: str = ''
-    blocks: str = ''
-    blockstates: str = ''
+    assets: str = ''
     cache: str = project + 'cache/'
     mcprep_data: str = mineprep + 'mcprep_data.json'
+
+    @property
+    def textures(self) -> str:
+        """默认命名空间的贴图目录。"""
+        return self.assets + '/minecraft/textures'
+
+    @property
+    def blocks(self) -> str:
+        """默认命名空间的方块模型目录。"""
+        return self.assets + '/minecraft/models/block'
+
+    @property
+    def blockstates(self) -> str:
+        """默认命名空间的方块状态目录。"""
+        return self.assets + '/minecraft/blockstates'
 
 
 class wclass:
@@ -50,7 +71,7 @@ class wclass:
 
 
 class ConfigNode:
-    """代理类：用于处理嵌套字典的读取和自动保存（保持不变）"""
+    """配置字典的嵌套节点代理，修改键值时自动写回配置文件"""
     def __init__(self, data, save_callback):
         self._data = data
         self._save_callback = save_callback
@@ -75,7 +96,8 @@ class ConfigMeta(type):
     def __init__(cls, name, bases, dct):
         super().__init__(name, bases, dct)
         cls.config_dict = {}
-        cls.load()  # 类定义加载时，自动读取文件
+        if unreal:
+            cls.load()  # 编辑器内在类定义时读取配置
 
     def load(cls):
         """从 Mineprep_config.txt 读取配置字典"""
@@ -119,9 +141,8 @@ class config(metaclass=ConfigMeta):
 
 
 paths = MCpath()
-paths.installer = config['Settings']['installer_dir']
-_mc_pack = (config.config_dict['Settings'].get('texture_pack_path')
-            or paths.installer + '/Blender扩展资源/mc_default')
-_mc_assets = _mc_pack.rstrip('/\\') + '/assets/minecraft'
-paths.blocks = _mc_assets + '/models/block'
-paths.blockstates = _mc_assets + '/blockstates'
+if unreal:
+    paths.installer = config['Settings']['installer_dir']
+    _pack = (config.config_dict['Settings'].get('default_resource_pack')
+             or paths.installer + '/Blender扩展资源/mc_default')
+    paths.assets = _pack.rstrip('/\\') + '/assets'

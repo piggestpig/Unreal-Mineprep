@@ -33,7 +33,8 @@ if not ok:
     pass
 ```
 
-Unsure of a signature? `print(unreal.mineprep.set_editor_ui_scale.__doc__)` (or `dir(unreal.mineprep)`), then one RE probe. Trust `MineprepBPLibrary.h` over this file if they disagree.
+Unsure of a signature? Inspect `unreal.mineprep.set_editor_ui_scale.__doc__`
+or the header. Probe only when runtime testing is relevant to the task.
 
 ## Call shape
 
@@ -94,8 +95,7 @@ Engine binding crashes still use this machine's Engine install (`Engine/Source` 
 
 ## Rebuild
 
-**Mineprep C++:** build the game Editor target. That is the normal path.
-
-Do **not** drop an Engine plugin (e.g. `PythonScriptPlugin`) into Mineprep `Plugins/` to patch it. Installed-engine modules such as `NiagaraEditor` / `ControlRigEditor` then depend on a **Project** plugin, and UBT rejects the hierarchy (`Project → … → Engine Plugins`).
-
-Last resort only — patched Engine plugin on a **launcher** Engine: compile it in a **blank** C++ project with `"DisableEnginePluginsByDefault": true`, enable that plugin plus `EnhancedInput` if the game module needs it, then copy `Plugins/<Name>/Binaries` back. `ModelingToolsEditorMode` pulls Niagara (via GeometryCache) and re-breaks the hierarchy — leave it off. Do not use this circus for Mineprep itself.
+Build the game's Editor target for Mineprep C++ changes. Engine-plugin changes
+need a build setup compatible with that engine installation. Moving an Engine
+plugin into the project's `Plugins/` directory can violate UBT's dependency
+hierarchy; it is not a general repair for missing bindings.

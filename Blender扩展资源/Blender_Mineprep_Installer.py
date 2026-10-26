@@ -14,18 +14,27 @@ import subprocess
 from sys import platform
 from pathlib import Path
 
+def resource_pack_default(install_path):
+    if not install_path.strip():
+        return ''
+    return os.path.abspath(join(get_abs_path(install_path), 'Plugins', 'Mineprep', 'mc_default'))
+
 def update_resource_pack_default(self, context):
     previous = self.get('_resource_pack_default', '')
-    target = (os.path.abspath(join(get_abs_path(self.install_path), 'Plugins', 'Mineprep', 'mc_default'))
-              if self.install_path.strip() else '')
+    target = resource_pack_default(self.install_path)
     if not self.resource_pack_path or self.resource_pack_path == previous:
         self.resource_pack_path = target
     self['_resource_pack_default'] = target
 
+def reset_resource_pack_default():
+    target = resource_pack_default(mc.install_path)
+    mc.resource_pack_path = target
+    mc['_resource_pack_default'] = target
+
 class MineprepProperties(bpy.types.PropertyGroup):
     install_path: bpy.props.StringProperty(subtype='DIR_PATH', update=update_resource_pack_default)
     ffmpeg_path: bpy.props.StringProperty(subtype='FILE_PATH')
-    ini_resource_pack: bpy.props.BoolProperty(default=False)
+    ini_resource_pack: bpy.props.BoolProperty(default=True)
     resource_pack_path: bpy.props.StringProperty(subtype='DIR_PATH')
     project_name: bpy.props.StringProperty(default="MC_Startup")
     page: bpy.props.IntProperty()
@@ -67,7 +76,7 @@ resource_pack_path = join(file_dir, 'Blender扩展资源', 'mc_default')
 localization = {
     'zh_CN': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安装路径为空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.6-pre1 安装向导---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
+        2: "---Mineprep v0.7-pre1 安装向导---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "欢迎使用Mineprep！",
         4: "· 实验性功能适用于 Windows UE5.8",
         5: "· 非实验性功能也许能兼容其他平台和高版本引擎",
@@ -111,7 +120,7 @@ localization = {
     },
     'en_US': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\nInstall path is empty!\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.6-pre1 Installer---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
+        2: "---Mineprep v0.7-pre1 Installer---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "Welcome to Mineprep!",
         4: "· The experimental features are exclusive to Windows UE5.8",
         5: "· Non-experimental features may be compatible with Mac and higher engine version",
@@ -155,7 +164,7 @@ localization = {
     },
     'zh_TW': {
         1: "\n\n⚠ ⚠ ⚠ ⚠ ⚠\n\n安裝路徑為空！\n\n⚠ ⚠ ⚠ ⚠ ⚠",
-        2: "---Mineprep v0.6-pre1 安裝嚮導---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
+        2: "---Mineprep v0.7-pre1 安裝嚮導---".replace("Mineprep", "Mineprep Lite" if lite_only else "Mineprep"),
         3: "歡迎使用Mineprep！",
         4: "· 實驗性功能適用於 Windows UE5.8 (Windows)",
         5: "· 非實驗性功能也許能兼容其他平台和高版本引擎",
@@ -703,7 +712,7 @@ def install():
     print(f'{loc(39)}: {pack_target} ({loc(41 if copy_pack else 42)})')
     if copy_pack:
         shutil.copytree(resource_pack_path, pack_target, dirs_exist_ok=True)
-    config['Settings']['texture_pack_path'] = os.path.normpath(pack_target)
+    config['Settings']['default_resource_pack'] = os.path.normpath(pack_target)
     config['Settings']['init'] = "true"
     config['Settings']['optimize_default'] = mc.optimize_default
     if mc.ini_ffmpeg:
@@ -863,6 +872,7 @@ class Installer1(bpy.types.Operator):
     def invoke(self, context, event):
         mc.install_path = join(outer_dir, "MC_Startup")
         mc.project_name = "MC_Startup"
+        reset_resource_pack_default()
         extract_zip(ffmpeg_zipfile, join(file_dir, 'Mineprep', 'Render'))
         return context.window_manager.invoke_props_dialog(self, width=420)
     
@@ -926,6 +936,7 @@ class Installer2(bpy.types.Operator):
     
     def invoke(self, context, event):
         mc.install_path = ""
+        reset_resource_pack_default()
         extract_zip(ffmpeg_zipfile, join(file_dir, 'Mineprep', 'Render'))
         return context.window_manager.invoke_props_dialog(self, width=420)
     

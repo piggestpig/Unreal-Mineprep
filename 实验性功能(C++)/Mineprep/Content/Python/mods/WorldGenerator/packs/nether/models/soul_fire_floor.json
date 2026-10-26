@@ -1,0 +1,4 @@
+{
+  "parent": "./fire_floor",
+  "textures": {"fire": "minecraft:block/soul_fire_0"}
+}

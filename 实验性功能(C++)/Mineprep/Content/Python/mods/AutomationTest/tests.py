@@ -89,7 +89,7 @@ def intro_tutorial(status=placeholder):
 
     status(bilingual('生成结构粒子', 'Spawning structure particles'))
     source = os.path.join(mineprep.paths.installer, 'Blender扩展资源', 'mcstructure_test.mcstructure')
-    actors = mineprep.spawn_structure(source, gpu=2)
+    actors = mineprep.spawn_structure(source, gpu=2, center=True)
     particle = yield from mineprep.until(lambda: actors[0] if actors else None, label='结构粒子')
 
     status(bilingual('创建效应器', 'Creating effector'))
@@ -106,7 +106,7 @@ def intro_tutorial(status=placeholder):
         return None
 
     effector = yield from mineprep.until(find_effector, label='Effector')
-    effector.set_actor_location(unreal.Vector(0, 1000, 0), False, True)
+    effector.set_actor_location(unreal.Vector(0, 1300, 0), False, True)
     comp = effector.get_component_by_class(unreal.CEEffectorComponent)
     effect = next(e for e in comp.get_active_effects() if isinstance(e, unreal.CEEffectorDelayEffect))
     effect.set_delay_enabled(True)
@@ -130,9 +130,9 @@ def intro_tutorial(status=placeholder):
     c.key('Rotation', unreal.Rotator(roll=0.0, pitch=-11.0, yaw=-30.0), 0)
 
     actor = mineprep.actor(effector)
-    actor.key('Location', unreal.Vector(0, 1100, 0), 0)
-    actor.key('Location', unreal.Vector(0, 1000, 0), 30)
-    actor.key('Location', unreal.Vector(0, -1000, 0), 120)
+    actor.key('Location', unreal.Vector(0, 1300, 0), 0)
+    actor.key('Location', unreal.Vector(0, 1200, 0), 30)
+    actor.key('Location', unreal.Vector(0, -1200, 0), 120)
 
     status(bilingual('正在渲染', 'Rendering'))
     yield 1

@@ -1,0 +1,7 @@
+{
+  "chorus": {
+    "type": "multi_block", "generator": "chorus:build", "placement": "chorus:place",
+    "blocks": ["chorus_plant", "chorus_flower"], "bounds": [[-5,0,-5],[6,24,6]],
+    "max_blocks": 96, "cell_size": "$chorus.spacing", "collision": "cells", "category": "chorus"
+  }
+}

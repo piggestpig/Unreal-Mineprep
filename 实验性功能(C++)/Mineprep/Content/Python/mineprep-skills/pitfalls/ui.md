@@ -19,12 +19,14 @@ Open with [../ui.md](../ui.md). Common reload / instantiate / `force_update`: [c
 | Symptom | Cause | Fix |
 |---------|--------|-----|
 | Want hide column but whole UI flashes | Calling `redraw()` | Keep `Layout` ref; `right.hide(flag)` |
-| Footer bool also in Details | Same PG as `layout.prop(props)` | Separate options `PropertyGroup` + named `prop` |
+| Footer bool also in Details | Same PG as `layout.prop(props)` | Separate options PropertyGroup, or a fixed property filter for the main view |
 | Footer log sits under a large empty gap | Details `prop` and footer `text` both `fill=1` in the same vertical box — they split leftover height | Omit `fill` on the `prop`; only the footer gets `fill=1` + `align=(1, 3)` |
 | Footer hugs content inside a `switcher` page | switcher/page default packs to the top | `layout.switcher(align=(0, 0), fill=1)` then `pages.col(align=(0, 0))`; footer `fill=1` + `align=(1, 3)` |
-| 「不支持的属性」 in a column | `layout.prop(group, 'ArrayField')` uses SinglePropertyView; arrays/sets/maps are unsupported there | `left.prop(group)` with no property name (full Details). One array per column → one PropertyGroup per column |
+| 「不支持的属性」 in a column | SinglePropertyView cannot display container rows | Use full `left.prop(group)`; split groups or fixed view filters for separate columns |
+| Inline toggle missing beside a value | SinglePropertyView does not display paired inline controls | Full `layout.prop(group)` — [metadata](../property-metadata.md#conditions-and-inline-toggles) |
 | `module 'unreal' has no attribute 'is_valid'` | There is no `unreal.is_valid` | `unreal.SystemLibrary.is_valid(obj)` |
 | `SystemLibrary.is_valid(DetailsView)` throws `ObjectInstance is null` | Destroyed/stale UMG widget: validity checks may raise | Guard the check; unbind selection callbacks in `Mod.destruct` |
+| Python delegate callback stops after garbage collection | The temporary delegate wrapper was released | Keep the delegate itself (`self.delegate = obj.on_event`), then call `add_callable_unique`; remove the callable and release that reference when its owner closes or unregisters. Keeping only the Python function or a bound flag is insufficient |
 | `TypeError: DeprecateSlateVector2D` on Image | `brush.image_size = Vector2D` | `set_desired_size_override(size)` |
 | `Text + str` or `str.join(notes)` raises `TypeError` | `bilingual()` / `localize()` return `unreal.Text` | Convert before concatenation / join; `set_text` accepts Text directly |
 | Mod Manager-style toggle needs full rebuild | Structural rows depend on flag | `on_property_changed=lambda _: self.redraw()` (OK **outside** `draw`) |
@@ -37,17 +39,14 @@ Open with [../ui.md](../ui.md). Common reload / instantiate / `force_update`: [c
 
 ## UMG Geometry (Python empty struct)
 
-`FGeometry` is `USTRUCT(BlueprintType)` but **Size / transform are not `UPROPERTY`**. Python in/out uses `CopyScriptStruct` (`PythonScriptPlugin` `PyWrapperStruct`), which copies only reflected fields → default Geometry, local size `0`. Same for `widget.get_cached_geometry()` and for passing Geometry **from Python into** a Blueprint `AbsoluteToLocal`.
+`FGeometry` size/transform fields are not reflected to Python, so `widget.get_cached_geometry()` and pointer-event `FGeometry` arguments arrive in Python with local size `(0, 0)`.
 
-`FPointerEvent` has `TStructOpsTypeTraits` `WithCopy = true`, so `InputLibrary.pointer_event_get_screen_space_position` can still work — do not rely on it for widget-local coords; convert in C++/Blueprint with a `UWidget*`.
-
-**Do:** `layout.border` callbacks receive `Layout`. Size/mouse helpers call the hotkey Blueprint (`GetLocalSize`, `AbsoluteToLocal`, …) so Geometry stays native. EventReply: [../ui.md](../ui.md) § border.
-
-**Do not:** `SlateLibrary.absolute_to_local` / `get_local_size` on the event Geometry or `get_cached_geometry()`. Do not add a BP node that takes `FGeometry` **from Python**.
+- **Do**: use `layout.border` (callbacks receive the Border's `Layout`) and call `w.get_mouse_local()`, `w.get_mouse_uv()`, and `w.get_local_size()`. EventReply rules: [../ui.md](../ui.md) § border.
+- **Do not**: call `SlateLibrary.absolute_to_local` / `get_local_size` on `FGeometry` in Python, or pass `FGeometry` from Python into Blueprint functions.
 
 ## Paint / sketch RT
 
-Lived-in recipe: [../ui.md](../ui.md) § Sketch RT.
+Painting recipe: [../ui.md](../ui.md#sketch-rt).
 
 | Symptom | Cause | Fix |
 |---------|--------|-----|

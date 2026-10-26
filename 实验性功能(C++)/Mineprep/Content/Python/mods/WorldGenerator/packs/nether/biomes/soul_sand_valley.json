@@ -1,0 +1,16 @@
+{
+  "id": "soul_sand_valley",
+  "name": {"zh": "灵魂沙峡谷", "en": "Soul sand valley"},
+  "color": "#759CAE",
+  "climate": [{"soul_region": ["$soul.biome_threshold", 2]}],
+  "surface": [{"top": "netherrack", "under": "netherrack", "deep": "netherrack"}],
+  "features": {
+    "ceiling_lava": {"surface": ["netherrack"], "density": "$lava_columns.density", "patch_scale": 128, "max_slope": 0},
+    "floor_fire": {"surface": ["netherrack"], "density": "$fire.density"},
+    "floor_soul_fire": {"surface": ["soul_sand", "soul_soil"], "density": "$fire.soul_density"},
+    "soul_fossil": {"surface": ["netherrack"], "density": "$soul.fossil_density",
+                   "patch_scale": 128, "max_slope": 2},
+    "ceiling_glowstone": {"surface": ["netherrack"], "density": "$glowstone.density",
+                          "patch_scale": 128, "max_slope": 0}
+  }
+}

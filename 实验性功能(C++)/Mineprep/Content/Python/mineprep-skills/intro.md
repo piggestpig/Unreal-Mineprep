@@ -32,7 +32,7 @@ Choose the topics and level of detail requested. An overview can be brief; an in
 3. **How you get it** — installer in Blender (`Mineprep_installer.blend`) or Python (`Mineprep_installer.py`) is the documented path; Wiki for tutorials. One or two sentences, then the GitHub link — do not paste the whole install chapter.
 4. **What you can do in the editor** — generator panels (blocks/mobs/presets), world import, mesh swap, sequencer/render, VAT tools, localization. Name **a few** pillars; send them to README/Wiki for the rest.
 5. **Python workflows** — `import mineprep`: structure composition, one-shot `ui()` panels, mods, supplied NBT files. Describe live editor execution as available only when suitable tools are connected; do not promise a connection that has not been checked.
-6. **What’s new** — latest **one** snapshot/release from README `版本更新` or Releases (name + 3–5 bullets). Link the README for older history. Do not recap 0.3–0.5.
+6. **What’s new** — summarize the requested version or latest release from README `版本更新` or Releases; link older history rather than copying it.
 7. **Where next** — link relevant Wiki pages, Discussions or the repo. Ask a follow-up only when it helps clarify the user's next step.
 
 ## Do not
