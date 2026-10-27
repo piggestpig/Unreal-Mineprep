@@ -4,7 +4,7 @@ English | [**中文**](./README.md) | [**繁體中文**](./README_繁體中文.m
 
 ✨This is a UE5 plugin that inherits the practical features of [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/), and adds some new assets to facilitate the creation of MC animations.
 
-![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.7-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/%E6%8F%92%E4%BB%B6%E5%B1%95%E7%A4%BA_EN.jpg)
 
@@ -134,7 +134,7 @@ Once installed, you can adjust DLSS quality levels in the MC Director Station.
 
 
 ## System Requirements
-Mineprep 0.6-pre1 is developed on Windows + UE5.7, and it is recommended to use this environment. Some features may not be available on other platforms or engine versions.
+Mineprep 0.7-pre1 is developed on Windows + UE5.8, and it is recommended to use this environment. Some features may not be available on other platforms or engine versions.
 
 In addition to the minimum requirements in the [Unreal Engine Documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/hardware-and-software-specifications-for-unreal-engine), rendering animations requires higher specs and more VRAM:
 
@@ -152,6 +152,7 @@ The vast majority of Mineprep features are written in Blueprint and Python, desi
 
 | Mineprep<br>Version | Python<br>API Version | Engine Version | Windows<br>Experimental | Mac/Linux<br>Experimental |
 | :---: | :---: | :---: | :---: | :---: |
+| 0.7-pre1 | 2.0 | 5.8 | ✅ | - |
 | 0.6-pre1 | 1.0 | 5.7 | ✅ | ℹ️ |
 | 0.5 | 0.1 | 5.7 | ✅ | ✅ |
 |  |  |  |  |  |
@@ -169,10 +170,11 @@ The vast majority of Mineprep features are written in Blueprint and Python, desi
 > [!WARNING]  
 > Do not check experimental features in incompatible environments (such as higher engine versions), otherwise the project will fail to open and crash right away!!
 
-Mineprep 0.6-pre1 only compiles the latest experimental features on Windows. We retain the binaries from version 0.5; Mac and Linux users can try installing them, but normal operation is not guaranteed.
 
 <details>
 <summary> *Show Details </summary>
+
+Mineprep 0.6-pre1 only compiles the latest experimental features on Windows. We retain the binaries from version 0.5; Mac and Linux users can try installing them, but normal operation is not guaranteed.
 
 <img src="https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/Mac%26Linux%E5%90%88%E5%BD%B1%E7%95%99%E5%BF%B5.jpg" alt="Mac&Linux Group Photo">
 <sup><i> ↑ A commemorative photo of Mineprep 0.5 running on MacOS and Linux </i></sup>
@@ -243,22 +245,27 @@ Mods are script files written with [Mineprep Python API](https://github.com/pigg
 - Automatically persists property groups
 - Ideal for Agent-driven iterative development
 
-Usage: Install / uninstall / enable / disable mods via `Top Menu Bar → MC → Mod Manager`.  
-Mineprep 0.6-pre1 includes the following built-in mods (currently in early development, bugs may present):
+Usage: Install, uninstall, enable, disable, and package mods via `Top Menu Bar → MC → Mod Manager`.  
+Mineprep 0.7-pre1 includes the following built-in mods (currently in early development, bugs may present):
 
 | Mod Name | Version | Description | Source Reference |
 | :--- | :---: | :--- | :--- |
-| [Mod Manager](<./实验性功能(C++)/Mineprep/Content/Python/mods/ModManager>) | 1.0 | Enable, disable, install, and uninstall mods | |
-| [VAT Tools](<./实验性功能(C++)/Mineprep/Content/Python/mods/VAT_Tools>) | 1.0 | Bake vertex animation textures (VAT) for large crowd particles | [Anim To Texture Helpers](https://github.com/kromond/AnimToTextureHelpers) |
-| [Skin & Face Editor](<./实验性功能(C++)/Mineprep/Content/Python/mods/Skin_Editor>) | 1.0 | Edit skin and head materials of selected Actor; draw textures | [MC Skin Converter](https://util.gflash.eu/mcskinconverter/) |
-| [Vanilla Mob Loader](<./实验性功能(C++)/Mineprep/Content/Python/mods/VanillaMobLoader>) | 1.0 | Browse, import, and place skeletal MC mobs (requires internet connection) | [CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/) |
-| [Bedrock Animation Converter](<./实验性功能(C++)/Mineprep/Content/Python/mods/BedrockAnimator>) | 1.0 | Convert Bedrock animation.json into animation sequences | |
+| [Mod Manager](<./实验性功能(C++)/Mineprep/Content/Python/mods/ModManager>) | 2.0 | Enable, disable, install, uninstall, and package mods | [Blender](https://github.com/blender/blender/blob/main/scripts/addons_core/bl_pkg/cli/blender_ext.py) |
+| [Editor Shortcuts](<./实验性功能(C++)/Mineprep/Content/Python/mods/EditorShortcuts>) | 2.0 | Edit custom shortcuts | |
 | | | | |
-| [Plugin Update & Migration](<./实验性功能(C++)/Mineprep/Content/Python/mods/VersionControl>) | 1.0 | Migrate Mineprep plugin to other project files or installer repos | |
-| [Localization Board](<./实验性功能(C++)/Mineprep/Content/Python/mods/LocalizationBoard>) | 1.0 | Scan assets and refresh variable display-name CSVs (requires experimental features) | |
-| [Automation Test](<./实验性功能(C++)/Mineprep/Content/Python/mods/AutomationTest>) | 1.0 | Run editor automation test projects | |
-| [Mod Template](<./实验性功能(C++)/Mineprep/Content/Python/mods/template.py>) | 1.0 | A standard mod template for developers | |
+| [VAT Tools](<./实验性功能(C++)/Mineprep/Content/Python/mods/VAT_Tools>) | 2.0 | Bake vertex animation textures (VAT) for large crowd particles | [Anim To Texture Helpers](https://github.com/kromond/AnimToTextureHelpers) |
+| [Skin & Face Editor](<./实验性功能(C++)/Mineprep/Content/Python/mods/Skin_Editor>) | 2.0 | Edit skin and head materials of selected Actor; draw textures | [MC Skin Converter](https://util.gflash.eu/mcskinconverter/) |
+| [Vanilla Mob Loader](<./实验性功能(C++)/Mineprep/Content/Python/mods/VanillaMobLoader>) | 2.0 | Browse, import, and place skeletal MC mobs (requires internet connection) | [CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/) |
+| [Bedrock Animation Converter](<./实验性功能(C++)/Mineprep/Content/Python/mods/BedrockAnimator>) | 2.0 | Convert Bedrock animation.json into animation sequences | |
+| [Title Generator](<./实验性功能(C++)/Mineprep/Content/Python/mods/TitleGenerator>) | 2.0 | Generate large 3D titles (requires internet connection) | [Minecraft Title Generator](https://github.com/ewanhowell5195/MinecraftTitleGenerator) |
+| [MC World Generator](<./实验性功能(C++)/Mineprep/Content/Python/mods/WorldGenerator>) | 0.64.7 | High-performance world generator supporting diverse terrains and biomes | [Minecraft](https://www.minecraft.net/en-us/article/removing-obfuscation-in-java-edition), [Mineways](https://github.com/erich666/Mineways) |
+| | | | |
+| [Plugin Update & Migration](<./实验性功能(C++)/Mineprep/Content/Python/mods/VersionControl>) | 2.0 | Migrate Mineprep plugin to other project files or installer repos | |
+| [Localization Board](<./实验性功能(C++)/Mineprep/Content/Python/mods/LocalizationBoard>) | 2.0 | Scan assets and refresh variable display-name CSVs (requires experimental features) | |
+| [Automation Test](<./实验性功能(C++)/Mineprep/Content/Python/mods/AutomationTest>) | 2.0 | Run editor automation test projects | |
+| [Mod Template](<./实验性功能(C++)/Mineprep/Content/Python/mods/template.py>) | 2.0 | A standard mod template for developers | |
 | [minimal](<./实验性功能(C++)/Mineprep/Content/Python/mods/minimal.py>) | - | Minimal example | |
+
 
 ## License
 - Since the full version of Mineprep contains Unreal's example contents and source code, which are incompatible with open-source licenses, there is no individual License file here. [Mineprep Lite](https://github.com/piggestpig/Mineprep-Lite) is a lite version open-sourced under the GPLv3 license.
@@ -268,6 +275,80 @@ See [Epic Games' EULA](https://www.unrealengine.com/en-US/eula) for details.
 
 
 ## Version Updates
+
+### 0.7-pre1
+
+![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.7-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
+
+Mineprep 0.7-pre1 is now available! This is the first version supporting UE5.8, themed around "Caves & Cliffs".
+
+Starting from this release, we have updated our release strategy: pre-releases do not need to strictly follow incremental version numbers and will be published more frequently, with stability between major releases and snapshots. Let's check out what's new:
+
+<details>
+<summary> MC World Generator </summary>
+
+MC World Generator is our largest mod to date, designed for high-performance terrain and biome generation. Thanks to the conciseness of Python, the distributed mod is only 1.6 MB.
+
+![image](<https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/MC世界生成器_EN.jpg>)
+
+The mod relies on several Blueprint assets and requires at least Mineprep Lite to run properly.
+
+Currently includes 3 resource packs and 24 global presets:
+- **Overworld**: Default | Default + Caves | Grassland | Mixed Forest | Birch Forest | Taiga | Snowy Taiga | Savanna | Mountains | Desert | Badlands | Snowy Plains | Ice Spikes | Ocean | Frozen Ocean
+- **Nether**: Default | All Biomes | Nether Wastes | Soul Sand Valley | Crimson Forest | Warped Forest | Basalt Deltas
+- **The End**: Default | Main Island - Void - Outer Islands
+
+The recommended workflow is "Generate Preview" → "Prepare Resources" → "Place in Level", or you can simply click "Place in Level" directly in one step.
+
+By default, generation uses 4 processes + PCG instanced blocks; setting CPU warm-up frames before rendering is recommended. The first run of "Prepare Resources" takes a moment to import models, and subsequent runs can reuse the cache.
+
+The 0.7-pre1 cover image is a 2048x2048 scene created with this mod using the default seed 42—you can easily recreate this world!
+
+This alpha-version mod was developed with GPT 6 Astra, 6.1 Sol, Claude Opus 5.5, and Gemini 4 Argon. We will continue leveraging frontier models to refine and refactor its features.
+
+The next phase will focus on practical features for animation rendering, including custom landscape, LOD, improved UI layouts and tooltips.
+
+</details>
+
+<details>
+<summary> Biome Color Texture </summary>
+
+MC World Generator can paint biome colors and save them as a Biome Color Texture (BCT).
+
+We improved the block materials so that PCG Instanced Blocks and Dynamic Structure Particles can use an independent biome texture, maintaining cohesive coloring across translation, rotation, and scaling.
+
+Biome textures currently support two modes: positive values represent RGB multipliers, while the absolute values of negative numbers represent HSV offsets. Applied to tinted leaves and grass by default, it can also be blended onto the entire material via the fractional part of the "Override Biome ID" variable. You can even use Render Targets or video textures for biome coloring!
+
+</details>
+
+<details>
+<summary> Performance and Memory Optimization </summary>
+
+Importing large structures is now up to 6x faster. A new `Groups` parameter lifts the 256-block-type limit per PCG Actor and reduces the total instance count for Niagara particles, significantly boosting rendering performance.
+
+</details>
+
+<details>
+<summary> Next-Gen Mover Pawn NPCs </summary>
+
+All NPC mobs have been upgraded to Mover Pawns, alongside the updated official Motion Matching sample from UE5.8. More new features are on the way!
+
+</details>
+
+<details>
+<summary> Title Generator </summary>
+
+This new mod downloads assets from Blockbench's Minecraft Title Generator plugin to generate 3D title models, integrating the entire workflow right inside Unreal Engine! We used it to create the 0.7-pre1 cover image.
+
+</details>
+
+<details>
+<summary> Refactored Editor Shortcuts </summary>
+
+The custom shortcut system has been refactored into a mod, supporting both Python code and Blueprint functions, while fixing shortcut conflicts in UE5.8.
+
+</details>
+
 
 ### 0.6-pre1
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.6-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)

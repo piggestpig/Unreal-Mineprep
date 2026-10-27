@@ -195,7 +195,7 @@ Mineprep 0.6-pre1 只在 Windows 上编译了最新的实验性功能。我们�
 > · 远景地形生成器性能差，比预期慢好几倍  
 > · 可交互3D水池非常不稳定，产生剧烈的自碰撞  
 > · 没有DLSS等超分辨率插件，默认使用引擎自带的TSR，拖影严重且性能差，空场景占用6ms比光追还慢  
-> · 缺少nDisplay，不支持3D立体渲染，安装实验性功能才后有初步的3D渲染功能  
+> · 缺少nDisplay，不支持3D立体渲染，安装实验性功能才有初步的3D渲染功能  
 > · Mac的文件夹可以随意摆放文件位置，渲染后好像要向下滚动才能在底部看到视频  
 > · 生成器子面板的排序和Windows不一样，好像是python sort的问题，反正中文名都没啥顺序，就当特性好了  
 > · 快捷键的Ctrl似乎会变成Cmd，远程连接时一个快捷键也没按出来，本地使用应该没问题
@@ -262,7 +262,7 @@ Mineprep 0.7-pre1有以下内置模组（目前仍处于早期开发阶段，可
 | [MC原版生物加载器](<./实验性功能(C++)/Mineprep/Content/Python/mods/VanillaMobLoader>) | 2.0 | 浏览、导入并放置MC生物模型（下载资源需联网） | [CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/) |
 | [基岩版动画转换器](<./实验性功能(C++)/Mineprep/Content/Python/mods/BedrockAnimator>) | 2.0 | 把基岩版 animation.json 转换为动画序列 | |
 | [像素标题生成器](<./实验性功能(C++)/Mineprep/Content/Python/mods/TitleGenerator>) | 2.0 | 生成大标题（下载资源需联网） | [Minecraft Title Generator](https://github.com/ewanhowell5195/MinecraftTitleGenerator) |
-| [MC世界生成器](<./实验性功能(C++)/Mineprep/Content/Python/mods/MC_WorldGenerator>) | 0.64.7 | 高性能的世界生成器，支持多种地形和生物群系 | [Minecraft](https://www.minecraft.net/en-us/article/removing-obfuscation-in-java-edition), [Mineways](https://github.com/erich666/Mineways) |
+| [MC世界生成器](<./实验性功能(C++)/Mineprep/Content/Python/mods/WorldGenerator>) | 0.64.7 | 高性能的世界生成器，支持多种地形和生物群系 | [Minecraft](https://www.minecraft.net/en-us/article/removing-obfuscation-in-java-edition), [Mineways](https://github.com/erich666/Mineways) |
 | | | | |
 | [插件更新与迁移工具](<./实验性功能(C++)/Mineprep/Content/Python/mods/VersionControl>) | 2.0 | 迁移Mineprep插件至其他工程文件或安装包仓库 | |
 | [本地化翻译控制板](<./实验性功能(C++)/Mineprep/Content/Python/mods/LocalizationBoard>) | 2.0 | 扫描资产并整理变量显示名 CSV（需要实验性功能）| |
@@ -284,8 +284,77 @@ Mineprep 0.7-pre1有以下内置模组（目前仍处于早期开发阶段，可
 
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.7-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
+Mineprep 0.7-pre1现已发布！这是首个支持UE5.8的版本，主题为“洞穴与山崖”
 
+从这个版本开始，我们改变了更新策略：预览版不必严格按照版本号递增，会以更高的频率发布，其稳定性介于大版本和快照之间。快来看看最新的内容吧：
 
+<details>
+<summary> MC世界生成器 </summary>
+
+MC世界生成器是迄今为止最大的模组，旨在高性能地生成地形和生物群系。得益于Python的简洁性，模组分发大小仅为1.6MB
+
+![image](<https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/MC世界生成器.jpg>)
+
+模组依赖一部分蓝图资源，至少需要安装Mineprep精简版才能正常运行。
+
+当前有3个资源包和24个全局预设：
+- **主世界**：默认 | 默认+洞穴 | 草原 | 混合林 | 白桦林 | 针叶林 | 覆雪针叶林 | 热带草原 | 山地 | 沙漠 | 恶地 | 雪地 | 冰刺之地 | 海洋 | 冻洋
+- **下界**：默认 | 所有群系 | 下界荒地 | 灵魂沙峡谷 | 绯红森林 | 诡异森林 | 玄武岩三角洲
+- **末地**：默认 | 主岛-虚空-外岛
+
+推荐用法是“生成预览” → “准备资源” → “放置到场景”，也可以一键点击放置到场景
+
+默认生成方式是4进程+PCG实例化方块，渲染前建议设置CPU暖场帧。首次“准备资源”会花一段时间导入方块，之后能复用缓存
+
+0.7-pre1的封面图就是用它制作的2048x2048场景，使用默认种子42，你可以快速复刻这个世界！
+
+第一代模组由GPT 6 Astra、6.1 Sol，Claude Opus 5.5和Gemini 4 Argon开发。我们将持续使用前沿模型改进和重构内容
+
+下一阶段将围绕动画渲染制作更多实用功能，包括自定义地形、LOD、更好的UI界面与提示文本
+
+</details>
+
+<details>
+<summary> 群系颜色纹理 </summary>
+
+MC世界生成器能够绘制生物群系颜色，并保存为纹理贴图(BCT)。
+
+我们改进了方块材质，使PCG实例化方块/动态结构粒子能使用独立的群系纹理，在平移、旋转、缩放时保持整体着色。
+
+群系纹理目前有两种模式：正数表示RGB倍率，负数绝对值表示HSV偏移。默认用于染色的树叶和草，可以通过“重载生物群系ID”变量的小数部分叠加到整个材质。你甚至可以将渲染目标或视频纹理用于群系着色！
+
+</details>
+
+<details>
+<summary> 性能与内存优化 </summary>
+
+导入大型结构的速度快至6倍，同时新增`分组`参数，解决了单个PCG actor最多支持256种方块的限制，还能减少Niagara粒子的实例总数，大幅提高渲染性能
+
+</details>
+
+<details>
+<summary> 新一代Mover Pawn NPC </summary>
+
+所有NPC生物已升级为Mover Pawn，并更新了来自UE5.8的运动匹配官方示例。未来将提供更多新功能！
+
+</details>
+
+<details>
+<summary> 像素标题生成器 </summary>
+
+这个新模组能从Blockbench的Minecraft Title Generator插件下载资源，生成大标题模型，将整个流程集成在虚幻引擎里！我们用其制作了0.7-pre1的封面图
+
+</details>
+
+<details>
+<summary> 新版自定义快捷键 </summary>
+
+自定义快捷键系统经过重构，已经变成模组，支持Python代码和蓝图函数这两种编程方式，并修复了在UE5.8中产生冲突的快捷键
+
+</details>
+
+<details>
+<summary> 📜展开快照 </summary>
 
 #### 26w42a
 - Mineprep 0.7-pre1即将发布，这里记录了最后的更新内容
@@ -357,6 +426,8 @@ Mineprep 0.7-pre1有以下内置模组（目前仍处于早期开发阶段，可
   - OCIO里面的ACES更新至2.0版本了，加入了Rec.2100 HLG等更多色彩模式，等重构渲染输出子面板的时候考虑加进来
   - 以前编辑器视口的亮度上限会随显示器变化，导致它和渲染输出的亮度有所不同。现在能用 r.HDR.Display.OverrideOSMaxLuminance 1 重载亮度上限为1000nits，完美对齐输出结果，即使显示器本身的亮度上限不高，也能用笔记本/手机远程连接电脑 监看高质量HDR画面
   - 编辑器亮度等其他参数也变得不同了，总之颜色子面板已经适配了新版引擎，调色示波器也直接用自带功能，旧的删了
+
+</details>
 
 
 ### 0.6-pre1
@@ -1162,7 +1233,7 @@ Mineprep 0.5 正式发布了！这是首个支持Windows、MacOS和Linux的跨�
 
 </details>
 
-#### 0.5-pre3
+### 0.5-pre3
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre3%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 <sup><i> 这是一张带 HDR增益图的 jpg封面！使用 HDR显示器或下载到手机上即可查看高动态范围效果 <br>
 地图来自https://www.curseforge.com/minecraft/worlds/rtx-aio-map </i></sup>
@@ -1175,6 +1246,10 @@ Mineprep 0.5-pre3 是最后一个支持UE5.6的版本，带来了许多革命性
 - 全面适配Chaos场系统，用于全局力场、材质遮罩、动画偏移
 
 需要注意的是，这个版本处于UE5.6和5.7的过渡阶段，许多新功能尚未在实际生产中进行测试。我们计划使用UE5.7制作新的动画视频。以下是最后两周的更新日志：
+
+<details>
+<summary> 查看细节 </summary>
+
 - 新增`全局力场`、`力场探测器`、`动画偏移场`、`材质遮罩场`、`角速度旋转场`。
   - 以上内容都使用Chaos场系统，只能在运行时生效，编辑器中没有效果。
   - 虚幻引擎提供了12种力场类型，包含整数场、小数场和向量场。向量场默认指向中心，可以勾选重设方向
@@ -1205,6 +1280,8 @@ Mineprep 0.5-pre3 是最后一个支持UE5.6的版本，带来了许多革命性
 - 修复了“从图片合成HDR增益图jpg”因为临时文件而报错的bug。注意，前两个文件名似乎需要纯英文。“渲染带HDR增益图的jpg”要等UE5.7才能解决色彩管理问题
 - 修复了VR+3D渲染错误启用nDisplay输出的bug
 - 修复了方块破碎模板的材质消失问题
+
+</details>
 
 <details>
 <summary> 📜展开快照 </summary>
@@ -1473,11 +1550,14 @@ MC即将迎来新的版本编号方法，下一次大更新不是1.22，不是2.
 
 </details>
 
-#### 0.5-pre2
+### 0.5-pre2
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre2%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 Mineprep 0.5-pre2带来了生物模型大改的阶段性成果，同时也新增了许多媒体播放和后期合成的素材，我们用其制作了猫meme《捡到一只快乐小恶魂》
 > 需要注意的是，这个版本由于升级到UE5.6的产生了新的bug（例如MC像素文字损坏、第三人称运动匹配角色开启物理交互后闪退），目前通过禁用部分设置来避免问题，最终的修复需要等Mineprep 0.5正式版发布
+
+<details>
+<summary> 查看细节 </summary>
 
 - 新增 `村民`、`烈焰人`、`凋灵`、`疣猪兽`、`雪傀儡`、`狼`、`猫`、`悦灵`、`流浪商人`、`豹猫` 、`恶魂`、`小恶魂`、`快乐恶魂` 的模型
   - 其中，村民和流浪商人包含NPC版本
@@ -1508,6 +1588,8 @@ Mineprep 0.5-pre2带来了生物模型大改的阶段性成果，同时也新增
 - 修复了材质和摄像机晃动未正确加载的bug
 - 修复了静态模型绑定父级失败的bug，现在会修改为可移动
 - 修复了准备场景的碰撞箱bug，现在能正确禁用碰撞
+
+</details>
 
 <details>
 <summary> 📜展开快照 </summary>
@@ -1608,10 +1690,14 @@ Mineprep 0.5-pre2带来了生物模型大改的阶段性成果，同时也新增
 
 </details>
 
-#### 0.5-pre1
+### 0.5-pre1
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.5-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》现已发布！
 > 这可能是最后一个支持UE5.5的版本——我们将在不久后升级引擎，非实验性功能已适配UE5.6。
+
+<details>
+<summary> 查看细节 </summary>
+
 - 虫群粒子新增全局粒子间碰撞功能，有“写入”和“读取”两个选项，会消耗更多的显卡性能和显存
 - 蠹虫、末影螨、蜘蛛（洞穴蜘蛛）的普通模型已加入放置生物功能中，NPC需要等未来进一步修改
 - 改进了语言本地化模块，现在会在打开插件面板或切换语言时从csv文件生成pickle缓存，删除空格，提升读取速度。各板块前面都添加了属性列，比如用于放置生物/预设素材/附加组件板块的类型过滤器
@@ -1623,6 +1709,8 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 - 新增`MC_Head_Face2D`和2D表情皮肤材质，完全由材质参数控制表情动画。更多功能正在开发中，未来将适用于所有生物
 - 默认MC资源包现在放在安装包中，安装时不再拷贝，而是提供文件地址链接，大幅提升安装速度
 - 修复了放置方块和物品时由于资产命名冲突而失败的bug
+
+</details>
 
 <details>
 <summary> 📜展开快照 </summary>
@@ -1939,9 +2027,13 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 
 </details>
 
-#### 0.4-pre2
+### 0.4-pre2
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4-pre2%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 - 新的里程碑！我们将这几个月的成果投入实际生产，制作了动画视频《史诗级动作优化2》，并带来了许多细节优化和bug修复
+
+<details>
+<summary> 查看细节 </summary>
+
 - 新增`MC导播台`，与Mineprep后期处理体积一起生成，作为场景的基础模块
   - 在细节面板中，可以分别控制预览画质、预览帧率上限和渲染画质，优化性能或提升质量（所有渲染预设已不再使用过场动画质量设置，转而由MC导播台控制）。预览画质默认为“3+ 极高”，渲染画质默认为“4 影视级”。如果电脑性能较弱，建议把预览画质改为“2 高（快速lumen）”；如果想要减少渲染时的闪烁和残影，进一步提高质量，可以把渲染画质改为“4+ 影视级（增强lumen）”
   - MC导播台可以在时间线上添加事件关键帧，向全场广播命令，例如批量开关灯光、切换NPC动作、开始跑步跳跃等。它能重载信号源位置（指定坐标<指定actor<按tag搜索actor）、调整信号最大传播距离（值为负数则从外向内收缩）、设置传播速度来模拟延迟，还能修改不同命令的专有参数。启用debug后会显示最大传播距离的球体形状
@@ -1963,6 +2055,8 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 - 在“Blender扩展资源”文件夹中上传了新增生物的FBX模型
 - 0.4-pre2没有内容示例，预计在寒假更新0.4正式版
 - *小故事：这个版本的主题叫“足迹与故事”，按照最初的计划有两次大更新 —— “足迹”指运动匹配，“故事”指镜头语言，分别对应0.4-pre1和0.4正式版。至于0.4-pre2，是趁着暑假给插件来了个底层重构，现在看看，新东西倒也不少。接下来一段时间，会重点更新摄像机和运镜方面的内容啦~*
+
+</details>
 
 <details>
 <summary> 📜展开快照 </summary>
@@ -2040,9 +2134,13 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 
 </details>
 
-#### 0.4-pre1
+### 0.4-pre1
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.4-pre1%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 - 新的里程碑(*・ω・)ﾉ 我们在这一周修复了大量bug并带来几个新功能，稍后将上传打包的exe示例文件，包含0.3和0.4-pre1的所有内容，作为正式的Release发布
+
+<details>
+<summary> 查看细节 </summary>
+
 - mcprep_data.json已更新至1.21版本，与刚刚发布的MCprep 3.6同步。默认资源包尚未更新
 - 插件面板的“启用碰撞”选项旁边添加了`复杂碰撞`选项，默认开启，之前的准备场景也都在用复杂碰撞；如果要进行物理模拟，请关闭此选项，再对选中物品使用准备场景。此外还增加了三个新功能：
 - **重载材质**  
@@ -2087,6 +2185,8 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 - 修复“灯光排除”对内部组件无效的bug
 - “LOD&Nanite”功能的“2x增强网格体距离场”和“启用Nanite”选项在默认状态下禁用，这俩运行起来特别卡，感觉第一个关闭阴影更实用一些
 - 插件面板弹出框现已支持英语，Github Readme也翻译了一部分英语 —— 是的，你点最顶上那个English按钮不会跳到404页面了，最古老的bug终于被修复了!
+
+</details>
 
 <details>
 <summary> 📜展开快照 </summary>
@@ -2223,6 +2323,10 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 ![image](https://raw.githubusercontent.com/wiki/piggestpig/Unreal-Mineprep/image/0.3%E5%B0%81%E9%9D%A2%E5%9B%BE.jpg)
 
 - 0.3正式版现已发布！本次更新的主题为“多彩世界”，和0.2版本相比，加入了大量新功能与资源素材，我们用其制作了动画短片《史蒂夫之梦》。来看一看最后更新的内容吧：
+
+<details>
+<summary> 查看细节 </summary>
+
 - **优化安装流程，减少对其他插件的依赖**。之前的版本必须借助TApython才能运行，否则整个蓝图都会报错。现在只有“植物摇摆”功能依赖TApython，而且它不影响其他功能。具体来说，我们用python自带的filedialog替代了“更换材质”的选择文件夹弹窗，用UE自带的“显示消息对话”节点替代了右下角提示弹窗。
 - **修复大量bug，提高稳定性**。 “准备场景”在搜索材质中的纹理贴图时，会判断对象是否为空来避免闪退，最多向前查找三层。“更换材质”会先删除原来的材质节点（删的更干净了），再连接新材质。动画纹理能对粗糙度和法线贴图进行处理了。
 - “准备场景”新增`渐变动画纹理`选项，可以使动画材质平滑过渡。
@@ -2230,6 +2334,8 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 - 新增`滚动方块`，把它拖放到场景中，设置方向、重力、速度，可以在运行时滚起来
 - 整理了插件结构，现在有一个“材质”文件夹。更新了Github页面对插件的介绍。
 - 我们计划跳过0.3 Demo内容示例，等下次0.4-pre1一起发布。下个版本的主题暂定为“足迹与故事”，将会制作生物、动画这方面的内容。
+
+</details>
 
 <details>
 <summary> 📜展开快照 </summary>
@@ -2257,8 +2363,12 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 
 </details>
 
-#### 0.3-pre1
+### 0.3-pre1
 - 第一个预览版本，进行了大量优化并修复了不少bug！稍后将上传打包的exe文件，供没有虚幻引擎的用户体验插件。以下是新功能
+
+<details>
+<summary> 查看细节 </summary>
+
 - **自发光**  
   `对象`：视口选中项/资产文件夹  
   `效果`：使选中的材质发光，可以分别控制照亮场景的强度和自身亮度  
@@ -2287,6 +2397,8 @@ Mineprep 0.5的第一个预览版来了，全新动画《捅了银鱼窝了》�
 - 新增`可交互2D水面`，`可交互3D水池`，`粒子自碰撞`，都是使用Niagara GPU的高性能粒子系统。
 - 新增`场景初始化`蓝图，拖放到场景中设置画质和最高帧率
 - 正在制作一个示例文件，展示Unreal MCprep的各种功能，打包后供没有虚幻引擎的用户体验。
+
+</details>
 
 <details>
 <summary> 📜展开快照 </summary>
