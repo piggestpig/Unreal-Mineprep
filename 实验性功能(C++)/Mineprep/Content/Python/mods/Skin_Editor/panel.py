@@ -2,19 +2,19 @@
 import unreal
 import mineprep
 from functools import partial
-from mineprep import bilingual
+from mineprep import i18n
 from . import ops, paint, util
 from .props import SkinEditorOptions, SkinPaintTools, SkinCodeTools, SkinBatchTools
 
 PAGES = (
-    bilingual('编辑材质', 'Edit Materials'),
-    bilingual('绘制皮肤', 'Paint Skin'),
+    i18n('编辑材质', 'Edit Materials'),
+    i18n('绘制皮肤', 'Paint Skin'),
 )
 TAB_DIM = 0.4
 
 
 class SkinEditor(mineprep.Mod):
-    _label_ = bilingual('皮肤&表情编辑器', 'Skin & Face Editor')
+    _label_ = i18n('皮肤&表情编辑器', 'Skin & Face Editor')
 
     def __init__(self, context=None):
         self.options = SkinEditorOptions()
@@ -52,7 +52,7 @@ class SkinEditor(mineprep.Mod):
             self._tabs.append(btn)
             build(self._pages.col(align=(0, 0)))
         header.button(
-            bilingual('打开模组', 'Open Mod'),
+            i18n('打开模组', 'Open Mod'),
             on_clicked=util.open_mod_script,
             align=3, padding=(4, 2), size=12, fill=1
         )
@@ -88,13 +88,13 @@ class SkinEditor(mineprep.Mod):
         )
         footer.prop(
             self.options, 'Body',
-            bilingual('身体', 'Body'),
+            i18n('身体', 'Body'),
             align=(1, 2),
             on_property_changed=lambda _: ops.apply_columns(self),
         )
         footer.prop(
             self.options, 'Head',
-            bilingual('头部', 'Head'),
+            i18n('头部', 'Head'),
             align=(1, 2),
             padding=(-2, 1),
             on_property_changed=lambda _: ops.apply_columns(self),
@@ -142,7 +142,7 @@ class SkinEditor(mineprep.Mod):
         footer = left.row(align=(1, 3), padding=3)
         footer.checkbox(
             '', size=10, align=(1, 3),
-            tooltip=bilingual('读取鼠标下的像素颜色（性能低）', 'Read color under mouse (low performance)'),
+            tooltip=i18n('实时取色（读取光标下像素，开销较高）', 'Live color sampling under cursor (slower)'),
             on_check_state_changed=self._pad.set_sample_color,
         )
         hint = footer.text(
@@ -156,43 +156,43 @@ class SkinEditor(mineprep.Mod):
         )
         actions = mid.row(padding=(0, 3))
         actions.button(
-            bilingual('还原', 'Restore'),
+            i18n('还原', 'Revert'),
             on_clicked=lambda: paint.restore(self),
             padding=(3,3,3,0), size=12, fill=1
         )
         actions.button(
-            bilingual('宽手臂', 'Wide Arm'),
+            i18n('宽臂', 'Wide Arms'),
             on_clicked=lambda: paint.use_snippet(self, 'wide_arms'),
             padding=(3,3,3,0), size=12, fill=1
         )
         actions.button(
-            bilingual('细手臂', 'Slim Arm'),
+            i18n('细臂', 'Slim Arms'),
             on_clicked=lambda: paint.use_snippet(self, 'slim_arms'),
             padding=(3,3,3,0), size=12, fill=1
         )
         layers = mid.row(padding=(0, 3))
         layers.button(
-            bilingual('内层', 'Inner'),
+            i18n('仅留内层', 'Keep Inner Layer'),
             on_clicked=lambda: paint.use_snippet(self, 'keep_inner'),
             padding=(3,0,3,3), size=12, fill=1
         )
         layers.button(
-            bilingual('外层', 'Outer'),
+            i18n('仅留外层', 'Keep Outer Layer'),
             on_clicked=lambda: paint.use_snippet(self, 'keep_outer'),
             padding=(3,0,3,3), size=12, fill=1
         )
         layers.button(
-            bilingual('叠加', 'Overlay'),
+            i18n('应用叠加', 'Apply Overlay'),
             on_clicked=lambda: paint.use_snippet(self, 'apply_overlay'),
             padding=(3,0,3,3), size=12, fill=1
         )
         mid.button(
-            bilingual('保存皮肤纹理', 'Save Skin Texture'),
+            i18n('保存皮肤纹理', 'Save Skin Texture'),
             on_clicked=lambda: paint.save(self),
             padding=(3,0,3,3), size=12
         )
         mid.button(
-            bilingual('导出.png', 'Export .png'),
+            i18n('导出 PNG', 'Export PNG'),
             on_clicked=lambda: paint.export_png(self),
             padding=3, size=12
         )
@@ -200,17 +200,17 @@ class SkinEditor(mineprep.Mod):
 
         right.prop(self.code_tools, padding = (0, 3))
         right.button(
-            bilingual('运行Python代码', 'Run Python Script'),
+            i18n('运行 Python 脚本', 'Run Python Script'),
             on_clicked=lambda: paint.run_code(self),
             padding=3, size=12,
         )
         right.button(
-            bilingual('批量处理', 'Batch Process'),
+            i18n('批量处理', 'Batch Process'),
             on_clicked=lambda: paint.run_batch(self),
             padding=3, size=12,
         )
         right.button(
-            bilingual('保存所有新纹理', 'Save All New Textures'),
+            i18n('保存所有新纹理', 'Save All New Textures'),
             on_clicked=lambda: paint.save_batch(self),
             padding=3, size=12,
         )

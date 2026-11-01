@@ -27,6 +27,7 @@ class ColumnContext:
     allowed: np.ndarray
     density: float
     patch_scale: float
+    layout: object = None
 
     def param(self, name): return self.params[name]
 
@@ -140,10 +141,12 @@ def _batches(pack,params,seed,r,resources,biome_ids=None,wet_mask=None):
                 allowed&=ref.wet & (level>=params['world.y_min'])&(level<params['world.y_max'])
             else: allowed&=ref.wet if f.habitat=='underwater' else ~ref.wet
             allowed&=c.get('slope')<=max_slope if f.habitat!='water_surface' else True
+            if pack.layout is not None and f.detail_only:
+                allowed &= pack.layout.anchors(True,c.x,c.z)
             if not allowed.any(): continue
             allowed.setflags(write=False)
             for a in (ref.raw,ref.height,ref.levels,ref.wet,ref.biomes,ref.columns): a.setflags(write=False)
-            ctx=ColumnContext(seed,params,f,ids,tile,ref,allowed,density,patch_scale)
+            ctx=ColumnContext(seed,params,f,ids,tile,ref,allowed,density,patch_scale,pack.layout)
             batch=f.fn(ctx);chunk=validate(batch,f,ctx)
             chunks.append((f.id,chunk))
             report['columns']+=int(bool(len(chunk[0])))+int(np.any(chunk[0][1:]!=chunk[0][:-1],axis=1).sum())
@@ -190,10 +193,13 @@ def apply_world(world, *, max_instances, cancel_event=None):
     if len(xz)>1 and np.any(np.all(xz[1:]==xz[:-1],axis=1)&(lo[1:]<hi[:-1])):
         raise ValueError('column features overlap; combine overlapping recipes in their generator')
     index=ColumnIndex(r,params['world.y_min'],params['world.y_max'],xz,lo,hi)
+    if world.arrays.sizes is not None:
+        from .coarse import split_water
+        world = split_water(world,index)
     points=world.arrays.xyz.astype(np.int64);points[:,0]+=r.x0;points[:,2]+=r.z0
     found,at=index.lookup(points)
-    surface=np.array([b.shape=='surface' for b in world.arrays.block_defs])[world.arrays.types]
-    decor=np.array([b.shape=='decor' for b in world.arrays.block_defs])[world.arrays.types]
+    surface=np.array([b.shape=='surface' for b in world.arrays.block_defs],bool)[world.arrays.types]
+    decor=np.array([b.shape=='decor' for b in world.arrays.block_defs],bool)[world.arrays.types]
     keep=~(found&(surface|decor))
     if getattr(world, 'soft_mask', None) is not None:
         from .features import remove_soft_plants
@@ -223,6 +229,7 @@ def apply_world(world, *, max_instances, cancel_event=None):
         offsets=np.r_[world.arrays.instance_y_offsets[keep],np.zeros(len(added))]
     if world.arrays.rotations is not None: rotations=np.r_[world.arrays.rotations[keep],np.zeros(len(added),np.uint8)]
     arrays=replace(world.arrays,xyz=np.r_[world.arrays.xyz[keep],added],types=remap[block_ids],names=names,
+        sizes=None if world.arrays.sizes is None else np.r_[world.arrays.sizes[keep],np.ones((len(added),3),np.int32)],
         block_defs=tuple(pack.block_defs[n] for n in names),
         y_offsets=tuple(world.arrays.y_offsets[world.arrays.names.index(n)] if world.arrays.y_offsets and n in world.arrays.names else 0. for n in names),
         instance_y_offsets=offsets,rotations=rotations)
@@ -231,13 +238,14 @@ def apply_world(world, *, max_instances, cancel_event=None):
     kept_features=int(keep[len(keep)-old_count:].sum()) if old_count else 0
     start=arrays.count-kept_features-len(added)
     feature_cells=replace(arrays,xyz=arrays.xyz[start:],types=arrays.types[start:],solid_count=0,
+        sizes=None if arrays.sizes is None else arrays.sizes[start:],
         rotations=None if rotations is None else rotations[start:],
         instance_y_offsets=None if offsets is None else offsets[start:])
     soft_mask=getattr(world,'soft_mask',None)
     if soft_mask is not None:
         soft_mask=np.r_[soft_mask[keep],np.zeros(len(added),bool)]
         soft_mask.setflags(write=False)
-    for a in (arrays.xyz,arrays.types,offsets,rotations,xz,lo,hi,types,index.removed):
+    for a in (arrays.xyz,arrays.types,arrays.sizes,offsets,rotations,xz,lo,hi,types,index.removed):
         if a is not None: a.setflags(write=False)
     work_bytes=sum(a.nbytes for a in (points,found,at,surface,decor,keep,xz,lo,hi,types,columns,y,added,added_types,alive,block_ids,arrays.xyz,arrays.types))
     stats=dict(world.stats,visible=arrays.count,column_features=reports,

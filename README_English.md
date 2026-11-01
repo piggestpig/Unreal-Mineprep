@@ -1,6 +1,6 @@
 # Unreal-Mineprep
 
-English | [**中文**](./README.md) | [**繁體中文**](./README_繁體中文.md)
+[**简体中文**](<./README.md>) | English | [**繁體中文(台灣)**](<./README_繁體中文(台灣).md>) | [**繁體中文(香港)**](<./README_繁體中文(香港).md>)
 
 ✨This is a UE5 plugin that inherits the practical features of [Blender MCprep](https://theduckcow.com/dev/blender/mcprep/), and adds some new assets to facilitate the creation of MC animations.
 

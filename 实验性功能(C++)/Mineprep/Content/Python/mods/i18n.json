@@ -1,0 +1,25 @@
+{
+  "template": {
+    "Mod模板": {
+      "zh": "Mod模板",
+      "en": "Mod Template",
+      "zh-Hant": "Mod 範本"
+    },
+    "面向开发者的基础 mod 模板": {
+      "zh": "面向开发者的基础 mod 模板",
+      "en": "Basic mod template for developers",
+      "zh-Hant": "面向開發者的基礎 mod 範本"
+    },
+    "这是一个 mod 模板": {
+      "zh": "这是一个 mod 模板",
+      "en": "This is a mod template",
+      "zh-Hant": "這是一個 mod 範本"
+    },
+    "打开Python文件": {
+      "zh": "打开Python文件",
+      "en": "Open Python File",
+      "zh-Hant": "開啟 Python 檔案",
+      "zh-Hant-HK": "打開 Python 檔案"
+    }
+  }
+}

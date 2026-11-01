@@ -21,20 +21,28 @@ def apply(ctx, surfaces):
     eligible &= cold
     parts, types, replacements = [], [], []
     if layers:
+        layout = ctx.query.world.pack.layout
+        local = layout.steps(points[:,0],points[:,2])!=1 if layout is not None else None
         leaves = [ctx.block_ids[name] for name in ('oak_leaves', 'birch_leaves', 'spruce_leaves')
                   if name in ctx.block_ids]
         canopy = np.isin(surfaces.types, leaves)
         dry = ~reference.wet[iz, ix] | (points[:, 1] > reference.levels[iz, ix])
-        use = (eligible & (surfaces.kind != 2) & dry &
-               ~np.isin(surfaces.types, [ctx.block_ids.get(n,-1) for n in ('packed_ice','snow_block')]) &
-               (points[:, 1] + 1 < ctx.params['world.y_max']) &
-               (~canopy | ctx.params['cold.canopy']))
-        added = points[use].copy()
-        added[:, 1] += 1
-        added = added[~ctx.query.occupied(added)] if len(added) else added
-        parts.append(added)
-        types.append(np.full(len(added), ctx.block_ids[f'snow_layer_{layers}'], np.uint16))
-        replacements.append(np.zeros(len(added), bool))
+        for coarse in ((False,True) if layout is not None else (ctx.query.world.spec.cell_step!=1,)):
+            use = (eligible & (surfaces.kind != 2) & dry &
+                   ~np.isin(surfaces.types, [ctx.block_ids.get(n,-1) for n in ('packed_ice','snow_block')]) &
+                   (points[:, 1] + (0 if coarse else 1) < ctx.params['world.y_max']) &
+                   (~canopy | ctx.params['cold.canopy']))
+            if local is not None: use &= local==coarse
+            if coarse:
+                # Colour only a real upward terrain cell; keep its top at the same Y.
+                use &= surfaces.kind == 0
+            added = points[use].copy()
+            if not coarse:
+                added[:, 1] += 1
+                added = added[~ctx.query.occupied(added)] if len(added) else added
+            parts.append(added)
+            types.append(np.full(len(added), ctx.block_ids['snow_block' if coarse else f'snow_layer_{layers}'], np.uint16))
+            replacements.append(np.full(len(added),coarse,bool))
     if ctx.params['cold.freeze'] or sea_freeze:
         inland = np.isin(reference.ctx.get('water_kind')[iz, ix], (2, 3, 4))
         use = inland & ctx.params['cold.freeze']

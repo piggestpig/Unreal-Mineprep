@@ -22,6 +22,7 @@ class SurfaceProcessor:
     sky_only: bool = False
     category: str = ''
     volume: bool = False
+    unit_replace: bool = False
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,7 @@ class SurfaceBatch:
     biomes: np.ndarray
     sky_open: np.ndarray
     water_levels: np.ndarray  # logical level; NaN for entities
+    sizes: object = None      # integer XYZ extents; None means unit cells
 
 
 @dataclass(frozen=True)
@@ -85,8 +87,15 @@ def _lookup(points, queries):
 
 class _EntityIndex:
     """Sparse ordinary entities plus column intervals, preserving output indices."""
-    def __init__(self, points, columns=None, soft_mask=None):
+    def __init__(self, points, columns=None, soft_mask=None, *, sizes=None, region=None, step=1,layout=None):
         self.columns=columns
+        self.layout=layout
+        self.boxes = None
+        if sizes is not None:
+            self.box_mapping = np.flatnonzero((sizes[:,0]>1)|(sizes[:,2]>1))
+            self.boxes = _PointIndex(points[self.box_mapping])
+            self.box_points, self.box_sizes = points[self.box_mapping], sizes[self.box_mapping]
+            self.region, self.step = region,step
         if columns is None:
             self.sparse=_PointIndex(points,soft_mask);self.mapping=None
         else:
@@ -103,19 +112,44 @@ class _EntityIndex:
                 remaining=np.flatnonzero(~found)
                 filled,indices=self.columns.lookup(points[remaining])
                 found[remaining[filled]]=True;at[remaining[filled]]=indices[filled]
+        if self.boxes is not None:
+            remaining = np.flatnonzero(~found)
+            q = points[remaining].copy()
+            q[:,0] = np.maximum(q[:,0]//self.step*self.step,self.region.x0)
+            q[:,2] = np.maximum(q[:,2]//self.step*self.step,self.region.z0)
+            if self.layout is not None: q = self.layout.box_origins(points[remaining],self.region)
+            hit,indices = self.boxes.lookup(q)
+            ids = np.flatnonzero(hit)
+            p,s = self.box_points[indices[hit]],self.box_sizes[indices[hit]]
+            hit[ids] &= ((points[remaining[hit]]>=p)&(points[remaining[hit]]<p+s)).all(axis=1)
+            found[remaining[hit]] = True
+            at[remaining[hit]] = self.box_mapping[indices[hit]]
         return found,at
 
 
 class SurfaceQuery:
     def __init__(self, world, points, types, allowed, *, point_index=None, resources=None, terrain_tops=None,
-                 skyline=None):
+                 skyline=None, above_index=None):
         from .planning import Resources
         self.world, self.points, self.types, self.allowed = world, points, types, allowed
         self.skyline = skyline
-        self.point_index = point_index if point_index is not None else _EntityIndex(points,getattr(world,'column_index',None),getattr(world,'soft_mask',None))
+        self.above_index = above_index
+        self.point_index = point_index if point_index is not None else _EntityIndex(
+            points,getattr(world,'column_index',None),getattr(world,'soft_mask',None),
+            sizes=world.arrays.sizes,region=world.region,step=world.spec.cell_step,layout=world.pack.layout)
         self.resources = resources if resources is not None else Resources(world.pack, world.params, world.spec.seed)
         self.terrain_tops = terrain_tops
         self._tops_complete = terrain_tops is not None and np.all(terrain_tops >= world.params['world.y_min'])
+
+    def _prepare_surfaces(self, sizes, soft_mask):
+        if self.skyline is not None:
+            return
+        self.skyline = _skyline(self.world,self.points,self.types,sizes)
+        noncube = np.array([self.world.pack.block_defs[n].shape != 'cube'
+                            for n in self.world.pack.blocks])[self.types]
+        if soft_mask is not None:
+            noncube[:len(soft_mask)] &= ~soft_mask
+        self.above_index = _PointIndex(self.points[noncube]) if self.world.spec.cell_step == 1 else None
 
     def _check(self, points):
         r = self.allowed
@@ -128,16 +162,43 @@ class SurfaceQuery:
         w = self.world
         return reference(w.pack, w.params, w.spec.seed, region, self.resources, include_surface=include_surface)
 
+    def emitted(self, points):
+        """Existing output cells, including the interior footprint of coarse boxes."""
+        points = np.asarray(points)
+        if points.ndim != 2 or points.shape[1] != 3 or points.dtype.kind not in 'iu':
+            raise ValueError('emitted requires integer XYZ[N,3]')
+        self._check(points)
+        found,_ = self.point_index.lookup(points)
+        found.setflags(write=False)
+        return found
+
     def occupied(self, points):
         from . import geometry
         points = np.asarray(points)
         if points.ndim != 2 or points.shape[1] != 3 or points.dtype.kind not in 'iu':
             raise ValueError('occupied requires integer XYZ[N,3]')
         self._check(points)
-        found, _ = self.point_index.lookup(points)
+        # Above the exact cube/model skyline only non-cube entities can remain.
+        # Snow probes use this small index instead of searching the entire shell.
+        found = np.zeros(len(points), bool)
+        remaining = np.arange(len(points))
+        if self.skyline is not None and self.above_index is not None:
+            r = self.world.region
+            inside = ((points[:,0]>=r.x0)&(points[:,0]<r.x0+r.width)&
+                      (points[:,2]>=r.z0)&(points[:,2]<r.z0+r.depth))
+            at = np.flatnonzero(inside)
+            above = np.zeros(len(points), bool)
+            above[at] = points[at,1] > self.skyline[(points[at,2]-r.z0)*r.width+points[at,0]-r.x0]
+            found[above], _ = self.above_index.lookup(points[above])
+            remaining = np.flatnonzero(~above)
+        hit, _ = self.point_index.lookup(points[remaining])
+        found[remaining] = hit
         if self.world.model_index is not None:
-            found |= self.world.model_index.occupied(points)
-        remaining = np.flatnonzero(~found)
+            found[remaining] |= self.world.model_index.occupied(points[remaining])
+        remaining = remaining[~found[remaining]]
+        if self.world.pack.layout is not None and self.world.pack.layout.empty:
+            q = points[remaining]
+            remaining = remaining[self.world.pack.layout.terrain(q[:,0],q[:,2])]
         if self.skyline is not None and len(remaining):
             # Shells emit every solid cell below air, so nothing above the
             # highest emitted cube of a column can be terrain.
@@ -226,23 +287,76 @@ def _cubes(world, types):
     return cubes, shapes[types] == 'surface'
 
 
-def _skyline(world, points, types):
+def _skyline(world, points, types, sizes):
     """Highest emitted cube per column, including interval and model tops."""
     cubes, _ = _cubes(world, types)
-    col=(points[:,2]-world.region.z0)*world.region.width+points[:,0]-world.region.x0
-    top=np.full(world.region.cells,world.params['world.y_min']-1,np.int64)
-    np.maximum.at(top,col[cubes],points[cubes,1])
+    from .coarse import tops
+    top=tops(points,sizes,cubes,world.region,world.params['world.y_min'])
     if world.model_index is not None: world.model_index.add_tops(top,world.region)
     return top
 
 
-def _surfaces(world, points, types, offsets, query, feature_at, *, sky_only=False, diagnostics=None):
+def _partial_tops(world, points, types, sizes, query, sky_only, cancel_event):
+    """Find coarse top faces with different exposure across their physical columns."""
+    if sizes is None:
+        return np.empty(0,np.intp)
+    cubes,_ = _cubes(world,types)
+    candidates = np.flatnonzero(cubes & (sizes[:,1]==1) & ((sizes[:,0]>1)|(sizes[:,2]>1)))
+    partial = []
+    for start in range(0,len(candidates),2048):
+        check_cancel(cancel_event)
+        ids = candidates[start:start+2048]
+        spans = sizes[ids]
+        offsets = np.array([(dx,0,dz) for dz in range(int(spans[:,2].max()))
+                            for dx in range(int(spans[:,0].max()))],np.int64)
+        p = points[ids,None,:]+offsets
+        valid = (offsets[None,:,0]<spans[:,None,0]) & (offsets[None,:,2]<spans[:,None,2])
+        col = (p[:,:,2]-world.region.z0)*world.region.width+p[:,:,0]-world.region.x0
+        # Padded positions of cropped boxes may fall outside the output region.
+        sky = np.zeros(valid.shape,bool)
+        sky[valid] = p[:,:,1][valid] >= query.skyline[col[valid]]
+        probe = valid & sky if sky_only else valid
+        exposed = np.zeros(valid.shape,bool)
+        if probe.any():
+            exposed[probe] = ~query.occupied(p[probe]+[0,1,0])
+        count = exposed.sum(1)
+        area = spans[:,0]*spans[:,2]
+        varying = (count>0) & (count<area)
+        if not sky_only:
+            varying |= (count>0) & sky.any(1) & (sky.sum(1)<area)
+        partial.append(ids[varying])
+    return np.concatenate(partial) if partial else np.empty(0,np.intp)
+
+
+def _split_cells(points,types,offsets,rotations,sizes,soft_mask,split,max_count):
+    """Preserve original slots and append the remaining unit children."""
+    if np.any(sizes[split,1]!=1):
+        raise ValueError('surface unit replacements require boxes one cell high')
+    extra = int((sizes[split,0]*sizes[split,2]-1).sum())
+    if len(points)+extra>max_count:
+        raise ValueError('surface splitting exceeds max_instances')
+    sources,children = [],[]
+    for dz in range(int(sizes[split,2].max())):
+        for dx in range(int(sizes[split,0].max())):
+            if dx==dz==0: continue
+            ids = split[(sizes[split,0]>dx)&(sizes[split,2]>dz)]
+            sources.append(ids);children.append(points[ids]+[dx,0,dz])
+    sources = np.concatenate(sources)
+    points = np.concatenate([points,*children])
+    types = np.r_[types,types[sources]]
+    offsets = np.r_[offsets,offsets[sources]]
+    rotations = np.r_[rotations,rotations[sources]]
+    sizes = np.r_[sizes,np.ones((extra,3),np.int32)]; sizes[split]=1
+    if soft_mask is not None: soft_mask=np.r_[soft_mask,soft_mask[sources]]
+    return points,types,offsets,rotations,sizes,soft_mask
+
+
+def _surfaces(world, points, types, offsets, query, feature_at, *, sky_only=False, diagnostics=None, sizes=None):
     cubes, water = _cubes(world, types)
     # A sky-only processor never consumes underground/covered surfaces, so
     # discard those before re-entering potentially expensive 3D occupancy.
     col=(points[:,2]-world.region.z0)*world.region.width+points[:,0]-world.region.x0
-    if query.skyline is None:
-        query.skyline=_skyline(world,points,types)
+    query._prepare_surfaces(sizes,world.soft_mask)
     top=query.skyline
     candidates = np.flatnonzero(cubes)
     water_candidates = np.flatnonzero(water)
@@ -272,7 +386,9 @@ def _surfaces(world, points, types, offsets, query, feature_at, *, sky_only=Fals
     use = kind == 2
     levels[use] = p[use,1] + offsets[selected[use]]
     for a in (p,t,kind,biomes,sky,levels):a.setflags(write=False)
-    return SurfaceBatch(p,t,kind,biomes,sky,levels)
+    spans = sizes[selected] if sizes is not None else None
+    if spans is not None: spans.setflags(write=False)
+    return SurfaceBatch(p,t,kind,biomes,sky,levels,spans)
 
 
 def apply_world(world, *, max_instances, cancel_event=None):
@@ -291,12 +407,13 @@ def apply_world(world, *, max_instances, cancel_event=None):
     types=np.array([index[n] for n in world.arrays.names],np.uint16)[world.arrays.types].copy()
     rotations=np.zeros(len(points),np.uint8) if world.arrays.rotations is None else world.arrays.rotations.copy()
     offsets=np.array(world.arrays.y_offsets)[world.arrays.types].copy()
+    sizes = world.arrays.sizes
     if world.arrays.instance_y_offsets is not None:offsets+=world.arrays.instance_y_offsets
     added=replaced_count=0
     features=world.feature_cells
     column_index=getattr(world,'column_index',None)
     soft_mask=getattr(world,'soft_mask',None)
-    point_index=_EntityIndex(points,column_index,soft_mask)
+    point_index=_EntityIndex(points,column_index,soft_mask,sizes=sizes,region=world.region,step=world.spec.cell_step,layout=world.pack.layout)
     feature_at=None
     if features is not None and features.count:
         if column_index is not None:
@@ -311,30 +428,54 @@ def apply_world(world, *, max_instances, cancel_event=None):
         cubes = np.array([pack.block_defs[n].shape == 'cube' for n in pack.blocks])[types]
         if feature_at is not None:
             cubes[feature_at] = False
-        col = (points[:,2]-world.region.z0)*world.region.width+points[:,0]-world.region.x0
-        terrain_tops = np.full(world.region.cells,world.params['world.y_min']-1,np.int64)
-        np.maximum.at(terrain_tops,col[cubes],points[cubes,1])
+        from .coarse import tops
+        terrain_tops = tops(points,sizes,cubes,world.region,world.params['world.y_min'])
         # A cube scatter cell is emitted immediately above its terrain column.
         plant_shapes = np.array([False, *(pack.block_defs[n].shape == 'cube' for n in pack.blocks)])
         terrain_tops -= plant_shapes[world.plant_ids.reshape(-1)]
         terrain_tops = terrain_tops.reshape(world.region.shape)
         terrain_tops.setflags(write=False)
     phase_query=SurfaceQuery(world,points,types,world.region,point_index=point_index,terrain_tops=terrain_tops)
-    diagnostics=dict(surface_candidates_before=0,surface_candidates_after=0,surface_probe_points=0)
+    diagnostics=dict(surface_candidates_before=0,surface_candidates_after=0,surface_probe_points=0,
+                     surface_split_boxes=0,surface_split_extra_cells=0)
     for stage, processor in enumerate(processors):
         check_cancel(cancel_event)
         phase_query.skyline=None
+        phase_query._prepare_surfaces(sizes,soft_mask)
+        split = _partial_tops(world,points,types,sizes,phase_query,processor.sky_only,cancel_event)
+        if len(split):
+            before = len(points)
+            points,types,offsets,rotations,sizes,soft_mask = _split_cells(
+                points,types,offsets,rotations,sizes,soft_mask,split,max_instances-len(world.model_instances))
+            point_index=_EntityIndex(points,column_index,soft_mask,sizes=sizes,region=world.region,
+                                     step=world.spec.cell_step,layout=world.pack.layout)
+            phase_query=SurfaceQuery(world,points,types,world.region,point_index=point_index,
+                                     resources=phase_query.resources,terrain_tops=terrain_tops,
+                                     skyline=phase_query.skyline,above_index=phase_query.above_index)
+            diagnostics['surface_split_boxes']+=len(split)
+            diagnostics['surface_split_extra_cells']+=len(points)-before
         surfaces=_surfaces(world,points,types,offsets,phase_query,feature_at,
-                           sky_only=processor.sky_only,diagnostics=diagnostics)
+                           sky_only=processor.sky_only,diagnostics=diagnostics,sizes=sizes)
+        buckets = None
+        if processor.radius == 0:
+            nx = (world.region.width + 255) // 256
+            keys = ((surfaces.xyz[:,2]-world.region.z0)//256*nx +
+                    (surfaces.xyz[:,0]-world.region.x0)//256)
+            order = np.argsort(keys, kind='stable')
+            edges = np.searchsorted(keys[order], np.arange(nx*((world.region.depth+255)//256)+1))
+            buckets = [order[a:b] for a,b in zip(edges[:-1],edges[1:])]
         patches=[]
-        for tile in world.region.tiles(256):
+        for tile_number, tile in enumerate(world.region.tiles(256)):
             check_cancel(cancel_event)
             r=tile.expanded(processor.radius)
-            use=(surfaces.xyz[:,0]>=r.x0)&(surfaces.xyz[:,0]<r.x0+r.width)&(surfaces.xyz[:,2]>=r.z0)&(surfaces.xyz[:,2]<r.z0+r.depth)
-            batch=SurfaceBatch(*(getattr(surfaces,k)[use] for k in SurfaceBatch.__dataclass_fields__))
-            for a in batch.__dict__.values():a.setflags(write=False)
+            use=(buckets[tile_number] if buckets is not None else
+                 (surfaces.xyz[:,0]>=r.x0)&(surfaces.xyz[:,0]<r.x0+r.width)&(surfaces.xyz[:,2]>=r.z0)&(surfaces.xyz[:,2]<r.z0+r.depth))
+            batch=SurfaceBatch(*(getattr(surfaces,k)[use] if getattr(surfaces,k) is not None else None
+                                 for k in SurfaceBatch.__dataclass_fields__))
+            for a in batch.__dict__.values():
+                if a is not None: a.setflags(write=False)
             query=SurfaceQuery(world,points,types,r,point_index=point_index,resources=phase_query.resources,
-                               terrain_tops=terrain_tops,skyline=phase_query.skyline)
+                               terrain_tops=terrain_tops,skyline=phase_query.skyline,above_index=phase_query.above_index)
             context=SurfaceContext(pack,world.params,world.spec.seed,tile,MappingProxyType(index),query)
             patch=processor.fn(context,batch)
             if not isinstance(patch,SurfacePatch):raise ValueError(f'{processor.id}: must return SurfacePatch')
@@ -350,6 +491,9 @@ def apply_world(world, *, max_instances, cancel_event=None):
             emitted,at=point_index.lookup(q)
             if np.any(flags&~emitted) or np.any(query.occupied(q[~flags])):
                 raise ValueError(f'{processor.id}: replacement missing or addition occupied')
+            if pack.layout is not None:
+                use = flags | pack.layout.terrain(q[:,0],q[:,2])
+                q,t,flags,at = q[use],t[use],flags[use],at[use]
             from .masks import active, weight
             if any(active(pack, kind, processor.category) for kind in ('vegetation','clearance')):
                 from .noise3 import hash01
@@ -357,6 +501,21 @@ def apply_world(world, *, max_instances, cancel_event=None):
                 q,t,flags,at = q[use],t[use],flags[use],at[use]
             patches.append((q.copy(),t.copy(),flags.copy(),at))
         count=sum(np.count_nonzero(~flags) for _,_,flags,_ in patches)
+        if processor.unit_replace and sizes is not None:
+            targets = np.concatenate([at[flags] for _,_,flags,at in patches])
+            split = np.unique(targets[(sizes[targets,0]>1)|(sizes[targets,2]>1)])
+            if len(split):
+                before = len(points)
+                points,types,offsets,rotations,sizes,soft_mask = _split_cells(
+                    points,types,offsets,rotations,sizes,soft_mask,split,
+                    max_instances-len(world.model_instances)-count)
+                point_index=_EntityIndex(points,column_index,soft_mask,sizes=sizes,region=world.region,
+                                         step=world.spec.cell_step,layout=world.pack.layout)
+                patches=[(q,t,flags,point_index.lookup(q)[1]) for q,t,flags,_ in patches]
+                phase_query=SurfaceQuery(world,points,types,world.region,point_index=point_index,
+                                         resources=phase_query.resources,terrain_tops=terrain_tops)
+                diagnostics['surface_split_boxes']+=len(split)
+                diagnostics['surface_split_extra_cells']+=len(points)-before
         if len(points)+count+len(world.model_instances)>max_instances:raise ValueError('surface processing exceeds max_instances')
         for q,t,flags,at in patches:
             types[at[flags]]=t[flags];offsets[at[flags]]=0;rotations[at[flags]]=0
@@ -365,9 +524,10 @@ def apply_world(world, *, max_instances, cancel_event=None):
             points=np.concatenate([points,*(q[~flags] for q,_,flags,_ in patches)])
             types=np.concatenate([types,*(t[~flags] for _,t,flags,_ in patches)])
             offsets=np.concatenate((offsets,np.zeros(count)));rotations=np.concatenate((rotations,np.zeros(count,np.uint8)))
+            if sizes is not None: sizes=np.r_[sizes,np.ones((count,3),np.int32)]
             if soft_mask is not None: soft_mask=np.r_[soft_mask,np.zeros(count,bool)]
             if stage+1<len(processors):
-                point_index=_EntityIndex(points,column_index,soft_mask)
+                point_index=_EntityIndex(points,column_index,soft_mask,sizes=sizes,region=world.region,step=world.spec.cell_step,layout=world.pack.layout)
                 phase_query=SurfaceQuery(world,points,types,world.region,point_index=point_index,resources=phase_query.resources,terrain_tops=terrain_tops)
     if not added and not replaced_count:
         elapsed=perf_counter()-started
@@ -379,6 +539,7 @@ def apply_world(world, *, max_instances, cancel_event=None):
     names=tuple(pack.blocks[i] for i in used)
     local=points.copy();local[:,0]-=world.region.x0;local[:,2]-=world.region.z0
     arrays=WorldArrays(world.region,local.astype(np.int32),remap[types],names,world.arrays.solid_count,
+                       sizes=sizes,
                        block_defs=tuple(pack.block_defs[n] for n in names),y_offsets=(0.,)*len(names),
                        instance_y_offsets=offsets if np.any(offsets) else None,
                        rotations=rotations if np.any(rotations) else None)
@@ -389,7 +550,7 @@ def apply_world(world, *, max_instances, cancel_event=None):
                          rotations=rotations[at] if np.any(rotations[at]) else None)
         for a in (features.types, features.instance_y_offsets, features.rotations):
             if a is not None: a.setflags(write=False)
-    for a in (arrays.xyz,arrays.types,arrays.instance_y_offsets,arrays.rotations):
+    for a in (arrays.xyz,arrays.types,arrays.sizes,arrays.instance_y_offsets,arrays.rotations):
         if a is not None:a.setflags(write=False)
     stats=dict(world.stats,visible=arrays.count,surface_added=added,surface_replaced=replaced_count,**diagnostics)
     stats['stages']=dict(stats.get('stages',{}),surface_processing=perf_counter()-started)

@@ -1,0 +1,339 @@
+{
+  "VersionControl": {
+    "插件更新与迁移工具": {
+      "zh": "插件更新与迁移工具",
+      "en": "Plugin Update & Migration",
+      "zh-Hant": "外掛更新與遷移工具",
+      "zh-Hant-HK": "插件更新與遷移工具"
+    },
+    "Props.category.Props": {
+      "en": "Properties",
+      "zh": "属性",
+      "zh-Hant": "屬性",
+      "_native": "en"
+    },
+    "Props.UpdateInstaller": {
+      "en": "Sync to Installer Repo",
+      "zh": "同步至安装包仓库",
+      "zh-Hant": "同步至安裝套件儲存庫",
+      "_native": "en",
+      "zh-Hant-HK": "同步至安裝包儲存庫"
+    },
+    "Props.TargetDir": {
+      "en": "Target Folder",
+      "zh": "目标文件夹",
+      "zh-Hant": "目標資料夾",
+      "_native": "en"
+    },
+    "Props.UseModManifest": {
+      "en": "Filter Files by Mod Manifests",
+      "zh": "按 mod 清单筛选文件",
+      "zh-Hant": "依 mod 清單篩選檔案",
+      "_native": "en"
+    },
+    "Props.ClearDest": {
+      "en": "Clear Target First",
+      "zh": "复制前清空目标",
+      "zh-Hant": "複製前清空目標",
+      "_native": "en"
+    },
+    "Props.RunScript": {
+      "en": "Run Script",
+      "zh": "运行自动化脚本",
+      "zh-Hant": "執行自動化指令碼",
+      "_native": "en",
+      "zh-Hant-HK": "執行自動化腳本"
+    },
+    "Props.CopyPythonLib": {
+      "en": "Copy Python Libraries",
+      "zh": "复制 Python 库",
+      "zh-Hant": "複製 Python 程式庫",
+      "_native": "en",
+      "zh-Hant-HK": "複製 Python 庫"
+    },
+    "Props.UseModManifest.tooltip": {
+      "zh": "使用模组清单中的打包规则，跳过不需要分发的文件。",
+      "en": "Use mod manifest build rules to skip files not needed for distribution.",
+      "zh-Hant": "使用 Mod 清單中的打包規則，略過不需散發的檔案。",
+      "zh-Hant-HK": "使用 Mod 清單中的打包規則，略過不需分發的檔案。"
+    },
+    "SkipProps.category.SkipProps": {
+      "en": "Custom Filter",
+      "zh": "自定义过滤",
+      "zh-Hant": "自訂篩選",
+      "_native": "en",
+      "zh-Hant-HK": "自訂過濾"
+    },
+    "SkipProps.SkipFolders": {
+      "en": "Skip Folders",
+      "zh": "跳过文件夹",
+      "zh-Hant": "略過資料夾",
+      "_native": "en"
+    },
+    "SkipProps.Script": {
+      "en": "Filter Script",
+      "zh": "过滤脚本",
+      "zh-Hant": "篩選指令碼",
+      "_native": "en",
+      "zh-Hant-HK": "過濾腳本"
+    },
+    "SkipProps.SkipFolders.tooltip": {
+      "zh": "按名称跳过任意层级的同名文件夹，区分大小写；清空列表可取消这项过滤。",
+      "en": "Skip folders with these exact, case-sensitive names at any depth. Clear the list to disable this filter.",
+      "zh-Hant": "依名稱略過任意層級的同名資料夾，區分大小寫；清空清單可取消此篩選。",
+      "zh-Hant-HK": "依名稱略過任意層級的同名資料夾，區分大小寫；清空清單可取消此過濾。"
+    },
+    "FilterProps.category.FilterProps": {
+      "en": "File Filters",
+      "zh": "文件过滤",
+      "zh-Hant": "檔案篩選",
+      "_native": "en",
+      "zh-Hant-HK": "檔案過濾"
+    },
+    "FilterProps.FilterNew": {
+      "en": "Filter New",
+      "zh": "筛选新增文件",
+      "zh-Hant": "篩選新增檔案",
+      "_native": "en"
+    },
+    "FilterProps.NewFiles": {
+      "en": "New Files (Copy)",
+      "zh": "新增文件（勾选复制）",
+      "zh-Hant": "新增檔案（勾選複製）",
+      "_native": "en"
+    },
+    "FilterProps.FilterNewer": {
+      "en": "Filter Newer",
+      "zh": "筛选源较新文件",
+      "zh-Hant": "篩選來源較新檔案",
+      "_native": "en"
+    },
+    "FilterProps.NewerFiles": {
+      "en": "Newer Files (Copy)",
+      "zh": "源较新文件（勾选复制）",
+      "zh-Hant": "來源較新檔案（勾選複製）",
+      "_native": "en"
+    },
+    "FilterProps.FilterOlder": {
+      "en": "Filter Older",
+      "zh": "筛选源较旧文件",
+      "zh-Hant": "篩選來源較舊檔案",
+      "_native": "en"
+    },
+    "FilterProps.OlderFiles": {
+      "en": "Older Files (Copy)",
+      "zh": "源较旧文件（勾选复制）",
+      "zh-Hant": "來源較舊檔案（勾選複製）",
+      "_native": "en"
+    },
+    "FilterProps.EntryDefault": {
+      "en": "Default Checked",
+      "zh": "默认勾选",
+      "zh-Hant": "預設勾選",
+      "_native": "en"
+    },
+    "FilterProps.FilterNew.tooltip": {
+      "zh": "列出目标目录中尚不存在的文件；列表内勾选表示复制，取消勾选表示跳过。",
+      "en": "List files not yet in the destination; checked entries are copied, unchecked are skipped.",
+      "zh-Hant": "列出目標目錄中尚不存在的檔案；清單內勾選表示複製，取消勾選表示略過。"
+    },
+    "FilterProps.FilterNewer.tooltip": {
+      "zh": "按文件修改时间判断（当前工程比目标目录更新）；列表内勾选表示复制，取消勾选表示跳过。",
+      "en": "Compared by file modification time (source newer than destination); checked = copy, unchecked = skip.",
+      "zh-Hant": "依檔案修改時間判斷（目前專案比目標目錄新）；清單內勾選表示複製，取消勾選表示略過。"
+    },
+    "FilterProps.FilterOlder.tooltip": {
+      "zh": "按文件修改时间判断（当前工程比目标目录更旧）；列表内勾选表示复制，取消勾选表示跳过。",
+      "en": "Compared by file modification time (destination newer than source); checked = copy, unchecked = skip.",
+      "zh-Hant": "依檔案修改時間判斷（目前專案比目標目錄舊）；清單內勾選表示複製，取消勾選表示略過。"
+    },
+    "FilterProps.EntryDefault.tooltip": {
+      "zh": "对应通道 0/1/2：展开新增、源文件较新、目标文件较新列表时，各条目的初始勾选状态（勾选=复制，取消=跳过）。",
+      "en": "Channels 0/1/2: initial checked state for New / Newer / Older file lists (checked = copy, unchecked = skip).",
+      "zh-Hant": "對應通道 0/1/2：展開新增、來源較新、來源較舊檔案清單時，各項目的初始勾選狀態（勾選＝複製，取消＝略過）。"
+    },
+    "ExtraProps.category.ExtraProps": {
+      "en": "Extra Files",
+      "zh": "多余文件",
+      "zh-Hant": "多餘檔案",
+      "_native": "en"
+    },
+    "ExtraProps.RemoveExtra": {
+      "en": "Remove Extra Files",
+      "zh": "清理多余文件",
+      "zh-Hant": "清理多餘檔案",
+      "_native": "en"
+    },
+    "ExtraProps.ExtraFiles": {
+      "en": "Extra Files (Remove)",
+      "zh": "多余文件（勾选移除）",
+      "zh-Hant": "多餘檔案（勾選移除）",
+      "_native": "en"
+    },
+    "ExtraProps.EntryDefault": {
+      "en": "Default Checked to Remove",
+      "zh": "默认勾选移除",
+      "zh-Hant": "預設勾選移除",
+      "_native": "en"
+    },
+    "ExtraProps.RemoveExtra.tooltip": {
+      "zh": "列出目标目录中有而当前工程中没有的文件；列表内勾选表示移除，取消勾选表示保留。",
+      "en": "List files present only in destination; checked entries are removed, unchecked are kept.",
+      "zh-Hant": "列出目標目錄中存在、目前專案中不存在的檔案；清單內勾選表示移除，取消勾選表示保留。"
+    },
+    "将 Mineprep 同步至安装包仓库或迁移到其他 UE 工程": {
+      "zh": "将 Mineprep 同步至安装包仓库或迁移到其他 UE 工程",
+      "en": "Sync Mineprep to the installer repo or migrate to another UE project",
+      "zh-Hant": "將 Mineprep 同步至安裝套件儲存庫或遷移至其他 UE 專案",
+      "zh-Hant-HK": "將 Mineprep 同步至安裝包儲存庫或遷移至其他 UE 專案"
+    },
+    "目标文件夹不存在": {
+      "zh": "目标文件夹不存在",
+      "en": "Target folder does not exist",
+      "zh-Hant": "目標資料夾不存在"
+    },
+    "是否继续？": {
+      "zh": "是否继续？",
+      "en": "Continue?",
+      "zh-Hant": "是否繼續？"
+    },
+    "确认复制": {
+      "zh": "确认复制",
+      "en": "Confirm copy",
+      "zh-Hant": "確認複製"
+    },
+    "路径无效": {
+      "zh": "路径无效",
+      "en": "Path is invalid",
+      "zh-Hant": "路徑無效"
+    },
+    "路径含有中文或非 ASCII 字符": {
+      "zh": "路径含有中文或非 ASCII 字符",
+      "en": "Path contains non-ASCII characters",
+      "zh-Hant": "路徑含有中文或非 ASCII 字元"
+    },
+    "未找到 .uproject，请选择工程根目录": {
+      "zh": "未找到 .uproject，请选择工程根目录",
+      "en": "No .uproject found; pick the project root",
+      "zh-Hant": "找不到 .uproject，請選擇專案根目錄"
+    },
+    "不能迁移到当前工程": {
+      "zh": "不能迁移到当前工程",
+      "en": "Cannot migrate onto the current project",
+      "zh-Hant": "無法遷移至目前專案"
+    },
+    "mod 清单筛选失败": {
+      "zh": "mod 清单筛选失败",
+      "en": "Mod manifest filtering failed",
+      "zh-Hant": "Mod 清單篩選失敗",
+      "zh-Hant-HK": "Mod 清單過濾失敗"
+    },
+    "将清空目标路径再复制。": {
+      "zh": "将清空目标路径再复制。",
+      "en": "Destination trees will be cleared then copied.",
+      "zh-Hant": "將清空目標路徑後再複製。"
+    },
+    "已按模组清单筛选复制内容。": {
+      "zh": "已按模组清单筛选复制内容。",
+      "en": "Files to copy are filtered using mod manifests.",
+      "zh-Hant": "已依 Mod 清單篩選要複製的內容。",
+      "zh-Hant-HK": "已依 Mod 清單過濾要複製的內容。"
+    },
+    "将复制 Python 库（Intermediate/PipInstall/Lib/site-packages）。": {
+      "zh": "将复制 Python 库（Intermediate/PipInstall/Lib/site-packages）。",
+      "en": "Python libraries will be copied (Intermediate/PipInstall/Lib/site-packages).",
+      "zh-Hant": "將複製 Python 程式庫（Intermediate/PipInstall/Lib/site-packages）。",
+      "zh-Hant-HK": "將複製 Python 庫（Intermediate/PipInstall/Lib/site-packages）。"
+    },
+    "未找到 .uproject": {
+      "zh": "未找到 .uproject",
+      "en": ".uproject not found",
+      "zh-Hant": "找不到 .uproject"
+    },
+    "已迁移至 {path}。请先关闭当前工程，再打开目标工程。": {
+      "zh": "已迁移至 {path}。请先关闭当前工程，再打开目标工程。",
+      "en": "Migrated to {path}. Please close the current project before opening the target project.",
+      "zh-Hant": "已遷移至 {path}。請先關閉目前專案，再開啟目標專案。"
+    },
+    "过滤脚本需要 def skip(path:str)->bool": {
+      "zh": "过滤脚本需要 def skip(path:str)->bool",
+      "en": "Filter script needs def skip(path:str)->bool",
+      "zh-Hant": "篩選指令碼需要 def skip(path:str)->bool",
+      "zh-Hant-HK": "過濾腳本需要 def skip(path:str)->bool"
+    },
+    "过滤脚本无效": {
+      "zh": "过滤脚本无效",
+      "en": "Invalid filter script",
+      "zh-Hant": "篩選指令碼無效",
+      "zh-Hant-HK": "過濾腳本無效"
+    },
+    "清空目标仍会移除其中的原有文件，包括被清单排除的文件。": {
+      "zh": "清空目标仍会移除其中的原有文件，包括被清单排除的文件。",
+      "en": "Clearing the destination also removes existing files excluded by manifests.",
+      "zh-Hant": "清空目標仍會移除其中的既有檔案，包括清單排除的檔案。"
+    },
+    "新增：复制 {copy}，跳过 {skip}": {
+      "zh": "新增：复制 {copy}，跳过 {skip}",
+      "en": "New: copy {copy}, skip {skip}",
+      "zh-Hant": "新增：複製 {copy}，略過 {skip}"
+    },
+    "变新：复制 {copy}，跳过 {skip}": {
+      "zh": "变新：复制 {copy}，跳过 {skip}",
+      "en": "Newer: copy {copy}, skip {skip}",
+      "zh-Hant": "來源較新：複製 {copy}，略過 {skip}"
+    },
+    "变旧：复制 {copy}，跳过 {skip}": {
+      "zh": "变旧：复制 {copy}，跳过 {skip}",
+      "en": "Older: copy {copy}, skip {skip}",
+      "zh-Hant": "來源較舊：複製 {copy}，略過 {skip}"
+    },
+    "相同文件：{count}": {
+      "zh": "相同文件：{count}",
+      "en": "Unchanged: {count}",
+      "zh-Hant": "相同檔案：{count}"
+    },
+    "共计复制：{count}": {
+      "zh": "共计复制：{count}",
+      "en": "Total to copy: {count}",
+      "zh-Hant": "共計複製：{count}"
+    },
+    "脚本跳过：{count}\n": {
+      "zh": "脚本跳过：{count}\n",
+      "en": "Skipped by script: {count}\n",
+      "zh-Hant": "指令碼略過：{count}\n",
+      "zh-Hant-HK": "腳本略過：{count}\n"
+    },
+    "目标目录有 {count} 个多余文件，将移除 {remove} 个。": {
+      "zh": "目标目录有 {count} 个多余文件，将移除 {remove} 个。",
+      "en": "Destination has {count} extra files; {remove} will be removed.",
+      "zh-Hant": "目標目錄有 {count} 個多餘檔案，將移除 {remove} 個。"
+    },
+    "源工程缺少 {path}": {
+      "zh": "源工程缺少 {path}",
+      "en": "Source project missing {path}",
+      "zh-Hant": "來源專案缺少 {path}"
+    },
+    "跳过（源工程没有）: {label}": {
+      "zh": "跳过（源工程没有）: {label}",
+      "en": "Skip (not in source): {label}",
+      "zh-Hant": "略過（來源專案中不存在）: {label}"
+    },
+    "更新安装包": {
+      "zh": "更新安装包",
+      "en": "Update Installer",
+      "zh-Hant": "更新安裝套件"
+    },
+    "迁移插件": {
+      "zh": "迁移插件",
+      "en": "Migrate Plugin",
+      "zh-Hant": "遷移外掛",
+      "zh-Hant-HK": "遷移插件"
+    },
+    "打开目标文件夹": {
+      "zh": "打开目标文件夹",
+      "en": "Open Target Folder",
+      "zh-Hant": "開啟目標資料夾",
+      "zh-Hant-HK": "打開目標資料夾"
+    }
+  }
+}

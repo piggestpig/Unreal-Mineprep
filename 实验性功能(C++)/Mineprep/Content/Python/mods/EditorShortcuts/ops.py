@@ -10,11 +10,12 @@ import os
 import unreal
 import mineprep
 
+from mineprep import i18n
 from . import snippets
 
-_CPP_REQUIRED = mineprep.bilingual(
-    '此操作需要启用 Mineprep C++ 实验性功能插件。',
-    'This operation requires the Mineprep experimental C++ plugin.',
+_CPP_REQUIRED = i18n(
+    '此操作需要启用 Mineprep C++ 插件。',
+    'This operation requires the Mineprep C++ plugin.',
 )
 
 # 默认预设快捷键清单 (name, chord_text, tooltip)
@@ -262,7 +263,7 @@ def execute_shortcut(name: str) -> None:
                 mineprep.warn(_CPP_REQUIRED)
                 return
             mineprep.warn(
-                mineprep.bilingual(f"快捷键 [{name}] 报错", f"Shortcut [{name}] error"),
+                i18n("快捷键 [{name}] 报错", "Shortcut [{name}] error").format(name=name),
                 e,
             )
     else:
@@ -271,7 +272,7 @@ def execute_shortcut(name: str) -> None:
         hotkey_obj = subsystem.get_hotkey_object() if subsystem else mineprep.get_hotkey_object()
         if not hotkey_obj:
             mineprep.warn(
-                mineprep.bilingual("无法获取自定义快捷键蓝图对象", "Failed to get hotkey blueprint object")
+                i18n("无法获取自定义快捷键蓝图对象", "Failed to get hotkey blueprint object")
             )
             return
 
@@ -280,7 +281,7 @@ def execute_shortcut(name: str) -> None:
             unreal.log(f"[Mineprep] 触发蓝图快捷键函数: [{name}]")
         except Exception as e:
             mineprep.warn(
-                mineprep.bilingual(f"蓝图快捷键 [{name}] 执行报错", f"BP Shortcut [{name}] error"),
+                i18n("蓝图快捷键 [{name}] 执行报错", "BP Shortcut [{name}] error").format(name=name),
                 e,
             )
 
@@ -385,7 +386,7 @@ def register_all_hotkeys() -> None:
     """将所有快捷键注册到 C++ UMineprepSubsystem。"""
     subsystem = get_subsystem()
     if not subsystem:
-        unreal.log_warning(str(mineprep.bilingual(
+        unreal.log_warning(str(i18n(
             '未启用 Mineprep C++ 插件，无法绑定全局快捷键；仍可编辑并手动执行 Python 代码。',
             'Global hotkeys require the Mineprep C++ plugin; editing and manually running Python code remain available.',
         )))

@@ -4,6 +4,7 @@ import numpy as np
 
 from ...core.templates import TemplateDefinition, TemplateBatch
 from ...core.volume_features import Anchors
+from .terrain import altar
 
 
 DIRECTIONS = {'west':(-1,0,0),'east':(1,0,0),'down':(0,-1,0),
@@ -89,6 +90,8 @@ def place(ctx, xz, keys):
     tops = np.where(columns,np.arange(lo,hi)[:,None],lo-1).max(0).reshape(-1,5)
     slopes = .5*np.hypot(tops[:,2]-tops[:,1],tops[:,4]-tops[:,3])
     chosen = np.flatnonzero((tops[:,0]>=lo)&(tops[:,0]<hi-1)&(slopes<=p['chorus.max_slope']))
+    if altar(p):
+        chosen=chosen[np.hypot(xz[chosen,0]-p['end.center_x'],xz[chosen,1]-p['end.center_z'])>=4]
     roots = np.column_stack((xz[chosen,0],tops[chosen,0]+1,xz[chosen,1]))
     return Anchors(roots,chosen,np.full(len(chosen),ctx.block_ids['end_stone'],np.uint16),slopes[chosen])
 

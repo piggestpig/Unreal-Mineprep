@@ -1,21 +1,260 @@
 #include "CustomDetailsPanel.h"
 
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "DefaultMovementSet/CharacterMoverComponent.h"
 #include "DetailCategoryBuilder.h"
+#include "DetailWidgetRow.h"
 #include "Editor.h"
 #include "DetailLayoutBuilder.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Pawn.h"
 #include "IDetailCustomization.h"
+#include "IDetailsView.h"
 #include "MaterialList.h"
 #include "Modules/ModuleManager.h"
 #include "PropertyCustomizationHelpers.h"
 #include "PropertyEditorModule.h"
 #include "ScopedTransaction.h"
+#include "UObject/UnrealType.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/SBoxPanel.h"
+#include "Widgets/Text/STextBlock.h"
 
 namespace
 {
+    struct FISMArrayEditFlags
+    {
+        FProperty* Property;
+        bool bOriginallyDisabled;
+    };
+
+    TArray<FISMArrayEditFlags> ISMArrayEditFlags;
+    FDetailLayoutCallback OriginalISMLayout{};
+    FOnGetDetailCustomizationInstance ISMLayoutDelegate;
+
+    struct FISMViewVisibility
+    {
+        TWeakPtr<IDetailsView> View;
+        FIsPropertyVisible Original;
+        FIsPropertyVisible Override;
+    };
+
+    TArray<FISMViewVisibility> ISMViewVisibility;
+
+    void AllowExpandedISMArrayRows(const TSharedPtr<IDetailsView>& View)
+    {
+        if (!View.IsValid())
+        {
+            return;
+        }
+        ISMViewVisibility.RemoveAll([](const FISMViewVisibility& Entry) { return !Entry.View.IsValid(); });
+        FISMViewVisibility* Entry = ISMViewVisibility.FindByPredicate(
+            [&View](const FISMViewVisibility& Item) { return Item.View.Pin() == View; });
+        const FIsPropertyVisible Original = View->GetIsPropertyVisibleDelegate();
+        if (Entry && Original.GetHandle() == Entry->Override.GetHandle())
+        {
+            return;
+        }
+        if (!Entry)
+        {
+            Entry = &ISMViewVisibility.AddDefaulted_GetRef();
+        }
+        Entry->View = View;
+        Entry->Original = Original;
+        Entry->Override = FIsPropertyVisible::CreateLambda([Original](const FPropertyAndParent& Property)
+        {
+            // Level Editor applies its own defaults-only visibility filter even
+            // to explicitly added external rows. Exempt only the requested arrays.
+            if (Property.Objects.Num() == 1 && ISMArrayEditFlags.ContainsByPredicate(
+                [&Property](const FISMArrayEditFlags& Item) { return Item.Property == &Property.Property; }))
+            {
+                const UInstancedStaticMeshComponent* Component = Cast<UInstancedStaticMeshComponent>(Property.Objects[0].Get());
+                if (Component && Component->bForceShowAllInstancesDetails)
+                {
+                    return true;
+                }
+            }
+            return !Original.IsBound() || Original.Execute(Property);
+        });
+        View->SetIsPropertyVisibleDelegate(Entry->Override);
+    }
+
+    void ApplyISMArrayEditFlags(bool bHide)
+    {
+        // MarkHiddenByCustomization only hides rows: UE still validates every
+        // instance's transform each tick. Defaults-only properties are filtered
+        // before those property nodes are created. This does not change the data.
+        for (const FISMArrayEditFlags& Entry : ISMArrayEditFlags)
+        {
+            if (bHide || Entry.bOriginallyDisabled)
+            {
+                Entry.Property->SetPropertyFlags(CPF_DisableEditOnInstance);
+            }
+            else
+            {
+                Entry.Property->ClearPropertyFlags(CPF_DisableEditOnInstance);
+            }
+        }
+    }
+
+    class FMineprepISMDetails : public IDetailCustomization
+    {
+    public:
+        static TSharedRef<IDetailCustomization> MakeInstance()
+        {
+            return MakeShared<FMineprepISMDetails>();
+        }
+
+        virtual void CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder) override
+        {
+            CachedDetailBuilder = DetailBuilder;
+            TArray<TWeakObjectPtr<UObject>> Objects;
+            DetailBuilder->GetObjectsBeingCustomized(Objects);
+            const bool bEditingTemplate = Objects.ContainsByPredicate([](const TWeakObjectPtr<UObject>& Object)
+            {
+                return Object.IsValid() && Object->IsTemplate();
+            });
+            if (bEditingTemplate && OriginalISMLayout.DetailLayoutDelegate.IsBound())
+            {
+                NativeDetails = OriginalISMLayout.DetailLayoutDelegate.Execute();
+                NativeDetails->CustomizeDetails(DetailBuilder);
+                return;
+            }
+            CustomizeDetails(*DetailBuilder);
+        }
+
+        virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override
+        {
+            AllowExpandedISMArrayRows(DetailBuilder.GetDetailsViewSharedPtr());
+            TArray<TWeakObjectPtr<UObject>> Objects;
+            DetailBuilder.GetObjectsBeingCustomized(Objects);
+            const FText Label = FindFProperty<FProperty>(
+                UInstancedStaticMeshComponent::StaticClass(),
+                GET_MEMBER_NAME_CHECKED(UInstancedStaticMeshComponent, PerInstanceSMData))->GetDisplayNameText();
+            const TWeakObjectPtr<UInstancedStaticMeshComponent> Component = Objects.Num() == 1
+                ? Cast<UInstancedStaticMeshComponent>(Objects[0].Get()) : nullptr;
+            IDetailCategoryBuilder& Category = DetailBuilder.EditCategory(TEXT("Instances"));
+            Category.AddCustomRow(Label)
+                .NameContent()
+                [
+                    SNew(STextBlock).Font(IDetailLayoutBuilder::GetDetailFont()).Text(Label)
+                ]
+                .ValueContent()
+                .MinDesiredWidth(280.f)
+                [
+                    SNew(SHorizontalBox)
+                    + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.f, 0.f, 8.f, 0.f)
+                    [
+                        SNew(STextBlock).Font(IDetailLayoutBuilder::GetDetailFont())
+                        .Text_Lambda([Objects]()
+                        {
+                            int64 Count = 0;
+                            for (const TWeakObjectPtr<UObject>& Object : Objects)
+                            {
+                                if (const UInstancedStaticMeshComponent* Item = Cast<UInstancedStaticMeshComponent>(Object.Get()))
+                                {
+                                    Count += Item->GetInstanceCount();
+                                }
+                            }
+                            return FText::AsNumber(Count);
+                        })
+                    ]
+                    + SHorizontalBox::Slot().AutoWidth()
+                    [
+                        SNew(SButton)
+                        .IsEnabled(Component.IsValid())
+                        .ToolTipText(NSLOCTEXT("InstancedStaticMeshComponentDetails", "ShowHideAllInstancesTooltip",
+                            "Displays per-instance data in the details. Can be very slow when there are lots of instances."))
+                        .Text_Lambda([Component]()
+                        {
+                            const bool bShow = Component.IsValid() && Component->bForceShowAllInstancesDetails;
+                            return FText::Format(bShow
+                                ? NSLOCTEXT("InstancedStaticMeshComponentDetails", "HideAllInstances", "Hide All {0} Instances")
+                                : NSLOCTEXT("InstancedStaticMeshComponentDetails", "ShowAllInstances", "Show All {0} Instances"),
+                                FText::AsNumber(Component.IsValid() ? Component->GetInstanceCount() : 0));
+                        })
+                        .OnClicked_Lambda([Component, WeakBuilder = CachedDetailBuilder]()
+                        {
+                            if (Component.IsValid())
+                            {
+                                Component->bForceShowAllInstancesDetails = !Component->bForceShowAllInstancesDetails;
+                                if (IDetailLayoutBuilder* Builder = WeakBuilder.Pin().Get())
+                                {
+                                    Builder->ForceRefreshDetails();
+                                }
+                            }
+                            return FReply::Handled();
+                        })
+                    ]
+                ];
+
+            if (Component.IsValid() && Component->bForceShowAllInstancesDetails)
+            {
+                // Explicit single-property rows bypass the defaults-only filter.
+                // On collapse, rebuilding the layout drops their property trees.
+                const TArray<UObject*> SourceObjects{Component.Get()};
+                Category.AddExternalObjectProperty(SourceObjects,
+                    GET_MEMBER_NAME_CHECKED(UInstancedStaticMeshComponent, PerInstanceSMData));
+                Category.AddExternalObjectProperty(SourceObjects,
+                    GET_MEMBER_NAME_CHECKED(UInstancedStaticMeshComponent, PerInstanceSMCustomData), EPropertyLocation::Advanced);
+            }
+        }
+
+    private:
+        TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;
+        TSharedPtr<IDetailCustomization> NativeDetails;
+    };
+
+    void RegisterISMDetails(FPropertyEditorModule& PropertyEditorModule)
+    {
+        if (ISMArrayEditFlags.IsEmpty())
+        {
+            // Save the native factory and its ordering; do not drop the engine's
+            // class-default customization or replace it permanently on shutdown.
+            FModuleManager::LoadModuleChecked<IModuleInterface>(TEXT("DetailCustomizations"));
+            OriginalISMLayout = PropertyEditorModule.GetClassNameToDetailLayoutNameMap().FindChecked(TEXT("InstancedStaticMeshComponent"));
+            for (const FName Name : {
+                GET_MEMBER_NAME_CHECKED(UInstancedStaticMeshComponent, PerInstanceSMData),
+                GET_MEMBER_NAME_CHECKED(UInstancedStaticMeshComponent, PerInstanceSMCustomData)})
+            {
+                FProperty* Property = FindFProperty<FProperty>(UInstancedStaticMeshComponent::StaticClass(), Name);
+                check(Property);
+                ISMArrayEditFlags.Add({Property, Property->HasAnyPropertyFlags(CPF_DisableEditOnInstance)});
+            }
+            ISMLayoutDelegate = FOnGetDetailCustomizationInstance::CreateStatic(&FMineprepISMDetails::MakeInstance);
+            FRegisterCustomClassLayoutParams Params;
+            Params.OptionalOrder = OriginalISMLayout.Order;
+            PropertyEditorModule.RegisterCustomClassLayout(TEXT("InstancedStaticMeshComponent"), ISMLayoutDelegate, Params);
+        }
+        ApplyISMArrayEditFlags(true);
+    }
+
+    void UnregisterISMDetails()
+    {
+        for (const FISMViewVisibility& Entry : ISMViewVisibility)
+        {
+            if (const TSharedPtr<IDetailsView> View = Entry.View.Pin();
+                View && View->GetIsPropertyVisibleDelegate().GetHandle() == Entry.Override.GetHandle())
+            {
+                View->SetIsPropertyVisibleDelegate(Entry.Original);
+            }
+        }
+        ISMViewVisibility.Empty();
+        ApplyISMArrayEditFlags(false);
+        ISMArrayEditFlags.Empty();
+        if (FPropertyEditorModule* PropertyEditorModule = FModuleManager::GetModulePtr<FPropertyEditorModule>(TEXT("PropertyEditor")))
+        {
+            const FDetailLayoutCallback* Current = PropertyEditorModule->GetClassNameToDetailLayoutNameMap().Find(TEXT("InstancedStaticMeshComponent"));
+            if (Current && Current->DetailLayoutDelegate.GetHandle() == ISMLayoutDelegate.GetHandle())
+            {
+                FRegisterCustomClassLayoutParams Params;
+                Params.OptionalOrder = OriginalISMLayout.Order;
+                PropertyEditorModule->RegisterCustomClassLayout(TEXT("InstancedStaticMeshComponent"), OriginalISMLayout.DetailLayoutDelegate, Params);
+            }
+        }
+    }
+
     static bool ShouldExposeAdvancedMaterialProperty(const FProperty* Property)
     {
         if (!Property || !Property->HasAnyPropertyFlags(CPF_Edit) || Property->HasAnyPropertyFlags(CPF_Deprecated))
@@ -608,6 +847,7 @@ namespace Mineprep::CustomDetailsPanel
     void Register()
     {
         FPropertyEditorModule& PropertyEditorModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"));
+        RegisterISMDetails(PropertyEditorModule);
         PropertyEditorModule.RegisterCustomClassLayout(
             TEXT("Pawn"),
             FOnGetDetailCustomizationInstance::CreateStatic(&FCustomMoverPawnDetails::MakeInstance));
@@ -619,6 +859,7 @@ namespace Mineprep::CustomDetailsPanel
 
     void Unregister()
     {
+        UnregisterISMDetails();
         if (!FModuleManager::Get().IsModuleLoaded(TEXT("PropertyEditor")))
         {
             return;

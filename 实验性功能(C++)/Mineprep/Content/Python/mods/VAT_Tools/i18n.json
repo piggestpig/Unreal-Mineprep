@@ -1,0 +1,170 @@
+{
+  "VAT_Tools": {
+    "VAT顶点动画工具": {
+      "zh": "VAT顶点动画工具",
+      "en": "VAT Tools",
+      "zh-Hant": "VAT 頂點動畫工具"
+    },
+    "烘焙顶点动画纹理，用于大型群体粒子": {
+      "zh": "烘焙顶点动画纹理，用于大型群体粒子",
+      "en": "Bake VAT textures for large crowd particles",
+      "zh-Hant": "烘焙頂點動畫紋理，用於大型群體粒子"
+    },
+    "BakeAnimProps.category.BakeAnimProps": {
+      "en": "Bake Animation",
+      "zh": "烘焙动画",
+      "zh-Hant": "烘焙動畫",
+      "_native": "en"
+    },
+    "BakeAnimProps.DataAsset": {
+      "en": "VAT Data Asset",
+      "zh": "VAT 数据资产",
+      "zh-Hant": "VAT 資料資產",
+      "_native": "en",
+      "zh-Hant-HK": "VAT 數據資產"
+    },
+    "BakeAnimProps.AnimSeq": {
+      "en": "Anim Sequences",
+      "zh": "动画序列",
+      "zh-Hant": "動畫序列",
+      "_native": "en"
+    },
+    "BakeAnimProps.bOverrideFramerate": {
+      "en": "Override Frame Rate",
+      "zh": "覆盖烘焙帧率",
+      "zh-Hant": "覆蓋烘焙影格率",
+      "_native": "en",
+      "zh-Hant-HK": "覆蓋烘焙幀率"
+    },
+    "BakeAnimProps.Framerate": {
+      "en": "Frame Rate",
+      "zh": "烘焙帧率",
+      "zh-Hant": "烘焙影格率",
+      "_native": "en",
+      "zh-Hant-HK": "烘焙幀率"
+    },
+    "CopyProps.category.CopyProps": {
+      "en": "Copy Data Asset",
+      "zh": "复制数据资产",
+      "zh-Hant": "複製資料資產",
+      "_native": "en",
+      "zh-Hant-HK": "複製數據資產"
+    },
+    "CopyProps.TargetPath": {
+      "en": "Target Path",
+      "zh": "目标路径",
+      "zh-Hant": "目標路徑",
+      "_native": "en"
+    },
+    "CopyProps.NewName": {
+      "en": "New Name",
+      "zh": "新名称",
+      "zh-Hant": "新名稱",
+      "_native": "en"
+    },
+    "CopyProps.CopyDeps": {
+      "en": "Copy All Dependencies",
+      "zh": "复制所有依赖项",
+      "zh-Hant": "複製所有相依項目",
+      "_native": "en",
+      "zh-Hant-HK": "複製所有依賴項"
+    },
+    "InitSkmProps.category.InitSkmProps": {
+      "en": "Create from Skeletal Mesh",
+      "zh": "从骨骼网格体创建",
+      "zh-Hant": "從骨骼網格體建立",
+      "_native": "en"
+    },
+    "InitSkmProps.SKM": {
+      "en": "Skeletal Mesh",
+      "zh": "骨骼网格体",
+      "zh-Hant": "骨骼網格體",
+      "_native": "en"
+    },
+    "InitSkmProps.bIsItem": {
+      "en": "Handheld Item",
+      "zh": "手持物品",
+      "zh-Hant": "手持物品",
+      "_native": "en"
+    },
+    "InitSkmProps.bOverwriteModel": {
+      "en": "Overwrite Static Mesh",
+      "zh": "覆盖静态网格体",
+      "zh-Hant": "覆蓋靜態網格體",
+      "_native": "en"
+    },
+    "InitSkmProps.SavePath": {
+      "en": "Save Path",
+      "zh": "保存路径",
+      "zh-Hant": "儲存路徑",
+      "_native": "en"
+    },
+    "VATToolsOptions.category.VATToolsOptions": {
+      "en": "Options",
+      "zh": "设置",
+      "zh-Hant": "設定",
+      "_native": "en"
+    },
+    "VATToolsOptions.AutoCleanCache": {
+      "en": "Auto Clean Cache",
+      "zh": "自动清理缓存",
+      "zh-Hant": "自動清理快取",
+      "_native": "en"
+    },
+    "VATToolsOptions.HideInitSkm": {
+      "en": "Hide Right Panel",
+      "zh": "隐藏右栏",
+      "zh-Hant": "隱藏右欄",
+      "_native": "en"
+    },
+    "打开模组": {
+      "zh": "打开模组",
+      "en": "Open Mod",
+      "zh-Hant": "開啟 Mod",
+      "zh-Hant-HK": "打開 Mod"
+    },
+    "烘焙动画": {
+      "zh": "烘焙动画",
+      "en": "Bake Animation",
+      "zh-Hant": "烘焙動畫"
+    },
+    "创建数据资产": {
+      "zh": "创建数据资产",
+      "en": "Create Data Asset",
+      "zh-Hant": "建立資料資產",
+      "zh-Hant-HK": "建立數據資產"
+    },
+    "自动清理缓存": {
+      "zh": "自动清理缓存",
+      "en": "Auto Clean Cache",
+      "zh-Hant": "自動清理快取"
+    },
+    "隐藏右栏": {
+      "zh": "隐藏右栏",
+      "en": "Hide Right Panel",
+      "zh-Hant": "隱藏右欄"
+    },
+    "烘焙动画至数据资产": {
+      "zh": "烘焙动画至数据资产",
+      "en": "Bake Animations to Data Asset",
+      "zh-Hant": "烘焙動畫至資料資產",
+      "zh-Hant-HK": "烘焙動畫至數據資產"
+    },
+    "槽位 0：待机 | 1：行走 | 2：奔跑": {
+      "zh": "槽位 0：待机 | 1：行走 | 2：奔跑",
+      "en": "Slot 0: Idle | 1: Walk | 2: Run",
+      "zh-Hant": "槽位 0：待機 | 1：行走 | 2：奔跑"
+    },
+    "复制数据资产": {
+      "zh": "复制数据资产",
+      "en": "Copy Data Asset",
+      "zh-Hant": "複製資料資產",
+      "zh-Hant-HK": "複製數據資產"
+    },
+    "从骨骼网格体创建数据资产": {
+      "zh": "从骨骼网格体创建",
+      "en": "Create from SKM",
+      "zh-Hant": "從骨骼網格體建立"
+    }
+  }
+}

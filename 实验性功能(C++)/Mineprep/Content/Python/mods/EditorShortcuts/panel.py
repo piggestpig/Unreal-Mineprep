@@ -4,6 +4,7 @@ from functools import partial
 import unreal
 import mineprep
 
+from mineprep import i18n
 from .props import Settings
 from . import ops
 
@@ -32,7 +33,7 @@ def compact_icon_button(box, text: str, on_clicked, tooltip: str = '', text_colo
 class EditorShortcuts(mineprep.Mod):
     """Mineprep 编辑器快捷键管理面板。"""
     _unique_ = True
-    _label_ = mineprep.bilingual("自定义快捷键", "Editor Shortcuts")
+    _label_ = i18n("自定义快捷键", "Editor Shortcuts")
     _menu_ = 'modules'
 
     def __init__(self, context=None):
@@ -46,7 +47,7 @@ class EditorShortcuts(mineprep.Mod):
         scalebox = layout.scalebox(scale=self.settings.scale)
         table = scalebox.col(fill=True)
         if ops.get_subsystem() is None:
-            table.text(mineprep.bilingual(
+            table.text(i18n(
                 '未启用 Mineprep C++ 插件，无法绑定全局快捷键；仍可编辑并手动执行 Python 代码。',
                 'Global hotkeys require the Mineprep C++ plugin; editing and manually running Python code remain available.',
             ), size=10, wrap=True, padding=5)
@@ -55,18 +56,18 @@ class EditorShortcuts(mineprep.Mod):
         # 1. 表头行
         # -------------------------------------------------------------
         header = table.row(padding=(4, 4))
-        header.text(mineprep.bilingual('触发 / 名称', 'Trigger / Name'), size=13, fill=1.3, align=(1, 2))
+        header.text(i18n('触发 / 名称', 'Trigger / Name'), size=13, fill=1.3, align=(1, 2))
         header.spacer(size=(8, 1))
-        header.text(mineprep.bilingual('快捷键 (点击设置)', 'Shortcut (Click to Set)'), size=13, fill=1.2, align=(1, 2))
+        header.text(i18n('快捷键（点击设置）', 'Shortcut (Click to Set)'), size=13, fill=1.2, align=(1, 2))
         header.spacer(size=(8, 1))
-        header.text(mineprep.bilingual('提示说明', 'Tooltip Description'), size=13, fill=2.1, align=(1, 2))
+        header.text(i18n('功能说明', 'Description'), size=13, fill=2.1, align=(1, 2))
         header.spacer(size=(6, 1))
         compact_icon_button(
             header,
             '{-}',
             text_padding=0,
             on_clicked=self.on_toggle_all_code_clicked,
-            tooltip=mineprep.bilingual('全体展开 / 收起代码', 'Expand / Collapse All Code'),
+            tooltip=i18n('展开 / 收起全部代码', 'Expand / Collapse All Code'),
             text_color=unreal.LinearColor(0.5, 0.8, 1.0, 1.0),
             size=9,
         )
@@ -76,7 +77,7 @@ class EditorShortcuts(mineprep.Mod):
             '+',
             text_padding=0,
             on_clicked=self.on_add_clicked,
-            tooltip=mineprep.bilingual('添加新快捷键', 'Add New Shortcut'),
+            tooltip=i18n('添加新快捷键', 'Add New Shortcut'),
             text_color=unreal.LinearColor(0.35, 0.9, 0.45, 1.0),
             size=10,
         )
@@ -103,13 +104,13 @@ class EditorShortcuts(mineprep.Mod):
                 '►',
                 text_padding=0,
                 on_clicked=partial(self.on_trigger_clicked, name),
-                tooltip=mineprep.bilingual(f'点击执行: {name}', f'Run: {name}'),
+                tooltip=i18n('点击执行: {name}', 'Run: {name}').format(name=name),
             )
             name_cell.spacer(size=(2, 1))
 
             name_box = name_cell.textbox(
                 name,
-                hint=mineprep.bilingual('输入按键名称', 'Enter name'),
+                hint=i18n('输入快捷键名称', 'Enter shortcut name'),
                 fill=True,
                 align=(0, 2),
                 padding=(0, 1),
@@ -139,7 +140,7 @@ class EditorShortcuts(mineprep.Mod):
             # 右侧：提示说明输入框
             tip_box = row1.textbox(
                 tooltip,
-                hint=mineprep.bilingual('输入功能提示说明', 'Enter tooltip'),
+                hint=i18n('输入功能说明', 'Enter description'),
                 fill=2.1,
                 align=(0, 2),
                 padding=(0, 1),
@@ -159,9 +160,9 @@ class EditorShortcuts(mineprep.Mod):
 
             code_box = code_row.textbox(
                 code_text,
-                hint=mineprep.bilingual(
-                    '# 输入 Python 代码（已自动导入 unreal, mineprep），留空在蓝图中触发对应函数',
-                    '# Enter Python code (unreal, mineprep imported). Empty to trigger BP function.'
+                hint=i18n(
+                    '# 输入 Python 代码（已自动导入 unreal、mineprep）；留空则触发同名蓝图函数',
+                    '# Enter Python code (unreal, mineprep pre-imported); leave blank to call the matching Blueprint function'
                 ),
                 fill=True,
                 align=(0, 0),
@@ -177,7 +178,7 @@ class EditorShortcuts(mineprep.Mod):
                 '{-}',
                 text_padding=0,
                 on_clicked=partial(self.toggle_code_visibility, name, code_row),
-                tooltip=mineprep.bilingual(f'展开/收起 [{name}] 的 Python 代码', f'Toggle Python code for [{name}]'),
+                tooltip=i18n('展开/收起 [{name}] 的 Python 代码', 'Toggle Python code for [{name}]').format(name=name),
                 text_color=unreal.LinearColor(0.5, 0.8, 1.0, 1.0),
                 size=9,
             )
@@ -190,7 +191,7 @@ class EditorShortcuts(mineprep.Mod):
                 '✕',
                 text_padding=0,
                 on_clicked=partial(self.on_delete_clicked, name),
-                tooltip=mineprep.bilingual(f'删除快捷键: {name}', f'Delete shortcut: {name}'),
+                tooltip=i18n('删除快捷键: {name}', 'Delete shortcut: {name}').format(name=name),
                 text_color=unreal.LinearColor(0.85, 0.4, 0.4, 1.0),
             )
 
@@ -204,7 +205,7 @@ class EditorShortcuts(mineprep.Mod):
         scale_col.prop(
             self.settings,
             'scale',
-            mineprep.bilingual('缩放', 'Scale'),
+            i18n('缩放', 'Scale'),
             align=(1, 3),
             on_property_changed=lambda _: scalebox.set('UserSpecifiedScale', self.settings.scale)
         )
@@ -213,11 +214,11 @@ class EditorShortcuts(mineprep.Mod):
 
         # 右下角按钮1：还原所有快捷键至初始状态
         bottom_row.button(
-            mineprep.bilingual('还原默认', 'Reset Defaults'),
+            i18n('还原默认', 'Reset Defaults'),
             size=11,
             text_padding=3,
             align=(2, 2),
-            tooltip=mineprep.bilingual('将所有快捷键重置为初始预设状态', 'Reset all shortcuts to initial defaults'),
+            tooltip=i18n('将所有快捷键还原为默认预设', 'Reset all shortcuts to defaults'),
             on_clicked=self.on_reset_all_clicked,
         )
 
@@ -225,11 +226,11 @@ class EditorShortcuts(mineprep.Mod):
 
         # 右下角按钮2：打开自定义快捷键蓝图
         bottom_row.button(
-            mineprep.bilingual('打开蓝图', 'Open BP'),
+            i18n('打开蓝图', 'Open Blueprint'),
             size=11,
             text_padding=3,
             align=(2, 2),
-            tooltip=mineprep.bilingual('在资产编辑器中打开快捷键蓝图 (/Mineprep/Mineprep自定义快捷键)', 'Open shortcuts blueprint in editor'),
+            tooltip=i18n('在资产编辑器中打开快捷键蓝图 (/Mineprep/Mineprep自定义快捷键)', 'Open shortcuts blueprint in editor'),
             on_clicked=self.on_open_blueprint_clicked,
         )
 
@@ -244,7 +245,7 @@ class EditorShortcuts(mineprep.Mod):
         success = ops.open_blueprint()
         if not success:
             mineprep.warn(
-                mineprep.bilingual("打开自定义快捷键蓝图失败，请检查资产是否存在", "Failed to open hotkey blueprint")
+                i18n("打开自定义快捷键蓝图失败，请检查资产是否存在", "Failed to open hotkey blueprint")
             )
 
     def toggle_code_visibility(self, name: str, code_row):
@@ -290,7 +291,8 @@ class EditorShortcuts(mineprep.Mod):
         is_valid, err_msg = ops.validate_code(new_code, name)
         if not is_valid:
             mineprep.prints(
-                mineprep.bilingual(f"[{name}] 语法错误: {err_msg}，已还原", f"Syntax error in [{name}]: {err_msg}, reverted"),
+                i18n("[{name}] 语法错误: {err_msg}，已还原", "Syntax error in [{name}]: {err_msg}, reverted").format(
+                    name=name, err_msg=err_msg),
                 color=unreal.LinearColor(1.0, 0.3, 0.3, 1.0),
                 duration=5,
             )
@@ -310,7 +312,7 @@ class EditorShortcuts(mineprep.Mod):
 
         if not new_name:
             mineprep.prints(
-                mineprep.bilingual("名称不能为空，已还原", "Name cannot be empty, reverted"),
+                i18n("名称不能为空，已还原", "Name cannot be empty, reverted"),
                 color=unreal.LinearColor(1.0, 0.4, 0.4, 1.0),
                 duration=3,
             )
@@ -322,7 +324,8 @@ class EditorShortcuts(mineprep.Mod):
 
         if ops.check_name_conflict(old_name, new_name):
             mineprep.prints(
-                mineprep.bilingual(f"名称冲突：'{new_name}' 已存在，已还原", f"Name conflict: '{new_name}' already exists, reverted"),
+                i18n("名称冲突：'{new_name}' 已存在，已还原", "Name conflict: '{new_name}' already exists, reverted").format(
+                    new_name=new_name),
                 color=unreal.LinearColor(1.0, 0.3, 0.3, 1.0),
                 duration=4,
             )
@@ -361,7 +364,7 @@ class EditorShortcuts(mineprep.Mod):
         if selected_chord.key.export_text() == 'None':
             ops.update_chord_text(name, new_chord_text)
             mineprep.prints(
-                mineprep.bilingual(f"已清除 [{name}] 的按键绑定", f"Cleared hotkey for [{name}]"),
+                i18n("已清除 [{name}] 的按键绑定", "Cleared hotkey for [{name}]").format(name=name),
                 color=unreal.LinearColor(0.8, 0.8, 0.8, 1.0),
                 duration=3,
             )
@@ -373,7 +376,8 @@ class EditorShortcuts(mineprep.Mod):
         conflict, conflict_name = ops.check_chord_conflict(name, new_chord_text)
         if conflict:
             mineprep.prints(
-                mineprep.bilingual(f"快捷键冲突：该按键已被 [{conflict_name}] 占用，已还原", f"Key conflict: chord used by [{conflict_name}], reverted"),
+                i18n('快捷键冲突：已被 [{conflict_name}] 占用，已还原',
+                     'Shortcut conflict: already bound to [{conflict_name}], reverted').format(conflict_name=conflict_name),
                 color=unreal.LinearColor(1.0, 0.3, 0.3, 1.0),
                 duration=4,
             )
@@ -385,7 +389,8 @@ class EditorShortcuts(mineprep.Mod):
 
         ops.update_chord_text(name, new_chord_text)
         mineprep.prints(
-            mineprep.bilingual(f"已设置 [{name}] 快捷键 -> {new_chord_text}", f"Set [{name}] hotkey -> {new_chord_text}"),
+            i18n("已设置 [{name}] 快捷键 -> {new_chord_text}", "Set [{name}] hotkey -> {new_chord_text}").format(
+                name=name, new_chord_text=new_chord_text),
             color=unreal.LinearColor(0.95, 0.85, 0.2, 1.0),
             duration=3,
         )
@@ -398,7 +403,7 @@ class EditorShortcuts(mineprep.Mod):
         self.code_rows.pop(name, None)
         self.redraw()
         mineprep.prints(
-            mineprep.bilingual(f"已删除快捷键: [{name}]", f"Deleted shortcut: [{name}]"),
+            i18n("已删除快捷键: [{name}]", "Deleted shortcut: [{name}]").format(name=name),
             color=unreal.LinearColor(0.95, 0.45, 0.35, 1.0),
             duration=3,
         )
@@ -408,7 +413,7 @@ class EditorShortcuts(mineprep.Mod):
         new_name = ops.add_shortcut()
         self.redraw()
         mineprep.prints(
-            mineprep.bilingual(f"已添加新快捷键: [{new_name}]", f"Added shortcut: [{new_name}]"),
+            i18n("已添加新快捷键: [{new_name}]", "Added shortcut: [{new_name}]").format(new_name=new_name),
             color=unreal.LinearColor(0.35, 0.9, 0.45, 1.0),
             duration=3,
         )

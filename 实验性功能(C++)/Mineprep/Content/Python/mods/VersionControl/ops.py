@@ -8,6 +8,7 @@ from pathlib import Path
 import unreal
 import mineprep
 from mc_mod import MANIFEST_NAME, PathPatternMatch, read_manifest
+from mineprep import i18n
 
 _SKIP_COPY = frozenset({'Intermediate', 'Saved'})
 _INSTALLER_SKIP_DIRS = frozenset({'intermediate', 'saved', '__pycache__', 'cache', '.vscode'})
@@ -75,7 +76,7 @@ def open_target(props):
     if os.path.isdir(folder):
         mineprep.startfile(folder)
         return folder
-    mineprep.warn(mineprep.bilingual('目标文件夹不存在', 'Target folder does not exist'))
+    mineprep.warn(i18n('目标文件夹不存在', 'Target folder does not exist'))
     return ''
 
 
@@ -134,13 +135,13 @@ def load_skip_fn(script_props):
             exec(text, ns)
             fn = ns.get('skip')
             if not callable(fn):
-                mineprep.warn(mineprep.bilingual(
+                mineprep.warn(i18n(
                     '过滤脚本需要 def skip(path:str)->bool',
                     'Filter script needs def skip(path:str)->bool',
                 ))
                 fn = None
         except Exception as extra:
-            mineprep.warn(mineprep.bilingual('过滤脚本无效', 'Invalid filter script'), extra)
+            mineprep.warn(i18n('过滤脚本无效', 'Invalid filter script'), extra)
     if not folders and fn is None:
         return None
 
@@ -255,10 +256,10 @@ def _source_trees():
         if os.path.isdir(src):
             trees.append((src, rel))
         elif rel in _REQUIRED:
-            mineprep.warn(mineprep.bilingual(
-                f'源工程缺少 {rel}',
-                f'Source project missing {rel}',
-            ))
+            mineprep.warn(i18n(
+                '源工程缺少 {path}',
+                'Source project missing {path}',
+            ).format(path=str(rel)))
     return trees
 
 
@@ -469,7 +470,7 @@ def refresh_filters(filter_props, props, name=None, skip_fn=None):
     except (ValueError, OSError) as err:
         for _, field in need:
             setattr(filter_props, field, {})
-        mineprep.warn('模组清单筛选失败 / Mod manifest filtering failed', err)
+        mineprep.warn(i18n('mod 清单筛选失败', 'Mod manifest filtering failed'), err)
         return
     bucket = {'FilterNew': added, 'FilterNewer': newer, 'FilterOlder': older}
     defaults = _filter_entry_defaults(filter_props)
@@ -497,7 +498,7 @@ def refresh_extras(extra_props, props, name=None, skip_fn=None):
         extras = extra_relpaths(props, installer=bool(props.UpdateInstaller), skip_fn=skip_fn)
     except (ValueError, OSError) as err:
         extra_props.ExtraFiles = {}
-        mineprep.warn('模组清单筛选失败 / Mod manifest filtering failed', err)
+        mineprep.warn(i18n('mod 清单筛选失败', 'Mod manifest filtering failed'), err)
         return
     extra_props.ExtraFiles = {key: bool(extra_props.EntryDefault) for key in sorted(extras)}
 
@@ -506,58 +507,58 @@ def confirm_copy(props, filter_props, extra_props=None, skip_fn=None, *, manifes
     stats = copy_stats(props, filter_props, extra_props, skip_fn=skip_fn, manifest_skip=manifest_skip)
     lines = []
     if stats['clear']:
-        lines.append(str(mineprep.bilingual(
+        lines.append(str(i18n(
             '将清空目标路径再复制。',
             'Destination trees will be cleared then copied.',
         )))
     if getattr(props, 'UseModManifest', False):
-        lines.append(str(mineprep.bilingual(
+        lines.append(str(i18n(
             '已按模组清单筛选复制内容。',
             'Files to copy are filtered using mod manifests.',
         )))
         if stats['clear']:
-            lines.append(str(mineprep.bilingual(
+            lines.append(str(i18n(
                 '清空目标仍会移除其中的原有文件，包括被清单排除的文件。',
                 'Clearing the destination also removes existing files excluded by manifests.',
             )))
-    lines.append(str(mineprep.bilingual(
-        f"新增：复制 {stats['added_c']}，跳过 {stats['added_s']}",
-        f"New: copy {stats['added_c']}, skip {stats['added_s']}",
-    )))
-    lines.append(str(mineprep.bilingual(
-        f"变新：复制 {stats['newer_c']}，跳过 {stats['newer_s']}",
-        f"Newer: copy {stats['newer_c']}, skip {stats['newer_s']}",
-    )))
-    lines.append(str(mineprep.bilingual(
-        f"变旧：复制 {stats['older_c']}，跳过 {stats['older_s']}",
-        f"Older: copy {stats['older_c']}, skip {stats['older_s']}",
-    )))
-    lines.append(str(mineprep.bilingual(
-        f"相同文件：{stats['same_s']}",
-        f"Unchanged: {stats['same_s']}",
-    )))
+    lines.append(str(i18n(
+        "新增：复制 {copy}，跳过 {skip}",
+        "New: copy {copy}, skip {skip}",
+    ).format(copy=stats['added_c'], skip=stats['added_s'])))
+    lines.append(str(i18n(
+        "变新：复制 {copy}，跳过 {skip}",
+        "Newer: copy {copy}, skip {skip}",
+    ).format(copy=stats['newer_c'], skip=stats['newer_s'])))
+    lines.append(str(i18n(
+        "变旧：复制 {copy}，跳过 {skip}",
+        "Older: copy {copy}, skip {skip}",
+    ).format(copy=stats['older_c'], skip=stats['older_s'])))
+    lines.append(str(i18n(
+        "相同文件：{count}",
+        "Unchanged: {count}",
+    ).format(count=stats['same_s'])))
     if stats['script_s']:
-        lines.append(str(mineprep.bilingual(
-            f"脚本跳过：{stats['script_s']}\n",
-            f"Skipped by script: {stats['script_s']}\n",
-        )))
-    lines.append(str(mineprep.bilingual(
-        f"共计复制 {stats['copy_n']}",
-        f"Total copy {stats['copy_n']}",
-    )))
+        lines.append(str(i18n(
+            "脚本跳过：{count}\n",
+            "Skipped by script: {count}\n",
+        ).format(count=stats['script_s'])))
+    lines.append(str(i18n(
+        '共计复制：{count}',
+        'Total to copy: {count}',
+    ).format(count=stats['copy_n'])))
     if not stats['clear']:
-        lines.append(str(mineprep.bilingual(
-            f"目标路径有多余文件 {stats['extra_n']}，将移除 {stats['extra_rm']}。",
-            f"Destination has extra files {stats['extra_n']}, remove {stats['extra_rm']}.",
-        )))
+        lines.append(str(i18n(
+            '目标目录有 {count} 个多余文件，将移除 {remove} 个。',
+            'Destination has {count} extra files; {remove} will be removed.',
+        ).format(count=stats['extra_n'], remove=stats['extra_rm'])))
     if not getattr(props, 'UpdateInstaller', False) and getattr(props, 'CopyPythonLib', False):
-        lines.append(str(mineprep.bilingual(
+        lines.append(str(i18n(
             '将复制 Python 库（Intermediate/PipInstall/Lib/site-packages）。',
             'Python libraries will be copied (Intermediate/PipInstall/Lib/site-packages).',
         )))
-    lines.append(str(mineprep.bilingual('是否继续？', 'Continue?')))
+    lines.append(str(i18n('是否继续？', 'Continue?')))
     return mineprep.dialog(
-        str(mineprep.bilingual('确认复制', 'Confirm copy')),
+        str(i18n('确认复制', 'Confirm copy')),
         '\n'.join(lines),
     )
 
@@ -649,10 +650,10 @@ def _copy_pairs(pairs, *, skip=None, installer=False, skip_fn=None, manifest_ski
             if label in _REQUIRED:
                 mineprep.panic(f'工程缺少源文件夹: {label}', src)
             else:
-                mineprep.prints(mineprep.bilingual(
-                    f'跳过（源工程没有）: {label}',
-                    f'Skip (not in source): {label}',
-                ))
+                mineprep.prints(i18n(
+                    '跳过（源工程没有）: {label}',
+                    'Skip (not in source): {label}',
+                ).format(label=label))
             continue
         _copy_tree(
             src, dst, label, skip=skip, project_root=project,
@@ -705,11 +706,11 @@ def path_warnings(props, *, require_uproject=False):
     folder = target_dir(props)
     notes = []
     if not folder or not os.path.isdir(folder):
-        notes.append(mineprep.bilingual('路径无效', 'Path is invalid'))
+        notes.append(i18n('路径无效', 'Path is invalid'))
     elif require_uproject and not _has_uproject(folder):
-        notes.append(mineprep.bilingual('未找到 .uproject', '.uproject not found'))
+        notes.append(i18n('未找到 .uproject', '.uproject not found'))
     if folder and not all(ord(ch) < 128 for ch in folder):
-        notes.append(mineprep.bilingual(
+        notes.append(i18n(
             '路径含有中文或非 ASCII 字符',
             'Path contains non-ASCII characters',
         ))
@@ -962,7 +963,7 @@ def migrate_plugin(props, filter_props=None, extra_props=None, script_props=None
         return ''
     if not _has_uproject(dest):
         mineprep.panic(
-            mineprep.bilingual('未找到 .uproject，请选择工程根目录', 'No .uproject found; pick the project root'),
+            i18n('未找到 .uproject，请选择工程根目录', 'No .uproject found; pick the project root'),
             dest,
         )
         if not _has_uproject(dest):
@@ -971,7 +972,7 @@ def migrate_plugin(props, filter_props=None, extra_props=None, script_props=None
     src_root = _project_root()
     if os.path.normcase(os.path.normpath(dest)) == os.path.normcase(os.path.normpath(src_root)):
         mineprep.panic(
-            mineprep.bilingual('不能迁移到当前工程', 'Cannot migrate onto the current project'),
+            i18n('不能迁移到当前工程', 'Cannot migrate onto the current project'),
             dest,
         )
         return ''
@@ -993,6 +994,6 @@ def migrate_plugin(props, filter_props=None, extra_props=None, script_props=None
     if getattr(props, 'CopyPythonLib', False):
         _copy_python_libs(dest)
     _write_project_ini(dest)
-    mineprep.prints(mineprep.bilingual(f'已迁移到 {dest}，务必要先关闭当前工程，再打开新工程文件',
-                    f'Migrated to {dest}. Close the current project first and then open the new project.'))
+    mineprep.prints(i18n('已迁移至 {path}。请先关闭当前工程，再打开目标工程。',
+                        'Migrated to {path}. Please close the current project before opening the target project.').format(path=str(dest)))
     return dest

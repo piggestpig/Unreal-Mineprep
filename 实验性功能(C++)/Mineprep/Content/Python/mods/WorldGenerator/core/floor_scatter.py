@@ -35,8 +35,10 @@ def lower_supports(pack, params, seed, natural, depth, tile, region, tops, colum
     from .shell import layer_roles
     mask = natural[1:-1, depth, 1:-1] & ~natural[1:-1, depth+1, 1:-1]
     iz, ix = np.nonzero(mask)
-    xyz = np.column_stack((ix+tile.x0-region.x0, np.full(len(ix), params['world.y_min']-1),
-                           iz+tile.z0-region.z0)).astype(np.int32)
+    from .coarse import axes, sizes
+    _,_,x,z,_,_ = axes(tile,pack.cell_step)
+    xyz = np.column_stack((x[ix]-region.x0, np.full(len(ix), params['world.y_min']-1),
+                           z[iz]-region.z0)).astype(np.int32)
     burial = tops[1:-1, 1:-1][iz, ix] - xyz[:, 1]
     role = layer_roles(burial, soil_depth if np.ndim(soil_depth) == 0 else soil_depth[iz, ix])
     types = columns[iz, ix, role]
@@ -48,15 +50,20 @@ def lower_supports(pack, params, seed, natural, depth, tile, region, tops, colum
         cap = materials.surface_depth(pack, params)
         nearby = materials.depths(natural, indices, cap) if cap else None
         absolute = xyz.astype(np.int64) + [region.x0, 0, region.z0]
+        if pack.cell_step != 1: absolute[:,[0,2]] = absolute[:,[0,2]]//pack.cell_step*pack.cell_step
         ids = biomes[iz, ix] if biomes is not None else np.zeros(len(ix), np.uint16)
         types = materials.apply(pack, params, seed, absolute, types, burial, faces, faces,
                                 ids, resources, natural_depths=nearby)
-    return np.column_stack((xyz, types)).astype(np.int32)
+    faces = np.column_stack((xyz, types)).astype(np.int32)
+    return (faces if pack.cell_step==1 and pack.layout is None else
+            np.column_stack((faces,sizes(xyz,region,pack.cell_step,clip=tile)[:,[0,2]])))
 
 
 def scatter(ctx, pack, tile, region, supports, biomes, water, levels, features, *, max_instances):
     """Independent coordinate draws; final support IDs decide the decoration type."""
     from .postprocess import _PointIndex
+    from .projection import expand_surfaces
+    supports = expand_surfaces(supports)
     selected = np.full(len(supports), -1, np.int32)
     bindings = active(pack, ctx.params)
     x = supports[:, 0] + region.x0 - tile.x0
@@ -71,6 +78,8 @@ def scatter(ctx, pack, tile, region, supports, biomes, water, levels, features, 
                     & np.isin(supports[:, 3], [ids[n] for n in binding.surface])
                     & np.isin(biomes[z, x], [i for i, b in enumerate(pack.biomes) if b.id in binding.biomes])
                     & (~water[z, x] | (y > levels[z, x])))
+            if pack.layout is not None:
+                mask &= pack.layout.anchors(binding.detail_only,supports[:,0]+region.x0,supports[:,2]+region.z0)
             chosen = np.flatnonzero(mask)
             p = supports[chosen, :3].astype(np.int64) + [region.x0, 1, region.z0]
             draw = hash01(*p.T, ctx.seed, f'features/{f.id}/volume-floor')

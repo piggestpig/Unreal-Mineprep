@@ -1,4 +1,5 @@
 import mineprep
+from mineprep import i18n
 
 # 从API版本2.0起，可以选用以下占位符，在unreal模块不存在时 依旧能离线测试Python代码
 try:
@@ -13,8 +14,8 @@ except ModuleNotFoundError:
 # EnabledByDefault只声明启动默认值；当前启用状态由mcvars.EnabledMods记录
 # 文件夹模组可选用mod_manifest.toml，格式见mods/ModManager/MANIFEST.md；mod_info仍须声明
 mod_info = {
-    "Name": mineprep.bilingual("Mod模板", "Mod Template"),
-    "Description": mineprep.bilingual("面向开发者的普通mod模板", "A simple mod template for developers"),
+    "Name": i18n("Mod模板", "Mod Template"),
+    "Description": i18n('面向开发者的基础 mod 模板', 'Basic mod template for developers'),
     "Version": "2.0",
     "CreatedBy": "",
     "Credits": "",
@@ -27,7 +28,7 @@ mod_info = {
 # mineprep.Mod在__init__中调用draw()构建界面；需要重绘时可绑定self.redraw到on_clicked等事件
 # 如果不需要UI界面，可以重载__new__，此时 self.layout 默认为 None
 class mod_template(mineprep.Mod):
-    # _label_ = mineprep.bilingual('工具栏显示名称', 'Toolbar Display Name')
+    # _label_ = i18n('工具栏显示名称', 'Toolbar Display Name')
     # _unique_ = True  # 单例模式，多次点击工具栏只打开一个模组面板
 
     # def __init__(self, context=None):
@@ -36,8 +37,8 @@ class mod_template(mineprep.Mod):
 
     def draw(self, context):
         layout = self.layout
-        layout.text(mineprep.bilingual("这是一个mod模板", "This is a mod template"))
-        layout.button(mineprep.bilingual("打开Python文件", "Open Python File"),
+        layout.text(i18n('这是一个 mod 模板', "This is a mod template"))
+        layout.button(i18n("打开Python文件", "Open Python File"),
                       on_clicked=lambda: mineprep.startfile(__file__))
 
     # 其他可重载函数
@@ -55,3 +56,4 @@ def register():
 # 写成文件夹的大型模组可在此注销子模块，参见ModManager的__init__.py
 def unregister():
     mod_template.unregister()
+

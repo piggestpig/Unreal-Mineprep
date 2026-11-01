@@ -12,11 +12,7 @@ class BakeAnimProps(mineprep.PropertyGroup):
     bOverrideFramerate: bool = (False, {'InlineEditConditionToggle': True})
     Framerate: int = (60, {'UIMin': 24, 'UIMax': 120, 'ClampMin': 1, 'EditCondition': 'bOverrideFramerate'})
 
-BakeAnimProps.localize('BakeAnimProps', '烘焙动画', 'Bake Anim', '烘焙動畫')
-BakeAnimProps.localize('DataAsset', '动画数据集', 'Anim Data Asset', '動畫數據集')
-BakeAnimProps.localize('AnimSeq', '动画序列', 'Anim Sequences', '動畫序列')
-BakeAnimProps.localize('bOverrideFramerate', '重载烘焙帧率', 'Override Framerate', '重載烘焙幀率')
-BakeAnimProps.localize('Framerate', '烘焙帧率', 'Framerate', '烘焙幀率')
+BakeAnimProps.localize()
 
 
 class CopyProps(mineprep.PropertyGroup):
@@ -25,10 +21,7 @@ class CopyProps(mineprep.PropertyGroup):
     NewName: str = ''
     CopyDeps: bool = False
 
-CopyProps.localize('CopyProps', '复制数据集', 'Copy Data Asset', '複製數據集')
-CopyProps.localize('TargetPath', '目标路径', 'Target Path', '目標路徑')
-CopyProps.localize('NewName', '新名称', 'New Name', '新名稱')
-CopyProps.localize('CopyDeps', '复制所有依赖项', 'Copy All Dependencies', '複製所有依賴項')
+CopyProps.localize()
 
 
 class InitSkmProps(mineprep.PropertyGroup):
@@ -38,11 +31,7 @@ class InitSkmProps(mineprep.PropertyGroup):
     bOverwriteModel: bool = False
     SavePath: str = ''
 
-InitSkmProps.localize('InitSkmProps', '从骨骼创建', 'Create From SKM', '從骨骼創建')
-InitSkmProps.localize('SKM', '骨骼网格体', 'Skeletal Mesh', '骨骼網格體')
-InitSkmProps.localize('bIsItem', '是手持物品', 'Handheld Item', '是手持物品')
-InitSkmProps.localize('bOverwriteModel', '覆写现有模型', 'Overwrite Existing Mesh', '覆寫現有模型')
-InitSkmProps.localize('SavePath', '保存路径', 'Save Path', '保存路徑')
+InitSkmProps.localize()
 
 
 class VATToolsOptions(mineprep.PropertyGroup):
@@ -51,6 +40,4 @@ class VATToolsOptions(mineprep.PropertyGroup):
     AutoCleanCache: bool = False
     HideInitSkm: bool = False
 
-VATToolsOptions.localize('VATToolsOptions', '设置', 'Options', '設置')
-VATToolsOptions.localize('AutoCleanCache', '自动清理缓存', 'Auto Clean Cache', '自動清理緩存')
-VATToolsOptions.localize('HideInitSkm', '隐藏右栏', 'Hide Right Panel', '隱藏右欄')
+VATToolsOptions.localize()

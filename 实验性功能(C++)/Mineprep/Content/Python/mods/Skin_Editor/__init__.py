@@ -4,16 +4,16 @@ except ModuleNotFoundError as exc:
     if exc.name != 'unreal':
         raise
     # 普通 Python 允许导入图片 API，不加载 UE 插件或面板。
-    def bilingual(zh, en):
+    def i18n(zh, en):
         return zh
 else:
-    from mineprep import bilingual
+    from mineprep import i18n
 
 mod_info = {
-    'Name': bilingual('皮肤&表情编辑器', 'Skin & Face Editor'),
-    'Description': bilingual(
-        '编辑视口选中的骨骼网格体皮肤与头部材质',
-        'Edit skin and head materials from the selected skeletal mesh',
+    'Name': i18n('皮肤&表情编辑器', 'Skin & Face Editor'),
+    'Description': i18n(
+        '编辑选中角色的皮肤纹理与头部材质',
+        'Edit skin textures and head materials on selected characters',
     ),
     'Version': '2.0',
     'CreatedBy': 'Pig',

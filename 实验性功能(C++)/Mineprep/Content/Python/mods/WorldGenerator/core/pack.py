@@ -1,7 +1,8 @@
 """Content packs: JSON data (parameters, presets, biomes) plus Python fields.
 
-    packs/<id>/pack.json        id, name, params schema, pages, biome order...
-    packs/<id>/presets/*.json   {"name": ..., "params": {"terrain.mountain_height": 20}}
+    packs/<id>/pack.json        id, params schema, pages, biome order...
+    packs/<id>/i18n.json        source texts and translations; outside generation identity
+    packs/<id>/presets/*.json   {"params": {"terrain.mountain_height": 20}}
     packs/<id>/biomes/*.json    one biome per file, see biomes.py / surface.py
     packs/<id>/<module>.py      @field functions listed in pack.json "modules"
 
@@ -9,11 +10,11 @@ A pack may `"extends": "<base>"`: it inherits content and overrides by key
 (parameter definitions merge key by key, fields and biomes by id, presets
 by file name). planning_params cache contracts require a local opt-in and
 are not inherited. Loading is cached by file stamps; any edit changes
-`Pack.fingerprint`, which is part of every generation cache key.
+`Pack.fingerprint`. Text catalogs have independent refresh stamps.
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections import OrderedDict
 import hashlib
 import json
@@ -22,7 +23,8 @@ from pathlib import Path
 import re
 import threading
 
-from .biomes import Biome, _label, parse_biome, validate_climate
+from .biomes import parse_biome, validate_climate
+from ..localization import TextKey
 from .blocks import builtin_block, parse_block
 from .features import parse_feature, compile_placements
 from .fields import FieldDef, check_graph
@@ -30,7 +32,7 @@ from .density import DensityDef, DensityRecipe
 from .materials import ShellMaterials
 from .fluids import StaticFluids
 from .spline import Spline, normalize_points
-from .surface import ROLES, referenced_params, rule_fields, parse_rules
+from .surface import referenced_params, rule_fields, parse_rules
 from . import pack_modules
 from .ui_metadata import parse_sections, section_id
 from types import SimpleNamespace
@@ -44,10 +46,10 @@ REQUIRED_PARAMS = ("world.y_min", "world.y_max", "world.sea_level", "surface.soi
                    "surface.boundary_scale", "surface.patch_scale")
 TYPES = ("float", "int", "bool", "curve", "str")
 _ID = re.compile(r"^[a-z][a-z0-9_]*$")
-_PACK_KEYS = {"id", "version", "name", "description", "extends", "modules", "height_field",
+_PACK_KEYS = {"id", "version", "extends", "modules", "height_field",
               "biome_parameters", "biomes", "default_preset", "pages", "params", "surface_overrides", "water", "planners", "planning_params", "ui_rows", "density", "shell_materials", "fluids", "format_version", "planner_gates", "feature_metrics", "biome_selector", "surface_processors", "mask_categories"}
 _PACK_KEYS.update(('ui_sections','soil_depth_field','terrain_materials','block_order','preset_menu','reference_mask_field'))
-_PARAM_KEYS = {"type", "default", "min", "max", "label", "tooltip", "page", "advanced", "enabled_param"}
+_PARAM_KEYS = {"type", "default", "min", "max", "page", "advanced", "enabled_param"}
 _lock = threading.RLock()
 _cache = OrderedDict()
 CACHE_LIMIT = 32
@@ -67,8 +69,8 @@ class ParamDef:
     default: object
     min: object = None
     max: object = None
-    label: tuple = ("", "")
-    tooltip: tuple = ("", "")
+    label: object = ''
+    tooltip: object = ''
     page: str = ""
     advanced: bool = False
     enabled_param: object = None
@@ -137,26 +139,27 @@ class Params(Mapping):
 @dataclass(frozen=True)
 class Preset:
     id: str
-    name: tuple
+    name: object
     params: dict
     section: object = None
 
 
 @dataclass(frozen=True)
 class UIRow:
-    label: tuple
+    id: str
+    label: object
     keys: tuple
     components: tuple = ()
 
 
 def parse_ui_rows(raw, params):
     """Display grouping only; every component retains its scalar definition."""
-    if not isinstance(raw, (list, tuple)):
-        raise ValueError('ui_rows must be a list')
+    if not isinstance(raw, dict):
+        raise ValueError('ui_rows must be a mapping of stable row IDs')
     rows, seen = [], set()
-    for item in raw:
-        if not isinstance(item, dict) or not {'label', 'keys'} <= set(item) or set(item) - {'label', 'keys', 'components'}:
-            raise ValueError('ui_rows entries require label and keys')
+    for ident, item in raw.items():
+        if not _ID.fullmatch(ident) or not isinstance(item, dict) or set(item) != {'keys'}:
+            raise ValueError('ui_rows entries require a stable ID and keys')
         keys = item['keys']
         if not isinstance(keys, (list, tuple)) or len(keys) not in (2, 3):
             raise ValueError('ui_rows need two or three numeric keys')
@@ -166,11 +169,8 @@ def parse_ui_rows(raw, params):
             raise ValueError('ui_rows components must appear only once')
         if len({(params[k].page, params[k].advanced) for k in keys}) != 1:
             raise ValueError('ui_rows must share a page and advanced visibility')
-        components = item.get('components', [params[k].label for k in keys])
-        if len(components) != len(keys):
-            raise ValueError('ui_rows component labels must match keys')
-        rows.append(UIRow(_label(item['label'], keys[0]), tuple(keys),
-                          tuple(_label(v, k) for k, v in zip(keys, components))))
+        rows.append(UIRow(ident, f'rows.{ident}', tuple(keys),
+                          tuple(f'rows.{ident}.components.{k}' for k in keys)))
         seen.update(keys)
     return tuple(rows)
 
@@ -178,12 +178,12 @@ def parse_ui_rows(raw, params):
 @dataclass(frozen=True)
 class Pack:
     id: str
-    name: tuple
-    description: tuple
+    name: object
+    description: object
     root: Path
     chain: tuple               # (base id, ..., own id)
     params: dict               # key -> ParamDef, in declaration order
-    pages: dict                # page id -> (zh, en)
+    pages: dict                # page id -> semantic text reference
     presets: dict              # id -> Preset
     default_preset: str
     biomes: tuple              # Biome, priority order
@@ -221,6 +221,9 @@ class Pack:
     mask_categories: object = None
     masks: object = None  # request-local snapshots; do not change terrain planner identity
     reference_mask_field: object = None  # optional 0..1 presence of a reference surface
+    cell_step: int = 1  # request-local geometry/reference lattice; not content-pack metadata
+    layout: object = None  # request-local fixed core; never pack metadata
+    biome_map: object = None  # request-local categorical input, after terrain/water planning
 
     @property
     def generation_fingerprint(self):
@@ -254,6 +257,11 @@ class Pack:
         if not volume and not values["world.y_min"] <= values["world.sea_level"] < values["world.y_max"]:
             raise ValueError("world.sea_level must be inside [y_min, y_max)")
         validate_climate(self.biomes, values)
+        from .coarse import validate
+        validate(self, spec.cell_step)
+        if spec.core is not None:
+            from .layout import validate as validate_layout
+            validate_layout(self,values)
         return Params(values)
 
 
@@ -294,7 +302,8 @@ def list_packs():
 
 def _files(directory):
     return sorted(p for p in directory.rglob("*")
-                  if p.is_file() and p.suffix in (".json", ".py") and "__pycache__" not in p.parts)
+                  if p.is_file() and p.suffix in (".json", ".py") and p != directory / 'i18n.json'
+                  and "__pycache__" not in p.parts)
 
 
 def _stamp(directory):
@@ -344,9 +353,11 @@ def catalog():
     for pack_id in list_packs():
         try:
             pack = load_pack(pack_id)
+            from ..localization import catalog as text_catalog
+            text_catalog(pack.name).refresh()
             result.append(dict(id=pack_id, name=pack.name, status='ready', error=None))
         except Exception as exc:
-            result.append(dict(id=pack_id, name=(pack_id, pack_id), status='error', error=str(exc)))
+            result.append(dict(id=pack_id, name=pack_id, status='error', error=str(exc)))
     return tuple(result)
 
 
@@ -416,14 +427,14 @@ def _param_def(key, raw, base, where):
         raise ValueError(f"{where}: parameter {key} keys are {sorted(_PARAM_KEYS)}")
     merged = {} if base is None else {
         "type": base.type, "default": base.default, "min": base.min, "max": base.max,
-        "label": base.label, "tooltip": base.tooltip, "page": base.page, "advanced": base.advanced,
+        "page": base.page, "advanced": base.advanced,
         "enabled_param": base.enabled_param}
     merged.update(raw)
     if merged.get("type") not in TYPES:
         raise ValueError(f"{where}: parameter {key} type must be one of {TYPES}")
     definition = ParamDef(key, merged["type"], merged.get("default"), merged.get("min"),
-                          merged.get("max"), _label(merged.get("label"), key),
-                          _label(merged.get("tooltip"), ""), merged.get("page") or key.partition(".")[0],
+                          merged.get("max"), f'params.{key}',
+                          f'params.{key}.tooltip', merged.get("page") or key.partition(".")[0],
                           bool(merged.get("advanced", False)), merged.get('enabled_param'))
     return ParamDef(**{**definition.__dict__, "default": definition.coerce(definition.default)})
 
@@ -431,8 +442,8 @@ def _param_def(key, raw, base, where):
 def _load(pack_id, directory, roots):
     where = f"pack {pack_id}"
     data = _read_json(directory / "pack.json")
-    if data.get('format_version', 2) != 2:
-        raise ValueError(f'{where}: run the one-time content upgrade to format_version 2')
+    if data.get('format_version') != 3:
+        raise ValueError(f'{where}: requires format_version 3; legacy files are preserved')
     if data.get("id") != pack_id:
         raise ValueError(f"{where}: pack.json id must equal its folder name")
     unknown = set(data) - _PACK_KEYS
@@ -455,9 +466,12 @@ def _load(pack_id, directory, roots):
     if missing:
         raise ValueError(f"{where}: missing required parameters {missing}")
     pages = dict(base.pages) if base else {}
-    pages.update({k: _label(v, k) for k, v in (data.get("pages") or {}).items()})
+    declared_pages = data.get('pages', [])
+    if not isinstance(declared_pages, list) or any(not isinstance(k, str) or not _ID.fullmatch(k) for k in declared_pages):
+        raise ValueError(f'{where}: pages must list stable page IDs')
+    pages.update({k: f'pages.{k}' for k in declared_pages})
     for definition in params.values():
-        pages.setdefault(definition.page, (definition.page, definition.page))
+        pages.setdefault(definition.page, f'pages.{definition.page}')
     ui_sections = parse_sections(data.get('ui_sections', {}), pages, params, base.ui_sections if base else ())
     for definition in params.values():
         gate = definition.enabled_param
@@ -468,15 +482,14 @@ def _load(pack_id, directory, roots):
             schema_pages = section.pages if section.shared_group else (definition.page,)
             if params[gate].page not in schema_pages:
                 raise ValueError(f'{where}: enable gate must share a native parameter schema')
-    inherited_rows = [{'label': {'zh': r.label[0], 'en': r.label[1]}, 'keys': list(r.keys), 'components': r.components}
-                      for r in base.ui_rows] if base else []
-    ui_rows = parse_ui_rows(data.get('ui_rows', inherited_rows), params)
+    inherited_rows = {r.id: {'keys': list(r.keys)} for r in base.ui_rows} if base else {}
+    ui_rows = parse_ui_rows({**inherited_rows, **data.get('ui_rows', {})}, params)
 
     presets = dict(base.presets) if base else {}
     for path in sorted((directory / "presets").glob("*.json")):
         raw = _read_json(path)
-        if set(raw) - {"name", "params", "notes", "section"} or not isinstance(raw.get("params", {}), dict):
-            raise ValueError(f"{where}: preset {path.name} keys are name/params")
+        if set(raw) - {"params", "notes", "section"} or not isinstance(raw.get("params", {}), dict):
+            raise ValueError(f"{where}: preset {path.name} keys are params/section")
         unknown = sorted(set(raw.get("params", {})) - set(params))
         if unknown:
             raise ValueError(f"{where}: preset {path.stem} sets unknown parameters {unknown}")
@@ -489,7 +502,7 @@ def _load(pack_id, directory, roots):
                 raise ValueError(f'{where}: invalid preset section {section!r}')
             if not values or any(section_id(params[k].page, ui_sections) != section for k in values):
                 raise ValueError(f'{where}: local preset must contain only {section} parameters')
-        presets[path.stem] = Preset(path.stem, _label(raw.get("name"), path.stem), values, section)
+        presets[path.stem] = Preset(path.stem, f'presets.{path.stem}.name', values, section)
     # Revalidate inherited presets against a child pack's parameter pages.
     from ..ui_model import page_id
     for preset in presets.values():
@@ -769,11 +782,12 @@ def _load(pack_id, directory, roots):
             raise ValueError(f'{where}: surface_processors must be an ordered list')
         for item in raw:
             if (not isinstance(item, dict) or not {'id','function','blocks','radius'} <= item.keys()
-                    or set(item)-{'id','function','blocks','radius','enabled_param','sky_only','category','volume'}
+                    or set(item)-{'id','function','blocks','radius','enabled_param','sky_only','category','volume','unit_replace'}
                     or not isinstance(item.get('category',''), str)
                     or (item.get('category') and not item['category'].isidentifier())
                     or type(item.get('sky_only',False)) is not bool
                     or type(item.get('volume',False)) is not bool
+                    or type(item.get('unit_replace',False)) is not bool
                     or not isinstance(item['id'], str) or not item['id'].isidentifier()
                     or not isinstance(item['blocks'], list) or not item['blocks']
                     or any(n not in definitions for n in item['blocks'])
@@ -784,7 +798,8 @@ def _load(pack_id, directory, roots):
                 raise ValueError(f'{where}: surface processor gate must be a boolean')
             processors.append(SurfaceProcessor(item['id'],item['function'],tuple(item['blocks']),item['radius'],gate,
                                                _callable(context,pack_id,directory,item['function']),
-                                               sky_only=item.get('sky_only',False), category=item.get('category',''),volume=item.get('volume',False)))
+                                               sky_only=item.get('sky_only',False), category=item.get('category',''),volume=item.get('volume',False),
+                                               unit_replace=item.get('unit_replace',False)))
         if len({p.id for p in processors}) != len(processors):
             raise ValueError(f'{where}: duplicate surface processor IDs')
         processors = tuple(processors)
@@ -884,7 +899,21 @@ def _load(pack_id, directory, roots):
     if base:
         digest.update(base.fingerprint.encode())
         generation_digest.update(base.generation_fingerprint.encode())
-    pack = Pack(pack_id, _label(data.get("name"), pack_id), _label(data.get("description"), ""),
+    from dataclasses import replace
+    sources = tuple(directories)
+    def text(key, fallback=''):
+        return TextKey(pack_id, sources, key.key if isinstance(key, TextKey) else key, fallback)
+    params = {k: replace(d, label=text(f'params.{k}', k), tooltip=text(f'params.{k}.tooltip'))
+              for k, d in params.items()}
+    pages = {k: text(f'pages.{k}', k) for k in pages}
+    presets = {k: replace(p, name=text(f'presets.{k}.name', k)) for k, p in presets.items()}
+    biomes = tuple(replace(b, name=text(f'biomes.{b.id}.name', b.id)) for b in biomes)
+    ui_rows = tuple(replace(r, label=text(r.label, r.id),
+                            components=tuple(text(k, p) for k, p in zip(r.components, r.keys))) for r in ui_rows)
+    ui_sections = tuple(replace(s, label=text(s.label, s.id),
+                               groups=tuple(replace(g, label=text(g.label, g.id)) for g in s.groups))
+                        for s in ui_sections)
+    pack = Pack(pack_id, text('pack.name', pack_id), text('pack.description'),
                 directory, (base.chain if base else ()) + (pack_id,), params, pages, presets,
                 default_preset, biomes, biome_parameters, fields, height_field, blocks,
                 digest.hexdigest(), definitions, overrides, water, tuple(features.values()), planners, ui_rows, recipe, densities,

@@ -154,7 +154,8 @@ class PresetLibrary:
         if ident not in pack.presets:
             raise ValueError(f'unknown pack preset: {ident}')
         preset = pack.presets[ident]
-        name = preset.name[0] if isinstance(preset.name,(tuple,list)) else preset.name
+        from .localization import source_text
+        name = source_text(preset.name)
         return _validate(dict(version=VERSION,id=ident,name=name,pack=pack.id,section=preset.section,
                               params=preset.params,definitions=_definitions(pack,preset.params)))
 

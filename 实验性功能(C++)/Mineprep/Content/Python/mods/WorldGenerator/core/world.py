@@ -25,7 +25,7 @@ from .store import active as active_store, crop_passes, evaluate_passes, evaluat
 from .tiles import get_executor, run_tiles
 from .water import validate_levels, displayed as water_displayed
 from .planning import Resources, install as install_plans, parallel_windows, window_values
-from . import geometry, fluids
+from . import geometry, fluids, coarse
 from . import multi_features
 
 GENERATOR_VERSION = "r22-region-pass-windows"
@@ -35,7 +35,7 @@ MAX_CELLS = 16_777_216
 MAX_INSTANCES = 4_000_000
 
 
-def world_key(spec, pack=None, *, _source=None, _mask_sources=None):
+def world_key(spec, pack=None, *, _source=None, _mask_sources=None, _biome_source=None):
     """Cache key over everything that changes blocks: code versions, pack files, resolved params."""
     pack = pack or load_pack(spec.pack)
     image_key = None
@@ -44,13 +44,21 @@ def world_key(spec, pack=None, *, _source=None, _mask_sources=None):
         image_key = input_key(spec.heightmap, _source or capture(spec.heightmap))
     from . import masks
     mask_keys = masks.keys(spec, masks.sources(spec) if _mask_sources is None else _mask_sources)
+    biome_key = None
+    if spec.biome_map is not None:
+        from .biome_map import capture, input_key
+        biome_key = input_key(spec.biome_map, _biome_source or capture(spec.biome_map))
+    from .layout import VERSION as LAYOUT_VERSION
     raw = json.dumps({"generator": GENERATOR_VERSION, "noise": NOISE_VERSION, "noise3": NOISE3_VERSION,
                       **({'volume': VOLUME_VERSION} if pack.density is not None and pack.density.base == 'volume' else {}),
                       "density": DENSITY_VERSION, "pack": spec.pack,
                       "fingerprint": pack.generation_fingerprint, "seed": spec.seed,
                       "region": spec.region.to_list(), "params": pack.resolve(spec).to_dict(),
+                      **({'cell_step': spec.cell_step, 'coarse': coarse.VERSION} if spec.cell_step != 1 else {}),
+                      **({'layout': (LAYOUT_VERSION,spec.core,spec.core_empty)} if spec.core is not None else {}),
                       **({'heightmap': image_key} if image_key is not None else {}),
-                      **({'masks': mask_keys} if mask_keys else {})},
+                      **({'masks': mask_keys} if mask_keys else {}),
+                      **({'biome_map': biome_key} if biome_key is not None else {})},
                      sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode()).hexdigest()
 
@@ -70,11 +78,15 @@ class _GenerationInput:
     plans: tuple = ()  # Resources.shared(), so worker processes skip eager planning
     region_passes: object = ()  # precomputed (Region, ndarray) map for @region_pass fields
     mask_sources: object = field(default_factory=dict)
+    biome_source: object = None
 
     @classmethod
     def capture(cls, spec, *, defer_heightmap=False, cancel_event=None):
         roots = pack_roots()
         pack = load_pack(spec.pack, roots=roots)
+        if spec.biome_map is not None:
+            from .biome_map import validate
+            validate(pack, spec.biome_map)
         has_masks = spec.vegetation_mask is not None or spec.clearance_mask is not None
         source = None
         if spec.heightmap is not None:
@@ -84,19 +96,25 @@ class _GenerationInput:
             if defer_heightmap:
                 return cls(spec, roots, pack.fingerprint, '')
             source = capture(spec.heightmap, cancel_event=cancel_event)
-        if defer_heightmap and has_masks:
+        if defer_heightmap and (has_masks or spec.biome_map is not None):
             return cls(spec, roots, pack.fingerprint, '')
         from . import masks
         inputs = masks.sources(spec, cancel_event=cancel_event)
+        from .biome_map import capture as capture_biomes
+        biome_source = capture_biomes(spec.biome_map, cancel_event=cancel_event) if spec.biome_map is not None else None
         request = cls(spec, roots, pack.fingerprint,
-                      world_key(spec, pack, _source=source, _mask_sources=inputs), source, mask_sources=inputs)
-        if source is None and not inputs:
+                      world_key(spec, pack, _source=source, _mask_sources=inputs, _biome_source=biome_source),
+                      source, mask_sources=inputs, biome_source=biome_source)
+        if source is None and not inputs and biome_source is None:
+            from .coarse import bind
+            pack = bind(pack,spec)
             object.__setattr__(request, '_pack', pack)
         return request
 
     def resolved(self, cancel_event=None):
         """Resolve deferred editor input on a worker before any result cache lookup."""
         if ((self.spec.heightmap is None or self.heightmap_source is not None)
+                and (self.spec.biome_map is None or self.biome_source is not None)
                 and all(getattr(self.spec, kind+'_mask') is None or kind in self.mask_sources
                         for kind in ('vegetation','clearance'))):
             return self
@@ -106,8 +124,12 @@ class _GenerationInput:
             source = capture(self.spec.heightmap, cancel_event=cancel_event)
         from . import masks
         inputs = masks.sources(self.spec, cancel_event=cancel_event)
-        return replace(self, key=world_key(self.spec, self.pack, _source=source, _mask_sources=inputs),
-                       heightmap_source=source, mask_sources=inputs)
+        from .biome_map import capture as capture_biomes
+        biome_source = self.biome_source
+        if self.spec.biome_map is not None and biome_source is None:
+            biome_source = capture_biomes(self.spec.biome_map, cancel_event=cancel_event)
+        return replace(self, key=world_key(self.spec, self.pack, _source=source, _mask_sources=inputs, _biome_source=biome_source),
+                       heightmap_source=source, mask_sources=inputs, biome_source=biome_source)
 
     def __getstate__(self):
         return {k: v for k, v in self.__dict__.items() if k != '_pack'}
@@ -127,6 +149,11 @@ class _GenerationInput:
             if self.mask_sources:
                 from .masks import bind as bind_masks
                 pack = bind_masks(pack, self.spec, self.mask_sources)
+            if self.biome_source is not None:
+                from .biome_map import bind as bind_biomes
+                pack = bind_biomes(pack, self.spec.biome_map, self.biome_source)
+            from .coarse import bind
+            pack = bind(pack,self.spec)
             object.__setattr__(self, '_pack', pack)
         return pack
 
@@ -161,9 +188,10 @@ class TileResult:
     scatter_counts: tuple = ()
     soft_mask: object = None  # aligned ordinary output cells
     plant_owners: object = None  # pack feature ID + 1, aligned with plants
-    landscape_surfaces: object = None  # sparse true upward faces, local X/Y/Z + pack block ID
+    landscape_surfaces: object = None  # local X/Y/Z + block ID; coarse faces append X/Z spans
     floor_scatter: object = None  # sparse all-layer single-cell decorations
     surface_blocked: object = None  # volume_features.blocked_tops, absolute XYZ
+    sizes: object = None
 
 
 def displayed_water(pack, params, levels, wet):
@@ -198,11 +226,12 @@ def _filter_plants(plants, owners, height, data, pack, tile, world_region, y_min
 
 
 def generate_tile(spec, tile, world_region, keep_fields=(), *, _input=None, max_instances=MAX_INSTANCES,
-                  cancel_event=None, _store=None):
+                  cancel_event=None, _store=None, _step=None):
     """Pure entity stage over one tile; the 2D reference comes from a field store covering it."""
     check_cancel(cancel_event)
     request = _input or _GenerationInput.capture(spec)
     pack = request.pack
+    if _step is not None: pack = replace(pack,cell_step=_step)
     params = pack.resolve(spec)
     passes = request.region_passes
     if not passes and any(f.region_pass for f in pack.fields.values()):
@@ -214,53 +243,84 @@ def generate_tile(spec, tile, world_region, keep_fields=(), *, _input=None, max_
             passes = evaluate_passes(pack, params, spec.seed, world_region, r)
             passes = evaluate_passes(pack, params, spec.seed, world_region, r, passes, with_resources=True)
     with active_passes(passes, world_region):
-        store = _store if _store is not None else evaluate_store(
-            pack, params, spec.seed, tile.expanded(margin(pack)),
-            Resources(pack, params, spec.seed, region=world_region))
+        if _store is None:
+            from .coarse import aligned
+            domain = aligned(tile.expanded(max(margin(pack),2*spec.cell_step-1)+spec.cell_step-1),spec.cell_step)
+            store = _field_store(request,domain,get_executor('serial',1),keep_fields=keep_fields) if pack.layout is not None else evaluate_store(
+                pack,params,spec.seed,domain,Resources(pack,params,spec.seed,region=world_region),step=spec.cell_step)
+        else:
+            store = _store
         with active_store(store), task_scope(request.key):
             return _tile_entities(request, pack, params, store, tile, world_region, max_instances, cancel_event)
 
 
 def _tile_shell(pack, params, seed, tile, world_region, reference, visible_water, plants, soft, feature_data,
-                max_instances, cancel_event):
+                max_instances, cancel_event, cell_step=1):
     """Extract 3D carved/volume shell or 2D column shell, and apply terrain materials."""
-    core = (slice(1, -1), slice(1, -1))
+    halo = 2*cell_step-1
+    core = (slice(halo, -halo), slice(halo, -halo))
     ctx = reference.ctx
     raw, height, columns, biome_ids = reference.raw, reference.height, reference.columns, reference.biomes
     soil_depth = reference.soil_depth[core] if np.ndim(reference.soil_depth) else reference.soil_depth
     y_min = params['world.y_min']
-    padded = tile.expanded(1)
+    padded = tile.expanded(halo)
     tops = np.ceil(height).astype(np.int32) - 1
     x, z = padded.coordinates()
     outside = ((x < world_region.x0) | (x >= world_region.x0 + world_region.width)
                | (z < world_region.z0) | (z >= world_region.z0 + world_region.depth))
     extras_count = int(visible_water.sum()) + int(np.count_nonzero(plants)) + len(feature_data.xyz)
     diagnostics, geometry_seconds, collector = {}, {}, None
-    if geometry.enabled(pack, params):
+    sizes = None
+    if pack.layout is not None and not geometry.enabled(pack,params):
+        from .layout import shell
+        xyz,types,solid_count,sizes = shell(reference,tile,world_region,params,pack.layout,cell_step,max_instances-len(feature_data.xyz))
+    elif cell_step != 1 and not geometry.enabled(pack,params):
+        from .coarse import shell
+        xyz,types,solid_count,sizes = shell(reference,tile,world_region,params,cell_step,max_instances-len(feature_data.xyz))
+    elif geometry.enabled(pack, params):
         from .projection import Collector
-        collector = Collector(world_region, tile, params, kind='carved' if geometry.height_mode(pack) else 'solid')
+        collector = Collector(world_region, tile, params, kind='carved' if geometry.height_mode(pack) else 'solid',
+                              cell_step=cell_step,layout=pack.layout)
         layout_start = perf_counter()
-        bounds = geometry.plan_bounds(pack, params, seed, padded, ctx.resources)
+        empty = pack.layout is not None and pack.layout.empty and bool(pack.layout.inside(tile.x0,tile.z0))
+        bounds = () if empty else geometry.plan_bounds(pack, params, seed, padded, ctx.resources)
         layout_seconds = perf_counter() - layout_start
         if bounds != () and plants.any():
             support, _ = geometry.sample(pack, params, seed, x[:, None, :], tops[:, None, :],
                                          z[:, None, :], tops, resources=ctx.resources)
-            plants[~support[1:-1, 0, 1:-1]] = 0
+            plants[~support[core[0],0,core[1]]] = 0
             if (soft & (plants != 0)).any():
                 check_cancel(cancel_event)
                 occupied, _ = geometry.sample(pack, params, seed, x[:, None, :], (tops + 1)[:, None, :],
                                               z[:, None, :], tops, resources=ctx.resources)
-                plants[soft & occupied[1:-1, 0, 1:-1]] = 0
+                plants[soft & occupied[core[0],0,core[1]]] = 0
         extras_count = int(visible_water.sum()) + int(np.count_nonzero(plants)) + len(feature_data.xyz)
         if extras_count > max_instances:
             raise ValueError(f'visible cells {extras_count:,} exceed max_instances={max_instances:,} before sparse allocation')
         ref_tops = (np.ceil(raw).astype(np.int64) - 1 if pack.shell_materials is not None
                     and (pack.shell_materials.enabled_param is None or params[pack.shell_materials.enabled_param]) else None)
+        shell_tops,shell_columns,shell_wet,shell_biomes = tops,columns[core],reference.wet,biome_ids[core]
+        if cell_step != 1:
+            ax,az,_,_,_ = geometry._axes(tile,cell_step,pack.layout)
+            ix,iz = ax[0]-padded.x0,az[:,0]-padded.z0
+            sample_grid = np.ix_(iz,ix)
+            sample_core = np.ix_(iz[1:-1],ix[1:-1])
+            shell_tops,shell_columns = tops[sample_grid],columns[sample_core]
+            shell_wet,shell_biomes = reference.wet[sample_grid],biome_ids[sample_core]
+            if ref_tops is not None: ref_tops = ref_tops[sample_grid]
+            if np.ndim(soil_depth): soil_depth = reference.soil_depth[sample_core]
+        background = None
+        if pack.layout is not None and bounds is not None:
+            from .layout import column_tops
+            background = column_tops(reference,tile,world_region,params,pack.layout,cell_step)
         xyz, types, solid_count, geometry_seconds, diagnostics = geometry.shell(
-            pack, params, seed, tile, world_region, tops, columns[core],
-            max_instances=max_instances - extras_count, wet=reference.wet, cancel_event=cancel_event,
-            resources=ctx.resources, bounds=bounds, projection=collector, biomes=biome_ids[core],
-            soil_depth=soil_depth, reference_tops=ref_tops)
+            pack, params, seed, tile, world_region, shell_tops, shell_columns,
+            max_instances=max_instances - extras_count, wet=shell_wet, cancel_event=cancel_event,
+            resources=ctx.resources, bounds=bounds, projection=collector, biomes=shell_biomes,
+            soil_depth=soil_depth, reference_tops=ref_tops,background=background)
+        if cell_step != 1 or pack.layout is not None:
+            from .coarse import sizes as shell_sizes
+            sizes = shell_sizes(xyz,world_region,cell_step,clip=tile)
         geometry_seconds['layout'] = layout_seconds
         geometry_seconds['projection'] = collector.seconds
         diagnostics['cavity_volume'] = collector.cells if geometry.height_mode(pack) else 0
@@ -279,23 +339,33 @@ def _tile_shell(pack, params, seed, tile, world_region, reference, visible_water
         solid_count = int(np.maximum(tops[core].astype(np.int64) - y_min + 1, 0).sum())
     if pack.terrain_materials is not None:
         from .materials import apply_terrain
-        types = apply_terrain(pack, params, seed, xyz, types, ctx, biome_ids,
+        material_xyz = xyz
+        if cell_step != 1:
+            material_xyz = xyz.copy()
+            material_xyz[:,0] = (xyz[:,0]+world_region.x0)//cell_step*cell_step-world_region.x0
+            material_xyz[:,2] = (xyz[:,2]+world_region.z0)//cell_step*cell_step-world_region.z0
+        types = apply_terrain(pack, params, seed, material_xyz, types, ctx, biome_ids,
                               origin=(world_region.x0, world_region.z0))
-    return xyz, types, solid_count, tops[core], collector, geometry_seconds, diagnostics
+    return xyz, types, solid_count, tops[core], collector, geometry_seconds, diagnostics, sizes
 
 
 def _tile_entities(request, pack, params, store, tile, world_region, max_instances, cancel_event):
     spec = request.spec
     y_min, y_max = params['world.y_min'], params['world.y_max']
-    padded = tile.expanded(1)
+    step = pack.cell_step
+    halo = 2*step-1
+    padded = tile.expanded(halo)
     resources = Resources(pack, params, spec.seed, region=world_region)
     resources.cancel_event = cancel_event
     reference = store.reference(padded, pack, params, spec.seed, resources)
     ctx = reference.ctx
     height, columns, biome_ids = reference.height, reference.columns, reference.biomes
     levels, wet = reference.levels, reference.wet
-    core = (slice(1, -1), slice(1, -1))
+    core = (slice(halo, -halo), slice(halo, -halo))
     water = displayed_water(pack, params, levels, wet)[core]
+    if pack.layout is not None:
+        tx,tz = tile.coordinates()
+        water = water & pack.layout.terrain(tx,tz)
     water_y = np.floor(levels)[core]
 
     started = perf_counter()
@@ -325,9 +395,12 @@ def _tile_entities(request, pack, params, store, tile, world_region, max_instanc
         visible_water[zz[on_plane], xx[on_plane]] = False
     replaced_surfaces = int(water.sum() - visible_water.sum())
 
-    xyz, types, solid_count, top, collector, geometry_seconds, diagnostics = _tile_shell(
+    xyz, types, solid_count, top, collector, geometry_seconds, diagnostics, sizes = _tile_shell(
         pack, params, spec.seed, tile, world_region, reference, visible_water, plants, soft,
-        feature_data, max_instances, cancel_event)
+        feature_data, max_instances, cancel_event, step)
+    if pack.layout is not None:
+        diagnostics[f'lod_step_{step}_solid'] = solid_count
+        diagnostics[f'lod_step_{step}_terrain_instances'] = len(xyz)
     surfaces = collector.surfaces(types) if collector and not geometry.height_mode(pack) else None
 
     fluid_start = perf_counter()
@@ -338,6 +411,12 @@ def _tile_entities(request, pack, params, store, tile, world_region, max_instanc
     extras = []
     for mask, ys, ids in ((visible_water, water_y, pack.blocks.index(pack.water['block']) if pack.water else 0),
                           (plants != 0, top + 1, plants.astype(np.int32) - 1)):
+        if step != 1 and np.isscalar(ids):
+            from .coarse import horizontal
+            points,water_sizes = horizontal(mask,ys,tile,world_region,step)
+            extras.append((points,np.full(len(points),ids,np.uint16)))
+            sizes = np.r_[sizes,water_sizes]
+            continue
         zz, xx = np.nonzero(mask)
         points = np.empty((len(xx), 3), np.int32)
         points[:, 0] = xx + tile.x0 - world_region.x0
@@ -345,11 +424,15 @@ def _tile_entities(request, pack, params, store, tile, world_region, max_instanc
         points[:, 1] = ys if np.isscalar(ys) else ys[mask]
         values = np.full(len(xx), ids, np.uint16) if np.isscalar(ids) else ids[mask].astype(np.uint16)
         extras.append((points, values))
+        if sizes is not None:
+            sizes = np.r_[sizes,np.ones((len(points),3),np.int32)]
     if len(fluid_layers.xyz) and water_displayed(pack, params):
         points = fluid_layers.xyz.copy()
         points[:, 0] -= world_region.x0
         points[:, 2] -= world_region.z0
         extras.append((points, np.full(len(points), pack.blocks.index(pack.fluids.block), np.uint16)))
+        if sizes is not None:
+            sizes = np.r_[sizes,np.ones((len(points),3),np.int32)]
 
     floor_scatter, scatter_seconds = None, 0.
     from .floor_scatter import active, scatter as scatter_floors
@@ -402,7 +485,7 @@ def _tile_entities(request, pack, params, store, tile, world_region, max_instanc
         tuple((pack.feature_defs[int(owner) - 1].id, int(count)) for owner, count in
               zip(*np.unique(owners[plants != 0], return_counts=True)))
         + (floor_scatter.counts if floor_scatter is not None else ()), soft_mask, owners,
-        surfaces, floor_scatter, surface_blocked)
+        surfaces, floor_scatter, surface_blocked, sizes)
 
 
 @dataclass(frozen=True)
@@ -468,14 +551,32 @@ class Overview:
 
 def _field_store(request, domain, executor, *, keep_fields=(), cancel_event=None, progress=None, validate=False):
     """Evaluate the 2D reference over domain once, as row strips on the executor."""
-    pieces = strips(domain, executor.workers)
+    if request.spec.core is not None:
+        from .layout import intersection
+        from .store import MixedStore
+        raw = replace(request,spec=request.spec.replace(core=None,core_empty=False))
+        base = _field_store(raw,domain,executor,keep_fields=keep_fields,cancel_event=cancel_event,progress=progress,validate=validate)
+        patch = intersection(domain,request.pack.layout.core) if not request.spec.core_empty and request.spec.cell_step!=1 else None
+        if patch is None: return base
+        fine = replace(raw,spec=raw.spec.replace(cell_step=1))
+        fields = tuple(k for k in base.arrays if k in request.pack.fields)
+        source = _field_store(fine,patch,executor,keep_fields=fields,cancel_event=cancel_event,validate=validate)
+        return MixedStore(base,source)
+    step = request.spec.cell_step
+    if step != 1:
+        from .coarse import aligned
+        domain = aligned(domain,step)
+        grid = Region(domain.x0//step,domain.z0//step,domain.width//step,domain.depth//step)
+        pieces = [Region(r.x0*step,r.z0*step,r.width*step,r.depth*step) for r in strips(grid,executor.workers)]
+    else:
+        pieces = strips(domain, executor.workers)
     parts = []
     def collect(task, result):
         parts.append(result)
         if progress:
             progress(len(parts), len(pieces))
     base = replace(request, region_passes=())
-    pad = 1 + request.pack.reference_halo + max(pass_order(request.pack.fields)[1].values(), default=0)
+    pad = step + request.pack.reference_halo + max(pass_order(request.pack.fields)[1].values(), default=0)
     run_tiles(executor, _strip_task, ((replace(base, region_passes=crop_passes(request.region_passes, s.expanded(pad))),
                                        s, validate, keep_fields) for s in pieces),
               on_result=collect, cancel_event=cancel_event)
@@ -496,6 +597,9 @@ def _reference_maps(request, store, keep_fields):
                     water_mask=displayed_water(pack, params, ref.levels, ref.wet), water_levels=ref.levels.copy(),
                     wet_mask=ref.wet.copy(), fields={n: ref.ctx.get(n).astype(np.float32) for n in keep_fields},
                     clipped=int(np.count_nonzero(ref.height != ref.raw)))
+        if pack.layout is not None and pack.layout.empty:
+            x,z = spec.region.coordinates()
+            maps['water_mask'] &= pack.layout.terrain(x,z)
         if pack.reference_mask_field is not None:
             mask = maps['fields'][pack.reference_mask_field]
             if not np.isfinite(mask).all() or np.any((mask < 0) | (mask > 1)):
@@ -550,6 +654,8 @@ def build_overview(spec, *, execution='serial', workers=4, keep_fields=(), cance
                            height_min=float(m['heights'].min()), height_max=float(m['heights'].max()),
                            array_bytes=sum(a.nbytes for a in arrays)),
                       m['water_mask'], m['water_levels'], m['wet_mask'])
+    if pack.biome_map is not None:
+        result.stats['biome_map'] = pack.biome_map.info()
     if pack.heightmap is not None:
         from .heightmap import metrics
         result.stats['heightmap'] = metrics(request.heightmap_source, pack.heightmap)
@@ -603,11 +709,21 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
         if name not in pack.fields and name != "slope":
             raise ValueError(f"unknown field {name!r}")
     key = request.key
-    plants = np.empty(region.shape, np.uint16)
-    plant_owners = np.empty(region.shape, np.uint16)
+    plants = np.zeros(region.shape, np.uint16) if spec.core_empty else np.empty(region.shape,np.uint16)
+    plant_owners = np.zeros_like(plants) if spec.core_empty else np.empty_like(plants)
     stages = dict(fields=0., surface=0., water=0., vegetation=0., shell=0.)
-    tiles = list(region.tiles(tile_size))
+    if pack.layout is not None:
+        radius = max((max(abs(v) for row in f.bounds for v in (row[0],row[2])) for f in pack.features if f.type=='multi_block'),default=0)
+        jobs = list(pack.layout.tasks(region,tile_size,radius))
+        if not jobs: jobs = [(Region(region.x0,region.z0,min(tile_size,region.width),min(tile_size,region.depth)),spec.cell_step)]
+        tiles = [r for r,step in jobs]
+    elif spec.cell_step != 1:
+        from .coarse import tiles as coarse_tiles
+        tiles = list(coarse_tiles(region,tile_size,spec.cell_step))
+    else:
+        tiles = list(region.tiles(tile_size))
     parts = [None] * len(tiles)
+    size_parts = [None] * len(tiles)
     projection_parts = [None] * len(tiles)
     surface_parts = [None] * len(tiles)
     fluid_parts = [None] * len(tiles)
@@ -635,6 +751,7 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
         for name, value in result.diagnostics.items():
             diagnostics[name] = max(diagnostics.get(name, 0), value) if name.endswith('_bytes') else diagnostics.get(name, 0) + value
         parts[index] = (result.xyz, result.types)
+        size_parts[index] = result.sizes
         soft_parts[index] = result.soft_mask
         projection_parts[index] = result.geometry_views
         surface_parts[index] = result.landscape_surfaces
@@ -665,7 +782,7 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
     task_cancel = cancel_event if execution != 'processes' else None
     phase('reference')
     reference_started = perf_counter()
-    border = margin(pack)
+    border = max(margin(pack),2*spec.cell_step-1) + spec.cell_step-1
     store = _field_store(request, region.expanded(border), executor, keep_fields=keep_fields, cancel_event=cancel_event)
     stages.update(store.stages)
     m = _reference_maps(request, store, keep_fields)
@@ -695,7 +812,7 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
                 if geometry.enabled(pack, params):
                     window = resources.surface_region(window)
                 request_tile = replace(tile_req, region_passes=crop_passes(request.region_passes, window.expanded(pass_pad)))
-            yield request_tile, tile, region, max_instances, i, task_cancel, store.crop(tile.expanded(border))
+            yield request_tile, tile, region, max_instances, i, task_cancel, store.crop(tile.expanded(border)), (jobs[i][1] if pack.layout is not None else None)
     run_tiles(executor, _tile_task, entity_tasks(),
               on_result=on_result, cancel_event=cancel_event)
     check_cancel(cancel_event)
@@ -719,7 +836,7 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
                         floor_parts[i] = filtered
     active_features = [p for p in feature_parts if len(p.xyz)]
     active_floors = [p for p in floor_parts if p is not None and len(p.xyz)]
-    fluid_layers=fluids.combine(fluid_parts,region,params)
+    fluid_layers=fluids.combine(fluid_parts,region,params,layout=pack.layout)
     if len(fluid_layers.xyz) and (active_features or model_index is not None):
         opaque = np.array([pack.block_defs[n].occludes for n in pack.blocks],bool)
         claimed = [p.xyz[opaque[p.types]] for p in active_features]
@@ -734,11 +851,17 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
                 ids = np.flatnonzero(types == fluid_id)
                 keep[ids] = np.fromiter((tuple(p) not in removed for p in points[ids]),bool,len(ids))
                 parts[i] = points[keep],types[keep]
+                if size_parts[i] is not None:
+                    size_parts[i] = size_parts[i][keep]
                 if soft_parts[i] is not None:
                     soft_parts[i] = soft_parts[i][keep]
     feature_start = sum(len(p[0]) for p in parts)
     xyz = np.concatenate([*(p[0] for p in parts), *(p.xyz for p in active_features), *(p.xyz for p in active_floors)])
     block_ids = np.concatenate([*(p[1] for p in parts), *(p.types for p in active_features), *(p.types for p in active_floors)])
+    sizes = None
+    if spec.cell_step != 1 or pack.layout is not None:
+        sizes = np.concatenate([*size_parts,np.ones((len(xyz)-feature_start,3),np.int32)])
+        sizes.setflags(write=False)
     rotations = None
     if any(p.rotations is not None for p in active_features):
         rotations = np.zeros(len(xyz), np.uint8)
@@ -781,7 +904,7 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
     remap = np.zeros(len(pack.blocks), np.uint32)
     remap[used] = np.arange(len(used), dtype=np.uint32)
     arrays = WorldArrays(region, xyz, remap[block_ids], tuple(pack.blocks[i] for i in used),
-                         totals["solid"], block_defs=tuple(pack.block_defs[pack.blocks[i]] for i in used),
+                         totals["solid"], sizes=sizes, block_defs=tuple(pack.block_defs[pack.blocks[i]] for i in used),
                          y_offsets=tuple(uniform_offset if pack.water and pack.blocks[i] == pack.water['block'] else 0.
                                          for i in used), instance_y_offsets=instance_offsets, rotations=rotations)
     soft_mask=None
@@ -797,6 +920,7 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
         array.setflags(write=False)
     feature_cells = WorldArrays(region, arrays.xyz[feature_start:], arrays.types[feature_start:], arrays.names,
                                 0, block_defs=arrays.block_defs,
+                                sizes=None if sizes is None else sizes[feature_start:],
                                 rotations=None if rotations is None else rotations[feature_start:])
     stats = dict(seconds=perf_counter() - started, planning_seconds=planning_seconds, compute_seconds=compute, tiles=len(tiles),
                  reference_seconds=reference_seconds, reference_wait_seconds=planning_seconds+reference_seconds,
@@ -805,6 +929,10 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
                  height_min=float(heights.min()), height_max=float(heights.max()))
     stats.update(water=int(water.sum()), wet=int(wet.sum()), vegetation=int(np.count_nonzero(plants)), stages=stages)
     stats.update(diagnostics)
+    if pack.layout is not None:
+        x,z = region.coordinates()
+        codes = pack.layout.steps(x,z)
+        stats['lod_cells'] = {str(s):int(np.count_nonzero(codes==s)) for s in (0,1,2,4)}
     feature_counts = np.bincount(feature_cells.types.astype(np.intp), minlength=len(arrays.names))
     stats.update(feature_candidates=feature_candidates, feature_instances=len(feature_instances),
                  feature_cells=feature_cells.count, feature_unsupported=tuple(sorted(unsupported)),
@@ -855,6 +983,8 @@ def build_world(spec, *, execution="serial", workers=4, tile_size=DEFAULT_TILE, 
     if world.stats['output_instances']>max_instances: raise ValueError('world model output exceeds max_instances')
     phase(None)
     world.stats.update(phase_seconds=phase_seconds,build_wall_seconds=perf_counter()-started)
+    if pack.biome_map is not None:
+        world.stats['biome_map'] = pack.biome_map.info()
     if pack.heightmap is not None:
         from .heightmap import metrics
         world.stats['heightmap'] = metrics(request.heightmap_source, pack.heightmap)
@@ -890,13 +1020,13 @@ def _strip_task(request, strip, validate=False, keep_fields=()):
     with active_passes(request.region_passes, request.spec.region), task_scope(request.key):
         return evaluate_store(pack, params, request.spec.seed, strip,
                               Resources(pack, params, request.spec.seed, region=request.spec.region, validate=bool(validate)),
-                              keep_fields)
+                              keep_fields,step=request.spec.cell_step)
 
 
-def _tile_task(request, tile, region, max_instances, index, cancel_event=None, store=None):
+def _tile_task(request, tile, region, max_instances, index, cancel_event=None, store=None, step=None):
     install_plans(request.plans)
     return generate_tile(request.spec, tile, region, _input=request, max_instances=max_instances,
-                         cancel_event=cancel_event, _store=store)
+                         cancel_event=cancel_event, _store=store,_step=step)
 
 
 def sample_fields(spec, names, region=None, *, tile_size=DEFAULT_TILE):
@@ -921,7 +1051,11 @@ def sample_fields(spec, names, region=None, *, tile_size=DEFAULT_TILE):
     with active_passes(passes, region):
         output = {name: np.empty(region.shape, np.float32) for name in names}
         for tile in region.tiles(tile_size):
-            ctx = Context.for_region(pack.fields, params, spec.seed, tile, resources=resources)
+            if pack.layout is not None:
+                from .store import mixed_reference
+                ctx = mixed_reference(pack,params,spec.seed,tile,resources,names).ctx
+            else:
+                ctx = Context.for_region(pack.fields, params, spec.seed, tile, resources=resources)
             target = region.slices(tile)
             for name in names:
                 output[name][target] = ctx.get(name)

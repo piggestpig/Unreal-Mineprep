@@ -545,12 +545,18 @@ def throw(*errors, duration=5.0, color=unreal.LinearColor(1, 0, 0, 1)):
     raise RuntimeError(errors)
 
 
+def _i18n(*args, **kwargs):
+    """i18n包装器，避免循环导入"""
+    from mc_localization import i18n
+    return i18n(*args, **kwargs)
+
+
 def panic(title, message=''):
     """弹出提示框，由用户决定是否继续运行"""
     if not message:
         message = title
-        title = '警告'
-    message = str(message) + ' \n\n是否继续运行？'
+        title = _i18n('警告', 'Warning', key='dialog.warning')
+    message = str(message) + ' \n\n' + str(_i18n('是否继续运行？', 'Continue running?', key='dialog.continue'))
     title = str(title)
     status = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO)
     if status == unreal.AppReturnType.NO:
@@ -561,7 +567,7 @@ def dialog(title, message=''):
     """弹出对话框"""
     if not message:
         message = title
-        title = '提示'
+        title = _i18n('提示', 'Information', key='dialog.info')
     message = str(message)
     title = str(title)
     result = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO,
@@ -680,7 +686,8 @@ def open_main_panel():
     """打开 Mineprep 主面板。已经在标签页中时直接返回现有控件。"""
     blueprint = uasset('/Game/Mineprep/Mineprep')
     if not blueprint:
-        warn('未找到插件面板 /Game/Mineprep/Mineprep')
+        warn(_i18n('未找到插件面板 {path}', 'Plugin panel not found: {path}', key='panel.main_missing').format(
+            path='/Game/Mineprep/Mineprep'))
         return None
 
     subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
@@ -802,8 +809,11 @@ def get_tex_size(tex: unreal.Texture2D) -> tuple[int, int]:
 ##############################################################################
 
 
-def askopenfilename(title="Select File", filetypes=None) -> str:
+def askopenfilename(title=None, filetypes=None) -> str:
     """跨平台文件选择对话框，返回选中的文件路径"""
+    if title is None:
+        title = _i18n('选择文件', 'Select File', key='dialog.select_file') if unreal else 'Select File'
+    title = str(title)
     # 1. tkinter (Windows)
     try:
         import tkinter as tk
@@ -857,8 +867,11 @@ def askopenfilename(title="Select File", filetypes=None) -> str:
     return ''
 
 
-def askdirectory(title="Select Directory") -> str:
+def askdirectory(title=None) -> str:
     """跨平台文件夹选择对话框，返回选中的文件夹路径"""
+    if title is None:
+        title = _i18n('选择文件夹', 'Select Directory', key='dialog.select_directory') if unreal else 'Select Directory'
+    title = str(title)
     # 1. tkinter（Windows）
     try:
         import tkinter as tk
@@ -900,8 +913,11 @@ def askdirectory(title="Select Directory") -> str:
     return ''
 
 
-def asksaveasfilename(title="Save File", defaultextension="", initialfile="", filetypes=None):
+def asksaveasfilename(title=None, defaultextension="", initialfile="", filetypes=None):
     """跨平台文件保存对话框，返回要保存的文件路径"""
+    if title is None:
+        title = _i18n('保存文件', 'Save File', key='dialog.save_file') if unreal else 'Save File'
+    title = str(title)
     # 1. tkinter
     try:
         import tkinter as tk

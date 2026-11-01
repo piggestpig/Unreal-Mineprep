@@ -80,8 +80,8 @@ def apply_terrain(pack, params, seed, xyz, types, reference, biomes, *, origin=(
     coords = xyz[chosen].astype(np.int64)
     coords[:, 0] += origin[0]
     coords[:, 2] += origin[1]
-    ix = coords[:, 0] - int(reference.x[0, 0])
-    iz = coords[:, 2] - int(reference.z[0, 0])
+    ix = (coords[:, 0] - int(reference.x[0, 0])) // reference.step
+    iz = (coords[:, 2] - int(reference.z[0, 0])) // reference.step
     if np.any((ix < 0) | (ix >= reference.shape[1]) | (iz < 0) | (iz >= reference.shape[0])):
         raise ValueError('terrain_materials coordinates outside reference columns')
     index = iz * reference.shape[1] + ix

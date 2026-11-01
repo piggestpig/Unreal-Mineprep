@@ -1,6 +1,7 @@
 """视口选中角色与材质面板的同步逻辑。"""
 import unreal
 import mineprep
+from mineprep import i18n
 from . import util
 
 
@@ -122,15 +123,15 @@ def refresh(mod, _selection_set=None, reset_index=True):
         _set_object(mod._body_view, None)
         _set_object(mod._head_view, None)
         if not selected:
-            body_msg = mineprep.bilingual('未选中 Actor', 'No actor selected')
+            body_msg = i18n('未选中 Actor', 'No actor selected')
         elif not skms:
-            body_msg = mineprep.bilingual(
+            body_msg = i18n(
                 '选中的 Actor 中未找到骨骼网格体',
                 'No skeletal mesh component on the selected actor')
         else:
-            body_msg = mineprep.bilingual('未选中 Actor', 'No actor selected')
+            body_msg = i18n('未选中 Actor', 'No actor selected')
         _set_text(mod._body_title, body_msg)
-        _set_text(mod._head_title, mineprep.bilingual('无头部', 'No Head'))
+        _set_text(mod._head_title, i18n('无头部', 'No Head'))
         return
 
     main = util.pick_main(skms, actor)
@@ -138,4 +139,4 @@ def refresh(mod, _selection_set=None, reset_index=True):
     _set_object(mod._body_view, main)
     _set_object(mod._head_view, head)
     _set_text(mod._body_title, actor.get_actor_label())
-    _set_text(mod._head_title, head.get_name() if head else mineprep.bilingual('无头部', 'No Head'))
+    _set_text(mod._head_title, head.get_name() if head else i18n('无头部', 'No Head'))

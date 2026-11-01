@@ -32,7 +32,12 @@ from mc_material import (
     register_biome_tex, clear_biome_tex,
     tex_source_files, export_tex_cache, import_data_tex,
 )
-from mc_localization import (localize, loctext, nsloctext, loctable_col, bilingual, tooltip)
+from mc_localization import (
+    localize, loctext, nsloctext, loctable_col, bilingual, tooltip,
+    Internationalization, i18n, I18N,
+    collect_i18n, check_i18n,
+    copy_engine_culture, editor_has_culture,
+)
 from mc_structure import (
     parse_structure, structure_to_tex, structure_parts, Blocks,
     convert_to_unreal_transforms, convert_to_packed_arrays, add_packed_instances,
@@ -358,8 +363,8 @@ class hotkey(MineprepAddonHandle):
             lines = [str(tooltip('所有快捷键'))]
             for shortcut_name, item in get_shortcuts().items():
                 lines.append(shortcut_name)
-                lines.append(f"  {bilingual('按键', 'Chord')}: {self._chord_label(item.get('chord_text', ''))}")
-                lines.append(f"  {bilingual('提示', 'Tooltip')}: {item.get('tooltip', '')}")
+                lines.append(f"  {i18n.hotkey.chord('按键', 'Chord')}: {self._chord_label(item.get('chord_text', ''))}")
+                lines.append(f"  {i18n.hotkey.tooltip('提示', 'Tooltip')}: {item.get('tooltip', '')}")
                 lines.append('')
             prints('\n'.join(lines), duration=8)
             return
@@ -992,7 +997,8 @@ def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None) 
     actor = mcvars.ActorCache
 
     if not actor:
-        warn(f'{button}: {target} 不存在')
+        warn(i18n.spawn.target_missing('{button}: {target} 不存在', '{button}: {target} does not exist').format(
+            button=str(button), target=str(target)))
         return None
     if loc:
         actor.set_actor_location(loc, False, True)

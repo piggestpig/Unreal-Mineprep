@@ -1,9 +1,10 @@
 """Mineprep 自定义快捷键模组。"""
 import mineprep
+from mineprep import i18n
 
 mod_info = {
-    "Name": mineprep.bilingual("自定义快捷键", "Editor Shortcuts"),
-    "Description": mineprep.bilingual("Mineprep自定义快捷键编辑面板", "Manage and customize Mineprep editor shortcuts"),
+    "Name": i18n("自定义快捷键", "Editor Shortcuts"),
+    "Description": i18n('管理与自定义 Mineprep 编辑器快捷键', "Manage and customize Mineprep editor shortcuts"),
     "Version": "2.0",
     "CreatedBy": "Pig",
     "EnabledByDefault": True,

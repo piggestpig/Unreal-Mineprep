@@ -1,10 +1,10 @@
-from mineprep import bilingual
+from mineprep import i18n
 
 mod_info = {
-    'Name': bilingual('插件更新与迁移工具', 'Plugin Update & Migration'),
-    'Description': bilingual(
-        '迁移Mineprep插件至其他工程文件或安装包仓库',
-        'Migrate Mineprep plugins to other projects or the installer',
+    'Name': i18n('插件更新与迁移工具', 'Plugin Update & Migration'),
+    'Description': i18n(
+        '将 Mineprep 同步至安装包仓库或迁移到其他 UE 工程',
+        'Sync Mineprep to the installer repo or migrate to another UE project',
     ),
     'Version': '2.0',
     'CreatedBy': 'Pig',

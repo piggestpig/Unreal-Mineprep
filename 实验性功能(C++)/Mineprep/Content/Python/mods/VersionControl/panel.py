@@ -1,6 +1,6 @@
 import unreal
 import mineprep
-from mineprep import bilingual
+from mineprep import i18n
 
 from . import ops
 from .props import ExtraProps, FilterProps, Props, SkipProps
@@ -10,7 +10,7 @@ _HINT_YELLOW = unreal.LinearColor(1.0, 0.82, 0.12, 1.0)
 
 class VersionControl(mineprep.Mod):
     _unique_ = True
-    _label_ = bilingual('插件更新与迁移工具', 'Plugin Update & Migration')
+    _label_ = i18n('插件更新与迁移工具', 'Plugin Update & Migration')
 
     def __init__(self, context=None):
         self.props = Props()
@@ -29,21 +29,21 @@ class VersionControl(mineprep.Mod):
         left.prop(self.props, on_property_changed=self.on_props, pass_rootname=True)
         self._hint = left.text('', size=10, color=_HINT_YELLOW, padding=(6, 2))
         self._btn_update = left.button(
-            bilingual('更新安装包', 'Update Installer'),
+            i18n('更新安装包', 'Update Installer'),
             on_clicked=lambda: ops.update_installer(
                 self.props, self.filters, self.extras, self.script,
             ),
             padding=3,
         )
         self._btn_migrate = left.button(
-            bilingual('迁移插件', 'Migrate Plugin'),
+            i18n('迁移插件', 'Migrate Plugin'),
             on_clicked=lambda: ops.migrate_plugin(
                 self.props, self.filters, self.extras, self.script,
             ),
             padding=3,
         )
         left.button(
-            bilingual('打开目标文件夹', 'Open Target Folder'),
+            i18n('打开目标文件夹', 'Open Target Folder'),
             on_clicked=lambda: ops.open_target(self.props),
             padding=3,
         )

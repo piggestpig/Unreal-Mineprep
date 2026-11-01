@@ -4,6 +4,7 @@ import time
 import weakref
 
 import mineprep
+from mineprep import i18n
 import unreal
 
 from . import ops
@@ -14,27 +15,25 @@ from .core.data import Region
 from .core.world import world_key
 from .core.presets import preset_sections
 from .editing import PackDraft, PreviewSchedule, WORKSPACE, fit_water_bounds
-from .editor import ContentEditors, click, tr, name_text
+from .editor import ContentEditors, click, name_text
 from .props import (WorldOutput, WorldRange, WorldCustom, HeightmapTexture, CaveSlice, LandscapeView, overrides, params_group, read_params, write_params,
-                    prop_name, operation_values, normalize_group, visible_properties, restore_operations)
+                    operation_values, normalize_group, visible_properties, restore_operations)
 from .storage import load_ui, save_ui, load_preferences, save_preferences, load_group, save_group, SAVED_DIR
-from .ui_model import group_pages, page_id, SaveSchedule
+from .ui_model import group_pages, page_id, SaveSchedule, detail_options, capabilities
 from .preset_library import PresetLibrary, _digest
 from .heightmap_source import HeightmapSource
 from .heightmap_panel import HeightmapPanel
 from .mask_panel import MaskPanel
+from .biome_map_panel import BiomeMapPanel
 from .preset_panel import PresetPanel
-
-# The shared localization table can already contain an untranslated Blocks key.
-mineprep.localize('方块', **{'zh-Hans': '方块', 'en': 'Blocks'})
-# Replace cached translations as well as source labels during a live reload.
-for zh, en in (('恢复默认', 'Reset'), ('保存用户资源包', 'Save Pack'),
-               ('另存预设', 'Save Preset'), ('预设库', 'Preset Lib'),
-               ('资源包｜', 'Pack | '), ('资源包默认', 'Pack Default')):
-    mineprep.localize(zh, **{'zh-Hans': zh, 'en': en})
+from .preview_panel import PreviewPanel
+from .paint_panel import PaintPanel
+from .ui_choices import choice, refresh_choice
+from .localization import catalog as text_catalog, bind_properties
 
 LIVE_INSTANCES = weakref.WeakSet()
 VIEWS = {'landscape': ('景观', 'Landscape'), 'surface': ('地表方块', 'Surface blocks'),
+         'lod': ('固定分区','Fixed regions'),
          'vegetation': ('植被分布', 'Vegetation'), 'biomes': ('群系', 'Biomes'),
          'height': ('高度', 'Height'), 'temperature': ('温度', 'Temperature'),
          'humidity': ('湿度', 'Humidity'), 'water_system': ('水系', 'Water systems'),
@@ -53,19 +52,21 @@ NAV_LABELS = {'world': ('世界范围', 'World region'), 'terrain': ('地形', '
               'output': ('输出', 'Output')}
 
 
-class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, mineprep.Mod):
+class WorldGenerator(PreviewPanel, PaintPanel, MaskPanel, BiomeMapPanel, HeightmapPanel, PresetPanel, ContentEditors, mineprep.Mod):
     _unique_ = True
-    _label_ = tr('MC世界生成器', 'MC World Generator')
+    _label_ = i18n('MC世界生成器', 'MC World Generator')
 
     def __init__(self, context=None):
         self.range_options, self.output_options = WorldRange(), WorldOutput()
         self.custom_options, self._heightmap_result = WorldCustom(), None
         self._heightmap_texture, self._heightmap_source = HeightmapTexture(), HeightmapSource()
         self._init_masks()
+        self._init_biome_map()
         self.slice_options, self._preview_world = CaveSlice(), None
         self.landscape_options = LandscapeView()
         self._landscape_due = self._landscape_key = None
         self._overview, self._overview_textures = None, {}
+        self._legend_world = None
         self._last_native = {id(g): operation_values(g) for g in (self.range_options, self.output_options, self.custom_options)}
         self.backend, self.merge, self.execution = 'pcg', 'cuboids', 'processes'
         self.view, self.page = 'landscape', 'world'
@@ -81,9 +82,11 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._schedule = PreviewSchedule()
         self._zoom, self._pan, self._drag = 1., [0., 0.], None
         self._image_shape = None
+        self._image_region = self._reference_region = None
         self._ui_state, self._ui_due = load_ui(), None
         self._preferences, self._saving = load_preferences(), SaveSchedule()
         self._custom_image_type = self._preferences['custom_image_type']
+        self._init_paint()
         self._advanced = dict(self._preferences['advanced'])
         self._folds = dict(self._preferences['folds'])
         self._preview_hidden, self._preview_old = self._ui_state['preview_hidden'], False
@@ -93,10 +96,6 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._batches, self._new_source = {}, ''
         self._pending_switch = None
         self._recovery = False
-        from .migration import upgrade_workspace
-        self._upgrade_report = upgrade_workspace(WORKSPACE, roots=pack_roots())
-        for error in self._upgrade_report['errors']:
-            unreal.log_warning(f"WorldGenerator migration preserved {error['path']}: {error['error']}")
         if (WORKSPACE / 'packs').is_dir():
             register_pack_root(WORKSPACE / 'packs')
         pack_id = self._preferences['pack']
@@ -113,6 +112,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._restore_preferences()
         self._restore_heightmap_source()
         self._restore_masks()
+        self._restore_biome_map()
         self._recovery = self.draft.needs_recovery(self._session_state())
         super().__init__(context)
         LIVE_INSTANCES.add(self)
@@ -126,14 +126,17 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
 
     def _page_label(self, page):
         section = next((s for s in self.pack.ui_sections if s.id == page), None)
-        return name_text(section.label if section else PAGES.get(page, (page, page)))
+        return name_text(section.label) if section else i18n(*PAGES[page]) if page in PAGES else page
 
     def _nav_label(self, page):
-        return tr(*NAV_LABELS[page]) if page in NAV_LABELS else self._page_label(page)
+        return i18n(*NAV_LABELS[page]) if page in NAV_LABELS else self._page_label(page)
 
     def _select_pack(self, pack_id, preset=None, draft=None):
+        self._cancel_drag()
         self.draft = draft or PackDraft(pack_id)
         self.pack = self.draft.pack
+        self._legend_world = None
+        text_catalog(self.pack.name).refresh()
         self.page = page_id(self.page,self.pack)
         if self.view in ('temperature', 'humidity') and self.view not in self.pack.fields:
             self.view = 'landscape'
@@ -210,8 +213,11 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
             self._set_parameter_values(values, fitted)
             self._remember()
         spec = self.draft._geometry_spec(self.preset, seed=int(r.Seed),
-            region=region, params=overrides(values, self._baseline(), self.pack))
-        return self._custom_spec(spec)
+            region=region, params=overrides(values, self._baseline(), self.pack),
+            **detail_options(self.pack,int(r.CellStep),
+                ((int(r.CoreA.x),int(r.CoreA.y)),(int(r.CoreB.x),int(r.CoreB.y))) if r.CoreEnabled else None,
+                bool(r.CoreEmpty)))
+        return self._biome_map_spec(self._custom_spec(spec))
 
 
     def apply_curves(self):
@@ -229,7 +235,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
             if changed:
                 self._suspend = False
                 self._changed()
-            self._set_status(tr('曲线已应用；切线与插值已按生成样条重建', 'Curves applied; tangents and interpolation match the generating spline.'))
+            self._set_status(i18n('曲线已应用；切线与插值已按生成样条重建', 'Curves applied; tangents and interpolation match the generating spline.'))
             return True
         except Exception as exc:
             self._errors['curves'] = str(exc)
@@ -240,6 +246,11 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
             self._update_buttons()
 
     # -- layout ------------------------------------------------------------
+    def _pack_options(self):
+        return {item['id']: unreal.Text('{name}{error}').format(
+                    name=name_text(item['name']), error=(' ⚠ ' + item['error'] if item['error'] else ''))
+                for item in catalog() if item['id'] in self._packs()}
+
     def draw(self, context=None):
         self._library_form = self._library_state = None
         self._frame_height = None
@@ -248,33 +259,31 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         head = root.row(padding=(0, 3))
         from . import mod_info
         head.text('v' + mod_info['Version'], size=13)
-        self._pack_combo = head.combo({item['id']: unreal.Text('{name}{error}').format(
-                                      name=name_text(item['name']), error=(' ⚠ ' + item['error'] if item['error'] else ''))
-                                      for item in catalog() if item['id'] in self._packs()},
-                   selected=self.pack.id, on_selection_changed=self._on_pack, fill=1,
-                   tooltip=tr('选择生成资源包：算法、参数、群系与方块规则。',
-                              'Choose a generation pack: algorithms, parameters, biomes and block rules.'))
+        self._pack_choice = choice(head, self._pack_options(), self.pack.id, self._on_pack, fill=1,
+                   tooltip=i18n('选择生成资源包：算法、参数、群系与方块规则。',
+                                'Choose a generation pack: algorithms, parameters, biomes and block rules.'))
+        self._pack_combo = self._pack_choice['widget']
         self._preset_slot = head.col(fill=1)
         self._render_global_preset()
-        head.button(tr('恢复默认', 'Reset'), text_scaling=True, size=11, on_clicked=click(self._reset_params),
-                    tooltip=tr('恢复当前资源包的全部生成参数默认值；保留种子、生成范围、输出设置及规则草稿。',
-                               'Reset all pack generation defaults; keep seed, region, output settings and rule drafts.'))
-        head.button(tr('保存资源包', 'Save Pack'), text_scaling=True, size=11, on_clicked=click(self._save_form),
-                    tooltip=tr('保存群系、地表、方块、植被及当前参数；内置/外部资源包另存为继承资源包。',
+        head.button(i18n('恢复默认', 'Reset'), text_scaling=True, size=11, on_clicked=click(self._reset_params),
+                    tooltip=i18n('恢复生成参数及分辨率默认值，禁用LOD并重置边界点；保留种子、生成范围、输出设置及规则草稿。',
+                               'Reset generation parameters and resolution; disable LOD and reset its boundaries. Keep seed, region, output settings and rule drafts.'))
+        head.button(i18n('保存资源包', 'Save Pack'), text_scaling=True, size=11, on_clicked=click(self._save_form),
+                    tooltip=i18n('保存群系、地表、方块、植被及当前参数；内置/外部资源包另存为继承资源包。',
                                'Save biomes, surfaces, blocks, vegetation and parameters. Built-in/external packs are saved as derived user packs.'))
-        head.button(tr('另存预设', 'Save Preset'), text_scaling=True, size=11, on_clicked=click(lambda: self._save_form(True)),
-                    tooltip=tr('直接保存生成参数到独立预设库；规则草稿保留。',
+        head.button(i18n('另存预设', 'Save Preset'), text_scaling=True, size=11, on_clicked=click(lambda: self._save_form(True)),
+                    tooltip=i18n('直接保存生成参数到独立预设库；规则草稿保留。',
                                'Save generation parameters to the independent library; retain content drafts.'))
-        head.button(tr('预设库', 'Preset Lib'), text_scaling=True, size=11, on_clicked=click(self._library_manager),
-                    tooltip=tr('打开预设库：加载、管理、导入或导出参数预设。',
+        head.button(i18n('预设库', 'Preset Lib'), text_scaling=True, size=11, on_clicked=click(self._library_manager),
+                    tooltip=i18n('打开预设库：加载、管理、导入或导出参数预设。',
                                'Open the preset library to load, manage, import or export parameter presets.'))
         self._dirty_text = head.text('', size=10)
         self._notice = root.col()
         if self._recovery:
             row = self._notice.row()
-            row.text(tr('找到上次会话草稿', 'Previous session draft found'), size=11, fill=1)
-            row.button(tr('恢复', 'Restore'), text_scaling=True, size=11, on_clicked=click(self._restore))
-            row.button(tr('放弃', 'Discard'), text_scaling=True, size=11, on_clicked=click(self._discard_session))
+            row.text(i18n('找到上次会话草稿', 'Previous session draft found'), size=11, fill=1)
+            row.button(i18n('恢复', 'Restore'), text_scaling=True, size=11, on_clicked=click(self._restore))
+            row.button(i18n('放弃', 'Discard'), text_scaling=True, size=11, on_clicked=click(self._discard_session))
         columns = root.row(fill=1, align=(0, 0))
         nav = columns.sizebox(width=128, padding=(0, 2), align=(0, 0)).scrollbox(align=(0, 0), clip=True).col()
         pages = {'world': self._nav_label('world')}
@@ -286,40 +295,45 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                        selected='● ' if page == self.page else '', label=label), text_scaling=True, size=11, padding=(1, 3),
                        tooltip=self._page_label(page), on_clicked=click(lambda p=page: self._page(p)))
         nav.spacer(12)
-        self._preview_toggle = nav.button(tr('展开预览', 'Show preview') if self._preview_hidden else tr('收起预览', 'Hide preview'), text_scaling=True, size=10,
+        self._preview_toggle = nav.button(i18n('展开预览', 'Show preview') if self._preview_hidden else i18n('收起预览', 'Hide preview'), text_scaling=True, size=10,
                    on_clicked=click(self._toggle_preview))
         self._splitter = columns.splitter(ratio=self._ui_state['ratio'], fill=1,
                                          padding=0, on_changed=self._on_split_changed)
         self._preview_column = self._splitter.first
         self._splitter.solo(2 if self._preview_hidden else 0)
         preview = self._preview_column.col(fill=1, padding=6, align=(0, 0))
-        self._view_combo = preview.combo({k: tr(*v) for k, v in VIEWS.items()
+        self._view_combo = preview.combo({k: i18n(*v) for k, v in VIEWS.items()
             if (k not in ('caves', 'cave_sections') or self.pack.density is not None)
             and (k!='underground_water' or self.pack.fluids is not None)}, selected=self.view,
                       on_selection_changed=self._on_view)
         self._slice_controls = preview.col()
         self._slice_controls.prop(self.slice_options, searching=False,
                                   on_property_changed=self._on_slice_changed)
-        self._slice_controls.button(tr('更新剖面', 'Update sections'), text_scaling=True, size=11,
+        self._slice_controls.button(i18n('更新剖面', 'Update sections'), text_scaling=True, size=11,
                                     on_clicked=click(self.update_sections))
-        self._slice_controls.text(tr('仅更新图像；不重新生成或准备资源',
+        self._slice_controls.text(i18n('仅更新图像；不重新生成或准备资源',
                                      'Updates images only; keeps generated world and prepared resources.'), size=9, wrap=True)
         self._old_text = preview.text('', size=10)
         self._preview_border = preview.border(color=unreal.LinearColor(.025, .025, .025, 1), clip=True,
             fill=1, align=(0, 0), on_mouse_button_down=self._pan_start, on_mouse_button_up=self._pan_stop,
             on_mouse_move=self._pan_move)
         overlay = self._preview_border.overlay()
-        self._image = overlay.image(size=unreal.Vector2D(1, 1), align=(2, 2))
+        self._image = overlay.image(size=unreal.Vector2D(1, 1), padding=0, align=(2, 2))
         self._image.set_render_transform_pivot(unreal.Vector2D(.5, .5))
         self._image.hide(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE)
-        self._placeholder = overlay.text(tr('尚无预览\n点击“生成预览”查看当前草稿', 'No preview yet\nClick Generate preview to view this draft'), size=13, align=(2, 2))
+        self._init_core_overlay(overlay)
+        self._init_paint_overlay(overlay)
+        self._placeholder = overlay.text(i18n('尚无预览\n点击“生成预览”查看当前草稿', 'No preview yet\nClick Generate preview to view this draft'), size=13, align=(2, 2))
         self._legend_text = preview.text('', size=10, wrap=True)
         self._stats_text = preview.text('', size=10, wrap=True)
         controls = preview.row()
         controls.button('-', text_scaling=True, size=12, on_clicked=click(lambda: self._zoom_by(1 / 1.25)))
         controls.button('+', text_scaling=True, size=12, on_clicked=click(lambda: self._zoom_by(1.25)))
-        controls.button(tr('适应范围', 'Fit view'), text_scaling=True, size=11, on_clicked=click(self._fit))
-        controls.text(tr('拖动平移', 'Drag to pan; wheel to zoom'), size=10, align=(1,2))
+        controls.button(i18n('适应范围', 'Fit view'), text_scaling=True, size=11, on_clicked=click(self._fit))
+        self._clear_core_button = controls.button(i18n('清除选框','Clear core'),text_scaling=True,size=11,
+                                                 on_clicked=click(self._clear_core))
+        self._core_hint = preview.text('',size=10,wrap=True)
+        self._paint_hint = preview.text('',size=10,wrap=True)
         self._landscape_controls = controls.col(fill=1, align=(3,2))
         self._landscape_controls.prop(self.landscape_options, 'MaxY',
                                       on_property_changed=self._on_landscape_changed)
@@ -329,24 +343,31 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._editor = self._editor_scroll.col()
         self._render_editor()
         actions = root.row(padding=(0, 5))
-        auto = actions.checkbox(tr('自动概览', 'Auto overview'), size=11, on_check_state_changed=self._auto)
+        auto = actions.checkbox(i18n('自动概览', 'Auto overview'), size=11, on_check_state_changed=self._auto)
         auto.set_is_checked(self._schedule.enabled)
-        actions.button(tr('生成预览', 'Generate preview'), text_scaling=True, size=12, on_clicked=click(self.preview), fill=1)
-        actions.button(tr('准备资源', 'Prepare resources'), text_scaling=True, size=12, on_clicked=click(self.prepare), fill=1)
-        self._place_button = actions.button(tr('放置到场景', 'Place in level'), text_scaling=True, size=12, on_clicked=click(self.place), fill=1)
-        actions.button(tr('取消', 'Cancel'), text_scaling=True, size=11, on_clicked=click(self.cancel_job))
-        self._status_text = root.text(tr('就绪', 'Ready'), size=10, wrap=True)
+        actions.button(i18n('生成预览', 'Generate preview'), text_scaling=True, size=12, on_clicked=click(self.preview), fill=1)
+        actions.button(i18n('准备资源', 'Prepare resources'), text_scaling=True, size=12, on_clicked=click(self.prepare), fill=1)
+        self._place_button = actions.button(i18n('放置到场景', 'Place in level'), text_scaling=True, size=12, on_clicked=click(self.place), fill=1)
+        actions.button(i18n('取消', 'Cancel'), text_scaling=True, size=11, on_clicked=click(self.cancel_job))
+        self._status_text = root.text(i18n('就绪', 'Ready'), size=10, wrap=True)
         self._on_view(self.view)
         self._update_buttons()
 
     def _render_editor(self):
+        self._biome_map_rows = []
+        self._biome_map_stats_label = None
+        self._pack_text_labels = []
+        self._biome_buttons = {}
         self._content_regions = {}
         self._rule_widgets = {}
         self._section_folds = {}
         self._bct_controls = None
         self._section_choice = None
         self._heightmap_info = self._heightmap_mode_combo = None
+        self._cell_step_combo = self._cell_step_label = None
         self._heightmap_auto_check = self._heightmap_output = None
+        self._paint_new_hint = None
+        self._paint_biome_choice = None
         self._mask_file_labels.clear()
         self._editor.clear_children()
         self._editor_header.clear_children()
@@ -355,17 +376,30 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._suspend = True
         try:
             parent = self._editor
-            self._editor_header.text(self._page_label(self.page), size=13)
+            self._page_title = self._editor_header.text(self._page_label(self.page), size=13)
             self._section_slot = self._editor_header.col()
             self._render_section_preset()
             if self.page == 'world':
-                self._properties(parent, 'range', self.range_options, self._on_range)
-                parent.text(tr('水平 X/Y，高度 Z；1 格 = 100 厘米', 'Horizontal X/Y, height Z; 1 block = 100 cm'), size=9)
+                detail = self._supports_lod()
+                steps = capabilities(self.pack)['horizontal_steps']
+                exclude = ('CellStep','CoreInitialized') + (() if detail else ('CoreEnabled','CoreEmpty','CoreA','CoreB'))
+                self._properties(parent, 'range', self.range_options, self._on_range,exclude=exclude)
+                row = parent.row()
+                self._cell_step_label = row.text(i18n('分辨率','Resolution'),size=10,align=(1,2))
+                self._cell_step_combo = row.combo({'1': i18n('1 格（完整）','1 block (full)'),
+                                                  '2': i18n('2 格','2 blocks'),'4': i18n('4 格','4 blocks')},
+                    selected=str(self.range_options.CellStep if self.range_options.CellStep in steps else 1),
+                    fill=1,on_selection_changed=self._on_cell_step,
+                    tooltip=i18n('仅降低水平精度。启用LOD后，框内为1格或留空，框外使用此分辨率；支持洞穴、地下水、湖海连接、下界与末地。向留空区泄漏的地下水候选会被拒绝。',
+                               'Horizontal detail only. With LOD enabled, the selection is full detail or empty; this resolution applies outside. Caves, groundwater, surface connections, Nether and End support fixed regions. Underground water candidates leaking into the empty selection are rejected.') if detail else
+                            i18n('仅降低水平精度，垂直保持1格。此资源包暂不支持框选LOD，已保存的边界点保留。',
+                               'Horizontal resolution only; vertical cells stay one block. Fixed-region LOD is not yet supported; saved boundaries are retained.'))
+                self._cell_step_combo.set_is_enabled(len(steps)>1)
             section = next((s for s in self.pack.ui_sections if s.id == self.page), None)
             if section:
                 self._section_editor(parent, section)
             if any(d.type == 'curve' and page_id(d.page, self.pack) == self.page for d in self.pack.params.values()):
-                parent.text(tr('曲线修改后自动应用，切线随生成样条重建。', 'Curve edits apply automatically; tangents follow the generating spline.'), size=10, wrap=True)
+                parent.text(i18n('曲线修改后自动应用，切线随生成样条重建。', 'Curve edits apply automatically; tangents follow the generating spline.'), size=10, wrap=True)
             if section and section.editor == 'biomes':
                 self._biome_editor(parent)
             elif section and section.editor == 'surface':
@@ -376,11 +410,11 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                 self._custom_editor(parent)
             elif self.page == 'output':
                 row = parent.row()
-                row.combo({n: tr(*BACKEND_LABELS[n]) for n in ops.BACKENDS}, selected=self.backend, fill=1,
+                row.combo({n: i18n(*BACKEND_LABELS[n]) for n in ops.BACKENDS}, selected=self.backend, fill=1,
                           on_selection_changed=self._on_backend)
-                self._merge_combo = row.combo({'none': tr('不合并', 'No merge'), 'runs': tr('条带', 'Runs'), 'rectangles': tr('矩形', 'Rectangles'), 'cuboids': tr('长方体', 'Cuboids')}, selected=self.merge, fill=1,
+                self._merge_combo = row.combo({'none': i18n('不合并', 'No merge'), 'runs': i18n('条带', 'Runs'), 'rectangles': i18n('矩形', 'Rectangles'), 'cuboids': i18n('长方体', 'Cuboids')}, selected=self.merge, fill=1,
                           on_selection_changed=self._on_merge)
-                parent.combo({k: tr(*v) for k, v in EXECUTIONS.items()}, selected=self.execution,
+                parent.combo({k: i18n(*v) for k, v in EXECUTIONS.items()}, selected=self.execution,
                              on_selection_changed=self._on_execution)
                 self._properties(parent, 'output', self.output_options, self._on_output_changed,
                                  exclude=('BCTEnabled', 'BCTCellSize', 'BCTColorMode', 'BCTPower'))
@@ -417,7 +451,8 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                     state='▼' if opened else '▶', label=name_text(group.label)),
                     text_scaling=True, size=11, on_clicked=click(lambda g=group: self._toggle_section(g)))
             else:
-                parent.text(name_text(group.label), size=12)
+                label_widget = parent.text(name_text(group.label), size=12)
+                self._pack_text_labels.append((label_widget, group.label))
             body = parent.col()
             for page in group.pages:
                 self._properties(body, page, self.groups[page], self._on_changed, exclude=section.controls)
@@ -429,7 +464,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                 if feature.get('type') == 'surface_scatter':
                     self._block_reference(parent, feature, name, 'decor')
         if section.editor == 'water' and self.draft.data['water']:
-            self._block_reference(parent, self.draft.data['water'], name_text(('水面方块', 'Water block')), 'surface')
+            self._block_reference(parent, self.draft.data['water'], i18n('水面方块', 'Water block'), 'surface')
 
     def _toggle_section(self, group):
         self._folds[group.id] = not self._folds.get(group.id, group.default_open)
@@ -449,6 +484,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         properties = [unreal.Name(n) for n in sorted(allowed)]
         if key not in self._views:
             self._views[key] = parent.prop(group, categories=[], properties=properties, searching=False,
+                                          pass_rootname=page == 'range',
                                           on_property_changed=lambda name:
                                           self._native_changed(page, group, callback, name))
         else:
@@ -475,17 +511,17 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._bct_controls.hide(split)
         text = ''
         if split:
-            text = tr('ISM分区时不启用群系颜色纹理', 'Biome colour texture is disabled for split ISM output')
+            text = i18n('ISM分区时不启用群系颜色纹理', 'Biome colour texture is disabled for split ISM output')
         elif self._bct_enabled():
             size, cell = self.range_options.Size, int(self.output_options.BCTCellSize)
-            text = tr('群系纹理：{width} × {height} 像素', 'Biome texture: {width} × {height} pixels').format(
+            text = i18n('群系纹理：{width} × {height} 像素', 'Biome texture: {width} × {height} pixels').format(
                 width=(int(size.x)+cell-1)//cell, height=(int(size.y)+cell-1)//cell)
         self._output_info.set_text(text)
         self._output_info.hide(not text)
 
     def _advanced_footer(self, parent):
         if self.page != 'output' and any(d.advanced and page_id(d.page, self.pack) == self.page for d in self.pack.params.values()):
-            control = parent.checkbox(tr('显示高级参数', 'Show advanced parameters'), size=11,
+            control = parent.checkbox(i18n('显示高级参数', 'Show advanced parameters'), size=11,
                                       on_check_state_changed=self._show_advanced)
             control.set_is_checked(self._advanced.get(f'{self.pack.id}/{self.page}', False))
 
@@ -542,6 +578,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         page = page_id(page, self.pack)
         if page == self.page:
             return
+        self._cancel_drag()
         self._scrolls[self.page] = self._editor_scroll.get_scroll_offset()
         self.page = page_id(page, self.pack)
         for key, button in self._nav_buttons.items():
@@ -549,14 +586,16 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
             button.get_content().get_content().set_text(unreal.Text('{selected}{label}').format(
                 selected='● ' if key == page else '', label=label))
         self._render_editor()
+        self._on_view(self.view)
         self._remember(draft=False)
 
     def _toggle_preview(self):
+        self._cancel_drag()
         self._preview_hidden = not self._preview_hidden
         self._splitter.solo(2 if self._preview_hidden else 0)
         self._ui_state['preview_hidden'] = self._preview_hidden
         self._ui_due = time.monotonic() + .3
-        self._preview_toggle.get_content().get_content().set_text(tr('展开预览', 'Show preview') if self._preview_hidden else tr('收起预览', 'Hide preview'))
+        self._preview_toggle.get_content().get_content().set_text(i18n('展开预览', 'Show preview') if self._preview_hidden else i18n('收起预览', 'Hide preview'))
 
     def _on_split_changed(self, ratio):
         self._ui_state['ratio'] = ratio
@@ -592,11 +631,11 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
     def _update_buttons(self):
         if not self._closed and hasattr(self, '_place_button'):
             self._place_button.set_is_enabled(not self._busy() and not self._errors)
-            self._dirty_text.set_text(tr('未保存 ●', 'Unsaved ●') if self._dirty() else tr('已保存', 'Saved'))
-            self._old_text.set_text(tr('参考概览 · 不含树木、冰体、覆雪和洞穴', 'Reference overview · excludes trees, ice bodies, covers and caves') if self._displaying_overview() else
-                tr('旧概览 · 配置已变化', 'Old overview · configuration changed') if self.view not in self._textures and self.view in self._overview_textures else
-                tr('参考地表 · 完整生成中', 'Reference surface · Full generation in progress') if self.view == 'landscape' and self._reference_texture is not None and self._busy() else
-                tr('旧预览 · 配置已变化', 'Old preview · configuration changed') if self._preview_old and self._textures else '')
+            self._dirty_text.set_text(i18n('未保存 ●', 'Unsaved ●') if self._dirty() else i18n('已保存', 'Saved'))
+            self._old_text.set_text(i18n('参考概览 · 不含树木、冰体、覆雪和洞穴', 'Reference overview · excludes trees, ice bodies, covers and caves') if self._displaying_overview() else
+                i18n('旧概览 · 配置已变化', 'Old overview · configuration changed') if self.view not in self._textures and self.view in self._overview_textures else
+                i18n('参考地表 · 完整生成中', 'Reference surface · Full generation in progress') if self.view == 'landscape' and self._reference_texture is not None and self._busy() else
+                i18n('旧预览 · 配置已变化', 'Old preview · configuration changed') if self._preview_old and self._textures else '')
 
     # -- state and auto preview -------------------------------------------
     def _vegetation_tints(self):
@@ -623,7 +662,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._prepared = None
         if self._busy() and self._job_kind == 'prepare':
             self._job.cancel()
-        self._set_status(tr('材质覆盖已更新；请重新准备资源','Material overrides updated; prepare resources again'))
+        self._set_status(i18n('材质覆盖已更新；请重新准备资源','Material overrides updated; prepare resources again'))
         self._update_buttons()
 
     def _chunk_count(self):
@@ -659,7 +698,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
             return
         self._remember()
         self._action = None
-        self._set_status(tr('颜色已更新；下次准备仅更新群系纹理', 'Colours updated; preparation will update the biome texture'))
+        self._set_status(i18n('颜色已更新；下次准备仅更新群系纹理', 'Colours updated; preparation will update the biome texture'))
         self._update_buttons()
 
     def _changed(self):
@@ -679,7 +718,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._prepared = None
         if self._busy() and self._job_kind in ('prepare', 'preview', 'view', 'sections', 'landscape', 'overview', 'heightmap', 'mask'):
             self._job.cancel()
-        self._set_status(tr('曲线待自动应用', 'Curve edits will apply shortly') if self._curves_pending else tr('配置已变化', 'Configuration changed'))
+        self._set_status(i18n('曲线待自动应用', 'Curve edits will apply shortly') if self._curves_pending else i18n('配置已变化', 'Configuration changed'))
         self._update_buttons()
 
     def _on_changed(self, name=None):
@@ -695,9 +734,26 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._changed()
 
     def _on_range(self, name=None):
-        if str(name) != 'Seed':
+        r = self.range_options
+        if str(name) in ('Origin','Size','CoreA','CoreB','CoreEnabled','CoreEmpty'):
+            self._cancel_drag()
+        if str(name) in ('CoreA','CoreB'): r.CoreInitialized = True
+        if str(name)=='CoreEnabled' and r.CoreEnabled and not r.CoreInitialized:
+            r.CoreInitialized = True
+        if str(name) in ('Origin','Size'):
             self._fit()
+        else:
+            self._transform()
         self._changed()
+
+    def _supports_lod(self):
+        return capabilities(self.pack)['fixed_regions']
+
+    def _on_cell_step(self, value, *_):
+        if self._suspend:
+            return
+        self.range_options.CellStep = int(str(value))
+        self._on_range('CellStep')
 
     def _on_output_changed(self, name=None):
         if self._suspend:
@@ -712,7 +768,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._remember()
         self._update_buttons()
         if str(name) in ('Budgets',):
-            self._set_status(tr('数量上限已变化；每次生成和放置都会重新检查', 'Limits changed; generation and placement check them each time.'))
+            self._set_status(i18n('数量上限已变化；每次生成和放置都会重新检查', 'Limits changed; generation and placement check them each time.'))
 
     def _on_bct_mode(self, mode, _reason=None):
         if self._suspend or mode == self.output_options.BCTColorMode:
@@ -724,8 +780,8 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
 
     def _bct_mode_editor(self, parent):
         row = parent.row()
-        row.text(tr('群系颜色模式', 'Biome colour mode'), size=11)
-        row.combo({'rgb': tr('RGB倍率', 'RGB multipliers'), 'hsv': tr('HSV调整', 'HSV adjustments')},
+        row.text(i18n('群系颜色模式', 'Biome colour mode'), size=11)
+        row.combo({'rgb': i18n('RGB倍率', 'RGB multipliers'), 'hsv': i18n('HSV调整', 'HSV adjustments')},
                   selected=self.output_options.BCTColorMode, fill=1,
                   on_selection_changed=self._on_bct_mode)
 
@@ -733,15 +789,52 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._schedule.enabled = checked
         self._schedule.due = time.monotonic() + .3 if checked and not self._curves_pending else None
 
+    def _refresh_pack_text(self):
+        texts = text_catalog(self.pack.name)
+        language = unreal.InternationalizationLibrary.get_current_language()
+        changed = texts.refresh()
+        if not changed and language == getattr(self, '_text_language', None):
+            return
+        self._text_language = language
+        for cls in {type(g) for g in self.groups.values()}:
+            bind_properties(cls, self.pack)
+        refresh_choice(self._pack_choice, self._pack_options(), self.pack.id)
+        self._preset_options_identity = None
+        self._refresh_preset_labels()
+        self._page_title.set_text(self._page_label(self.page))
+        for page, button in self._nav_buttons.items():
+            button.get_content().get_content().set_text(unreal.Text('{selected}{label}').format(
+                selected='● ' if page == self.page else '', label=self._nav_label(page)))
+            button.set_tool_tip_text(self._page_label(page))
+        for widget, key in self._pack_text_labels:
+            widget.set_text(name_text(key))
+        for section in self.pack.ui_sections:
+            for group in section.groups:
+                if group.id in self._section_folds:
+                    button, _ = self._section_folds[group.id]
+                    button.get_content().get_content().set_text(unreal.Text('{state} {label}').format(
+                        state='▼' if self._folds.get(group.id, group.default_open) else '▶', label=name_text(group.label)))
+        self._refresh_biome_names()
+        self._refresh_biome_map_names()
+        if self._legend_world is not None:
+            self._show_world(self._legend_world)
+
     def _tick(self, delta):
         if self._closed:
             return
+        if self._drag is not None and not self._preview_border.target.has_mouse_capture():
+            self._cancel_drag()
+        selecting = self._drag is not None and self._drag['mode'] != 'pan'
         if self._schedule.curves_due is not None and time.monotonic() >= self._schedule.curves_due:
             self._schedule.curves_due = None
             if self._curves_pending:
                 self.apply_curves()
         if time.monotonic() >= self._preset_poll_at:
             self._preset_poll_at = time.monotonic() + 1.
+            try:
+                self._refresh_pack_text()
+            except (OSError, ValueError, KeyError) as exc:
+                self._set_status(str(exc))
             stamp = self._library.stamp()
             if stamp != self._library_stamp:
                 self._library_stamp = stamp
@@ -764,11 +857,11 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         cells = int(self.range_options.Size.x) * int(self.range_options.Size.y)
         if self._schedule.due is not None and cells > 512 ** 2:
             self._schedule.cancel()
-            self._set_status(tr('范围超过 512²；本次请手动生成预览', 'Region exceeds 512²; generate this preview manually.'))
-        if self._schedule.ready(time.monotonic(), busy=self._busy(), cells=cells):
+            self._set_status(i18n('范围超过 512²；本次请手动生成预览', 'Region exceeds 512²; generate this preview manually.'))
+        if not selecting and self._schedule.ready(time.monotonic(), busy=self._busy(), cells=cells):
             self._schedule.cancel()
             self.overview()
-        if not self._busy() and self._action is None:
+        if not selecting and not self._busy() and self._action is None:
             self._ensure_view()
 
     # -- pack switch and storage ------------------------------------------
@@ -815,6 +908,8 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                          range=operation_values(self.range_options), output=operation_values(self.output_options),
                          custom=operation_values(self.custom_options),
                          masks=self._mask_state(),
+                         biome_map=operation_values(self.biome_map_options),
+                         paint=self._paint_settings,
                          backend=self.backend, merge=self.merge, execution=self.execution,
                          advanced=self._advanced, folds=self._folds,
                          selection=dict(params=self._values(),global_mark=self._global_mark,section_marks=self._section_marks))
@@ -838,10 +933,10 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._library_state = None
         self._notice.clear_children()
         row = self._notice.row()
-        row.text(tr('当前草稿未保存', 'This draft has unsaved changes'), size=11, fill=1)
-        row.button(tr('保存', 'Save'), text_scaling=True, size=11, on_clicked=click(self._save_form))
-        row.button(tr('放弃', 'Discard'), text_scaling=True, size=11, on_clicked=click(self._accept_switch))
-        row.button(tr('取消', 'Cancel'), text_scaling=True, size=11, on_clicked=click(self._cancel_switch))
+        row.text(i18n('当前草稿未保存', 'This draft has unsaved changes'), size=11, fill=1)
+        row.button(i18n('保存', 'Save'), text_scaling=True, size=11, on_clicked=click(self._save_form))
+        row.button(i18n('放弃', 'Discard'), text_scaling=True, size=11, on_clicked=click(self._accept_switch))
+        row.button(i18n('取消', 'Cancel'), text_scaling=True, size=11, on_clicked=click(self._cancel_switch))
 
     def _accept_switch(self):
         action, self._pending_switch = self._pending_switch, None
@@ -888,6 +983,8 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
             output=operation_values(self.output_options),
             custom=operation_values(self.custom_options),
             masks=self._mask_state(),
+            biome_map=operation_values(self.biome_map_options),
+            paint=self._paint_settings,
             backend=self.backend, merge=self.merge, execution=self.execution)
 
     def _checkpoint(self):
@@ -924,11 +1021,15 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
             self._recovery = False
             self._restore_heightmap_source()
             self._restore_masks(state.get('masks', {}))
+            self._restore_biome_map(state.get('biome_map', {}))
             self._custom_image_type = state.get('custom_image_type', self._custom_image_type)
+            from .painting import brush_values
+            self._paint_settings = brush_values(state.get('paint',self._paint_settings))
+            self._load_paint_tools()
             self._changed()
             self.redraw()
-            self._set_status(tr('已恢复上次会话草稿{warning}', 'Previous session draft restored{warning}').format(
-                warning=tr('；上次有未完成输入，请重新检查', '; unfinished input was found; please review.') if state.get('input_errors') else ''))
+            self._set_status(i18n('已恢复上次会话草稿{warning}', 'Previous session draft restored{warning}').format(
+                warning=i18n('；上次有未完成输入，请重新检查', '; unfinished input was found; please review.') if state.get('input_errors') else ''))
         except Exception as exc:
             self._set_status(str(exc))
 
@@ -939,69 +1040,6 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._remember()
 
     # -- preview navigation -----------------------------------------------
-    def _fit(self):
-        self._zoom, self._pan = 1., [0., 0.]
-        self._transform()
-
-    def _zoom_by(self, factor, anchor=None):
-        old = self._zoom
-        zoom = min(8., max(.25, old * factor))
-        if zoom == old:
-            return
-        if anchor is not None:
-            ratio = zoom / old
-            self._pan = [q - ratio * (q - p) for q, p in zip(anchor, self._pan)]
-        self._zoom = zoom
-        self._transform()
-
-    def on_mouse_wheel(self, delta):
-        self.layout.set_consume_mouse_wheel(unreal.ConsumeMouseWheel.WHEN_SCROLLING_POSSIBLE)
-        if not delta or self._preview_hidden or not self._textures.get(self.view):
-            return
-        size = self._preview_border.get_local_size()
-        if min(size.x, size.y) <= 0:
-            return
-        point = self._preview_border.get_mouse_local()
-        if not (0 <= point.x < size.x and 0 <= point.y < size.y):
-            return
-        self.layout.set_consume_mouse_wheel(unreal.ConsumeMouseWheel.NEVER)
-        self._zoom_by(1.25 ** delta, (point.x - size.x / 2, point.y - size.y / 2))
-
-    def _transform(self):
-        if not hasattr(self, '_image'):
-            return
-        size = self._preview_border.get_local_size()
-        if min(size.x, size.y) < 1:
-            return
-        width, depth = self._image_shape or (int(self.range_options.Size.x), int(self.range_options.Size.y))
-        state = (id(self._image), size.x, size.y, width, depth, self._zoom, *self._pan)
-        if state == getattr(self, '_image_transform', None):
-            return
-        self._image_transform = state
-        scale = min(size.x / width, size.y / depth)
-        self._image.set_desired_size_override(unreal.Vector2D(width * scale, depth * scale))
-        self._image.set_render_scale(unreal.Vector2D(self._zoom, self._zoom))
-        self._image.set_render_translation(unreal.Vector2D(*self._pan))
-
-    def _pan_start(self, border):
-        point = border.get_mouse_local()
-        self._drag = (point.x, point.y)
-        return unreal.WidgetLibrary.capture_mouse(unreal.WidgetLibrary.handled(), border.target)
-
-    def _pan_stop(self, border):
-        self._drag = None
-        return unreal.WidgetLibrary.release_mouse_capture(unreal.WidgetLibrary.handled())
-
-    def _pan_move(self, border):
-        if self._drag is None:
-            return False
-        point = border.get_mouse_local()
-        self._pan[0] += point.x - self._drag[0]
-        self._pan[1] += point.y - self._drag[1]
-        self._drag = (point.x, point.y)
-        self._transform()
-        return True
-
     def _on_view(self, name, _reason=None):
         if getattr(self, '_sync_view', False):
             return
@@ -1015,6 +1053,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                     self._sync_view = False
             changed = name != self.view
             if changed:
+                self._cancel_drag()
                 self._view_revision += 1
                 self._view_failures.discard((self._preview_key,name))
             self.view = name
@@ -1024,17 +1063,22 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                 self._landscape_controls.hide(name != 'landscape' or density is None or density.base != 'volume')
             self._remember(draft=False)
             texture = self._textures.get(name)
+            source_region = self._preview_world.region if texture is not None and self._preview_world is not None else None
             if self._displaying_overview():
                 texture = self._overview_textures[name]
+                source_region = self._overview.region
             elif texture is None:
                 texture = self._overview_textures.get(name)
+                source_region = self._overview.region if texture is not None and self._overview is not None else None
             if name == 'landscape' and self._busy() and self._reference_texture is not None:
                 texture = self._reference_texture
+                source_region = self._reference_region
                 if self._first_shown_seconds is None:
                     self._first_shown_seconds = time.perf_counter()-self._image_request_started
             if texture is not None:
                 texture.set_editor_property('filter', unreal.TextureFilter.TF_NEAREST)
                 self._image_shape = (int(texture.blueprint_get_size_x()), int(texture.blueprint_get_size_y()))
+            self._image_region = source_region
             self._image.set_brush_resource_object(texture)
             self._image.hide(unreal.SlateVisibility.SELF_HIT_TEST_INVISIBLE if texture else
                              unreal.SlateVisibility.COLLAPSED)
@@ -1130,13 +1174,14 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
     def _reference_done(self, stage, result, revision):
         if self._closed or not self._schedule.current(revision) or not self._current(result.world):
             return
-        self._set_status(tr('载入参考预览', 'Loading reference preview'))
+        self._set_status(i18n('载入参考预览', 'Loading reference preview'))
         started = time.perf_counter()
         world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
         texture = unreal.RenderingLibrary.import_file_as_texture2d(world, result.images['landscape'])
         if texture is None:
             raise RuntimeError('reference preview import failed')
         self._reference_texture = texture
+        self._reference_region = result.world.region
         self._reference_import_seconds = time.perf_counter()-started
         self._show_world(result.world)
         self._on_view(self.view)
@@ -1174,7 +1219,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
 
     def _launch(self, kind, start):
         if self._closed or self._busy():
-            self._set_status(tr('请等待或取消当前任务', 'Wait for or cancel the current task.'))
+            self._set_status(i18n('请等待或取消当前任务', 'Wait for or cancel the current task.'))
             return
         try:
             self._schedule.cancel()
@@ -1235,7 +1280,11 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         if (self._closed or self._busy() or self._action is not None or self._errors
                 or self._curves_pending):
             return
-        spec = self.spec()
+        try:
+            spec = self.spec()
+        except ValueError as exc:
+            self._set_status(str(exc))
+            return
         if self.view in ('vegetation_mask','clearance_mask'):
             self._preview_mask(self.view.removesuffix('_mask'))
             return
@@ -1246,7 +1295,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         if self.view not in overview_views(load_pack(spec.pack)):
             if failed not in self._view_failures:
                 self._view_failures.add(failed)
-                self._set_status(tr('此视图需要手动生成完整预览', 'Generate a full preview manually for this view.'))
+                self._set_status(i18n('此视图需要手动生成完整预览', 'Generate a full preview manually for this view.'))
             return
         if self._preview_valid() and self.view in self._textures and self._current(self._preview_world):
             self._on_view(self.view)
@@ -1275,7 +1324,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         if not self._sync_heightmap_source():
             return
         if self._closed or self._busy():
-            self._set_status(tr('请等待或取消当前任务', 'Wait for or cancel the current task.'))
+            self._set_status(i18n('请等待或取消当前任务', 'Wait for or cancel the current task.'))
             return
         self._landscape_for_action()
         if self.apply_curves():
@@ -1316,7 +1365,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         if self._closed or self._busy():
             return
         if self._preview_world is None or not self._preview_valid() or not self._current(self._preview_world):
-            self._set_status(tr('请先生成当前世界的预览', 'Generate a preview of the current world first.'))
+            self._set_status(i18n('请先生成当前世界的预览', 'Generate a preview of the current world first.'))
             return
         self._view_revision += 1
         view_revision = self._view_revision
@@ -1329,7 +1378,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         if not self._sync_heightmap_source():
             return
         if not self._place_valid():
-            self._set_status(tr('准备结果已过期、超出数量上限或尚未准备；请重新准备资源', 'Resources are missing, outdated or over the limit; prepare again.'))
+            self._set_status(i18n('准备结果已过期、超出数量上限或尚未准备；请重新准备资源', 'Resources are missing, outdated or over the limit; prepare again.'))
             return
         o = self.output_options
         self._launch('place', lambda rev: ops.place_world(self._prepared,
@@ -1348,7 +1397,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
     def _current(self, world):
         try:
             spec = self.spec()
-            if spec.vegetation_mask is not None or spec.clearance_mask is not None:
+            if spec.vegetation_mask is not None or spec.clearance_mask is not None or spec.biome_map is not None:
                 if world.spec != spec:
                     return False
                 from .core.masks import check_sources
@@ -1367,24 +1416,26 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
             return False
 
     def _show_world(self, world):
+        self._legend_world = world
         labels = unreal.Text('')
         fractions = world.biome_fractions()
         for index, biome in enumerate(world.pack.biomes):
             labels = unreal.Text('{previous}{separator}{name} {fraction}').format(
-                previous=labels, separator=' / ' if index else '', name=name_text(biome.name),
+                previous=labels, separator=' / ' if index else '', name=self._biome_name(biome.id),
                 fraction=f'{fractions[biome.id]:.0%}')
         s = world.stats
-        self._legend_text.set_text(tr('{labels}\n高度 {low}–{high}', '{labels}\nHeight {low}–{high}').format(
+        self._biome_map_stats(world)
+        self._legend_text.set_text(i18n('{labels}\n高度 {low}–{high}', '{labels}\nHeight {low}–{high}').format(
             labels=labels, low=f"{s['height_min']:.1f}", high=f"{s['height_max']:.1f}"))
 
     def _import_images(self, images):
-        self._set_status(tr('载入预览图片', 'Loading preview images'))
+        self._set_status(i18n('载入预览图片', 'Loading preview images'))
         started = time.perf_counter()
         world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
         textures = {name:unreal.RenderingLibrary.import_file_as_texture2d(world,path)
                     for name,path in images.items()}
         if any(t is None for t in textures.values()):
-            raise RuntimeError(tr('预览图片载入失败', 'Failed to load preview images.'))
+            raise RuntimeError(i18n('预览图片载入失败', 'Failed to load preview images.'))
         return textures, time.perf_counter()-started
 
     def _done(self, kind, job, revision, view_revision=None):
@@ -1400,7 +1451,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                 if kind in ('view','sections','landscape'):
                     self._view_failures.add((self._preview_key,self.view))
                 self._on_view(self.view)
-                self._set_status(job.error or tr('已取消', 'Cancelled'))
+                self._set_status(job.error or i18n('已取消', 'Cancelled'))
                 return
             result = job.result
             if kind == 'overview':
@@ -1417,10 +1468,10 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                 draw = f'{result.seconds:.3f}'
                 import_time = f'{import_seconds:.3f}'
                 total = f'{time.perf_counter()-self._image_request_started:.3f}'
-                self._stats_text.set_text(tr('参考计算 {generation} 秒 · 总等待 {total} 秒（悬停查看详细统计）',
+                self._stats_text.set_text(i18n('参考计算 {generation} 秒 · 总等待 {total} 秒（悬停查看详细统计）',
                                             'Reference {generation} s · wait {total} s (hover for details)').format(
                     generation=generation, total=total))
-                self._stats_text.set_tool_tip_text(tr('详细统计\n参考计算：{generation} 秒；绘图：{draw} 秒；导入：{import_time} 秒\n本次等待：{total} 秒',
+                self._stats_text.set_tool_tip_text(i18n('详细统计\n参考计算：{generation} 秒；绘图：{draw} 秒；导入：{import_time} 秒\n本次等待：{total} 秒',
                                                       'Detailed stats\nReference: {generation} s; image: {draw} s; import: {import_time} s\nRequest wait: {total} s').format(
                     generation=generation, draw=draw, import_time=import_time, total=total))
                 self._on_view(self.view)
@@ -1465,10 +1516,10 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                     reference_import = f"{getattr(self,'_reference_import_seconds',0.):.3f}"
                     first = f'{self._first_shown_seconds:.3f}' if self._first_shown_seconds is not None else '—'
                     total = f'{time.perf_counter()-self._image_request_started:.3f}'
-                    self._stats_text.set_text(tr('合并前实例 {visible} · 模型 {models}（{templates} 种） · 生成 {generation} 秒 · 总等待 {total} 秒（悬停查看详细统计）',
+                    self._stats_text.set_text(i18n('合并前实例 {visible} · 模型 {models}（{templates} 种） · 生成 {generation} 秒 · 总等待 {total} 秒（悬停查看详细统计）',
                                                 'Pre-merge instances {visible} · models {models} ({templates} types) · build {generation} s · wait {total} s (hover for details)').format(
                         visible=visible, models=models, templates=templates, generation=generation, total=total))
-                    self._stats_text.set_tool_tip_text(tr('详细统计\n合并前实例：{visible}；模型：{models}；种类：{templates}\n生成流程：{generation} 秒；单图：{preview} 秒；导入：{import_time} 秒\n表面处理：{surface} 秒；参考绘图：{reference_draw} 秒；参考导入：{reference_import} 秒\n首图：{first} 秒；本次等待：{total} 秒',
+                    self._stats_text.set_tool_tip_text(i18n('详细统计\n合并前实例：{visible}；模型：{models}；种类：{templates}\n生成流程：{generation} 秒；单图：{preview} 秒；导入：{import_time} 秒\n表面处理：{surface} 秒；参考绘图：{reference_draw} 秒；参考导入：{reference_import} 秒\n首图：{first} 秒；本次等待：{total} 秒',
                                                           'Detailed stats\nPre-merge instances: {visible}; models: {models}; types: {templates}\nGeneration flow: {generation} s; image: {preview} s; import: {import_time} s\nSurface processing: {surface} s; reference image: {reference_draw} s; reference import: {reference_import} s\nFirst image: {first} s; request wait: {total} s').format(
                         visible=visible, models=models, templates=templates, generation=generation, preview=preview,
                         import_time=import_time, surface=surface, reference_draw=reference_draw,
@@ -1481,7 +1532,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                         or (result.biome_enabled and result.biome_cell_size != int(self.output_options.BCTCellSize))):
                     return
                 if not self._colour_current(result):
-                    self._set_status(tr('准备基底已缓存；颜色已变化，请重新准备', 'Geometry cached; colours changed, prepare again'))
+                    self._set_status(i18n('准备基底已缓存；颜色已变化，请重新准备', 'Geometry cached; colours changed, prepare again'))
                     return
                 self._sync_landscape_options(result.world)
                 self._prepared = result
@@ -1491,17 +1542,17 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                 self._preview_world, self._preview_key, self._preview_old = result.world, result.world.key, False
                 self._accept_display(result.world)
                 self._show_world(result.world)
-                cache_state = (tr('复用完整缓存', 'full cache') if result.reused else
-                               tr('复用几何基底', 'reused geometry') if result.base_reused else
-                               tr('新建资源', 'fresh build'))
+                cache_state = (i18n('复用完整缓存', 'full cache') if result.reused else
+                               i18n('复用几何基底', 'reused geometry') if result.base_reused else
+                               i18n('新建资源', 'fresh build'))
                 visible = f'{result.visible_count:,}'
                 instances = f'{result.instance_count:,}'
                 seconds = f'{result.seconds:.3f}'
                 merge_s = f'{result.merge_seconds:.3f}'
-                self._stats_text.set_text(tr('合并前实例 {visible} → 合并后实例 {instances} · 准备 {seconds} 秒（{cache}，悬停查看详细统计）',
+                self._stats_text.set_text(i18n('合并前实例 {visible} → 合并后实例 {instances} · 准备 {seconds} 秒（{cache}，悬停查看详细统计）',
                                             'Pre-merge instances {visible} → merged instances {instances} · prepared in {seconds} s ({cache}, hover for details)').format(
                     visible=visible, instances=instances, seconds=seconds, cache=cache_state))
-                details = tr('详细统计\n合并前实例：{visible}；合并后实例：{instances}\n准备：{seconds} 秒（合并 {merge} 秒）；状态：{cache}',
+                details = i18n('详细统计\n合并前实例：{visible}；合并后实例：{instances}\n准备：{seconds} 秒（合并 {merge} 秒）；状态：{cache}',
                              'Detailed stats\nPre-merge instances: {visible}; merged instances: {instances}\nPreparation: {seconds} s (merge {merge} s); state: {cache}').format(
                     visible=visible, instances=instances, seconds=seconds, merge=merge_s, cache=cache_state)
                 if result.biome_enabled:
@@ -1512,11 +1563,11 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
                         build=f'{result.biome_seconds:.3f}', import_time=f'{result.biome_import_seconds:.3f}')
                 self._stats_text.set_tool_tip_text(details)
             else:
-                self._stats_text.set_text(tr('新增 Actor {actors}；放置 {seconds} 秒',
+                self._stats_text.set_text(i18n('新增 Actor {actors}；放置 {seconds} 秒',
                                             'New actors {actors}; placement {seconds} s').format(
                     actors=len(result['actors']), seconds=f"{result['seconds']:.3f}"))
                 self._stats_text.set_tool_tip_text('')
-            self._set_status(tr('完成', 'Completed'))
+            self._set_status(i18n('完成', 'Completed'))
             succeeded = True
         except Exception as exc:
             self._set_status(str(exc))
@@ -1541,6 +1592,8 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
     def destruct(self):
         if self._closed:
             return
+        self._cancel_drag()
+        self._release_paint_rt()
         self._save_ui()
         self._save_preferences()
         try:
@@ -1563,6 +1616,7 @@ class WorldGenerator(MaskPanel, HeightmapPanel, PresetPanel, ContentEditors, min
         self._prepared, self._textures, self._preview_world = None, {}, None
         self._overview, self._overview_textures = None, {}
         LIVE_INSTANCES.discard(self)
+        self._legend_world, self._pack_text_labels = None, []
         self._views, self._content_regions = {}, {}
         self._rule_widgets = {}
         self._bct_controls = None

@@ -29,8 +29,8 @@ When a mod has operations useful from scripts as well as UI, share the core impl
 import mineprep
 
 mod_info = {
-    'Name': mineprep.bilingual('名称', 'Name'),
-    'Description': mineprep.bilingual('说明', 'Desc'),
+    'Name': 'My Tool',
+    'Description': 'Open this mod file.',
     'Version': '1.0',
     'CreatedBy': '',
     'EnabledByDefault': False,
@@ -40,7 +40,7 @@ mod_info = {
 }
 
 class MyMod(mineprep.Mod):
-    _label_ = mineprep.localize('标题', '标题', 'Title', '標題')
+    _label_ = 'My Tool'
     # _unique_ = True  # one Editor tab; requested ID = class name
 
     def draw(self, context=None):
@@ -133,10 +133,9 @@ VAT Tools' asset synchronization rules belong in [pitfalls/vat.md](pitfalls/vat.
 
 ## Localization
 
-- `bilingual(zh, en)` / `localize(...)` → **`unreal.Text`**, not `str`; convert before concatenation / `join`, not before every `set_text` or f-string
-- `bilingual(zh, en)` → `mod_info` / short labels
-- `localize(...)` → panel titles, buttons, footnotes
-- `Cls.localize('Field', ...)` → Details display names (attribute name as key)
+Ordinary strings are sufficient for a personal mod. When multilingual support
+is needed, see [localization.md](localization.md) for text, properties, manifest
+translations and offline inspection. Preserve existing translations when editing a mod.
 
 ## Reload workflow
 

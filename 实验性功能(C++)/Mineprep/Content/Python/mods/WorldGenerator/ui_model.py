@@ -1,7 +1,20 @@
 """Display metadata, page migration and debounced saves; no Unreal dependency."""
 import json
 import math
+from dataclasses import dataclass
 from .core.ui_metadata import section_id, group_pages
+from .core.coarse import capabilities
+
+MAP_VIEWS = frozenset(('landscape','surface','vegetation','biomes','height',
+                       'temperature','humidity','water_system','lod'))
+
+
+def detail_options(pack, cell_step, core=None, core_empty=False):
+    """Effective request options; inactive saved core coordinates stay untouched."""
+    caps = capabilities(pack)
+    core = core if caps['fixed_regions'] else None
+    return dict(cell_step=cell_step if cell_step in caps['horizontal_steps'] else 1,
+                core=core,core_empty=bool(core is not None and core_empty))
 
 
 def preview_color_linear(value):
@@ -34,6 +47,57 @@ def rule_summary(rule):
     elif top:
         material, extra = top[0][0], len(top) - 1
     return material, extra, len(rule.get('when', {})), json.dumps(rule, ensure_ascii=False, indent=2)
+
+
+@dataclass(frozen=True)
+class PreviewMap:
+    """One image-to-world transform, including letterbox, zoom and pan."""
+    region: object
+    image_size: tuple
+    viewport: tuple
+    zoom: float
+    pan: tuple
+
+    @property
+    def size(self):
+        scale = min(v / n for v,n in zip(self.viewport,self.image_size))
+        return tuple(n * scale for n in self.image_size)
+
+    def world(self, point, *, clip=False):
+        """Continuous MC X/Z, also used by world-size brushes."""
+        uv = tuple((p-v/2-t)/(n*self.zoom)+.5
+                   for p,v,t,n in zip(point,self.viewport,self.pan,self.size))
+        if not clip and not all(0 <= q < 1 for q in uv):
+            return None
+        r = self.region
+        if clip: uv = tuple(min(1.,max(0.,q)) for q in uv)
+        return tuple(o+q*n for o,n,q in zip((r.x0,r.z0),(r.width,r.depth),uv))
+
+    def cell(self, point, *, clip=False):
+        world = self.world(point,clip=clip)
+        if world is None:
+            return None
+        r = self.region
+        return tuple(min(o+n-1,max(o,math.floor(p)))
+                     for o,n,p in zip((r.x0,r.z0),(r.width,r.depth),world))
+
+    def local(self, point):
+        r = self.region
+        return tuple(v/2+t+((p-o)/n-.5)*s*self.zoom for p,o,n,s,v,t in zip(
+            point,(r.x0,r.z0),(r.width,r.depth),self.size,self.viewport,self.pan))
+
+    def box(self, corners):
+        """Visible intersection: unscaled size and translation from viewport centre."""
+        r = self.region
+        a,b = corners
+        lo = max(r.x0,min(a[0],b[0])),max(r.z0,min(a[1],b[1]))
+        hi = min(r.x0+r.width,max(a[0],b[0])+1),min(r.z0+r.depth,max(a[1],b[1])+1)
+        if any(end <= start for start,end in zip(lo,hi)):
+            return None
+        size = tuple((end-start)*s/n for start,end,s,n in zip(lo,hi,self.size,(r.width,r.depth)))
+        offset = tuple(t+((start+end)/2-o-n/2)*s/n*self.zoom
+                       for start,end,o,n,s,t in zip(lo,hi,(r.x0,r.z0),(r.width,r.depth),self.size,self.pan))
+        return size,offset
 
 
 class SaveSchedule:

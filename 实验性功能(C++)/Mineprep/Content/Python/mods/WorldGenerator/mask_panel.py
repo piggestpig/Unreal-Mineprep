@@ -1,22 +1,24 @@
 """Two compact input editors sharing heightmap texture ownership and jobs."""
 from pathlib import Path
 import mineprep
+from mineprep import i18n
 import unreal
 from . import api, ops
-from .editor import click, tr
+from .editor import click
 from .props import MaskOptions, HeightmapTexture, operation_values, normalize_group, restore_operations
 from .heightmap_source import HeightmapSource
 from .storage import mask_values
 
 LABELS = {'vegetation': ('植被分布', 'Vegetation distribution'), 'clearance': ('留空区域', 'Clear areas')}
-CUSTOM_IMAGES = {'heightmap': ('高度图', 'Heightmap'), **LABELS}
+CUSTOM_IMAGES = {'heightmap': ('高度图', 'Heightmap'), **LABELS,
+                 'biome_map': ('群系分布图', 'Biome distribution map')}
 
 
 class MaskPanel:
     def _init_masks(self):
         self.mask_options = {k: MaskOptions() for k in LABELS}
         self._mask_textures = {k: HeightmapTexture() for k in LABELS}
-        self._mask_sources = {k: HeightmapSource('/'.join(LABELS[k])) for k in LABELS}
+        self._mask_sources = {k: HeightmapSource(str(i18n(*LABELS[k]))) for k in LABELS}
         self._mask_file_labels = {}
 
     def _listen_masks(self):
@@ -45,9 +47,9 @@ class MaskPanel:
     def _custom_editor(self, parent):
         row = parent.row()
         for kind, label in CUSTOM_IMAGES.items():
-            button = row.button(tr(*label), size=11, fill=1, text_scaling=True,
+            button = row.button(i18n(*label), size=11, fill=1, text_scaling=True,
                 on_clicked=click(lambda k=kind: self._select_custom_image(k)),
-                tooltip=tr('切换编辑项，不改变启用状态。', 'Switch editors without changing enabled inputs.'))
+                tooltip=i18n('切换编辑项，不改变启用状态。', 'Switch editors without changing enabled inputs.'))
             if kind == self._custom_image_type:
                 style = button.get_editor_property('widget_style')
                 style.normal.tint_color.specified_color = unreal.LinearColor(.08, .20, .30, 1)
@@ -55,15 +57,23 @@ class MaskPanel:
                 button.set_style(style)
         if self._custom_image_type == 'heightmap':
             self._heightmap_editor(parent)
+        elif self._custom_image_type == 'biome_map':
+            self._paint_editor(parent)
+            self._biome_map_editor(parent)
+            return
         else:
             self._mask_editor(parent, self._custom_image_type)
+        self._paint_editor(parent)
 
     def _select_custom_image(self, kind):
         if kind == self._custom_image_type:
             return
+        self._cancel_drag()
         self._custom_image_type = kind
+        self._load_paint_tools()
         self._scrolls['custom'] = 0.
         self._render_editor()
+        self._transform()
         self._remember(draft=False)
 
     def _toggle_custom_mapping(self):
@@ -76,24 +86,24 @@ class MaskPanel:
         c = self.mask_options[kind]
         parent.prop(c, 'Enabled', on_property_changed=lambda name: self._mask_changed(kind))
         row = parent.row()
-        row.button(tr('选择遮罩', 'Choose mask'), size=11, on_clicked=click(lambda: self._mask_pick(kind)))
-        row.button(tr('清除', 'Clear'), size=11, on_clicked=click(lambda: self._mask_clear(kind)))
+        row.button(i18n('选择遮罩', 'Choose mask'), size=11, on_clicked=click(lambda: self._mask_pick(kind)))
+        row.button(i18n('清除', 'Clear'), size=11, on_clicked=click(lambda: self._mask_clear(kind)))
         parent.prop(self._mask_textures[kind], 'Texture', on_property_changed=lambda name: self._mask_texture_changed(kind),
-            tooltip=tr('PNG按位深归一化，EXR使用0～1原值；彩色输入取R通道。',
+            tooltip=i18n('PNG按位深归一化，EXR使用0～1原值；彩色输入取R通道。',
                        'PNG normalizes by bit depth; EXR uses values from 0 to 1. Colour inputs use red.'))
         self._mask_file_labels[kind] = parent.text(str(c.Path), size=10, wrap=True)
         self._mask_file_labels[kind].hide(not bool(c.Path))
         for name in ('Origin', 'Size'):
             parent.prop(c, name, on_property_changed=lambda name: self._mask_changed(kind),
-                tooltip=tr('图片覆盖范围固定，改变世界范围不会拉伸图片。',
+                tooltip=i18n('图片覆盖范围固定，改变世界范围不会拉伸图片。',
                            'Image mapping stays fixed when the world region changes.'))
         row = parent.row()
-        row.button(tr('使用当前世界范围', 'Use current world region'), size=11,
+        row.button(i18n('使用当前世界范围', 'Use current world region'), size=11,
                    on_clicked=click(lambda: self._mask_rebind(kind)))
-        row.button(tr('查看图像', 'Preview image'), size=11, on_clicked=click(lambda: self._preview_mask(kind)))
-        parent.text(tr('白色保持原有密度，黑色不生成，灰色减少植物。',
+        row.button(i18n('查看图像', 'Preview image'), size=11, on_clicked=click(lambda: self._preview_mask(kind)))
+        parent.text(i18n('白色保持原有密度，黑色不生成，灰色减少植物。',
                        'White keeps existing density; black removes plants; grey reduces density.') if kind=='vegetation'
-                    else tr('白色区域不生成植物和零散景物，树冠也会避让。',
+                    else i18n('白色区域不生成植物和零散景物，树冠也会避让。',
                             'White areas exclude plants and small scenery, including overhanging crowns.'), size=10, wrap=True)
 
     def _mask_state(self):
@@ -122,9 +132,10 @@ class MaskPanel:
         self._mask_changed(kind)
 
     def _mask_pick(self, kind):
-        path = mineprep.askopenfilename(title=str(tr(*LABELS[kind])), filetypes=[('Mask', '*.png *.exr')])
+        path = mineprep.askopenfilename(title=str(i18n(*LABELS[kind])), filetypes=[('Mask', '*.png *.exr')])
         if not path:
             return
+        self._discard_paint(kind)
         self._mask_sources[kind].clear()
         self._set_mask_texture(kind, None)
         c = self.mask_options[kind]
@@ -133,6 +144,7 @@ class MaskPanel:
         self._preview_mask(kind)
 
     def _mask_clear(self, kind):
+        self._discard_paint(kind)
         self._mask_sources[kind].clear()
         self._set_mask_texture(kind, None)
         c = self.mask_options[kind]
@@ -150,6 +162,7 @@ class MaskPanel:
         if texture is None:
             self._mask_clear(kind)
             return
+        self._discard_paint(kind)
         source.clear()
         source.texture = texture
         c.Path, c.SourceKind, c.AssetPath, c.Enabled = '', 'asset', texture.get_path_name(), True
@@ -167,8 +180,6 @@ class MaskPanel:
             self._errors[kind+'_mask'] = str(exc)
             self._set_status(str(exc))
             return
-        self._textures.pop(kind+'_mask', None)
-        self._overview_textures.pop(kind+'_mask', None)
         label = self._mask_file_labels.get(kind)
         if label is not None:
             label.set_text(str(self.mask_options[kind].Path))
@@ -212,7 +223,7 @@ class MaskPanel:
                 return
             if job.state != 'completed':
                 self._view_failures.add((kind+'_mask', self.spec().key))
-                self._set_status(job.error or tr('已取消','Cancelled'))
+                self._set_status(job.error or i18n('已取消','Cancelled'))
                 return
             result = job.result
             if getattr(self.spec(),kind+'_mask') != result.data.config:
@@ -224,11 +235,11 @@ class MaskPanel:
             textures, _ = self._import_images(result.images)
             result.data.source.checked()
             self._textures.update(textures)
-            self._legend_text.set_text(tr(*LABELS[kind]))
-            self._stats_text.set_text(tr('遮罩预览 {seconds:.3f} 秒','Mask preview {seconds:.3f} s').format(seconds=result.seconds))
+            self._legend_text.set_text(i18n(*LABELS[kind]))
+            self._stats_text.set_text(i18n('遮罩预览 {seconds} 秒','Mask preview {seconds} s').format(seconds=f'{result.seconds:.3f}'))
             self._on_view(kind+'_mask')
             self._schedule.cancel()
-            self._set_status(tr('遮罩就绪','Mask ready'))
+            self._set_status(i18n('遮罩就绪','Mask ready'))
         except Exception as exc:
             self._set_status(str(exc))
         finally:

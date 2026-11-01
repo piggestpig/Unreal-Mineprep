@@ -7,8 +7,9 @@ import tempfile
 
 import unreal
 import mineprep
+from mineprep import i18n
 
-HEADER = ['Namespace', 'Key', 'Source String', 'zh-Hans', 'en', 'zh-Hant']
+HEADER = ['Namespace', 'Key', 'Source String', 'zh', 'en', 'zh-Hant', 'zh-Hant-HK']
 NS = 'UObjectDisplayNames'
 OLD_NAME = '变量显示名_VariableDisplayNames.csv'
 NEW_NAME = '新变量显示名_VariableDisplayNames.csv'
@@ -26,10 +27,6 @@ _KIND_NAMES = frozenset({
 _SKIP_CLASSES = frozenset({
     'ControlRigBlueprint',
 })
-
-
-def tr(zh, en):
-    return mineprep.bilingual(zh, en)
 
 
 def csv_dir() -> str:
@@ -60,25 +57,27 @@ PROMPT_TEMPLATE = """请翻译虚幻引擎插件（Minecraft风格）的变量�
 - **本地化表**：`{old_csv}`
 - **临时工作表**：`{new_csv}`
 - **待翻译表**：`{todo_csv}`（从临时工作表中提取的任一语言列为空的行，仅供速览定位）
-- **列顺序（固定）**：`Namespace, Key, Source String, zh-Hans, en, zh-Hant`
+- **列顺序（固定）**：`Namespace, Key, Source String, zh, en, zh-Hant, zh-Hant-HK`
 
 ### 2. 基本原则
 - **严禁修改前三列**：`Namespace`、`Key`、`Source String` 必须保持原样（包括空格、大小写、特殊符号及结构体 GUID 后缀，源自引擎 `FName::NameToDisplayString`）。
 - **严禁改动文件结构**：不得增减列、修改列名、新建文件或改动已有列顺序；保持 `UTF-8 with BOM (utf-8-sig)` 编码，若译文内含英文逗号 `,` 须用双引号包裹单元格。
-- **补全空白列**：直接在**临时工作表**中补全 `zh-Hans`、`en`、`zh-Hant` 空白单元格（新增待翻译行通常位于文件末尾）；已有译文若有明显错译也可修正。
+- **补全空白列**：直接在**临时工作表**中补全 `zh`、`en`、`zh-Hant`、`zh-Hant-HK` 空白单元格（新增待翻译行通常位于文件末尾）；四种语言均须完整填写，港译不能留空依赖回退。
+- **避免 Excel 自动转换**：优先用 VS Code 等文本编辑器，不要双击 CSV 后直接用 Excel 保存。若必须使用 Excel，先通过文本导入将所有列设为文本；保存前与原表核对前三列。CSV 引号不能指定单元格类型，不得给真实数据添加单引号或公式包装（如 ="文本"），否则会改变 UE 的 key 或原文。
 
 ### 3. 翻译规范
 - **上下文对齐**：先参考工作表中已有译文对齐风格后再翻译，全表同类概念与同名属性保持统一。
 - **英文 (`en`)**：使用简短 Title Case，符合 UE 引擎习惯（如 Camera, Post Process, Skeleton, Material, Niagara, Sequencer）；专有名词/缩写保留原样（如 DLSS, FSR, Actor, Debug, CSV, RT）。
+- **台译与港译**：`zh-Hant` 使用台湾习惯，`zh-Hant-HK` 使用香港习惯；相同译法也要分别填写。Minecraft 名称按对应地区译名核对。
 - **特殊前后缀与格式保留**：
   - `/` 连接的并列项逐段翻译并保留 `/`（如 `待机/走路/跑步` → `Idle/Walk/Run`）。
   - 括号内的单位和类型提示原样保留或按对应语言翻译，如 `(m)`, `(m/s)`, `(Actor)`, `(类)` → `(Class)`。
-  - 开头的装饰或分类符号（如 `◆`、`↻`、`💡`、`*`、`→`）在各语言译文中原样保留；蓝图 Setter 前缀（如 `Set右手物品`）中文保留 `Set` 前缀，英文译为 `Set Right Hand Item`。
+  - 开头的装饰或分类符号（如 `◆`、`↻`、`💡`、`*`、`→`）在各语言译文中原样保留；蓝图 Setter 显示名可译为 `设置右手物品` / `Set Right Hand Item`，前三列中的程序标识仍保留。
   - 若 `Source String` 含结构体内部后缀（如 `Ragdoll_Speed_2_63FE...`）或布尔前缀 `B `，译文列中应去掉后缀或前缀（如译为 `布娃娃速度` / `Ragdoll Speed`），但第 3 列 `Source String` 严禁改动。
 
 ### 4. 执行流程
 - 请直接编辑**临时工作表**填充翻译内容（不要写机械的词典替换脚本进行批量硬翻）。
-- 翻译并校验所有行均无空单元格后，把原始**本地化表**和**待翻译表**移至回收站，再将**临时工作表**重命名为 `变量显示名_VariableDisplayNames.csv`。
+- 翻译并校验所有行均无空单元格、前三列未变且没有新增 `#NAME?` 等错误后，先备份原始**本地化表**，再把原始表和**待翻译表**移至回收站，将**临时工作表**重命名为 `变量显示名_VariableDisplayNames.csv`。含义不明的既有损坏记录不要猜译或删除，应交给用户确认。
 
 Token 足够，条目多时可以开多个子 agent 并行处理。"""
 
@@ -98,9 +97,9 @@ def _has_cjk(text: str) -> bool:
 
 def _pad_row(row) -> list[str]:
     cells = [str(c) if c is not None else '' for c in row]
-    if len(cells) < 6:
-        cells.extend([''] * (6 - len(cells)))
-    return cells[:6]
+    if len(cells) < len(HEADER):
+        cells.extend([''] * (len(HEADER) - len(cells)))
+    return cells[:len(HEADER)]
 
 
 def _read_csv(path: str) -> list[list[str]]:
@@ -139,7 +138,7 @@ def _write_csv(path: str, rows: list[list[str]]):
         with os.fdopen(fd, 'w', encoding='utf-8-sig', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(HEADER)
-            writer.writerows(rows)
+            writer.writerows(_pad_row(row) for row in rows)
         os.replace(tmp, path)
     except Exception:
         try:
@@ -160,7 +159,7 @@ def load_working(csv_root=None) -> dict[str, list[str]]:
             if key not in working:
                 continue
             row = working[key]
-            for i in (3, 4, 5):
+            for i in range(3, len(HEADER)):
                 if not str(row[i]).strip() and str(old[i]).strip():
                     row[i] = old[i]
         return working
@@ -178,7 +177,7 @@ def merge_entry(working: dict[str, list[str]], old_by_key: dict[str, list[str]],
         row[2] = source
         working[key] = row
         return 'reused'
-    working[key] = [NS, key, source, '', '', '']
+    working[key] = [NS, key, source] + [''] * (len(HEADER) - 3)
     return 'added'
 
 
@@ -192,7 +191,7 @@ def fill_chinese(working: dict[str, list[str]]):
 def untranslated_rows(working: dict[str, list[str]]) -> list[list[str]]:
     todo = []
     for row in working.values():
-        if any(not str(row[i]).strip() for i in (3, 4, 5)):
+        if any(not str(row[i]).strip() for i in range(3, len(HEADER))):
             todo.append(row)
     return todo
 
@@ -220,13 +219,13 @@ def write_tables(working: dict[str, list[str]], *, fill: bool, csv_root=None) ->
 def refresh_todo(csv_root=None) -> dict:
     paths = csv_paths(csv_root)
     if not os.path.isfile(paths['new']) and not os.path.isfile(paths['old']):
-        mineprep.throw(str(tr('找不到变量显示名 CSV', 'Variable display-name CSV not found')))
+        mineprep.throw(str(i18n('找不到变量显示名 CSV', 'Variable display-name CSV not found')))
     working = load_working(csv_root)
     stats = write_tables(working, fill=True, csv_root=csv_root)
-    mineprep.prints(tr(
-        f"已刷新待翻译表：{stats['untranslated']} / {stats['total']} 行",
-        f"Refreshed untranslated table: {stats['untranslated']} / {stats['total']} rows",
-    ))
+    mineprep.prints(i18n(
+        '已刷新待翻译表：{untranslated} / {total} 行',
+        'Refreshed untranslated table: {untranslated} / {total} rows',
+    ).format(untranslated=stats['untranslated'], total=stats['total']))
     return stats
 
 
@@ -240,7 +239,7 @@ def _wanted_asset(asset_data) -> bool:
 def list_scan_assets(scan_path: str) -> list[str]:
     folder = (scan_path or '').strip().rstrip('/')
     if not folder:
-        mineprep.throw(str(tr('扫描路径为空', 'Scan path is empty')))
+        mineprep.throw(str(i18n('扫描路径为空', 'Scan path is empty')))
     if not folder.startswith('/'):
         folder = '/' + folder
     registry = unreal.AssetRegistryHelpers.get_asset_registry()
@@ -283,7 +282,7 @@ def iter_gather(props, on_status, is_closed, out=None):
 def _iter_gather(scan_path, set_enum_key, csv_root, on_status, is_cancelled,
                  save_partial, out):
     if not has_cpp_gather():
-        mineprep.throw(str(tr(
+        mineprep.throw(str(i18n(
             '未找到 C++ 函数 unreal.mineprep.gather_property_names',
             'C++ function unreal.mineprep.gather_property_names not found',
         )))
@@ -310,17 +309,17 @@ def _iter_gather(scan_path, set_enum_key, csv_root, on_status, is_cancelled,
 
     try:
         if not total:
-            on_status(str(tr('没有可扫描的资产', 'No matching assets to scan')))
+            on_status(str(i18n('没有可扫描的资产', 'No matching assets to scan')))
             return commit(is_cancelled())
 
         for i, path in enumerate(assets):
             if is_cancelled():
                 scanned = i
                 return commit(True)
-            on_status(str(tr(
-                f'收集中 {i + 1}/{total}  新增 {added}  复用 {reused}  失败 {failed}\n{path}',
-                f'Gathering {i + 1}/{total}  added {added}  reused {reused}  failed {failed}\n{path}',
-            )))
+            on_status(str(i18n(
+                '收集中 {index}/{total}  新增 {added}  复用 {reused}  失败 {failed}\n{path}',
+                'Gathering {index}/{total}  added {added}  reused {reused}  failed {failed}\n{path}',
+            ).format(index=i + 1, total=total, added=added, reused=reused, failed=failed, path=str(path))))
             if is_cancelled():
                 return commit(True)
             try:

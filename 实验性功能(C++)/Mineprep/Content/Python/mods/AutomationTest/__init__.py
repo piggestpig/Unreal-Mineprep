@@ -1,8 +1,8 @@
-from mineprep import bilingual
+from mineprep import i18n
 
 mod_info = {
-    'Name': bilingual('自动化测试', 'Automation Test'),
-    'Description': bilingual('运行编辑器自动化测试项目', 'Run editor automation tests'),
+    'Name': i18n('自动化测试', 'Automation Test'),
+    'Description': i18n('运行编辑器自动化测试项目', 'Run editor automation tests'),
     'Version': '2.0',
     'CreatedBy': 'Pig',
     'EnabledByDefault': False,

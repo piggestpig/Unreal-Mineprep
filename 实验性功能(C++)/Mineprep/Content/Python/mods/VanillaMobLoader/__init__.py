@@ -4,10 +4,11 @@
 参考插件：https://github.com/ewanhowell5195/blockbenchPlugins/tree/main/cem_template_loader
 """
 import mineprep
+from mineprep import i18n
 
 mod_info = {
-    'Name': mineprep.bilingual('MC原版生物加载器', 'Vanilla Mob Loader'),
-    'Description': mineprep.bilingual('浏览、导入并放置MC生物模型', 'Browse, import and place skeletal MC entities'),
+    'Name': i18n('MC原版生物加载器', 'Vanilla Mob Loader'),
+    'Description': i18n('浏览、导入并放置 Minecraft 原版生物模型', 'Browse, import, and place vanilla Minecraft mobs'),
     'Version': '2.0',
     'CreatedBy': 'Pig',
     'Credits': '[CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/)',

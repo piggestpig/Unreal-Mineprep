@@ -9,6 +9,7 @@
     "support": "footprint", "priority": 20, "category": "ice_spikes"
   },
   "seagrass": {
+    "detail_only": true,
     "enabled_when": {"vegetation.simplified": false},
     "type": "multi_block",
     "generator": "aquatic:build",
@@ -21,6 +22,7 @@
     "category": "aquatic"
   },
   "kelp": {
+    "detail_only": true,
     "enabled_when": {"vegetation.simplified": false},
     "type": "multi_block",
     "generator": "aquatic:build",
@@ -54,22 +56,25 @@
     "support": "footprint",
     "category": "decorations"
   },
-  "grass": {"type": "surface_scatter", "block": "short_grass", "category": "vegetation", "enabled_when": {"vegetation.simplified": false}},
-  "bush": {"type": "surface_scatter", "block": "dead_bush", "category": "vegetation", "enabled_when": {"vegetation.simplified": false}},
-  "bush_simple": {"type": "surface_scatter", "block": "dead_bush", "category": "vegetation", "enabled_when": {"vegetation.simplified": true}},
-  "short_dry_grass": {"type": "surface_scatter", "block": "short_dry_grass", "category": "vegetation", "enabled_when": {"vegetation.simplified": false}},
-  "tall_dry_grass": {"type": "surface_scatter", "block": "tall_dry_grass", "category": "vegetation"},
+  "grass": {"detail_only": true,"type": "surface_scatter", "block": "short_grass", "category": "vegetation", "enabled_when": {"vegetation.simplified": false}},
+  "bush": {"detail_only": true,"type": "surface_scatter", "block": "dead_bush", "category": "vegetation", "enabled_when": {"vegetation.simplified": false}},
+  "bush_simple": {"detail_only": true,"type": "surface_scatter", "block": "dead_bush", "category": "vegetation", "enabled_when": {"vegetation.simplified": true}},
+  "short_dry_grass": {"detail_only": true,"type": "surface_scatter", "block": "short_dry_grass", "category": "vegetation", "enabled_when": {"vegetation.simplified": false}},
+  "tall_dry_grass": {"detail_only": true,"type": "surface_scatter", "block": "tall_dry_grass", "category": "vegetation"},
   "cactus": {
+    "detail_only": true,
     "type": "multi_block", "generator": "plants:cactus", "blocks": ["cactus"],
     "bounds": [[0, 0, 0], [1, 3, 1]], "max_blocks": 3, "cell_size": 6,
     "category": "vegetation"
   },
   "grass_simple": {
+    "detail_only": true,
     "type": "surface_scatter", "block": "short_grass", "soft": true,
     "allow_overlap_categories": ["trees"], "category": "vegetation",
     "enabled_when": {"vegetation.simplified": true}
   },
   "seagrass_simple": {
+    "detail_only": true,
     "type": "surface_scatter", "block": "seagrass", "soft": true, "habitat": "underwater",
     "allow_overlap_categories": ["trees"], "category": "aquatic", "enabled_when": {"vegetation.simplified": true}
   },
@@ -107,6 +112,7 @@
     "category": "trees"
   },
   "tall_grass": {
+    "detail_only": true,
     "enabled_when": {"vegetation.simplified": false},
     "type": "multi_block",
     "generator": "plants:build",
@@ -118,6 +124,7 @@
     "category": "vegetation"
   },
   "tall_flowers": {
+    "detail_only": true,
     "enabled_when": {"vegetation.simplified": false},
     "type": "multi_block",
     "generator": "plants:build",

@@ -1,0 +1,360 @@
+{
+  "Skin_Editor": {
+    "皮肤&表情编辑器": {
+      "zh": "皮肤&表情编辑器",
+      "en": "Skin & Face Editor",
+      "zh-Hant": "皮膚&表情編輯器"
+    },
+    "SkinEditorOptions.Body": {
+      "en": "Body",
+      "zh": "身体",
+      "zh-Hant": "身體",
+      "_native": "en"
+    },
+    "SkinEditorOptions.Head": {
+      "en": "Head",
+      "zh": "头部",
+      "zh-Hant": "頭部",
+      "_native": "en"
+    },
+    "SkinEditorOptions.category.SkinEditorOptions": {
+      "en": "Display Options",
+      "_native": "en",
+      "zh": "显示选项",
+      "zh-Hant": "顯示選項"
+    },
+    "SkinPaintTools.category.SkinPaintTools": {
+      "en": "Brush & Save",
+      "zh": "画笔与保存",
+      "zh-Hant": "筆刷與儲存",
+      "_native": "en",
+      "zh-Hant-HK": "畫筆與儲存"
+    },
+    "SkinPaintTools.Texture": {
+      "en": "Skin Texture",
+      "zh": "皮肤纹理",
+      "zh-Hant": "皮膚紋理",
+      "_native": "en"
+    },
+    "SkinPaintTools.Overlay": {
+      "en": "Overlay Texture",
+      "zh": "叠加纹理",
+      "zh-Hant": "疊加紋理",
+      "_native": "en"
+    },
+    "SkinPaintTools.ViewSize": {
+      "en": "Canvas Size",
+      "zh": "画布大小",
+      "zh-Hant": "畫布大小",
+      "_native": "en"
+    },
+    "SkinPaintTools.BrushSize": {
+      "en": "Brush Size",
+      "zh": "画笔尺寸",
+      "zh-Hant": "筆刷大小",
+      "_native": "en",
+      "zh-Hant-HK": "畫筆大小"
+    },
+    "SkinPaintTools.Color": {
+      "en": "Color",
+      "zh": "颜色",
+      "zh-Hant": "顏色",
+      "_native": "en"
+    },
+    "SkinPaintTools.Round": {
+      "en": "Round Brush",
+      "zh": "圆形笔触",
+      "zh-Hant": "圓形筆刷",
+      "_native": "en",
+      "zh-Hant-HK": "圓形筆觸"
+    },
+    "SkinPaintTools.WriteAlpha": {
+      "en": "Overwrite Alpha",
+      "zh": "覆盖透明度",
+      "zh-Hant": "覆蓋透明度",
+      "_native": "en"
+    },
+    "SkinPaintTools.PeekKey": {
+      "en": "Peek Key",
+      "zh": "预览原图键",
+      "zh-Hant": "預覽原圖鍵",
+      "_native": "en"
+    },
+    "SkinPaintTools.PickKey": {
+      "en": "Pick Key",
+      "zh": "吸色键",
+      "zh-Hant": "吸色鍵",
+      "_native": "en"
+    },
+    "SkinPaintTools.SavePath": {
+      "en": "Save Path",
+      "zh": "保存路径",
+      "zh-Hant": "儲存路徑",
+      "_native": "en"
+    },
+    "SkinPaintTools.ExportPath": {
+      "en": "Export PNG Path",
+      "zh": "导出 PNG 路径",
+      "zh-Hant": "匯出 PNG 路徑",
+      "_native": "en"
+    },
+    "SkinPaintTools.Advanced": {
+      "en": "Advanced Options",
+      "zh": "高级选项",
+      "zh-Hant": "進階選項",
+      "_native": "en",
+      "zh-Hant-HK": "高級選項"
+    },
+    "SkinCodeTools.category.SkinCodeTools": {
+      "en": "Python Script",
+      "zh": "Python 脚本",
+      "zh-Hant": "Python 指令碼",
+      "_native": "en",
+      "zh-Hant-HK": "Python 腳本"
+    },
+    "SkinCodeTools.Code": {
+      "en": "Code",
+      "zh": "代码",
+      "zh-Hant": "程式碼",
+      "_native": "en",
+      "zh-Hant-HK": "代碼"
+    },
+    "SkinBatchTools.category.SkinBatchTools": {
+      "en": "Batch Process",
+      "zh": "批量处理",
+      "zh-Hant": "批次處理",
+      "_native": "en",
+      "zh-Hant-HK": "批量處理"
+    },
+    "SkinBatchTools.BesideOriginal": {
+      "en": "Save Beside Source",
+      "zh": "保存在原目录",
+      "zh-Hant": "儲存在原目錄",
+      "_native": "en"
+    },
+    "SkinBatchTools.Textures": {
+      "en": "Source Textures",
+      "zh": "源纹理",
+      "zh-Hant": "來源紋理",
+      "_native": "en"
+    },
+    "SkinBatchTools.NewTextures": {
+      "en": "Output Textures",
+      "zh": "输出纹理",
+      "zh-Hant": "輸出紋理",
+      "_native": "en"
+    },
+    "编辑材质": {
+      "zh": "编辑材质",
+      "en": "Edit Materials",
+      "zh-Hant": "編輯材質"
+    },
+    "绘制皮肤": {
+      "zh": "绘制皮肤",
+      "en": "Paint Skin",
+      "zh-Hant": "繪製皮膚"
+    },
+    "编辑选中角色的皮肤纹理与头部材质": {
+      "zh": "编辑选中角色的皮肤纹理与头部材质",
+      "en": "Edit skin textures and head materials on selected characters",
+      "zh-Hant": "編輯所選角色的皮膚紋理與頭部材質"
+    },
+    "未选中 Actor": {
+      "zh": "未选中 Actor",
+      "en": "No actor selected",
+      "zh-Hant": "未選取 Actor"
+    },
+    "无头部": {
+      "zh": "无头部",
+      "en": "No Head",
+      "zh-Hant": "無頭部"
+    },
+    "选中的 Actor 中未找到骨骼网格体": {
+      "zh": "选中的 Actor 中未找到骨骼网格体",
+      "en": "No skeletal mesh component on the selected actor",
+      "zh-Hant": "選取的 Actor 中找不到骨骼網格體"
+    },
+    "请先指定导出PNG路径": {
+      "zh": "请先指定导出PNG路径",
+      "en": "Set an export PNG path first",
+      "zh-Hant": "請先指定匯出 PNG 路徑"
+    },
+    "请先指定保存路径": {
+      "zh": "请先指定保存路径",
+      "en": "Set a save path first",
+      "zh-Hant": "請先指定儲存路徑"
+    },
+    "请先填写代码": {
+      "zh": "请先填写代码",
+      "en": "Write a script first",
+      "zh-Hant": "請先輸入程式碼",
+      "zh-Hant-HK": "請先輸入代碼"
+    },
+    "代码需要 def main(tex, overlay)": {
+      "zh": "代码需要 def main(tex, overlay)",
+      "en": "Script needs def main(tex, overlay)",
+      "zh-Hant": "程式碼需要 def main(tex, overlay)",
+      "zh-Hant-HK": "代碼需要 def main(tex, overlay)"
+    },
+    "画布未就绪": {
+      "zh": "画布未就绪",
+      "en": "Canvas is not ready",
+      "zh-Hant": "畫布尚未就緒"
+    },
+    "请先在批量处理中指定纹理": {
+      "zh": "请先在批量处理中指定纹理",
+      "en": "Set textures in Batch Process first",
+      "zh-Hant": "請先在批次處理中指定紋理",
+      "zh-Hant-HK": "請先在批量處理中指定紋理"
+    },
+    "没有可保存的新纹理": {
+      "zh": "没有可保存的新纹理",
+      "en": "No new textures to save",
+      "zh-Hant": "沒有可儲存的新紋理"
+    },
+    "已导出 {path}": {
+      "zh": "已导出 {path}",
+      "en": "Exported {path}",
+      "zh-Hant": "已匯出 {path}"
+    },
+    "已保存 {path}": {
+      "zh": "已保存 {path}",
+      "en": "Saved {path}",
+      "zh-Hant": "已儲存 {path}"
+    },
+    "编译失败: ": {
+      "zh": "编译失败: ",
+      "en": "Compile failed: ",
+      "zh-Hant": "編譯失敗: "
+    },
+    "运行失败: ": {
+      "zh": "运行失败: ",
+      "en": "Script failed: ",
+      "zh-Hant": "執行失敗: "
+    },
+    "已处理 {count}/{total} 张": {
+      "zh": "已处理 {count}/{total} 张",
+      "en": "Processed {count}/{total}",
+      "zh-Hant": "已處理 {count}/{total} 張"
+    },
+    "已保存 {count}/{total} 张": {
+      "zh": "已保存 {count}/{total} 张",
+      "en": "Saved {count}/{total}",
+      "zh-Hant": "已儲存 {count}/{total} 張"
+    },
+    "无法写入纹理: {path}": {
+      "zh": "无法写入纹理: {path}",
+      "en": "Cannot write texture: {path}",
+      "zh-Hant": "無法寫入紋理: {path}"
+    },
+    "已保存 {directory}/{name}": {
+      "zh": "已保存 {directory}/{name}",
+      "en": "Saved {directory}/{name}",
+      "zh-Hant": "已儲存 {directory}/{name}"
+    },
+    "无效导出路径: {path}": {
+      "zh": "无效导出路径: {path}",
+      "en": "Invalid export path: {path}",
+      "zh-Hant": "無效的匯出路徑: {path}"
+    },
+    "无效保存路径: {path}": {
+      "zh": "无效保存路径: {path}",
+      "en": "Invalid save path: {path}",
+      "zh-Hant": "無效的儲存路徑: {path}"
+    },
+    "第 {index} 张纹理读取失败": {
+      "zh": "第 {index} 张纹理读取失败",
+      "en": "Failed to read texture #{index}",
+      "zh-Hant": "第 {index} 張紋理讀取失敗"
+    },
+    "第 {index} 张纹理保存失败": {
+      "zh": "第 {index} 张纹理保存失败",
+      "en": "Failed to save texture #{index}",
+      "zh-Hant": "第 {index} 張紋理儲存失敗"
+    },
+    "第 {index} 张纹理处理失败：": {
+      "zh": "第 {index} 张纹理处理失败：",
+      "en": "Failed to process texture #{index}: ",
+      "zh-Hant": "第 {index} 張紋理處理失敗："
+    },
+    "打开模组": {
+      "zh": "打开模组",
+      "en": "Open Mod",
+      "zh-Hant": "開啟 Mod",
+      "zh-Hant-HK": "打開 Mod"
+    },
+    "身体": {
+      "zh": "身体",
+      "en": "Body",
+      "zh-Hant": "身體"
+    },
+    "头部": {
+      "zh": "头部",
+      "en": "Head",
+      "zh-Hant": "頭部"
+    },
+    "还原": {
+      "zh": "还原",
+      "en": "Revert",
+      "zh-Hant": "還原"
+    },
+    "宽臂": {
+      "zh": "宽臂",
+      "en": "Wide Arms",
+      "zh-Hant": "寬臂"
+    },
+    "细臂": {
+      "zh": "细臂",
+      "en": "Slim Arms",
+      "zh-Hant": "細臂"
+    },
+    "仅留内层": {
+      "zh": "仅留内层",
+      "en": "Keep Inner Layer",
+      "zh-Hant": "僅保留內層"
+    },
+    "仅留外层": {
+      "zh": "仅留外层",
+      "en": "Keep Outer Layer",
+      "zh-Hant": "僅保留外層"
+    },
+    "应用叠加": {
+      "zh": "应用叠加",
+      "en": "Apply Overlay",
+      "zh-Hant": "套用疊加"
+    },
+    "保存皮肤纹理": {
+      "zh": "保存皮肤纹理",
+      "en": "Save Skin Texture",
+      "zh-Hant": "儲存皮膚紋理"
+    },
+    "导出 PNG": {
+      "zh": "导出 PNG",
+      "en": "Export PNG",
+      "zh-Hant": "匯出 PNG"
+    },
+    "运行 Python 脚本": {
+      "zh": "运行 Python 脚本",
+      "en": "Run Python Script",
+      "zh-Hant": "執行 Python 指令碼",
+      "zh-Hant-HK": "執行 Python 腳本"
+    },
+    "批量处理": {
+      "zh": "批量处理",
+      "en": "Batch Process",
+      "zh-Hant": "批次處理",
+      "zh-Hant-HK": "批量處理"
+    },
+    "保存所有新纹理": {
+      "zh": "保存所有新纹理",
+      "en": "Save All New Textures",
+      "zh-Hant": "儲存所有新紋理"
+    },
+    "实时取色（读取光标下像素，开销较高）": {
+      "zh": "实时取色（读取光标下像素，开销较高）",
+      "en": "Live color sampling under cursor (slower)",
+      "zh-Hant": "即時取色（讀取游標下的像素，耗用資源較多）",
+      "zh-Hant-HK": "即時取色（讀取光標下的像素，耗用資源較多）"
+    }
+  }
+}

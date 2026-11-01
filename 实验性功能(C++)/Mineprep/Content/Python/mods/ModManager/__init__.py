@@ -1,8 +1,8 @@
-from mineprep import bilingual
+from mineprep import i18n
 
 mod_info = {
-    "Name": bilingual("模组管理器", "Mod Manager"),
-    "Description": bilingual("用于启用/禁用模组", "Used for enabling/disabling mods"),
+    "Name": i18n("模组管理器", "Mod Manager"),
+    "Description": i18n('启用、禁用、安装与打包 mod', 'Enable, disable, install, and package mods'),
     "Version": "2.0",
     "CreatedBy": "Pig",
     "Credits": "Blender",

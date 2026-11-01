@@ -1,4 +1,4 @@
-# Python内容包入门（0.47.0）
+# Python内容包入门（格式 3）
 
 先读[README](../README.md)的最小生成、用户目录注册和UE完成回调。本页帮助第一次制作内容包，声明细节按需查[EXTENSIONS](EXTENSIONS.md)。
 
@@ -14,12 +14,14 @@
 | 新单格植物 | surface_scatter及群系features绑定 | 复用现有二维散布，不恢复组块或逐株对象 |
 | 新树形／小景观 | tree_template→TemplateBatch；其他形状仍可用FeatureBatch | 核心负责支撑、碰撞与裁切；助手仅支持原生树木模型 |
 | 新材料资源 | blocks.json的builtin／json／mesh来源 | color只改变预览图；实际颜色由UE模型／材质／贴图决定 |
-| 方块发光／照明强度 | blocks.json的material.emission／lighting；prepare的block_materials | 独立非负有限值，0有效、允许HDR；全部材质槽覆盖，使用隔离变体，详见[R39](OUTPUT.md) |
+| 方块发光／照明强度 | blocks.json的material.emission／lighting；prepare的block_materials | 独立非负有限值，0有效、允许HDR；全部材质槽覆盖，使用隔离变体，详见[输出材质](OUTPUT.md) |
 | 群系草／树叶颜色 | 群系JSON的vegetation_tint；面板原生颜色倍率控件 | 线性RGB倍率，缺省[1,1,1]；支持HDR，地图color另有用途 |
 | 覆盖层／冻结 | surface_processors | 真实向上表面，sky_only声明决定是否只要露天输入 |
 | 悬空岛与虚空 | 独立volume密度包，参见[end](END.md) | reference_mask_field区分参考地表与虚空；小型表面补丁可显式声明volume:true |
 
-高度图使用正式文件输入：[R21](HEIGHTMAP.md)。PNG按整数位深归一化，浮点EXR默认保存格数；范围映射可以表达缩放、偏移及负增量。默认忠实模式不再自然塑形；add保留作者height_custom并在其后叠加。输入不是pack.json参数，也不随保存包复制文件；分享Spec需要携带图片。自定义字段自行读取其他外部文件仍没有自动依赖跟踪，应避免绕过这个入口。笔刷、群系图和方块区域删填尚未提供。
+标准height／volume配方自动共用1／2／4格分辨率、固定LOD和留空，不需要按包名注册。景观支撑、净空和水体验证必须使用公共实际几何查询，表面处理读取真实尺寸；小景观可声明 `detail_only: true`。主世界地下水与湖海连接也支持混合分区，向留空区泄漏的候选被拒绝；自定义水体仍须遵守实际占据和输出裁切约定。详见[粗精度与LOD](COARSE.md)和[扩展接口](EXTENSIONS.md)。
+
+高度图使用正式文件输入：[高度图](HEIGHTMAP.md)。PNG按整数位深归一化，浮点EXR默认保存格数；范围映射可以表达缩放、偏移及负增量。默认忠实模式不再自然塑形；add保留作者height_custom并在其后叠加。输入不是pack.json参数，也不随保存包复制文件；分享Spec需要携带图片。自定义字段自行读取其他外部文件仍没有自动依赖跟踪，应避免绕过这个入口。笔刷、群系图和方块区域删填尚未提供。
 
 ## 文件与继承
 
@@ -27,11 +29,12 @@
 
 包可在`pack.json`声明`"preset_menu": ["my_preset", "other_preset"]`，按给定顺序显示全局快捷预设；ID须唯一且指向已存在的整套预设。空列表隐藏所有资源包快捷项，未声明（不自动继承父包此设置）则显示原有全部条目；用户预设仍可显示，预设库及API仍能访问未列出的预设。该字段只影响界面，不进入几何身份。`default_preset: ""`表示新请求直接采用参数默认值。
 
-先用`folder = api.create_pack('my_world', extends='vanilla', name='My world')`创建最小派生包。默认写Saved/packs，可指定`root`；返回绝对Path并注册当前解释器。已有目录／已注册ID会拒绝，加载验证失败不发布包，不启动工作区迁移。只创建pack.json、空landscape.py、短README，默认输出继承父包；按需要添加以下文件：
+先用`folder = api.create_pack('my_world', extends='vanilla', name='My world')`创建最小派生包。默认写Saved/packs，可指定`root`；返回绝对Path并注册当前解释器。已有目录／已注册ID会拒绝，加载验证失败不发布包，不启动工作区迁移。创建pack.json、i18n.json、空landscape.py和短README，默认输出继承父包；按需要添加以下文件：
 
 ```text
 Saved/packs/my_world/
   pack.json            # ID、继承、模块、参数及群系顺序
+  i18n.json            # 本包名称、说明、参数与资源文本；不复制父包词典
   landscape.py         # 需要Python配方时加入modules
   biomes/my_biome.json  # 需要新群系时添加
   features.json        # 需要新景观定义时添加
@@ -40,7 +43,7 @@ Saved/packs/my_world/
 
 这些文件按实际需要创建，不要求复制整套vanilla。create_pack已经把landscape加入modules；写辅助模块时再按声明需要加入。内置savanna／金合欢可直接使用，无需另建热带草原包；以下流程用于自己的新内容。
 
-`api.register_pack_root(root)`只增加搜索路径，不创建包。重新打开纯API解释器后要重新注册；请求会把根目录传给工作进程。`api.edit()`返回PackDraft，可以编辑规则并save到用户工作区，但初始化会执行工作区升级检查，不是只读查询。
+`api.register_pack_root(root)`只增加搜索路径，不创建包。重新打开纯API解释器后要重新注册；请求会把根目录传给工作进程。`api.edit()`返回PackDraft，初始化只读取；编辑后显式save到用户工作区。格式3不自动迁移旧包或会话。展示文本的键与继承见[本地化](LOCALIZATION.md)。
 
 参数定义按键合并，新参数须声明类型、默认值及必要范围。群系按ID整份覆盖；省略pack.json.biomes时保留基包的既有顺序，新增文件不会自动进入该顺序。新增群系时，用 `api.describe('vanilla')['biomes']` 查看顺序，把完整目标列表写入子包；不要假定新文件会自动优先于沙漠。features定义按ID继承覆盖，实际分布写在群系features绑定中。
 
@@ -63,10 +66,13 @@ from mods.WorldGenerator import api
 
 folder = api.create_pack('my_meadow')  # 已有目录会拒绝，请用自己的新ID
 (folder / 'biomes').mkdir()
-biome = {'id': 'my_meadow', 'name': {'zh': '我的草甸', 'en': 'My meadow'},
+biome = {'id': 'my_meadow',
          'climate': [{'water_kind': [0, 0]}],
          'surface': [{'top': 'grass_block', 'under': 'dirt', 'deep': 'stone'}]}
 (folder / 'biomes/my_meadow.json').write_text(json.dumps(biome), encoding='utf8')
+texts = json.loads((folder / 'i18n.json').read_text(encoding='utf8'))
+texts['WorldGenerator.pack.my_meadow']['biomes.my_meadow.name'] = {'zh': '我的草甸', 'en': 'My meadow'}
+(folder / 'i18n.json').write_text(json.dumps(texts, ensure_ascii=False), encoding='utf8')
 meta = json.loads((folder / 'pack.json').read_text(encoding='utf8'))
 meta['biomes'] = api.biome_order(insert='my_meadow', before='lake')
 (folder / 'pack.json').write_text(json.dumps(meta), encoding='utf8')
@@ -81,7 +87,7 @@ print(api.check(world))
 
 示例故意把干地规则放在最前面以保证小区域可观察；正式混合群系需按作品的气候条件选择顺序，避免抢占现有陆地。这里只加地表，群系未声明features便不会继承别的群系的树草绑定；新增树形／景观需添加features.json并在该群系中绑定。只用已有方块无需blocks.json。
 
-群系climate是闭区间；surface／locate上限排除。api.describe的blocks为名称列表、block_defs为定义映射；api.pack().blocks则是名称元组。报告和测量脚本放在包目录外，包内Python／JSON参与源码指纹。
+群系climate是闭区间；surface／locate上限排除。api.describe的blocks为名称列表、block_defs为定义映射；api.pack().blocks则是名称元组。报告和测量脚本放在包目录外，包内Python／JSON参与源码指纹，i18n.json是独立的展示数据例外。
 
 ## 复用地图检查与取景
 

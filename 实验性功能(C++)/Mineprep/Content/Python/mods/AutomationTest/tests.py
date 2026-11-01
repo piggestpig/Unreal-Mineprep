@@ -56,11 +56,11 @@ def spawn_oak(status=placeholder, loc=(0, 0, 0), step=800):
         (2, '粒子', 'Niagara'),
     )
     for i, (gpu, zh, en) in enumerate(modes):
-        status(bilingual(f'正在生成{zh}橡树', f'Spawning {en} oak'))
+        status(bilingual('正在生成{zh}橡树', 'Spawning {en} oak').format(zh=zh, en=en))
         pos = (loc[0] + i * step, loc[1], loc[2])
         out = mineprep.spawn_structure(b, loc=pos, gpu=gpu, name=f'oak_{en.lower()}')
         if not out:
-            raise RuntimeError(str(bilingual(f'{zh}橡树生成失败', f'{en} oak spawn failed')))
+            raise RuntimeError(str(bilingual('{zh}橡树生成失败', '{en} oak spawn failed').format(zh=zh, en=en)))
         yield 0.5
 
 
@@ -70,7 +70,7 @@ def mob_spawner(status=placeholder, step=250, offset=(0, 0, 1000)):
     for pos, name in options.items():
         if name == -1 or name == '-1':
             continue
-        status(bilingual(f'正在生成 {name}', f'Spawning {name}'))
+        status(bilingual('正在生成 {name}', 'Spawning {name}').format(name=str(name)))
         mineprep.spawn_mob(name, pos)
         yield
 
@@ -153,17 +153,17 @@ def intro_tutorial(status=placeholder):
 TESTS = [
     {
         'id': 'spawn_oak',
-        'label': mineprep.bilingual('生成橡树', 'Spawn oak'),
+        'label': bilingual('生成橡树', 'Spawn oak'),
         'fn': spawn_oak,
     },
     {
         'id': 'mob_spawner',
-        'label': mineprep.bilingual('生成生物', 'Spawn mobs'),
+        'label': bilingual('生成生物', 'Spawn mobs'),
         'fn': mob_spawner,
     },
     {
         'id': 'intro_tutorial',
-        'label': mineprep.bilingual('入门教程示例', 'Getting started example'),
+        'label': bilingual('入门教程示例', 'Getting started example'),
         'fn': intro_tutorial,
     },
 ]

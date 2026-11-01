@@ -1,7 +1,7 @@
 schema_version = 2
 Name = ["MC世界生成器","MC World Generator"]
-Description = "Pack-driven Minecraft-style world generation: preview, prepare and place in the editor."
-Version = "0.64.7"
+Description = { zh = "资源包驱动的MC世界生成、预览与场景放置", en = "Pack-driven Minecraft world generation, preview and placement" }
+Version = "0.76.0"
 CreatedBy = "Pig"
 Credits = "Minecraft, Mineways"
 EnabledByDefault = true

@@ -1,4 +1,4 @@
-"""Public entry for scripts and agents. preview/prepare/place require UE.
+"""Public entry for scripts and agents. preview/prepare/place and text collection use UE.
 
     from mods.WorldGenerator import api
     spec = api.spec("vanilla", "default", seed=7, region=(0, 0, 512, 512))
@@ -14,13 +14,16 @@ from .core.fields import field, region_pass
 from .core.pack import list_packs, load_pack, register_pack_root, catalog as _catalog
 from .core.spec import WorldSpec
 from .core.world import build_world, build_overview, sample_fields, world_key
+from .core.coarse import capabilities as _detail_capabilities
 
 __all__ = ["spec", "generate", "overview", "snapshot", "fields", "packs", "pack", "describe",
            "prepare", "place", "preview", "edit", "plan_water", "plan_caves", "fluid_surfaces", "section", "projection", "apply_preset", "reset_section", "preset_sections", "presets", "preset_library", "register_pack_root", "WorldSpec", "Region", "world_key"]
 __all__.append('catalog')
+__all__.append('pack_i18n')
 __all__.extend(('create_pack', 'check', 'locate', 'biome_order'))
 __all__.append('write_biome_texture')
 __all__.append('with_heightmap')
+__all__.append('with_biome_map')
 __all__.extend(('with_vegetation_mask', 'with_clearance_mask'))
 __all__.extend(('to_ue', 'from_ue', 'field', 'region_pass'))
 from .core.building import Builder, Selection, Structure
@@ -130,6 +133,21 @@ def _with_mask(spec, path, region, kind):
         raise TypeError('mask input requires a WorldSpec')
     region = spec.region if region is None else region if isinstance(region, Region) else Region(*region)
     return spec.replace(**{kind+'_mask': None if path is None else MaskInput(path, region)})
+
+
+def with_biome_map(spec, path, *, palette=None, region=None, tolerance=32):
+    """Map PNG marker colours to land biomes; tolerance bounds each RGB channel."""
+    from .core.spec import BiomeMapInput
+    from .core.biome_map import palette as defaults, validate
+    if not isinstance(spec, WorldSpec):
+        raise TypeError('with_biome_map requires a WorldSpec')
+    if path is None:
+        return spec.replace(biome_map=None)
+    pack = load_pack(spec.pack)
+    region = spec.region if region is None else region if isinstance(region, Region) else Region(*region)
+    config = BiomeMapInput(path, region, defaults(pack) if palette is None else palette, tolerance)
+    validate(pack, config)
+    return spec.replace(biome_map=config)
 
 
 def with_vegetation_mask(spec, path, *, region=None):
@@ -297,10 +315,10 @@ def edit(pack="vanilla", *, workspace=None):
     return PackDraft(pack, workspace=workspace)
 
 
-def spec(pack="vanilla", preset="", *, seed=42, region=(0, 0, 256, 256), params=None):
+def spec(pack="vanilla", preset="", *, seed=42, region=(0, 0, 256, 256), params=None, cell_step=1, core=None, core_empty=False):
     """Build and validate a WorldSpec against its pack (raises on unknown parameters)."""
     region = region if isinstance(region, Region) else Region(*region)
-    result = WorldSpec(pack, preset, seed, region, tuple((params or {}).items()))
+    result = WorldSpec(pack, preset, seed, region, tuple((params or {}).items()), cell_step=cell_step,core=core,core_empty=core_empty)
     load_pack(pack).resolve(result)
     return result
 
@@ -347,11 +365,24 @@ def packs():
 
 
 def catalog():
-    return _catalog()
+    from .localization import plain
+    return plain(_catalog())
 
 
 def pack(pack_id="vanilla"):
     return load_pack(pack_id)
+
+
+def pack_i18n(pack_id, *, langs=None):
+    """Collect authored text into one registered pack's own catalog in UE.
+
+    JSON entries take priority. Inherited display and draft saves use their
+    existing paths; this collector never loads the merged display catalog.
+    """
+    from mineprep import Internationalization
+    from .localization import namespace
+    p = load_pack(pack_id)
+    return Internationalization(namespace=namespace(p.id), file=p.root/'i18n.json', langs=langs)
 
 
 def describe(pack_id="vanilla"):
@@ -359,7 +390,11 @@ def describe(pack_id="vanilla"):
     p = load_pack(pack_id)
     from .core.features import describe_feature
     from .core.heightmap import supported
-    return {"id": p.id, "name": p.name, "chain": list(p.chain), "fingerprint": p.fingerprint[:8],
+    from .core.biome_map import supported as biome_map_supported, palette as biome_palette, MARKERS
+    from .localization import catalog, plain
+    catalog(p.name).refresh()
+    return plain({"id": p.id, "name": p.name, "description": p.description,
+            "chain": list(p.chain), "fingerprint": p.fingerprint[:8],
             "presets": {k: v.name for k, v in p.presets.items()}, "default_preset": p.default_preset,
             "preset_sections": preset_sections(pack_id),
             "local_presets": {k: v.section for k, v in p.presets.items() if v.section is not None},
@@ -377,6 +412,10 @@ def describe(pack_id="vanilla"):
             "height_field": p.height_field,
             "heightmap": {"formats": ['png', 'exr'], "modes": ['faithful', 'add'],
                           "supported": supported(p)},
+            "biome_map": {"formats": ['png'], "supported": biome_map_supported(p),
+                          "tolerance": 32,
+                          "marker_colors": list(MARKERS),
+                          "palette": biome_palette(p) if biome_map_supported(p) else {}},
             "mask_categories": dict(p.mask_categories or {}),
             "inactive_biomes": list(p.inactive_biomes),
             "planners": list(p.planners or {}),
@@ -385,13 +424,15 @@ def describe(pack_id="vanilla"):
                                  shared_group=s.shared_group,editor=s.editor,
                                  groups=[g.__dict__ for g in s.groups]) for s in p.ui_sections],
             "surface_processors": [dict(id=s.id,function=s.function,blocks=s.blocks,radius=s.radius,
-                                        enabled_param=s.enabled_param,sky_only=s.sky_only,category=s.category,volume=s.volume) for s in p.surface_processors],
+                                        enabled_param=s.enabled_param,sky_only=s.sky_only,category=s.category,
+                                        volume=s.volume,unit_replace=s.unit_replace) for s in p.surface_processors],
             "soil_depth_field": p.soil_depth_field,
             "reference_mask_field": p.reference_mask_field,
             "terrain_materials": (dict(inputs=p.terrain_materials.inputs,blocks=p.terrain_materials.blocks,
                                        fields=p.terrain_materials.fields,enabled_param=p.terrain_materials.enabled_param)
                                   if p.terrain_materials is not None else None),
             "capabilities": dict(reference=True,overview=True,biome_selector=True,per_column_soil_depth=True,terrain_materials=True,
+                                 **_detail_capabilities(p),
                                  upward_entities=p.density is None or p.density.base == 'height',
                                  water_surfaces=True,water_surface_features=p.density is None or p.density.base=='height',
                                  column_features=p.density is None or p.density.base=='height',
@@ -409,12 +450,12 @@ def describe(pack_id="vanilla"):
             "fluids": (dict(block=p.fluids.block,enabled_param=p.fluids.enabled_param,requires=p.fluids.requires)
                        if p.fluids is not None else None),
             "densities": {k: dict(deps=f.deps, res=f.res, axes=f.axes, resources=f.resources) for k, f in (p.densities or {}).items()},
-            "ui_rows": [{"label": r.label, "keys": r.keys, "components": r.components} for r in p.ui_rows],
+            "ui_rows": [{"id": r.id, "label": r.label, "keys": r.keys, "components": r.components} for r in p.ui_rows],
             "params": {k: {"type": d.type, "default": d.default, "min": d.min, "max": d.max,
                            "label": d.label, "tooltip": d.tooltip, "advanced": d.advanced,
                            "page": d.page, "enabled_param": d.enabled_param} for k, d in p.params.items()},
             "blocks": list(p.blocks), "block_defs": {k: b.describe() for k, b in p.block_defs.items()},
-            "water": p.water, "features": [describe_feature(f) for f in p.feature_defs]}
+            "water": p.water, "features": [describe_feature(f) for f in p.feature_defs]})
 
 
 def prepare(spec, *, name='World', type_group_count=1, block_materials=None,

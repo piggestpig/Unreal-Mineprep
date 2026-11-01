@@ -39,6 +39,7 @@
 #include "InteractiveToolManager.h"
 #include "Tools/UEdMode.h"
 #include "Internationalization/TextLocalizationResource.h"
+#include "Internationalization/PolyglotTextData.h"
 #include "Materials/MaterialInterface.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
@@ -87,6 +88,10 @@ class Umineprep : public UBlueprintFunctionLibrary
 	//翻译鼠标指针下的文本：NewText为空时查找本地化表并设置，不为空时直接设置
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
 	static int32 LocWidgetTextUnderMouse(const FString& NewText = TEXT(""));
+
+	/** 批量注册 Polyglot 文本并返回对应的 Text；保持输入顺序，无效条目返回空 Text。主线程调用。 */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static TArray<FText> RegisterPolyglotTexts(const TArray<FPolyglotTextData>& TextData);
 
 	//启用Tick多线程
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")

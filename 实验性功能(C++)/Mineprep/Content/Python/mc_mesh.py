@@ -666,7 +666,7 @@ class _SourceResolver:
                 path = Path(path)
                 self._parents(path)
                 data = self.importer._load_mc_model(path)
-                collected = self.importer._collect_block_model(path, data, model)
+                collected = self.importer._collect_block_model(path, data)
                 if not collected or collected[0] != "block":
                     raise ValueError(f"Baking requires JSON elements: {model}")
                 # 标记了 force_translucent 的贴图按半透明处理，不遮挡邻格

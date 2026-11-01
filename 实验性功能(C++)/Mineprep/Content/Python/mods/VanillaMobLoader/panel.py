@@ -4,6 +4,7 @@ from functools import partial
 
 import unreal
 import mineprep
+from mineprep import i18n
 from .assets import AssetStore, load_settings, save_settings
 from .props import LoaderOptions
 from . import composition, api
@@ -13,12 +14,8 @@ CATEGORIES = {'ALL': ('全部', 'All'), 'Regular': ('常规', 'Regular'),
               'Legacy': ('历史版本', 'Legacy'), 'Unsupported': ('未支持', 'Unsupported')}
 
 
-def tr(zh, en):
-    return mineprep.bilingual(zh, en)
-
-
 def label(category):
-    return tr(*CATEGORIES[category]) if category in CATEGORIES else category
+    return i18n(*CATEGORIES[category]) if category in CATEGORIES else category
 
 
 def picture(parent, size):
@@ -29,7 +26,7 @@ def picture(parent, size):
 
 class VanillaMobLoader(mineprep.Mod):
     _unique_ = True
-    _label_ = tr('MC原版生物加载器', 'Vanilla Mob Loader')
+    _label_ = i18n('MC原版生物加载器', 'Vanilla Mob Loader')
 
     def __init__(self, context=None):
         self.options = LoaderOptions()
@@ -97,17 +94,17 @@ class VanillaMobLoader(mineprep.Mod):
         root = self.frame.col(align=(0, 0), padding=8)
 
         header = root.row(padding=(0, 4))
-        header.text(tr('*需要联网下载资源，模型来自 Blockbench CEM Template Loader\n 按住Shift进行多选，按顺序组合模型',
+        header.text(i18n('*需要联网下载资源，模型来自 Blockbench CEM Template Loader\n 按住Shift进行多选，按顺序组合模型',
                        '*Internet required to download resources from Blockbench CEM Template Loader'
                        '\n Hold Shift to select multiple mobs and combine them in order'),
                     size=10, wrap=True, align=(1, 2), fill=1)
-        self.refresh_button = header.button(tr('刷新资源', 'Refresh assets'), size=12, on_clicked=self.refresh)
+        self.refresh_button = header.button(i18n('刷新资源', 'Refresh Assets'), size=12, on_clicked=self.refresh)
 
         searchrow = root.row(padding=(0, 5))
         self.search = searchrow.textbox(
-            hint=tr('搜索名称或 ID…', 'Search name or ID…'),
+            hint=i18n('搜索名称或 ID…', 'Search name or ID…'),
             fill=1, align=(0, 2), on_text_changed=self._search_changed)
-        self.clear_button = searchrow.button(tr('清除', 'Clear'), size=12, on_clicked=lambda: self.search.set_text(''))
+        self.clear_button = searchrow.button(i18n('清除', 'Clear'), size=12, on_clicked=lambda: self.search.set_text(''))
 
         body = root.row(fill=1, align=(0, 0), padding=0)
         self.categories = body.sizebox(150, align=(0, 0), padding=(0, 4)).scrollbox(align=(0, 0)).col()
@@ -122,9 +119,9 @@ class VanillaMobLoader(mineprep.Mod):
         self.details = self.details_scroll.col()
         self._create_detail_widgets()
         right.prop(self.options, on_property_changed=self._options_changed)
-        self.load_button = right.button(tr('放置生物', 'Place entity'), size=12, on_clicked=self.load_entity)
+        self.load_button = right.button(i18n('放置生物', 'Place Mob'), size=12, on_clicked=self.load_entity)
         self.load_button.set_is_enabled(False)
-        self.reload_button = right.button(tr('重新加载生物', 'Reload entity'), size=12,
+        self.reload_button = right.button(i18n('重新导入生物', 'Reimport Mob'), size=12,
                                           on_clicked=self.reload_entity)
         self.reload_button.set_is_enabled(False)
 
@@ -186,7 +183,7 @@ class VanillaMobLoader(mineprep.Mod):
 
                 count = len(self.catalog.variants.get(entry.key, []))
                 if entry.parent_key:
-                    content.text(tr('变体', 'Variant'), size=9, align=(2, 1), padding=(0, 1))
+                    content.text(i18n('变体', 'Variants'), size=9, align=(2, 1), padding=(0, 1))
                 elif count:
                     self._badges[entry.key] = content.text('', size=9, align=(2, 1), padding=(0, 1))
 
@@ -210,7 +207,7 @@ class VanillaMobLoader(mineprep.Mod):
             title.hide(not group[1] and self.category != 'ALL')
 
         for key, badge in self._badges.items():
-            badge.set_text(('−' if key in self.expanded else '+') + str(len(self.catalog.variants[key])) + ' ' + str(tr('变体', 'variants')))
+            badge.set_text(('−' if key in self.expanded else '+') + str(len(self.catalog.variants[key])) + ' ' + str(i18n('变体', 'Variants')))
 
         valid = [k for k in self.selected_keys if self.catalog and k in self.catalog.by_key]
         if valid != self.selected_keys:
@@ -220,8 +217,8 @@ class VanillaMobLoader(mineprep.Mod):
                     for e in self.catalog.entries) if self.catalog else 0
         self.heading.set_text(f'{label(self.category)} · {count}')
         self.empty.hide(bool(self.rows))
-        self.empty.set_text(tr('没有匹配的模板', 'No matching templates') if self.catalog else
-                            tr('尚未下载模板目录，请点击「刷新资源」获取最新信息。', 'No template catalog. Click Refresh assets to download the latest information.'))
+        self.empty.set_text(i18n('没有匹配的模板', 'No matching templates') if self.catalog else
+                            i18n('尚未下载模板目录，请点击「刷新资源」获取最新信息。', 'No template catalog. Click Refresh assets to download the latest information.'))
 
         if rebuild or self._details_key != tuple(self.selected_keys):
             self._build_details()
@@ -233,7 +230,7 @@ class VanillaMobLoader(mineprep.Mod):
         if self.catalog and not save_settings(self.category, self.selected_keys, save_path=self.options.SavePath,
                                               save_name=self.options.SaveName, expansion=self.options.LayerExpansion,
                                               random_scale=self.options.RandomScale):
-            self._status = str(tr('设置未保存：缓存目录不可写', 'Settings not saved: cache is not writable'))
+            self._status = str(i18n('设置未保存：缓存目录不可写', 'Settings not saved: cache is not writable'))
 
     def select(self, key):
         state = unreal.InputLibrary.get_modifier_keys_state()
@@ -276,7 +273,7 @@ class VanillaMobLoader(mineprep.Mod):
 
     def _create_detail_widgets(self):
         # 右栏详情控件只创建一次，切换选中项与刷新时直接复用
-        self._detail_empty = self.details.text(tr('选择模板查看详情', 'Select a template to view details'), size=13, wrap=True)
+        self._detail_empty = self.details.text(i18n('选择模板查看详情', 'Select a template to view details'), size=13, wrap=True)
         self._detail_body = self.details.col()
         self._detail_image = picture(self._detail_body, 170)
         self._detail_name = self._detail_body.text('', size=17, wrap=True, align=(2, 1), padding=(0, 2))
@@ -309,9 +306,9 @@ class VanillaMobLoader(mineprep.Mod):
         values = {
             'id': entry.id,
             'category': label(entry.category),
-            'textures': tr('仅应用主皮肤，附加贴图暂不加载', 'Primary skin only; additional textures are not loaded')
+            'textures': i18n('仅应用主皮肤，附加贴图暂不加载', 'Primary skin only; additional textures are not loaded')
                         if self.catalog.texture_count(entry) > 1 else '',
-            'parent': tr('父模板：' + entry.parent_name, 'Parent: ' + entry.parent_name) if entry.parent_name else '',
+            'parent': i18n('父模板：{name}', 'Parent: {name}').format(name=entry.parent_name) if entry.parent_name else '',
             'description': entry.description,
             'model': 'Model: ' + entry.model,
             'filename': 'JEM: ' + entry.filename + '.jem',
@@ -321,7 +318,7 @@ class VanillaMobLoader(mineprep.Mod):
             values['description'] = '\n+\n'.join(
                 '\n'.join(filter(None, (e.name, e.id, str(label(e.category)), e.description,
                                           'Model: '+e.model, 'JEM: '+e.filename+'.jem',
-                                          str(tr('仅使用主皮肤', 'Primary skin only')) if self.catalog.texture_count(e)>1 else '')))
+                                          str(i18n('仅使用主皮肤', 'Primary skin only')) if self.catalog.texture_count(e)>1 else '')))
                 for e in entries)
         for key, value in values.items():
             self._detail_fields[key].set_text(value)
@@ -361,15 +358,15 @@ class VanillaMobLoader(mineprep.Mod):
                     self._update_status()
 
             def conflict(conflicts):
-                mineprep.panic(tr('组合骨骼冲突', 'Conflicting bones'),
-                               str(tr('继续运行将使用主模型的骨骼，忽略后续多选模型的冲突骨骼。',
+                mineprep.panic(i18n('组合骨骼冲突', 'Conflicting bones'),
+                               str(i18n('继续运行将使用主模型的骨骼，忽略后续多选模型的冲突骨骼。',
                                       'Continue to keep the first selected bone definitions and ignore later conflicting bones.'))
                                + '\n' + '\n'.join(conflicts))
                 return True
 
             def stalled():
-                mineprep.panic(tr('资源下载停滞', 'Download stalled'),
-                               tr('连续 10 秒没有资源下载完成。可继续等待，或停止本次刷新。',
+                mineprep.panic(i18n('资源下载停滞', 'Download stalled'),
+                               i18n('连续 10 秒没有资源下载完成。可继续等待，或停止本次刷新。',
                                   'No resource completed for 10 seconds. Continue waiting or stop this refresh.'))
                 return True
 
@@ -380,16 +377,16 @@ class VanillaMobLoader(mineprep.Mod):
                     if job.state == 'failed':
                         raise RuntimeError(job.error)
                     if job.state == 'cancelled':
-                        self._status = str(tr('已取消', 'Cancelled'))
+                        self._status = str(i18n('已取消', 'Cancelled'))
                         return
                     result = job.result
                     if not reload:
                         importer.place(result['mesh'], scale, placement)
-                    self._status = str(tr('已更新：', 'Updated: ') if reload else tr('已放置：', 'Placed: ')) + result['name']
+                    self._status = str(i18n('已更新：', 'Updated: ') if reload else i18n('已放置：', 'Placed: ')) + result['name']
                     if result['warnings']:
                         self._status += ' · ' + '; '.join(result['warnings'])
                 except Exception as exc:
-                    self._status = str(tr('加载失败：', 'Import failed: ')) + str(exc)[:220]
+                    self._status = str(i18n('加载失败：', 'Import failed: ')) + str(exc)[:220]
                     mineprep.warn('VanillaMobLoader', exc)
                 finally:
                     self._finish_build()
@@ -399,7 +396,7 @@ class VanillaMobLoader(mineprep.Mod):
                 random_scale=self.options.RandomScale, reload=reload, cache=self.store.cache, on_progress=progress,
                 on_conflict=conflict, on_stall=stalled, on_done=finished)
         except Exception as exc:
-            self._status = str(tr('加载失败：', 'Import failed: ')) + str(exc)[:220]
+            self._status = str(i18n('加载失败：', 'Import failed: ')) + str(exc)[:220]
             mineprep.warn('VanillaMobLoader', exc)
             self._finish_build()
 
@@ -423,7 +420,7 @@ class VanillaMobLoader(mineprep.Mod):
                 yield pending.pop(future), future
             else:
                 if time.monotonic() - last >= 10:
-                    self._status = str(tr('资源下载较慢，正在继续等待…', 'Download is slow; still waiting…'))
+                    self._status = str(i18n('资源下载较慢，正在继续等待…', 'Download is slow; still waiting…'))
                     self._update_status()
                     last = time.monotonic()
                 yield None
@@ -440,7 +437,7 @@ class VanillaMobLoader(mineprep.Mod):
         self.refresh_button.set_is_enabled(False)
         self.load_button.set_is_enabled(False)
         self.reload_button.set_is_enabled(False)
-        self._status = str(tr('正在下载模板目录', 'Downloading catalog'))
+        self._status = str(i18n('正在下载模板目录', 'Downloading catalog'))
         self._update_status()
         self._refresh_job = self._refresh_assets()
 
@@ -465,7 +462,7 @@ class VanillaMobLoader(mineprep.Mod):
             yield
 
             ids = list(dict.fromkeys(e.id for e in data.entries))
-            self._status = str(tr('正在读取缓存并补齐缩略图', 'Loading cached thumbnails and downloading missing ones')) + f' · 0/{len(ids)}'
+            self._status = str(i18n('正在读取缓存并补齐缩略图', 'Loading cached thumbnails and downloading missing ones')) + f' · 0/{len(ids)}'
             self._update_status()
             futures = {self.store.submit(self.store.thumbnail, ident): ident for ident in ids}
             for event in self._wait_batch(futures):
@@ -478,14 +475,14 @@ class VanillaMobLoader(mineprep.Mod):
                     if not self._apply_png(ident, raw or self.store.cached_png(ident)) and ident not in self.textures:
                         self._missing += 1
                     self.attempted.add(ident)
-                    self._status = str(tr('正在读取缓存并补齐缩略图', 'Loading cached thumbnails and downloading missing ones')) + f' · {len(self.attempted)}/{len(ids)}'
+                    self._status = str(i18n('正在读取缓存并补齐缩略图', 'Loading cached thumbnails and downloading missing ones')) + f' · {len(self.attempted)}/{len(ids)}'
                     self._update_status()
                 yield  # 每帧最多导入一张缩略图，下载等待期间也让出主线程。
 
-            self._status = str(tr('全部资源刷新完成', 'Asset refresh complete') if saved and not self.store.unsaved else
-                               tr('刷新完成，但部分缓存未保存', 'Refresh complete; some cache was not saved'))
+            self._status = str(i18n('全部资源刷新完成', 'Asset refresh complete') if saved and not self.store.unsaved else
+                               i18n('刷新完成，但部分缓存未保存', 'Refresh complete; some cache was not saved'))
         except Exception as exc:
-            self._status = str(tr('刷新停止，请重试', 'Refresh stopped; please retry')) + ': ' + str(exc)[:120]
+            self._status = str(i18n('刷新停止，请重试', 'Refresh stopped; please retry')) + ': ' + str(exc)[:120]
             mineprep.warn('VanillaMobLoader', exc)
         finally:
             self.store.close()
@@ -500,7 +497,7 @@ class VanillaMobLoader(mineprep.Mod):
     def _update_status(self):
         messages = [self._status] if self._status else []
         if self._missing:
-            messages.append(str(tr('部分缩略图不可用', 'Some thumbnails unavailable')))
+            messages.append(str(i18n('部分缩略图不可用', 'Some thumbnails unavailable')))
         self.status.set_text(' · '.join(messages))
         self.status.hide(not messages)
 

@@ -7,6 +7,7 @@ import math
 
 from .core.spline import normalize_points, points_from_ue_text, ue_text_from_points
 from .ui_model import group_pages
+from .localization import bind_properties
 
 
 def _components(value, count):
@@ -45,6 +46,12 @@ class WorldRange(mineprep.PropertyGroup):
     Seed: int = (42, {"NoSpinbox": True})
     Origin: unreal.IntPoint = unreal.IntPoint(0, 0)
     Size: unreal.IntPoint = (unreal.IntPoint(512, 512), {"ClampMin": 1, "UIMax": 2048})
+    CellStep: int = 1
+    CoreEnabled: bool = False
+    CoreEmpty: bool = (False, {'EditCondition':'CoreEnabled','HideEditConditionToggle':True})
+    CoreA: unreal.IntPoint = (unreal.IntPoint(0,0), {'EditCondition':'CoreEnabled','HideEditConditionToggle':True})
+    CoreB: unreal.IntPoint = (unreal.IntPoint(512,512), {'EditCondition':'CoreEnabled','HideEditConditionToggle':True})
+    CoreInitialized: bool = (False, {'EditCondition':'false','EditConditionHides':True})
 
 
 class WorldOutput(mineprep.PropertyGroup):
@@ -57,21 +64,22 @@ class WorldOutput(mineprep.PropertyGroup):
     ISMChunkCount: int = (1, {"ClampMin": 1, "UIMax": 256,
                             "EditCondition": "UIIsISM", "EditConditionHides": True,
                             "HideEditConditionToggle": True,
-                            "ToolTip": "空间区块总数，不是Actor数量；每块按模型类型建立Actor / Spatial chunks, not Actor count; one Actor per model type"})
+                            "ToolTip": 'Spatial chunks, not Actor count; one Actor per model type'})
     GPUTypeGroupCount: int = (1, {"ClampMin": 1, "UIMax": 16,
                                 "EditCondition": "!UIIsISM", "EditConditionHides": True,
                                 "HideEditConditionToggle": True,
-                                "ToolTip": "将模型分成多个输出组，每组一个 Actor，同种模型不拆分 / Split models into output groups, one Actor per group; model types are not split"})
+                                "ToolTip": 'Split models into output groups, one Actor per group; model types are not split'})
     Workers: int = (4, {"ClampMin": 1, "ClampMax": 16,
                         "EditCondition": "UIUsesWorkers", "HideEditConditionToggle": True})
-    Budgets: unreal.IntPoint = (unreal.IntPoint(2147483647, 2000000), {"ClampMin": 1, "ClampMax": 2147483647,
-        "ToolTip": "预处理格数：宽×长×输出高度；最终实例数：合并后的总实例数 / Preprocess cells: width × depth × output height; final instances: total merged count"})
+    Budgets: unreal.Vector2D = (unreal.Vector2D(2147483647, 2000000), {"ClampMin": 1, "ClampMax": 2**40,
+        "Delta": 1, "UIMax": 9_999_999_999,
+        "ToolTip": 'Preprocess cells: width × depth × output height; final instances: total merged count'})
     BCTEnabled: bool = (True, {"InlineEditConditionToggle": True})
     BCTColorMode: str = 'rgb'
     BCTCellSize: int = (4, {"ClampMin": 1, "ClampMax": 16, "EditCondition": "BCTEnabled",
-                           "ToolTip": "每像素覆盖的格数；颜色约8格过渡 / Blocks per pixel; approximately eight-block blending"})
+                           "ToolTip": 'Blocks per pixel; approximately eight-block blending'})
     BCTPower: float = (1., {'ClampMin': 0, 'UIMax': 4, 'EditCondition': 'BCTEnabled',
-        'ToolTip': '对正数 RGB 或 HSV 数值逐项乘方后再编码和混合；1 保持默认 / Exponent applied to positive RGB/HSV values before encoding and blending; 1 keeps defaults'})
+        'ToolTip': 'Exponent applied to positive RGB/HSV values before encoding and blending; 1 keeps defaults'})
 
 
 class WorldCustom(mineprep.PropertyGroup):
@@ -93,6 +101,17 @@ class HeightmapTexture(mineprep.PropertyGroup):
     Texture: unreal.Texture2D = None
 
 
+class MapPaintTools(mineprep.PropertyGroup):
+    _autosave_ = False
+    Value: float = 16.
+    Diameter: float = (32., {'ClampMin': .1, 'ClampMax': 65536., 'UIMin': 1., 'UIMax': 256.})
+    Hardness: float = (.5, {'ClampMin': 0., 'ClampMax': 1., 'Delta': .05})
+    Strength: float = (1., {'ClampMin': 0., 'ClampMax': 1., 'Delta': .05})
+    Visible: bool = True
+
+
+
+
 class MaskOptions(mineprep.PropertyGroup):
     _autosave_ = False
     Enabled: bool = False
@@ -103,13 +122,23 @@ class MaskOptions(mineprep.PropertyGroup):
     Size: unreal.IntPoint = (unreal.IntPoint(512, 512), {'ClampMin': 1})
 
 
-for name, zh, en in (('Enabled','启用','Enable'), ('Path','遮罩文件','Mask file'),
-                     ('Origin','覆盖原点（X/Y，格）','Mapping origin (X/Y, blocks)'),
-                     ('Size','覆盖尺寸（宽/长，格）','Mapping size (width/depth, blocks)')):
-    MaskOptions.localize(name, zh, en, zh)
 
 
-HeightmapTexture.localize('Texture', '输入纹理', 'Input texture', '輸入紋理')
+
+
+class BiomeMapOptions(mineprep.PropertyGroup):
+    _autosave_ = False
+    Enabled: bool = False
+    Path: str = ''
+    Palette: str = ''
+    Tolerance: int = (32, {'ClampMin': 0, 'ClampMax': 255})
+    Origin: unreal.IntPoint = unreal.IntPoint(0, 0)
+    Size: unreal.IntPoint = (unreal.IntPoint(512, 512), {'ClampMin': 1})
+
+
+class BiomeMapColor(mineprep.PropertyGroup):
+    _autosave_ = False
+    Color: unreal.LinearColor = ((1, 0, 0, 1), {'HideAlphaChannel': True, 'ClampMin': 0, 'ClampMax': 1})
 
 
 class LandscapeView(mineprep.PropertyGroup):
@@ -118,7 +147,6 @@ class LandscapeView(mineprep.PropertyGroup):
     MaxY: int = 127
 
 
-LandscapeView.localize('MaxY', '预览高度', 'Preview height', '預覽高度')
 
 
 class CaveSlice(mineprep.PropertyGroup):
@@ -129,37 +157,20 @@ class CaveSlice(mineprep.PropertyGroup):
     HorizontalZ: int = 0
 
 
-CaveSlice.localize('VerticalY', '纵剖位置（水平 Y，格）', 'Vertical cut (UE Y, blocks)', '纵剖位置（水平 Y，格）')
-CaveSlice.localize('VerticalX', '侧剖位置（水平 X，格）', 'Side cut (UE X, blocks)', '侧剖位置（水平 X，格）')
-CaveSlice.localize('HorizontalZ', '水平剖面高度（Z，格）', 'Horizontal cut (UE Z, blocks)', '水平剖面高度（Z，格）')
 
 
-for cls, category, labels in (
-    (WorldRange, ("生成范围", "Region"), {
-        "Seed": ("种子", "Seed"), "Origin": ("生成原点（X/Y，格）", "Origin (X/Y, blocks)"),
-        "Size": ("生成尺寸（宽/长，格）", "Size (width/length, blocks)")}),
-    (WorldOutput, ("输出与性能", "Output & performance"), {
-        "OutputName": ("输出名称", "Output name"),
-        "Offset": ("放置偏移（UE X/Y/Z，厘米）", "Placement offset (UE X/Y/Z, cm)"),
-        "ISMChunkCount": ("ISM 区块数", "ISM chunk count"),
-        "GPUTypeGroupCount": ("模型分组数", "Model groups"),
-        "Workers": ("线程/进程数", "Threads / processes"),
-        "Budgets": ("数量上限 (预处理格数/最终实例数)", "Limits (preprocess cells / final instances)"),
-        "BCTEnabled": ("群系颜色纹理", "Biome colour texture"),
-        "BCTColorMode": ("群系颜色模式", "Biome colour mode"),
-        "BCTCellSize": ("群系颜色纹理（格/像素）", "Biome colour texture (blocks/pixel)"),
-        "BCTPower": ("群系色彩指数", "Biome colour exponent")}),
-    (WorldCustom, ('自定义高度图', 'Custom heightmap'), {
-        'Enabled': ('启用高度图', 'Enable heightmap'), 'Path': ('高度图文件', 'Heightmap file'),
-        'Mode': ('地形模式', 'Terrain mode'), 'InputRange': ('输入范围', 'Input range'),
-        'AutoOutput': ('自动输出范围', 'Automatic output range'),
-        'OutputRange': ('手动输出范围（格）', 'Manual output range (blocks)'),
-        'Origin': ('覆盖原点（X/Y，格）', 'Mapping origin (X/Y, blocks)'),
-        'Size': ('覆盖尺寸（宽/长，格）', 'Mapping size (width/depth, blocks)')}),
-):
-    cls.localize(cls.__name__, category[0], category[1], category[0])
-    for name, (zh, en) in labels.items():
-        cls.localize(name, zh, en, zh)
+
+
+WorldRange.localize(tooltip=True)
+WorldOutput.localize(tooltip=True)
+WorldCustom.localize(tooltip=True)
+HeightmapTexture.localize(tooltip=True)
+MapPaintTools.localize(tooltip=True)
+MaskOptions.localize(tooltip=True)
+BiomeMapOptions.localize(tooltip=True)
+BiomeMapColor.localize(tooltip=True)
+LandscapeView.localize(tooltip=True)
+CaveSlice.localize(tooltip=True)
 
 
 def prop_name(key):
@@ -180,7 +191,7 @@ def operation_values(group):
 
 
 def row_name(row):
-    return 'Row__' + prop_name(row.keys[0])
+    return 'Row__' + row.id
 
 
 def restore_operations(group, values, validate, *, size=(512, 512)):
@@ -221,12 +232,13 @@ def params_group(pack, page=None):
     cache_key = (pack.id, pages)
     cached = _groups.get(cache_key)
     if cached and cached[0] == pack.fingerprint:
+        bind_properties(cached[1], pack)
         return cached[1]
     annotations = {"ShowAdvanced": bool}
     namespace = {"ShowAdvanced": (False, {"Category": f"WG_{pack.id}_controls"}), "_autosave_": False}
     types = {"float": float, "int": int, "bool": bool, "curve": unreal.RuntimeFloatCurve, "str": str}
     rows = {key: row for row in pack.ui_rows for key in row.keys}
-    bindings, aliases, labels = {}, {}, {}
+    bindings, aliases = {}, {}
     for key, d in pack.params.items():
         if page is not None and d.page not in pages:
             continue
@@ -235,8 +247,8 @@ def params_group(pack, page=None):
             meta["ClampMin"] = d.min
         if d.max is not None and d.type != "bool":
             meta["ClampMax"] = d.max
-        if d.tooltip[0]:
-            meta["ToolTip"] = f"{d.tooltip[0]} / {d.tooltip[1]}"
+        meta['DisplayName'] = d.label.key
+        meta['ToolTip'] = d.tooltip.key
         if d.advanced:
             meta.update(EditCondition="ShowAdvanced", EditConditionHides=True)
         if d.enabled_param:
@@ -266,11 +278,8 @@ def params_group(pack, page=None):
                 kind = unreal.IntVector
             annotations[attr] = kind
             namespace[attr] = (kind(*(v.default for v in definitions)), meta)
-            hints = [f"{axis}: {label[0]} / {label[1]}"
-                     f" [{v.min}, {v.max}] {v.tooltip[0]} / {v.tooltip[1]}"
-                     for axis, label, v in zip(('X', 'Y', 'Z'), row.components, definitions)]
-            meta['ToolTip'] = '\n'.join(hints)
-            labels[attr] = row.label
+            meta['DisplayName'] = row.label.key
+            meta['ToolTip'] = row.label.key + '.tooltip'
             continue
         attr = prop_name(key)
         bindings[key] = (attr, None)
@@ -280,17 +289,11 @@ def params_group(pack, page=None):
             default = unreal.RuntimeFloatCurve()
             default.import_text(ue_text_from_points(d.default))
         namespace[attr] = (default, meta)
-        labels[attr] = d.label
     namespace['_bindings_'], namespace['_aliases_'] = bindings, aliases
     namespace["__annotations__"] = annotations
     namespace["__module__"] = __name__
     cls = type(f"WGParams_{pack.id}", (_ScalarAliases, mineprep.PropertyGroup), namespace)
-    cls.localize("ShowAdvanced", "显示高级参数", "Show advanced parameters", "显示高级参数")
-    cls.localize(f"WG_{pack.id}_controls", "参数", "Parameters", "参数")
-    for page, (zh, en) in pack.pages.items():
-        cls.localize(f"WG_{pack.id}_{page}", zh, en, zh)
-    for attr, label in labels.items():
-        cls.localize(attr, label[0], label[1], label[0])
+    bind_properties(cls, pack)
     _groups[cache_key] = (pack.fingerprint, cls)
     return cls
 
@@ -344,6 +347,8 @@ def normalize_group(group, pack=None):
                 old=getattr(group,name)
                 setattr(group,name,type(old)(*(max(1,int(v)) for v in values[name])))
         if 'Workers' in values: group.Workers=max(1,min(group.Workers,16))
+        if 'CellStep' in values and values['CellStep'] not in (1,2,4):
+            raise ValueError('CellStep must be 1, 2 or 4')
         if 'ISMChunkCount' in values: group.ISMChunkCount=max(1,group.ISMChunkCount)
         if 'GPUTypeGroupCount' in values: group.GPUTypeGroupCount=max(1,group.GPUTypeGroupCount)
         return operation_values(group)

@@ -133,12 +133,6 @@ def solid(ctx, level, body, rock):
         if (radial > 0).any():
             column = np.minimum(radial,np.minimum(y-(p['end.height']-12),high-y))
             result = np.maximum(result,column)
-    if altar(p):
-        radius = np.hypot(ctx.x-p['end.center_x'],ctx.z-p['end.center_z'])
-        floor = np.minimum(3.5-radius,np.minimum(y-(p['end.height']-3),p['end.height']-y))
-        rim = np.minimum(np.minimum(3.5-radius,radius-2.3),np.minimum(y-p['end.height'],p['end.height']+1-y))
-        stem = np.minimum(.8-radius,np.minimum(y-p['end.height'],p['end.height']+4-y))
-        result = np.maximum(result,np.maximum(floor,np.maximum(rim,stem)))
     return result.astype(np.float32)
 
 
@@ -150,8 +144,4 @@ def materials(ctx):
         selected = (r < radius+.25) & (ctx.y >= p['end.height']-12) & (ctx.y < high)
         result[selected] = ctx.block_index['obsidian']
         result[selected & (ctx.x==cx) & (ctx.z==cz) & (ctx.y==high-1)] = ctx.block_index['bedrock']
-    if altar(p):
-        selected = ((np.hypot(ctx.x-p['end.center_x'],ctx.z-p['end.center_z']) < 3.5)
-                    & (ctx.y >= p['end.height']-3) & (ctx.y < p['end.height']+4))
-        result[selected] = ctx.block_index['bedrock']
     return result

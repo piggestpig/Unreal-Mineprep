@@ -1,4 +1,4 @@
-# 内容扩展接口（格式 2）
+# 内容扩展接口（格式 3）
 
 ## 参考地表有效区域
 
@@ -86,7 +86,11 @@ vanilla及派生包可覆盖`@field('height_custom', deps=('height_lowlands',))`
 
 ## 群系与景观
 
-`pack.json` 声明 `format_version: 2`。群系文件按 ID 整份覆盖；`features.json` 按景观 ID 继承覆盖，不能在景观定义里放群系列表或分布参数。群系负责全部分布条件：
+`pack.json` 声明 `format_version: 3`。名称等文本位于独立词典，见[本地化](LOCALIZATION.md)。群系文件按 ID 整份覆盖；`features.json` 按景观 ID 继承覆盖，不能在景观定义里放群系列表或分布参数。群系负责全部分布条件：
+
+景观定义可声明 `detail_only: true`，表示只在1格精度生成；缺省为 `false`，粗区保留。该字段适用于 `surface_scatter`、`multi_block` 和 `column_field`，不改变存储的分布参数；固定分区按锚点／列的实际精度判断。内置小植物、水生植物、下界小菌／菌索／下界苗／零散火显式标注；完整树木、菌树、紫颂树、萤石、化石等保留。核心不依赖这些景观的分类名称决定精度策略。
+
+标准height／volume几何配方共享 `cell_step/core/core_empty` 的统一精度与固定分区，无资源包名白名单。景观必须使用公共几何查询取得支撑和净空，体积规划器可显式选择基础密度字段；表面记录使用实际覆盖尺寸。符合这些约定的自定义包沿用同一提壳、混合接缝和全高留空流程；高度地形关闭密度时继续走二维快路径。能力从 `api.describe(pack)['capabilities']` 读取；地下水及湖海连接支持固定LOD，并按最终实际开口校验。见[粗精度](COARSE.md)。
 
 ```json
 "features": {
@@ -202,17 +206,19 @@ prepare只将实际用到的配方烘焙为版本化UE资产，在普通方块�
 [{"id":"cover", "function":"demo:cover", "blocks":["demo_snow"], "radius":0, "enabled_param":"cold.cover"}]
 ```
 
-可选`volume: true`显式允许处理器在三维体积地形中运行，仍使用已有SurfacePatch与真实占据查询。默认false，原有高度地形处理器不会被隐式启用到体积地形。末地以此添加静态传送门表面；三维地形本体仍由密度与壳层材料负责。
+可选`volume: true`显式允许处理器在三维体积地形中运行，仍使用已有SurfacePatch与真实占据查询。默认false，原有高度地形处理器不会被隐式启用到体积地形。末地以此添加单位格祭坛；三维地形本体仍由密度与壳层材料负责。
 
 可选布尔字段 `sky_only` 默认 `false`，保持全部真实向上表面的输入。设为 `true` 表示处理器只需要 `sky_open=True` 的表面：核心先按当前立方体、列景观和模型顶面计算天空遮挡，再对露天候选做真实占据查询，避免为积雪等处理枚举洞内表面。水面也按同一天空判定筛选，洞口仍使用实际支撑。vanilla 的 `cold_surfaces` 已声明 `sky_only:true`；子包继承声明，自定义实现若需要洞内表面应显式设为 `false` 或替换处理器列表。格式版本保持2。
 
 函数为 `fn(ctx, surfaces) → SurfacePatch(xyz, types, replace)`。XYZ 是绝对整数世界坐标，types 是包方块 ID，replace 为布尔数组。新增必须在空单元，替换必须有已输出单元；重复坐标、未声明方块、越界、错误数组或超预算均报错。只能提交 `ctx.region` 内且在世界 Y 范围内的结果。核心按固定 256 格输出块调用，输入含所声明半径（0–64）内的已生成表面，结果与地形计算分块及执行器无关。
 
-`SurfaceBatch` 数组只读：xyz 为支撑单元，types 为包方块 ID，kind 为 0 地形／1 景观／2 显示水平水面，biomes 为群系索引，sky_open 为上方没有实体遮挡，water_levels 仅在水面记录中提供逻辑水位，其余为 NaN。参考高度不是实体表面：洞口内不能以参考高度为支撑；水面独立于物理湿域。处理器可通过 `ctx.query.reference(region)` 查询高度、坡度、群系、地表材料、水位及湿域，通过 `ctx.query.occupied(xyz)` 查询真实地形／景观占据。查询半径超限报错；引用查询按需求值，不分配完整体积。
+0.71.2新增可选布尔字段 `unit_replace`，默认 `false`：保持原规则，替换坐标命中粗块时对整个粗块改材质。设为 `true` 时，只把本次命中的水平粗块拆成单位格，精确替换指定子格，其余子格保留原材质；适用于生成器合并前Y尺寸为1的水平粗块。拆分复用局部表面处理路径，保留原数组槽位，新增子格计入实例预算；新增补丁仍为单位格，合并器随后可重新合并。末地祭坛用此保留基岩池圈，不把整个岛面细化。`api.describe()` 同步返回该元数据，不增加Spec字段。
+
+`SurfaceBatch` 数组只读：xyz 为支撑单元，types 为包方块 ID，kind 为 0 地形／1 景观／2 显示水平水面，biomes 为群系索引，sky_open 为上方没有实体遮挡，water_levels 仅在水面记录中提供逻辑水位，其余为 NaN。`sizes` 为实际XYZ尺寸，`None` 表示单位格；处理器应根据覆盖范围决定自己的粗模式行为。参考高度不是实体表面：洞口内不能以参考高度为支撑；水面独立于物理湿域。处理器可通过 `ctx.query.reference(region)` 查询高度、坡度、群系、地表材料、水位及湿域，通过 `ctx.query.occupied(xyz)` 查询真实地形／景观占据。`ctx.query.emitted(xyz)` 返回可替换的普通已输出单元，包含粗块内部覆盖列，区别于未输出的隐含实心岛体或完整模型内部；输入为绝对整数 `XYZ[N,3]`，返回只读布尔数组。查询半径超限报错；引用查询按需求值，不分配完整体积。
 
 表面枚举限于本次生成区域及其已生成单元；区域外邻域可以查询参考和占据，不会提供未生成的覆盖层。处理器如读取邻域，必须使最终决策只依赖世界坐标和声明的有限邻域；不要依赖批次排列或外部可变状态。按顺序运行时，后处理器能看到前处理器新增／替换的单元。
 
-只需高度、坡度、水位、湿域和字段时，可使用 `ctx.query.reference(region, include_surface=False)`，跳过群系选择和材料规则，返回的 `biomes`、`columns` 为 None，其他查询语义不变。默认仍返回完整参考。占据查询复用当前阶段坐标索引；关闭洞穴时从本次地形外壳提取精确整数列顶面，排除景观及立方体散布植物，不用 float32 参考高度推断整数边界。洞穴、区域外及未持有精确顶面的独立查询保留原始精度路径；必要的 64 格高度小块只在本次调用内复用，结束即释放，不跨世界或跨进程共享。
+只需高度、坡度、水位、湿域和字段时，可使用 `ctx.query.reference(region, include_surface=False)`，跳过群系选择和材料规则，返回的 `biomes`、`columns` 为 None，其他查询语义不变。默认仍返回完整参考。占据查询复用当前阶段坐标索引；关闭洞穴时从本次地形外壳提取精确整数列顶面，排除景观及立方体散布植物，不用 float32 参考高度推断整数边界。洞穴、区域外及未持有精确顶面的独立查询使用同一几何采样入口，粗模式将 X／Z 对齐到相应粗格，Y 不变；必要的 64 格高度小块只在本次调用内复用，结束即释放，不跨世界或跨进程共享。
 
 景观预览读取表面处理后的最高实体／水面材料，显示覆盖和替换颜色；地表、植被和水系诊断图继续描述各自的参考数据。预览着色不能代替 UE 模型与材质观感验收。
 
@@ -246,9 +252,9 @@ ctx提供pack、params、seed、feature、block_ids、resources和query（Volume
 
 ## UI、目录与快照
 
-`ui_sections` 是有序映射。每节可声明 label、pages、controls、shared_group、groups、editor。groups 的字段为 id、label、pages、fold、default_open；editor 可选 biomes、surface、features、water。未归属的参数页自动生成独立节。重复归属和无效控制参数在加载时报错；共享原生参数组只由 shared_group 决定。
+`pages` 是有序页ID列表，`ui_sections` 是有序映射。每节可声明 pages、controls、shared_group、groups、editor。groups 的字段为 id、pages、fold、default_open；editor 可选 biomes、surface、features、water。未归属的参数页自动生成独立节。重复归属和无效控制参数在加载时报错；共享原生参数组只由 shared_group 决定。名称位于词典的 pages／sections／groups 键。
 
-参数可声明 `enabled_param` 布尔开关。`ui_rows` 声明 label、keys 和可选 components（每个分量的中英文标签），保留原标量参数键与有效值。世界范围、预览、内容编辑、输出操作沿用原有工具。包无需添加 UI 专用分支。
+参数可声明 `enabled_param` 布尔开关。`ui_rows` 为 `{稳定行ID: {"keys": [参数键]}}` 映射，标签和分量名称位于 rows 词条。保留原标量参数键与有效值。世界范围、预览、内容编辑、输出操作沿用原有工具。包无需添加 UI 专用分支。
 
 `api.catalog()` 逐包返回 id、name、status、error，坏包不会阻断健康包。`api.pack()` 仍严格报错。`api.describe()` 包括群系绑定、生成器、处理器、参数 UI 元数据、启停条件与能力说明，主流程仍为 `spec → generate → prepare → place`。0.42.0补充最终`height_field`、参数`tooltip/advanced`及处理器`sky_only`，旧键保留；元数据是继承后的定义和默认值，当前Spec解析值仍用`api.pack(spec.pack).resolve(spec)`查询。
 

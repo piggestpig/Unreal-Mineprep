@@ -2,11 +2,8 @@ from functools import partial
 
 import unreal
 import mineprep
+from mineprep import i18n
 from . import tests, ops
-
-
-def tr(zh, en):
-    return mineprep.bilingual(zh, en)
 
 
 _UNTESTED = unreal.LinearColor(1, 1, 1, 1)
@@ -17,7 +14,7 @@ _FAIL = unreal.LinearColor(1.0, 0.35, 0.3, 1.0)
 
 class AutomationTest(mineprep.Mod):
     _unique_ = True
-    _label_ = tr('自动化测试', 'Automation Test')
+    _label_ = i18n('自动化测试', 'Automation Test')
 
     def __init__(self, context=None):
         self.closed = False
@@ -29,13 +26,13 @@ class AutomationTest(mineprep.Mod):
     def draw(self, context=None):
         layout = self.layout
         self._run_all = layout.button(
-            tr('运行所有项目', 'Run all tests'), on_clicked=self.run_all, padding=4)
+            i18n('运行所有项目', 'Run all tests'), on_clicked=self.run_all, padding=4)
 
         self._rows = []
         for i, spec in enumerate(tests.TESTS):
             row = layout.row(padding=(0, 2))
             button = row.button(spec['label'], on_clicked=partial(self.run_one, i), padding=3)
-            status = row.text(tr('未测试', 'Not tested'), wrap=True, padding=(8, 2), align=(1,2), fill=1)
+            status = row.text(i18n('未测试', 'Not tested'), wrap=True, padding=(8, 2), align=(1,2), fill=1)
             self._rows.append(dict(spec=spec, button=button, status=status))
 
     def run_all(self):
@@ -65,8 +62,8 @@ class AutomationTest(mineprep.Mod):
         by_id = {row['spec']['id']: row for row in rows}
 
         def progress(item, text, color):
-            labels = {'running': tr('运行中…', 'Running…'), 'passed': tr('通过', 'Passed'),
-                      'cancelled': tr('已取消', 'Cancelled'), 'failed': item['error'] or tr('失败', 'Failed')}
+            labels = {'running': i18n('运行中…', 'Running…'), 'passed': i18n('通过', 'Passed'),
+                      'cancelled': i18n('已取消', 'Cancelled'), 'failed': item['error'] or i18n('失败', 'Failed')}
             self._set_status(by_id[item['id']], text or labels.get(item['state'], ''),
                              color if color is not None else _PASS if item['state'] == 'passed' else
                              _FAIL if item['state'] == 'failed' else _RUNNING)

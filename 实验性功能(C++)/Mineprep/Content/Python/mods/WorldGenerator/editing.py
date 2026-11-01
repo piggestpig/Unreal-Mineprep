@@ -80,19 +80,21 @@ def _effective(pack, roots):
             if key in manifest:
                 data[key] = manifest[key]
     data['biomes'] = [data['biomes'][b.id] for b in pack.biomes]
+    from .localization import read_entries
+    data['texts'] = read_entries(pack.root, pack.id)
     return data
 
 
 class PackDraft:
     def __init__(self, pack_id='vanilla', *, workspace=None):
         self.workspace = Path(workspace or WORKSPACE).resolve()
-        from .migration import upgrade_workspace
-        self.upgrade_report = upgrade_workspace(self.workspace, roots=pack_roots())
         self.user_root = self.workspace / 'packs'
         if self.user_root.is_dir():
             register_pack_root(self.user_root)
         self.roots = pack_roots()
         self.pack = load_pack(pack_id, roots=self.roots)
+        from .localization import catalog
+        catalog(self.pack.name).refresh()
         self.fingerprint = self.pack.fingerprint
         self.data = _effective(self.pack, self.roots)
         self.original = deepcopy(self.data)
@@ -100,6 +102,25 @@ class PackDraft:
         self.revision = 0
         self._last = None
         self._last_geometry = None
+
+    def text(self, key, language=None, fallback=''):
+        from .localization import catalog, record_text
+        record = (self.data['texts'][key] if self.data['texts'].get(key) != self.original['texts'].get(key)
+                  else catalog(self.pack.name).entries.get(key, {}))
+        return record_text(record, language, fallback)
+
+    def set_text(self, key, value, language='zh'):
+        from .localization import catalog
+        if self.data['texts'].get(key) == self.original['texts'].get(key):
+            entry = deepcopy(catalog(self.pack.name).entries.get(key, {}))
+        else:
+            entry = dict(self.data['texts'][key])
+        if not entry:
+            entry['_native'] = language
+        if language == entry.get('_native', 'zh') and not str(value).strip():
+            raise ValueError('Source text must not be empty')
+        entry[language] = str(value)
+        self.data['texts'][key] = entry
 
     @property
     def dirty(self):
@@ -158,7 +179,7 @@ class PackDraft:
 
     def _write_content(self, directory, manifest, data=None):
         data = self.data if data is None else data
-        manifest['format_version'] = 2
+        manifest['format_version'] = 3
         base = (_effective(load_pack(manifest['extends'], roots=self.roots), self.roots)
                 if manifest.get('extends') else dict(biomes=[], blocks={}, features={}))
         known = {b['id']: b for b in base['biomes']}
@@ -181,6 +202,14 @@ class PackDraft:
             else:
                 path.unlink(missing_ok=True)
         _json(directory / 'pack.json', manifest)
+        from .localization import catalog, write_entries
+        inherited = {}
+        if manifest.get('extends'):
+            parent_texts = catalog(load_pack(manifest['extends'], roots=self.roots).name)
+            parent_texts.refresh()
+            inherited = parent_texts.entries
+        entries = {k: v for k, v in data['texts'].items() if v != inherited.get(k)}
+        write_entries(directory, manifest['id'], entries)
 
     def _materialize(self, data=None, *, geometry=False):
         self._check_base()
@@ -207,10 +236,11 @@ class PackDraft:
             self._last = (digest, loaded.id)
         return loaded.id
 
-    def _geometry_spec(self, preset='', *, seed=42, region=(0, 0, 256, 256), params=None):
+    def _geometry_spec(self, preset='', *, seed=42, region=(0, 0, 256, 256), params=None, cell_step=1,core=None,core_empty=False):
         """Panel-only stable generation revision; output colours remain in the full draft."""
         self._check_base()
         data = deepcopy(self.data)
+        data['texts'] = self.original['texts']
         for name, item in tuple(data['blocks'].items()):
             definition = parse_block(name,item,self.pack.root)
             initial = self.original['blocks'].get(name)
@@ -231,15 +261,16 @@ class PackDraft:
                 else:
                     biome.pop(field, None)
         pack_id = self._materialize(data, geometry=True) if data != self.original else self.pack.id
-        result = WorldSpec(pack_id, preset, seed, region if isinstance(region, Region) else Region(*region), params or {})
+        result = WorldSpec(pack_id, preset, seed, region if isinstance(region, Region) else Region(*region), params or {},cell_step=cell_step,core=core,core_empty=core_empty)
         load_pack(pack_id).resolve(result)
         return result
 
-    def spec(self, preset='', *, seed=42, region=(0, 0, 256, 256), params=None):
+    def spec(self, preset='', *, seed=42, region=(0, 0, 256, 256), params=None, cell_step=1,core=None,core_empty=False):
         """Immutable temporary content version + normal WorldSpec parameter overrides."""
         self._check_base()
-        pack_id = self._materialize() if self.dirty else self.pack.id
-        result = WorldSpec(pack_id, preset, seed, region if isinstance(region, Region) else Region(*region), params or {})
+        data = {**self.data, 'texts': self.original['texts']}
+        pack_id = self._materialize(data) if data != self.original else self.pack.id
+        result = WorldSpec(pack_id, preset, seed, region if isinstance(region, Region) else Region(*region), params or {},cell_step=cell_step,core=core,core_empty=core_empty)
         load_pack(pack_id).resolve(result)
         return result
 
@@ -248,10 +279,15 @@ class PackDraft:
 
     def save(self, pack_id, *, name=None, preset='user_default', params=None, preset_name=None, section=None):
         """Publish a new derived pack, or update this managed user pack after validation."""
+        for value in (name, preset_name):
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError('Names must be nonempty source strings')
         if not _ID.fullmatch(pack_id) or not _ID.fullmatch(preset):
             raise ValueError('资源包与预设 ID 必须是小写字母开头的字母、数字、下划线')
         self._check_base()
         target = self.user_root / pack_id
+        from .localization import read_entries
+        starting_texts = read_entries(self.pack.root, self.pack.id)
         updating = target.resolve() == self.pack.root and self.pack.root.parent == self.user_root
         if section is not None and (not updating or self.dirty):
             raise ValueError('请先保存用户资源包及资源包规则修改，再另存本板块预设')
@@ -271,9 +307,18 @@ class PackDraft:
             else:
                 manifest = dict(id=pack_id, extends=self.pack.id)
             if section is None:
-                manifest.update(name=name if name is not None else manifest.get('name', pack_id))
+                from .localization import literal
+                content = deepcopy(self.data)
+                current = starting_texts
+                changed = {k: v for k, v in content['texts'].items() if v != self.original['texts'].get(k)}
+                if any(k in current and current[k] != self.original['texts'].get(k) and current[k] != v
+                       for k, v in changed.items()):
+                    raise ValueError('Text changed on disk; reload before saving the same entry')
+                content['texts'] = {**current, **changed}
+                if name is not None and name != self.text('pack.name'):
+                    content['texts']['pack.name'] = literal(name)
                 manifest['default_preset'] = preset
-                self._write_content(staged, manifest)
+                self._write_content(staged, manifest, content)
             values = self.pack.resolve(WorldSpec(self.pack.id, params=params or {})).to_dict() if params is None else params
             if section is None:
                 values = {k: v for k, v in values.items() if k not in self.pack.params or
@@ -283,10 +328,17 @@ class PackDraft:
                 keys = section_keys(self.pack, section)
                 resolved = self.pack.resolve(WorldSpec(self.pack.id, params=values)).to_dict()
                 values = {k: resolved[k] for k in keys}
-            declaration = dict(name=preset_name or preset, params=values)
+            declaration = dict(params=values)
             if section is not None:
                 declaration['section'] = section
             _json(staged / 'presets' / (preset + '.json'), declaration)
+            from .localization import literal, read_entries, write_entries
+            entries = read_entries(staged, pack_id)
+            preset_key = f'presets.{preset}.name'
+            current_name = self.text(preset_key)
+            if not current_name or (preset_name is not None and preset_name != current_name):
+                entries[preset_key] = literal(preset_name or preset)
+            write_entries(staged, pack_id, entries)
             load_pack(pack_id, roots=(str(staging_root), *self.roots)).resolve(WorldSpec(pack_id, preset))
             self._check_base()
             self.user_root.mkdir(parents=True, exist_ok=True)
@@ -298,6 +350,8 @@ class PackDraft:
             try:
                 if updating and load_pack(pack_id, roots=(str(backup.parent), *self.roots)).fingerprint != self.fingerprint:
                     raise ValueError('资源包已变化，请重新载入草稿')
+                if updating and read_entries(backup, pack_id) != starting_texts:
+                    raise ValueError('Text changed during save; the original pack has been restored')
                 os.replace(staged, target)
                 published = True
             except Exception as exc:
@@ -321,11 +375,11 @@ class PackDraft:
         path = self.pack.root / 'presets' / (preset + '.json')
         if path.exists():
             raise FileExistsError('预设已存在，请使用新的 ID')
-        return self.save(self.pack.id, name=self.pack.name, preset=preset, params=params, preset_name=name, section=section)
+        return self.save(self.pack.id, preset=preset, params=params, preset_name=name, section=section)
 
     def checkpoint(self, state):
-        _json(self.workspace / 'session.json', dict(format_version=2, pack=self.pack.id, fingerprint=self.fingerprint,
-                                                   data=self.data, state=state))
+        _json(self.workspace / 'session.json', dict(format_version=3, pack=self.pack.id, fingerprint=self.fingerprint,
+                                                   data=self.data, text_base=self.original['texts'], state=state))
 
     def needs_recovery(self, state):
         """Keep only additional session edits behind the explicit recovery prompt.
@@ -365,13 +419,15 @@ class PackDraft:
     @classmethod
     def restore(cls, *, workspace=None):
         workspace = Path(workspace or WORKSPACE)
-        from .migration import upgrade_workspace
-        upgrade_workspace(workspace, roots=pack_roots())
         saved = _read_json(workspace / 'session.json')
+        if saved.get('format_version') != 3:
+            raise ValueError('Unsupported legacy session; the original file is preserved')
         result = cls(saved['pack'], workspace=workspace)
         if result.fingerprint != saved['fingerprint']:
             raise ValueError('上次草稿的基础资源包已变化，请重新载入')
         result.data = saved['data']
+        changes = {k: v for k, v in saved['data']['texts'].items() if v != saved['text_base'].get(k)}
+        result.data['texts'] = {**result.original['texts'], **changes}
         return result, saved['state']
 
 

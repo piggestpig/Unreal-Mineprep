@@ -18,19 +18,10 @@ _ID = re.compile(r"^[a-z][a-z0-9_]*$")
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
-def _label(value, fallback):
-    if isinstance(value, dict):
-        zh = str(value.get("zh") or value.get("en") or fallback)
-        return zh, str(value.get("en") or zh)
-    if isinstance(value, (list, tuple)) and len(value) == 2:
-        return str(value[0]), str(value[1])
-    return (str(value), str(value)) if value else (fallback, fallback)
-
-
 @dataclass(frozen=True)
 class Biome:
     id: str
-    name: tuple          # (zh, en)
+    name: object         # semantic text reference, never an Unreal Text
     color: tuple         # (r, g, b)
     climate: tuple       # boxes: tuple of ((parameter, lo, hi), ...)
     surface: tuple       # Rule objects, see surface.py
@@ -47,7 +38,7 @@ class Biome:
 def parse_biome(data, parameters, source="biome"):
     if not isinstance(data, dict):
         raise ValueError(f"{source}: biome must be a JSON object")
-    unknown = set(data) - {"id", "name", "color", "climate", "fallback", "surface", "notes", "features", "vegetation_tint", "vegetation_hsv"}
+    unknown = set(data) - {"id", "color", "climate", "fallback", "surface", "notes", "features", "vegetation_tint", "vegetation_hsv"}
     if unknown:
         raise ValueError(f"{source}: unknown keys {sorted(unknown)}")
     biome_id = data.get("id")
@@ -83,7 +74,7 @@ def parse_biome(data, parameters, source="biome"):
         climate.append(tuple(conditions))
     rules = parse_rules(data.get("surface"), f"{source}.surface")
     rgb = tuple(int(color[i:i + 2], 16) for i in (1, 3, 5))
-    return Biome(biome_id, _label(data.get("name"), biome_id), rgb, tuple(climate), rules, fallback,
+    return Biome(biome_id, f'biomes.{biome_id}.name', rgb, tuple(climate), rules, fallback,
                  parse_placements(data.get('features', {}), source),
                  vegetation_tint(data.get('vegetation_tint', [1, 1, 1]), source),
                  vegetation_hsv(data.get('vegetation_hsv', [1, 1, 1]), source))

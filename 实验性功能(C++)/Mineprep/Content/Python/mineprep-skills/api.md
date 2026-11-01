@@ -22,7 +22,7 @@ Outside Unreal, the public modules use `mc_utils.Lazy` as an `unreal` placeholde
 | Plugin UI | `panel`, `toolbar`, `hotkey` |
 | Editor UI | `Layout`, `ui(...)`, `PropertyGroup`, `save` / `load`, `_autosave_` |
 | Mods | `Mod`, `mods.register` / `unregister` / `register_all` |
-| Loc | `bilingual`, `localize`, `loctext`, `tooltip` |
+| Optional localization | [localization.md](localization.md): `i18n`, `I18N`, `collect_i18n`, `check_i18n` |
 | Spawn | `spawn_block/item/mob/preset`, `attach`, `spawn_blocks`, `spawn_structure`, `Blocks`, `structure_parts`, `get_all_blocks` |
 | Mesh | `merge_skm`, `Blocks.bake` |
 | Assets & Config | `uasset`, `uclass`, `bpclass`, `construct`, `copy`, `config`, `paths` |
@@ -374,20 +374,8 @@ Run these on the editor game thread (`mc_material.py`):
 
 ## Localization
 
-```python
-mineprep.bilingual('中文', 'English')                 # mod_info / short labels
-mineprep.localize(source, zh, en, zh_tw, ...)       # multi-lang UI
-# PropertyGroup fields: Cls.localize('FieldName', zh, en, zh_tw)
-```
-
-`bilingual` / `localize` / `loctext` return **`unreal.Text`**, not `str`:
-
-```python
-message = str(label) + '\n'  # convert to str before + or join
-widget.set_text(label)       # set_text and f-strings accept unreal.Text directly
-```
-
-Args after `source` follow `mcvars.Languages` order. Pass the **Python attribute name** as the field key on `Cls.localize`. `loctable_col` reads `mcvars.LocalizationCache`.
+Localization is optional. For multilingual text, property translations, catalog
+files and offline tools, read [localization.md](localization.md).
 
 ## Reload
 
@@ -414,6 +402,16 @@ mineprep.warn(f'导入方块失败: {path}', exc)  # Exception → full tracebac
 mineprep.throw('fatal')                      # on-screen error, then raise
 mineprep.panic('title', 'message')           # Yes → continue; No → throw
 ```
+
+`panic()` and `dialog()` localize their built-in titles and prompts. Caller-supplied
+text can be an ordinary string; use `i18n` at the call site when multilingual text is needed.
+
+## File dialogs
+
+`askopenfilename`, `askdirectory` and `asksaveasfilename` use `title=None` by
+default, resolving a localized title when called. An explicit string or Text is
+converted to a string without translation, including an empty title. Outside UE,
+default titles remain `Select File`, `Select Directory` and `Save File`.
 
 ## Undo
 

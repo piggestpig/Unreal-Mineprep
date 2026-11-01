@@ -26,6 +26,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Rendering/SlateRenderer.h"
 #include "Internationalization/Text.h"
+#include "Internationalization/TextLocalizationManager.h"
 #include "Internationalization/TextNamespaceUtil.h"
 #include "Internationalization/TextPackageNamespaceUtil.h"
 #include "Engine/UserDefinedEnum.h"
@@ -516,6 +517,25 @@ Umineprep::Umineprep(const FObjectInitializer& ObjectInitializer)
 
 }
 
+
+TArray<FText> Umineprep::RegisterPolyglotTexts(const TArray<FPolyglotTextData>& TextData)
+{
+    FTextLocalizationManager::Get().RegisterPolyglotTextData(MakeArrayView(TextData));
+
+    TArray<FText> Texts;
+    Texts.SetNum(TextData.Num());
+    for (int32 Index = 0; Index < TextData.Num(); ++Index)
+    {
+        const FPolyglotTextData& Data = TextData[Index];
+        if (Data.IsValid())
+        {
+            // GetText() 会再次逐项注册；直接查已注册文本，保留其本地化历史。
+            FText::FindTextInLiveTable_Advanced(
+                Data.GetNamespace(), Data.GetKey(), Texts[Index], &Data.GetNativeString());
+        }
+    }
+    return Texts;
+}
 
 float Umineprep::SetEditorUIScale(float Scale)
 {

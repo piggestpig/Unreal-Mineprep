@@ -13,7 +13,7 @@ from pathlib import Path
 from mc_config import wclass
 from mc_widget import Layout, copy
 from mc_utils import uclass, startfile, warn
-from mc_localization import bilingual
+from mc_localization import Internationalization, i18n
 
 MODS_DIR = Path(__file__).with_name('mods')
 MANIFEST_NAME = 'mod_manifest.toml'
@@ -42,12 +42,14 @@ def read_manifest(path):
         value = data[key]
         valid = isinstance(value, str)
         if isinstance(value, list):
-            valid = 1 <= len(value) <= 2 and all(isinstance(v, str) for v in value)
+            valid = (1 <= len(value) <= len(mcvars.Languages) and bool(value[0])
+                     and all(isinstance(v, str) for v in value))
         elif isinstance(value, dict):
-            valid = ('chinese' in value and value.keys() <= {'chinese', 'english'}
-                     and all(isinstance(v, str) for v in value.values()))
+            valid = (bool(value.get(mcvars.Languages[0]))
+                     and all(re.fullmatch(r'[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*', lang)
+                             and isinstance(text, str) for lang, text in value.items()))
         if not valid:
-            raise ValueError(f'{path}: {key} 须为字符串、双语数组或 chinese/english 字典')
+            raise ValueError(f'{path}: {key} 须为字符串、i18n 语言数组或含 {mcvars.Languages[0]} 原文的语言字典')
     for key, expected in (('Version', str), ('CreatedBy', str), ('Priority', int),
                           ('EnabledByDefault', bool), ('ReloadWithMineprep', bool), ('Advanced', bool)):
         if key in data and type(data[key]) is not expected:
@@ -67,10 +69,13 @@ def manifest_info(data, name):
     """将清单转换为 mod_info；保留额外元数据，不混入构建设置。"""
     info = {'Name': name, **DEFAULT_INFO}
     info.update((key, value) for key, value in data.items() if key not in ('schema_version', 'build'))
+    i18n = Internationalization(namespace=name, file=MODS_DIR / name / 'i18n.json')
     for key in ('Name', 'Description'):
         value = info[key]
-        if isinstance(value, (list, dict)):
-            info[key] = bilingual(*value) if isinstance(value, list) else bilingual(**value)
+        if isinstance(value, list):
+            info[key] = i18n(*value, key=f'mod_info.{key}')
+        elif isinstance(value, dict):
+            info[key] = i18n(**value, key=f'mod_info.{key}')
     return info
 
 
@@ -378,11 +383,14 @@ class Mod():
     def bp_script(cls):
         mod_path = f'{cls.__module__}.{cls.__name__}'
         return f"""
-mod_class = mcvars.RegisteredMods.get('{mod_path}')
+mod_class = mcvars.RegisteredMods.get({mod_path!r})
 if mod_class:
     mod_class(context)
 else:
-    mineprep.warn(mineprep.bilingual('[未注册模组] {mod_path}', '[Unregistered Mod] {mod_path}'))
+    from pathlib import Path
+    mineprep.warn(mineprep.Internationalization(
+        namespace='Core', file=Path(mineprep.__file__).with_name('i18n.json'),
+    ).mod.unregistered('[未注册 mod] {{mod}}', '[Unregistered mod] {{mod}}').format(mod={mod_path!r}))
 """
 
     @classmethod
@@ -448,8 +456,10 @@ subsystem.spawn_and_register_tab_with_id(widget_bp, {id})
             if mcvars.WidgetModMap.get(widget) is instance:
                 mcvars.WidgetModMap.pop(widget, None)
                 try:
-                    warn(bilingual(f'未能关闭所有的{cls.__name__}模组面板：{instance}',
-                        f'Failed to close all {cls.__name__} mod panels: {instance}'))
+                    warn(i18n.mod.close_panels_failed(
+                        '未能关闭所有的{mod}模组面板：{instance}',
+                        'Failed to close all {mod} mod panels: {instance}').format(
+                            mod=str(cls.__name__), instance=str(instance)))
                     instance.layout.clear_children()
                 except:
                     pass

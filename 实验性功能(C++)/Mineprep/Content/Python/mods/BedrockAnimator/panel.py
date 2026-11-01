@@ -1,13 +1,13 @@
 """基岩版动画转换器面板。"""
 import mineprep
-from mineprep import bilingual
+from mineprep import i18n
 
 from . import ops, util
 from .props import Props
 
 
 class BedrockAnimator(mineprep.Mod):
-    _label_ = bilingual('基岩版动画转换器', 'Bedrock Animator')
+    _label_ = i18n('基岩版动画转换器', 'Bedrock Animation Converter')
     _unique_ = True
 
     def __init__(self, context=None):
@@ -21,11 +21,11 @@ class BedrockAnimator(mineprep.Mod):
         layout = self.layout
         layout.prop(self.props, on_property_changed=self.on_props)
         layout.button(
-            bilingual('生成动画至Sequencer', 'Key to Sequencer'),
+            i18n('写入 Sequencer', 'Key to Sequencer', key='将动画写入 Sequencer'),
             on_clicked=self.apply,
         )
         layout.button(
-            bilingual('烘焙动画序列', 'Bake Anim Sequence'),
+            i18n('烘焙动画序列', 'Bake Anim Sequence'),
             on_clicked=self.bake,
         )
 

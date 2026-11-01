@@ -4,7 +4,6 @@ from types import MappingProxyType
 import numpy as np
 from .data import Region, check_cancel
 from .fields import Context
-from .reference import biomes_for
 from .features import FeatureBatch
 from .noise import fbm2
 from .surface import bound
@@ -112,8 +111,11 @@ def build(pack,params,seed,region,proposals,resources):
         from .masks import weight, rejected
         probability = np.minimum(density*np.clip(1+2*patch,0,2), 1.)
         mask = uniform < probability * weight(pack, f.category, px, pz)
-        biome = biomes_for(ctx,pack)[pz-r.z0,px-r.x0]
+        from .store import biomes
+        biome = biomes(pack,params,seed,r,resources)[pz-r.z0,px-r.x0]
         mask &= np.isin(biome,[i for i,b in enumerate(pack.biomes) if b.id in f.biomes])
+        if pack.layout is not None:
+            mask &= pack.layout.anchors(f.detail_only,px,pz)
         ids = np.flatnonzero(mask)
         xz = np.column_stack((px[ids],pz[ids]))
         owned = ((px[ids] >= region.x0) & (px[ids] < region.x0+region.width)
@@ -279,6 +281,21 @@ def blocked_tops(pack, params, seed, region, xyz, types, models, resources):
     return absolute[_terrain_filled(pack, params, seed, absolute, resources)]
 
 
+def _uncovered_surfaces(faces,contains):
+    if faces.shape[1] == 4:
+        return faces[~contains(faces[:,:3]+[0,1,0])]
+    hits = np.zeros(len(faces),np.int32)
+    for dx in range(int(faces[:,4].max(initial=0))):
+        for dz in range(int(faces[:,5].max(initial=0))):
+            ids = np.flatnonzero((faces[:,4]>dx)&(faces[:,5]>dz))
+            hits[ids] += contains(faces[ids,:3]+[dx,1,dz])
+    # Keep untouched rectangles; only partial model contacts need unit faces.
+    from .projection import expand_surfaces
+    cut = expand_surfaces(faces[(hits>0)&(hits<faces[:,4]*faces[:,5])])
+    cut = cut[~contains(cut[:,:3]+[0,1,0])]
+    return np.concatenate((faces[hits==0],np.column_stack((cut,np.ones((len(cut),2),np.int32)))))
+
+
 def add_surfaces(pack,params,seed,region,surfaces,features,model_index=None,*,resources=None,blocked=None):
     """Overlay sparse feature faces and remove terrain faces they now occlude.
 
@@ -292,7 +309,7 @@ def add_surfaces(pack,params,seed,region,surfaces,features,model_index=None,*,re
     if not len(p):
         return surfaces
     contains = _containment(params, region, p, model_index)
-    surfaces = surfaces[~contains(surfaces[:,:3]+[0,1,0])]
+    surfaces = _uncovered_surfaces(surfaces,contains)
     above = p+[0,1,0]
     visible = ~contains(above) & (above[:,1] < params['world.y_max'])
     ids = np.flatnonzero(visible)
@@ -304,4 +321,6 @@ def add_surfaces(pack,params,seed,region,surfaces,features,model_index=None,*,re
         filled = _PointIndex(blocked).lookup(absolute)[0]
     visible[ids] &= ~filled
     extra = np.column_stack((p[visible],types[visible])).astype(surfaces.dtype,copy=False)
+    if surfaces.shape[1] == 6:
+        extra = np.column_stack((extra,np.ones((len(extra),2),np.int32)))
     return np.concatenate((surfaces,extra))

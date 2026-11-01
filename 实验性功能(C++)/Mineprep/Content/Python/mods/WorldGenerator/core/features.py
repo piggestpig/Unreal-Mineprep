@@ -22,6 +22,7 @@ class Feature:
     soft: bool = False
     allow_overlap_categories: tuple = ()
     placement: object = None  # None = legacy reference surface; volume_floor = all true floors
+    detail_only: bool = False
 
     @property
     def type(self):
@@ -57,6 +58,7 @@ class MultiBlockFeature:
     placement_fn: object = field(default=None, repr=False, compare=False)
     collision: str = 'bounds'  # explicit volume recipes may opt into exact cells
     overlap_blocks: tuple = ()  # small canopy overlaps; all other contacts remain hard
+    detail_only: bool = False
 
     @property
     def type(self):
@@ -90,6 +92,7 @@ class ColumnFeature:
     owner: str = ''
     fn: object = field(default=None, repr=False, compare=False)
     enabled_when: tuple = ()
+    detail_only: bool = False
 
     @property
     def type(self): return 'column_field'
@@ -110,6 +113,7 @@ def describe_feature(f):
     raw = {k: v for k, v in f.__dict__.items() if k not in
            ('id', 'owner', 'fn', 'placement_fn', 'biomes', 'surface', 'density', 'patch_scale', 'max_slope', 'enabled_param')}
     raw['enabled_when']=dict(f.enabled_when)
+    if not f.detail_only: raw.pop('detail_only')
     if f.type == 'surface_scatter' and f.placement is None:
         raw.pop('placement', None)
     return dict(id=f.id, type=f.type, **raw)
@@ -124,9 +128,12 @@ def parse_feature(name, raw):
     if not isinstance(raw, dict): return _parse_feature(name, raw)
     raw = dict(raw)
     when = raw.pop('enabled_when', {})
+    detail = raw.pop('detail_only', False)
+    if type(detail) is not bool:
+        raise ValueError(f'feature {name}: detail_only must be boolean')
     if not isinstance(when, dict) or any(not isinstance(k,str) or type(v) is not bool for k,v in when.items()):
         raise ValueError(f'feature {name}: enabled_when must map boolean parameters to booleans')
-    return replace(_parse_feature(name,raw),enabled_when=tuple(sorted(when.items())))
+    return replace(_parse_feature(name,raw),enabled_when=tuple(sorted(when.items())),detail_only=detail)
 
 
 def _parse_feature(name, raw):
@@ -304,6 +311,8 @@ def scatter(ctx, pack, biomes, columns, height, *, wet_mask=None, water_levels=N
                 & (top_boundary < ctx.param('world.y_max')) & (ctx.get('slope') <= slope)
                 & np.isin(biomes, [i for i, b in enumerate(pack.biomes) if b.id in f.biomes])
                 & np.isin(columns[..., 0], [index[n] for n in f.surface]))
+        if pack.layout is not None:
+            mask &= pack.layout.anchors(f.detail_only,ctx.x,ctx.z)
         if not mask.any():
             continue
         patch = ctx.noise(f'features/{f.id}/patch', scale, octaves=2)

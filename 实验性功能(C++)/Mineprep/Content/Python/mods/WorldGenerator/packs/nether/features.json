@@ -12,10 +12,12 @@
     "enabled_when": {"glowstone.enabled": true}
   },
   "floor_fire": {
+    "detail_only": true,
     "type": "surface_scatter", "block": "fire_floor", "placement": "volume_floor",
     "category": "fire", "soft": true, "enabled_when": {"fire.enabled": true}
   },
   "floor_soul_fire": {
+    "detail_only": true,
     "type": "surface_scatter", "block": "soul_fire_floor", "placement": "volume_floor",
     "category": "fire", "soft": true, "enabled_when": {"fire.soul_enabled": true}
   },
@@ -34,11 +36,13 @@
     "enabled_when": {"crimson.enabled": true}
   },
   "ground_crimson_fungus": {
+    "detail_only": true,
     "type": "surface_scatter", "block": "crimson_fungus", "placement": "volume_floor",
     "category": "crimson_ground", "soft": true,
     "enabled_when": {"crimson.enabled": true, "crimson.ground_enabled": true}
   },
   "ground_crimson_roots": {
+    "detail_only": true,
     "type": "surface_scatter", "block": "crimson_roots", "placement": "volume_floor",
     "category": "crimson_ground", "soft": true,
     "enabled_when": {"crimson.enabled": true, "crimson.ground_enabled": true}
@@ -52,16 +56,19 @@
     "enabled_when": {"warped.enabled": true}
   },
   "ground_warped_fungus": {
+    "detail_only": true,
     "type": "surface_scatter", "block": "warped_fungus", "placement": "volume_floor",
     "category": "warped_ground", "soft": true,
     "enabled_when": {"warped.enabled": true, "warped.ground_enabled": true}
   },
   "ground_warped_roots": {
+    "detail_only": true,
     "type": "surface_scatter", "block": "warped_roots", "placement": "volume_floor",
     "category": "warped_ground", "soft": true,
     "enabled_when": {"warped.enabled": true, "warped.ground_enabled": true}
   },
   "ground_nether_sprouts": {
+    "detail_only": true,
     "type": "surface_scatter", "block": "nether_sprouts", "placement": "volume_floor",
     "category": "warped_ground", "soft": true,
     "enabled_when": {"warped.enabled": true, "warped.ground_enabled": true}

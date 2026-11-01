@@ -247,6 +247,10 @@ def import_textures(files, key, *, folder, index, world_key):
     for kind in ('BPT','BRT'):
         task = mc_importer._make_import_task(files[kind],folder,f'structure_{kind}_{index}')
         texture = mc_importer._run_import_task(task)[0]
+        # These texels are instance records: averaging or streaming out a mip
+        # changes positions/scales even while the source dimensions stay valid.
+        texture.set_editor_properties(dict(srgb=False,
+            mip_gen_settings=unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS, never_stream=True))
         mineprep.prep_texture(texture,unreal.TextureCompressionSettings.TC_HDR_F32)
         unreal.EditorAssetLibrary.set_metadata_tag(texture,'WGTextureSize',json.dumps([files['side']]*2))
         unreal.EditorAssetLibrary.set_metadata_tag(texture,'方块映射',pformat(files['mapping']))

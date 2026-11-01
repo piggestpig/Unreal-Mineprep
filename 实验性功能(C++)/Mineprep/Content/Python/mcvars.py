@@ -6,7 +6,7 @@ EnabledMods = set()
 RegisteredMods = {}
 WidgetModMap = {}
 Props = {}
-Languages = ['zh-Hans', 'en', 'zh-Hant']
+Languages = ['zh', 'en', 'zh-Hant', 'zh-Hant-HK']
 
 ActorCache = None
 SpawnIDCache = None

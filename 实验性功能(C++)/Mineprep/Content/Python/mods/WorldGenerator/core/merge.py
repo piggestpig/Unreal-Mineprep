@@ -3,7 +3,7 @@ from dataclasses import replace
 import numpy as np
 from .data import check_cancel
 
-MERGE_VERSION = 'cuboids-5'
+MERGE_VERSION = 'cuboids-6-boxes'
 MERGE_TILE = 128
 MODES = ('none', 'runs', 'rectangles', 'cuboids')
 
@@ -12,8 +12,6 @@ def merge_arrays(data, mode='rectangles', cancel_event=None):
     if mode not in MODES:
         raise ValueError('merge must be none, runs, rectangles or cuboids')
     check_cancel(cancel_event)
-    if data.sizes is not None:
-        raise ValueError('merge_arrays requires unmerged visible cells')
     if mode == 'none' or not data.count:
         return replace(data, visible_count=data.count)
     nx = (data.region.width + MERGE_TILE - 1) // MERGE_TILE
@@ -26,34 +24,42 @@ def merge_arrays(data, mode='rectangles', cancel_event=None):
     for indices in np.split(order, boundaries):
         check_cancel(cancel_event)
         p, t = data.xyz[indices], data.types[indices]
+        unit = data.sizes is None
+        sizes = None if unit else data.sizes[indices].copy()
         offsets = (np.zeros(len(p)) if data.instance_y_offsets is None
                    else data.instance_y_offsets[indices])
         rotations = (np.zeros(len(p), np.uint8) if data.rotations is None else data.rotations[indices])
         # Sort by type, Y, Z, X, then identify uninterrupted X runs.
-        sort = np.lexsort((p[:, 0], p[:, 2], offsets, p[:, 1], rotations, t))
+        sort = np.lexsort((p[:,0],p[:,2],offsets,p[:,1],rotations,t) if unit else
+                          (p[:,0],sizes[:,2],p[:,2],offsets,sizes[:,1],p[:,1],rotations,t))
         p, t, offsets, rotations = p[sort], t[sort], offsets[sort], rotations[sort]
+        if not unit: sizes = sizes[sort]
         eligible = mergeable[t]
         breaks = ((t[1:] != t[:-1]) | (p[1:, 1] != p[:-1, 1])
-                  | (p[1:, 2] != p[:-1, 2]) | (p[1:, 0] != p[:-1, 0] + 1)
+                  | (p[1:, 2] != p[:-1, 2]) | (p[1:, 0] != p[:-1, 0] + (1 if unit else sizes[:-1,0]))
                   | (offsets[1:] != offsets[:-1]) | ~eligible[1:] | ~eligible[:-1])
         breaks |= rotations[1:] != rotations[:-1]
+        if not unit:
+            breaks |= (sizes[1:,1]!=sizes[:-1,1]) | (sizes[1:,2]!=sizes[:-1,2])
         starts = np.r_[0, np.flatnonzero(breaks) + 1]
-        widths = np.diff(np.r_[starts, len(p)])
+        widths = np.diff(np.r_[starts,len(p)]) if unit else np.add.reduceat(sizes[:,0],starts)
         p, t, offsets, rotations = p[starts], t[starts], offsets[starts], rotations[starts]
-        sizes = np.ones_like(p)
+        sizes = np.ones_like(p) if unit else sizes[starts]
         sizes[:, 0] = widths
         if mode in ('rectangles', 'cuboids'):
             # Only identical X intervals can join across consecutive Z rows.
-            sort = np.lexsort((p[:, 2], widths, p[:, 0], offsets, p[:, 1], rotations, t))
+            sort = np.lexsort((p[:,2],widths,p[:,0],offsets,p[:,1],rotations,t) if unit else
+                              (p[:,2],widths,p[:,0],offsets,sizes[:,1],p[:,1],rotations,t))
             p, t, sizes, offsets, rotations = p[sort], t[sort], sizes[sort], offsets[sort], rotations[sort]
             eligible = mergeable[t]
             breaks = ((t[1:] != t[:-1]) | (p[1:, 1] != p[:-1, 1])
                       | (p[1:, 0] != p[:-1, 0]) | (sizes[1:, 0] != sizes[:-1, 0])
                       | (offsets[1:] != offsets[:-1])
-                      | (p[1:, 2] != p[:-1, 2] + 1) | ~eligible[1:] | ~eligible[:-1])
+                      | (p[1:, 2] != p[:-1, 2] + (1 if unit else sizes[:-1,2])) | ~eligible[1:] | ~eligible[:-1])
             breaks |= rotations[1:] != rotations[:-1]
+            if not unit: breaks |= sizes[1:,1] != sizes[:-1,1]
             starts = np.r_[0, np.flatnonzero(breaks) + 1]
-            depths = np.diff(np.r_[starts, len(p)])
+            depths = np.diff(np.r_[starts,len(p)]) if unit else np.add.reduceat(sizes[:,2],starts)
             p, t, sizes, offsets, rotations = p[starts], t[starts], sizes[starts], offsets[starts], rotations[starts]
             sizes[:, 2] = depths
         if mode == 'cuboids':
@@ -63,10 +69,10 @@ def merge_arrays(data, mode='rectangles', cancel_event=None):
             breaks = ((t[1:] != t[:-1]) | (offsets[1:] != offsets[:-1])
                       | (p[1:, 0] != p[:-1, 0]) | (p[1:, 2] != p[:-1, 2])
                       | (sizes[1:, 0] != sizes[:-1, 0]) | (sizes[1:, 2] != sizes[:-1, 2])
-                      | (p[1:, 1] != p[:-1, 1] + 1) | ~eligible[1:] | ~eligible[:-1])
+                      | (p[1:, 1] != p[:-1, 1] + (1 if unit else sizes[:-1,1])) | ~eligible[1:] | ~eligible[:-1])
             breaks |= rotations[1:] != rotations[:-1]
             starts = np.r_[0, np.flatnonzero(breaks) + 1]
-            heights = np.diff(np.r_[starts, len(p)])
+            heights = np.diff(np.r_[starts,len(p)]) if unit else np.add.reduceat(sizes[:,1],starts)
             p, t, sizes, offsets, rotations = p[starts], t[starts], sizes[starts], offsets[starts], rotations[starts]
             sizes[:, 1] = heights
         chunks.append((p, t, sizes, offsets, rotations))

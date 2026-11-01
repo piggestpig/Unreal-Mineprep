@@ -125,17 +125,17 @@ class Snapshot:
                     clipped=min(bounds) < params['world.y_min'] or max(bounds) > params['world.y_max'])
 
 
-def capture(config, *, cancel_event=None):
+def capture(config, *, cancel_event=None, color=False):
     check_cancel(cancel_event)
     raw, digest, stamp, reading, hashing = _read(config.path)
     source = Source(config.path, digest, stamp, reading, hashing)
-    snapshot = decoded(source, raw=raw)
+    snapshot = decoded(source, raw=raw, color=color)
     check_cancel(cancel_event)
     return replace(source, decode_seconds=snapshot.source.decode_seconds)
 
 
-def decoded(source, *, raw=None):
-    key = (VERSION, source.path, source.digest)
+def decoded(source, *, raw=None, color=False):
+    key = (VERSION, source.path, source.digest, color)
     with _lock:
         cached = _cache.get(key)
         if cached is not None:
@@ -146,31 +146,43 @@ def decoded(source, *, raw=None):
             if digest != source.digest:
                 raise PackChangedError()
         started = perf_counter()
+        label = 'biome map' if color else 'heightmap'
         try:
             width, depth = _image_dimensions(raw, Path(source.path).suffix.lower())
         except (ValueError, struct.error, IndexError) as exc:
-            raise ValueError('heightmap has an invalid PNG/EXR header') from exc
+            raise ValueError(f'{label} has an invalid PNG/EXR header') from exc
         if width < 1 or depth < 1 or width * depth > MAX_PIXELS:
-            raise ValueError(f'heightmap exceeds {MAX_PIXELS:,} pixels')
+            raise ValueError(f'{label} exceeds {MAX_PIXELS:,} pixels')
         os.environ.setdefault('OPENCV_IO_ENABLE_OPENEXR', '1')
         import cv2
         image = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_UNCHANGED)
         if image is None or image.shape[:2] != (depth, width):
-            raise ValueError('cannot decode heightmap PNG/EXR')
-        if image.ndim == 3:
-            if image.shape[2] not in (3, 4):
-                raise ValueError('heightmap requires a single channel or RGB/RGBA image')
-            image = image[..., 2]  # OpenCV decodes BGR/BGRA; heights use red, never luminance.
-        normalized = image.dtype in (np.dtype('uint8'), np.dtype('uint16'))
-        if (Path(source.path).suffix.lower() == '.png' and not normalized) or (
-                Path(source.path).suffix.lower() == '.exr' and image.dtype.kind != 'f'):
-            raise ValueError('heightmap requires integer PNG or floating EXR')
-        dtype = str(image.dtype)
-        values = image.astype(np.float32)
-        if normalized:
-            values /= np.iinfo(image.dtype).max
-        if not np.isfinite(values).all():
-            raise ValueError('heightmap pixels must be finite')
+            raise ValueError(f'cannot decode {label} PNG/EXR')
+        if color:
+            if Path(source.path).suffix.lower() != '.png' or image.dtype != np.uint8:
+                raise ValueError('biome map requires an 8-bit RGB/RGBA PNG')
+            if image.ndim == 2:
+                image = np.repeat(image[..., None], 3, axis=2)
+            values = np.full((depth, width, 4), 255, np.uint8)
+            values[..., :3] = image[..., [2, 1, 0]]
+            if image.shape[2] == 4:
+                values[..., 3] = image[..., 3]
+            dtype, normalized = 'uint8', False
+        else:
+            if image.ndim == 3:
+                if image.shape[2] not in (3, 4):
+                    raise ValueError('heightmap requires a single channel or RGB/RGBA image')
+                image = image[..., 2]  # BGR/BGRA; heights use red, never luminance.
+            normalized = image.dtype in (np.dtype('uint8'), np.dtype('uint16'))
+            if (Path(source.path).suffix.lower() == '.png' and not normalized) or (
+                    Path(source.path).suffix.lower() == '.exr' and image.dtype.kind != 'f'):
+                raise ValueError('heightmap requires integer PNG or floating EXR')
+            dtype = str(image.dtype)
+            values = image.astype(np.float32)
+            if normalized:
+                values /= np.iinfo(image.dtype).max
+            if not np.isfinite(values).all():
+                raise ValueError('heightmap pixels must be finite')
         values.setflags(write=False)
         source = replace(source, decode_seconds=perf_counter() - started)
         snapshot = Snapshot(source, values, dtype, normalized)

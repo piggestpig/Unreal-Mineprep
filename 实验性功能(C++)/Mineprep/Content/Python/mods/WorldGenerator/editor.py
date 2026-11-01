@@ -4,6 +4,7 @@ import math
 
 import unreal
 import mineprep
+from mineprep import i18n
 
 from .core.blocks import parse_block
 from .core.data import from_ue, to_ue
@@ -12,20 +13,10 @@ from .editing import normalize_source
 from .ui_model import rule_summary, preview_color_linear, preview_color_hex
 
 
-def tr(zh, en):
-    return mineprep.bilingual(zh, en)
-
-
 def name_text(name):
-    """Use provided translations; plain user names are never translated."""
-    if isinstance(name, dict):
-        zh = name.get('zh') or name.get('en', '')
-        en = name.get('en') or zh
-    elif isinstance(name, (list, tuple)):
-        zh, en = name[0], name[1] if len(name) > 1 else name[0]
-    else:
-        return str(name)
-    return tr(zh, en) if zh != en else str(zh)
+    """Resolve pack keys; literal user names remain literal."""
+    from .localization import localized
+    return localized(name)
 
 
 def click(fn):
@@ -75,7 +66,7 @@ def read_bound(text):
         return text
     value = float(text)
     if not math.isfinite(value):
-        raise ValueError(tr('边界必须是有限数字、空白或 $参数名', 'Bounds must be finite numbers, blank or $parameter references.'))
+        raise ValueError(i18n('边界必须是有限数字、空白或 $参数名', 'Bounds must be finite numbers, blank or $parameter references.'))
     return value
 
 
@@ -83,18 +74,13 @@ class BiomeColor(mineprep.PropertyGroup):
     _autosave_ = False
     MapColor: unreal.LinearColor = ((1, 1, 1, 1), {'HideAlphaChannel': True})
     Tint: unreal.LinearColor = ((1, 1, 1, 1), {"HideAlphaChannel": True,
-        "ToolTip": "线性RGB乘法倍率，1不变；允许大于1 / Linear RGB multiplier; 1 is neutral, HDR values allowed"})
+        "ToolTip": 'Linear RGB multiplier; 1 is neutral, HDR values allowed'})
     H: float = (1., {'ClampMin': .5, 'ClampMax': 1.5,
-        'ToolTip': '1不变；0.9为−36°，范围±180° / 1 is neutral; 0.9 shifts −36°, range ±180°'})
+        'ToolTip': '1 is neutral; 0.9 shifts −36°, range ±180°'})
     S: float = (1., {'ClampMin': 0, 'ClampMax': 65504, 'UIMax': 2})
     V: float = (1., {'ClampMin': 0, 'ClampMax': 65504, 'UIMax': 2})
 
 
-BiomeColor.localize('Tint', '植被颜色倍率', 'Vegetation colour multiplier', '植被颜色倍率')
-BiomeColor.localize('MapColor', '地图标识色', 'Map colour', '地图标识色')
-BiomeColor.localize('BiomeColor', '群系颜色', 'Biome colours', '群系颜色')
-for field, zh, en in (('H', '色相', 'Hue'), ('S', '饱和度', 'Saturation'), ('V', '明度', 'Value')):
-    BiomeColor.localize(field, zh, en, zh)
 
 
 class BlockOptions(mineprep.PropertyGroup):
@@ -113,29 +99,34 @@ class BlockOptions(mineprep.PropertyGroup):
     OverrideColor: bool = (False, {'InlineEditConditionToggle':True})
     Color: unreal.LinearColor = ((1,1,1,1), {'EditCondition':'OverrideColor','HideAlphaChannel':True})
     Offset: unreal.Vector = (unreal.Vector(0,0,0), {'EditCondition':'!Occludes','HideEditConditionToggle':True,
-                                                 'ToolTip':'UE XYZ，Z为高度；单位格 / UE XYZ, Z up, blocks'})
+                                                 'ToolTip':'UE XYZ, Z up, blocks'})
     Scale: unreal.Vector = (unreal.Vector(1,1,1), {'EditCondition':'!Occludes','HideEditConditionToggle':True,
-                                                'ToolTip':'UE XYZ，Z为高度 / UE XYZ, Z up'})
+                                                'ToolTip':'UE XYZ, Z up'})
     ShowGeometry: bool = False
     Occludes: bool = (True, {'EditCondition':'ShowGeometry','EditConditionHides':True,'HideEditConditionToggle':True})
 
 
-BlockOptions.localize('BlockOptions','方块设置','Block options','方塊設定')
 
-for _name, _zh, _en in (
-    ('Builtin','内置模型','Builtin model'),('JSON','模型JSON文件','Model JSON file'),('Mesh','来源网格','Source mesh'),
-    ('Emission','发光亮度','Emission'),
-    ('Lighting','照明强度','Lighting'),
-    ('Color','预览颜色','Preview colour'),
-    ('Offset','偏移（格）','Offset (blocks)'),
-    ('Scale','缩放','Scale'),('ShowGeometry','高级几何设置','Advanced geometry'),
-    ('Occludes','完整不透明立方体','Complete opaque cube')):
-    BlockOptions.localize(_name,_zh,_en,_zh)
+
+
+BiomeColor.localize(tooltip=True)
+BlockOptions.localize(tooltip=True)
 
 
 class ContentEditors:
     """Mixin: selections and folds are model state, independent of page widgets."""
-    def _text(self, row, text, setter, *, hint='', key=None, multiline=False, fill=1):
+
+    def _biome_name(self, ident):
+        from .localization import current_language
+        return self.draft.text(f'biomes.{ident}.name', current_language(), ident)
+
+    def _refresh_biome_names(self):
+        for key, (button, biome) in self._biome_buttons.items():
+            button.get_content().get_content().set_text(unreal.Text('{selected}{name} · {id}{fallback}').format(
+                selected='● ' if key == self._biome_id else '', name=self._biome_name(key), id=key,
+                fallback=i18n(' [兜底]', ' [fallback]') if biome.get('fallback') else ''))
+
+    def _text(self, row, text, setter, *, hint='', key=None, multiline=False, fill=1, text_only=False):
         def identity(value):
             return value if isinstance(value, (str, int, float, bool, type(None))) else id(value)
         closure = tuple(identity(c.cell_contents) for c in (setter.__closure__ or ()))
@@ -144,26 +135,34 @@ class ContentEditors:
         self._active_inputs.add(error_key)
         def changed(value):
             self._input_text[error_key] = str(value)
-            self._edit(lambda: setter(str(value)), error_key=error_key)
+            self._edit(lambda: setter(str(value)), error_key=error_key, text_only=text_only)
             if error_key not in self._errors:
                 self._input_text.pop(error_key, None)
         return textbox(row, self._input_text.get(error_key, str(text)), hint=hint, multiline=multiline,
                        on_text_changed=changed, fill=fill)
 
-    def _edit(self, action, *, redraw=False, error_key=None, appearance=False):
+    def _edit(self, action, *, redraw=False, error_key=None, appearance=False, text_only=False):
         if self._suspend:
             return
         try:
             action()
             self._errors.pop(error_key, None)
-            (self._palette_changed if appearance else self._changed)()
+            if text_only:
+                self._remember()
+                self._refresh_biome_names()
+                self._update_buttons()
+            else:
+                (self._palette_changed if appearance else self._changed)()
             if redraw:
                 self._refresh_content(*((redraw,) if isinstance(redraw, str) else ()))
             elif 'rules' in getattr(self, '_content_regions', {}):
                 self._refresh_rule_titles()
         except Exception as exc:
             self._errors[error_key] = str(exc)
-            (self._palette_changed if appearance else self._changed)()
+            if text_only:
+                self._update_buttons()
+            else:
+                (self._palette_changed if appearance else self._changed)()
             self._set_status(str(exc))
 
     def _content_region(self, parent, name, build):
@@ -202,11 +201,11 @@ class ContentEditors:
         for label, delta in (('↑', -1), ('↓', 1)):
             row.button(label, text_scaling=True, size=10, on_clicked=click(lambda d=delta: self._edit(
                 lambda: self._move(items, index, d), redraw=region)))
-        row.button(tr('删除', 'Delete'), text_scaling=True, size=10, on_clicked=click(lambda: self._edit(
+        row.button(i18n('删除', 'Delete'), text_scaling=True, size=10, on_clicked=click(lambda: self._edit(
             delete or (lambda: items.pop(index)), redraw=region)))
 
     def _bounds(self, row, values, *, mapping=False):
-        for index, label in enumerate((tr('下界', 'Lower'), tr('上界', 'Upper'))):
+        for index, label in enumerate((i18n('下限', 'Lower'), i18n('上限', 'Upper'))):
             name = ('min', 'max')[index] if mapping else index
             row.text(label, size=9)
             value = values.get(name) if mapping else values[index]
@@ -221,12 +220,12 @@ class ContentEditors:
             self._bounds(row, conditions[field])
         else:
             raw = conditions[field]
-            for name, index, label in (('min', 0, tr('下界', 'Lower')), ('max', 1, tr('上界', 'Upper'))):
+            for name, index, label in (('min', 0, i18n('下限', 'Lower')), ('max', 1, i18n('上限', 'Upper'))):
                 row.text(label, size=9)
                 value = raw.get(name) if isinstance(raw, dict) else raw[index]
                 self._text(row, bound_text(value), lambda text, n=name: self._condition(conditions, field, n, text))
         if not climate:
-            row.text(tr('扰动', 'Jitter'), size=9)
+            row.text(i18n('扰动', 'Jitter'), size=9)
             self._text(row, bound_text(raw.get('jitter', 0) if isinstance(raw, dict) else 0),
                        lambda text: self._condition(conditions, field, 'jitter', text), fill=.6)
         row.button('×', text_scaling=True, size=10, on_clicked=click(lambda: self._edit(
@@ -235,7 +234,7 @@ class ContentEditors:
     def _rename_field(self, conditions, old, new, *, climate=False):
         def change():
             if new in conditions and new != old:
-                raise ValueError(tr('同一个盒/规则中的字段不能重复', 'A field cannot occur twice in one box or rule.'))
+                raise ValueError(i18n('同一个盒/规则中的字段不能重复', 'A field cannot occur twice in one box or rule.'))
             conditions[new] = conditions.pop(old)
         self._edit(change, redraw='biome_details' if climate else 'rules')
 
@@ -244,24 +243,24 @@ class ContentEditors:
             fields = self.pack.biome_parameters if climate else self.pack.fields
             field = next((f for f in fields if f not in conditions), None)
             if field is None:
-                raise ValueError(tr('所有字段已在当前条件中', 'All available fields are already used.'))
+                raise ValueError(i18n('所有字段已在当前条件中', 'All available fields are already used.'))
             conditions[field] = [None, None] if climate else {'min': None, 'max': None}
         self._edit(add, redraw='biome_details' if climate else 'rules')
 
     def _biome_editor(self, parent):
-        parent.text(tr('群系列表：顺序决定重叠/等距优先级', 'Biome order resolves overlaps and equal distances.'), size=11, wrap=True)
-        search = textbox(parent, self._biome_search, hint=tr('搜索名称或 ID', 'Search name or ID'),
+        parent.text(i18n('群系列表：顺序决定重叠/等距优先级', 'Biome order resolves overlaps and equal distances.'), size=11, wrap=True)
+        search = textbox(parent, self._biome_search, hint=i18n('搜索名称或 ID', 'Search name or ID'),
                                on_text_committed=lambda value, _: self._search_biomes(str(value)))
         self._biome_search_box = search
         self._content_region(parent, 'biome_list', self._biome_list)
-        parent.button(tr('复制当前群系并新增', 'Duplicate selected biome'), text_scaling=True, size=11, on_clicked=click(self._clone_biome))
+        parent.button(i18n('复制当前群系并新增', 'Duplicate selected biome'), text_scaling=True, size=11, on_clicked=click(self._clone_biome))
         self._content_region(parent, 'biome_details', self._biome_details)
 
     def _biome_list(self, parent):
         biomes = self.draft.data['biomes']
         self._biome_buttons = {}
         for index, biome in enumerate(biomes):
-            if self._biome_search.lower() not in (biome['id'] + str(biome['name'])).lower():
+            if self._biome_search.lower() not in (biome['id'] + self._biome_name(biome['id'])).lower():
                 continue
             row = parent.row(padding=(0, 2))
             color = biome.get('color', '#808080')
@@ -270,10 +269,10 @@ class ContentEditors:
                 row.border(color=unreal.LinearColor(*rgb, 1)).spacer(12)
             except (ValueError, TypeError):
                 row.text('?', size=10)
-            name = name_text(biome['name'])
+            name = self._biome_name(biome['id'])
             label = unreal.Text('{selected}{name} · {id}{fallback}').format(
                 selected='● ' if biome['id'] == self._biome_id else '', name=name, id=biome['id'],
-                fallback=tr(' [兜底]', ' [fallback]') if biome.get('fallback') else '')
+                fallback=i18n(' [兜底]', ' [fallback]') if biome.get('fallback') else '')
             button = row.button(label, text_scaling=True, size=11, fill=1,
                        on_clicked=click(lambda b=biome: self._select_biome(b['id'])))
             self._biome_buttons[biome['id']] = (button, biome)
@@ -283,20 +282,17 @@ class ContentEditors:
         biomes = self.draft.data['biomes']
         biome = next((b for b in biomes if b['id'] == self._biome_id), None)
         if not biome:
-            parent.text(tr('请选择群系', 'Select a biome'), size=11)
+            parent.text(i18n('请选择群系', 'Select a biome'), size=11)
             return
-        parent.text(tr('ID {id}（已有 ID 保持稳定）', 'ID {id} (existing IDs remain stable)').format(id=biome['id']), size=10)
-        if isinstance(biome['name'], str):
-            # Preserve the original shape until the name is actually edited.
-            def name_set(text):
-                biome['name'] = {'zh': text, 'en': text}
-            self._text(parent.row(), biome['name'], name_set)
-        else:
-            for language, label in (('zh', tr('中文名称', 'Chinese name')), ('en', tr('英文名称', 'English name'))):
-                row = parent.row()
-                row.text(label, size=10)
-                self._text(row, biome['name'].get(language, ''),
-                           lambda text, lang=language: biome['name'].__setitem__(lang, text))
+        parent.text(i18n('ID {id}（已有 ID 保持稳定）', 'ID {id} (existing IDs remain stable)').format(id=biome['id']), size=10)
+        text_key = f'biomes.{biome["id"]}.name'
+        for language, label in (('zh', i18n('中文名称', 'Chinese name')), ('en', i18n('英文名称', 'English name')),
+                                ('zh-Hant', i18n('台繁名称', 'Taiwan Traditional name')),
+                                ('zh-Hant-HK', i18n('港繁差异', 'Hong Kong override'))):
+            row = parent.row()
+            row.text(label, size=10)
+            self._text(row, self.draft.text(text_key, language, biome['id']),
+                       lambda text, lang=language: self.draft.set_text(text_key, text, lang), text_only=True)
         self._biome_colors = BiomeColor()
         self._biome_colors.MapColor = unreal.LinearColor(*preview_color_linear(biome.get('color', '#808080')), 1)
         parent.prop(self._biome_colors, 'MapColor', searching=False,
@@ -310,22 +306,22 @@ class ContentEditors:
             self._biome_colors.Tint = unreal.LinearColor(*biome.get('vegetation_tint', [1, 1, 1]), 1)
             parent.prop(self._biome_colors, properties=['Tint'], categories=[], searching=False,
                         on_property_changed=lambda _: self._tint_changed(biome))
-        box = parent.checkbox(tr('兜底群系（不参与普通气候盒竞争）', 'Fallback biome (excluded from normal climate candidates)'), size=11,
+        box = parent.checkbox(i18n('兜底群系（不参与普通气候盒竞争）', 'Fallback biome (excluded from normal climate candidates)'), size=11,
                               on_check_state_changed=lambda checked: self._fallback(biome, checked))
         box.set_is_checked(bool(biome.get('fallback')))
-        parent.text(tr('盒内条件为“且”；盒间为“或”；区间包含两端。空白为无界，支持 $参数名。', 'AND within a box; OR between boxes. Bounds are inclusive. Blank is unbounded; $parameter references are supported.'), size=10, wrap=True)
+        parent.text(i18n('盒内条件为“且”；盒间为“或”；区间包含两端。空白为无界，支持 $参数名。', 'AND within a box; OR between boxes. Bounds are inclusive. Blank is unbounded; $parameter references are supported.'), size=10, wrap=True)
         if biome.get('fallback'):
             return
         for index, climate in enumerate(biome['climate']):
             card = parent.col(padding=4)
             row = card.row()
-            row.text(tr('气候盒 {index} · 且{or}', 'Climate box {index} · AND{or}').format(
-                index=index + 1, **{'or': tr('（或）', ' (OR)') if index else ''}), size=11, fill=1)
+            row.text(i18n('气候盒 {index} · 且{or}', 'Climate box {index} · AND{or}').format(
+                index=index + 1, **{'or': i18n('（或）', ' (OR)') if index else ''}), size=11, fill=1)
             self._order_buttons(row, biome['climate'], index)
             for field in list(climate):
                 self._field_row(card, climate, field, climate=True)
-            card.button(tr('＋条件', '+ Condition'), text_scaling=True, size=10, on_clicked=click(lambda c=climate: self._add_field(c, climate=True)))
-        parent.button(tr('＋气候盒（或）', '+ Climate box (OR)'), text_scaling=True, size=11, on_clicked=click(lambda: self._edit(
+            card.button(i18n('＋条件', '+ Condition'), text_scaling=True, size=10, on_clicked=click(lambda c=climate: self._add_field(c, climate=True)))
+        parent.button(i18n('＋气候盒（或）', '+ Climate box (OR)'), text_scaling=True, size=11, on_clicked=click(lambda: self._edit(
             lambda: biome['climate'].append({'temperature': [None, None]}), redraw='biome_details')))
 
     def _map_color_changed(self, biome):
@@ -372,10 +368,7 @@ class ContentEditors:
         if name == self._biome_id or self._suspend:
             return
         self._biome_id = name
-        for key, (button, biome) in self._biome_buttons.items():
-            button.get_content().get_content().set_text(unreal.Text('{selected}{name} · {id}{fallback}').format(
-                selected='● ' if key == name else '', name=name_text(biome['name']), id=key,
-                fallback=tr(' [兜底]', ' [fallback]') if biome.get('fallback') else ''))
+        self._refresh_biome_names()
         self._refresh_content('biome_details', prune=False)
 
     def _clone_biome(self):
@@ -383,13 +376,16 @@ class ContentEditors:
             biomes = self.draft.data['biomes']
             original = next((b for b in biomes if b['id'] == self._biome_id), biomes[-1] if biomes else None)
             if original is None:
-                raise ValueError(tr('没有可复制的群系，请恢复预设或重新载入资源包', 'No biome to duplicate; reset or reload the pack.'))
+                raise ValueError(i18n('没有可复制的群系，请恢复预设或重新载入资源包', 'No biome to duplicate; reset or reload the pack.'))
             clone = deepcopy(original)
             used = {b['id'] for b in biomes}
             index = 1
             while f'custom_biome_{index}' in used:
                 index += 1
             clone['id'] = f'custom_biome_{index}'
+            from .localization import literal
+            self.draft.data['texts'][f'biomes.{clone["id"]}.name'] = literal(
+                self.draft.text(f'biomes.{original["id"]}.name', fallback=original['id']))
             if clone.get('fallback'):
                 clone['fallback'], clone['climate'] = False, [{'temperature': [None, None]}]
             biomes.append(clone)
@@ -405,7 +401,7 @@ class ContentEditors:
     def _candidate_editor(self, parent, rule, role):
         raw = rule.get(role, '')
         candidates = [[raw, 1]] if isinstance(raw, str) else raw
-        parent.text({'top': tr('顶层', 'Top'), 'under': tr('覆盖层', 'Under'), 'deep': tr('深层', 'Deep')}[role], size=10)
+        parent.text({'top': i18n('顶层', 'Top'), 'under': i18n('覆盖层', 'Under'), 'deep': i18n('深层', 'Deep')}[role], size=10)
         for index, (name, weight) in enumerate(candidates):
             row = parent.row(padding=(0, 1))
             def set_name(text, i=index):
@@ -414,20 +410,20 @@ class ContentEditors:
                 updated[i][0] = block
                 rule[role] = updated
                 candidates[i][0] = block
-            self._text(row, name, set_name, hint=tr('方块名 / JSON 路径 / StaticMesh 引用', 'Block name / JSON path / StaticMesh reference'), key=(id(rule), role, index))
+            self._text(row, name, set_name, hint=i18n('方块名 / JSON 路径 / StaticMesh 引用', 'Block name / JSON path / StaticMesh reference'), key=(id(rule), role, index))
             row.spinbox(weight, min=0.000001, digits=3, width=52,
                         on_value_committed=commit(lambda value, _, i=index: self._edit(
                             lambda: self._weight(rule, role, candidates, i, value))))
             row.button('×', text_scaling=True, size=10, on_clicked=click(lambda i=index: self._edit(
                 lambda: rule.__setitem__(role, [c for j, c in enumerate(candidates) if j != i]), redraw='rules')))
         row = parent.row()
-        row.button(tr('＋候选', '+ Candidate'), text_scaling=True, size=10, on_clicked=click(lambda: self._edit(
+        row.button(i18n('＋候选', '+ Candidate'), text_scaling=True, size=10, on_clicked=click(lambda: self._edit(
             lambda: rule.__setitem__(role, deepcopy(candidates) + [['stone', 1]]), redraw='rules')))
         batch_key = (id(rule), role)
         batch = textbox(parent, self._batches.get(batch_key, ''),
-                        hint=tr('批量粘贴：每行一个方块名或路径，初始等权', 'Paste one block name or path per line; initial weights are equal.'), multiline=True,
+                        hint=i18n('批量粘贴：每行一个方块名或路径，初始等权', 'Paste one block name or path per line; initial weights are equal.'), multiline=True,
                         on_text_changed=lambda value: self._batches.__setitem__(batch_key, str(value)))
-        row.button(tr('替换为批量输入', 'Replace with batch input'), text_scaling=True, size=10, on_clicked=click(lambda: self._edit(
+        row.button(i18n('替换为批量输入', 'Replace with batch input'), text_scaling=True, size=10, on_clicked=click(lambda: self._edit(
             lambda: rule.__setitem__(role, [[self.draft.input_block(line), 1]
                                           for line in str(batch.get_text()).splitlines() if line.strip()]), redraw='rules')))
 
@@ -437,7 +433,7 @@ class ContentEditors:
         rule[role] = deepcopy(candidates)
 
     def _rules_editor(self, parent):
-        options = {'common': tr('公共覆盖（优先于群系规则）', 'Common overrides (before biome rules)')}
+        options = {'common': i18n('公共覆盖（优先于群系规则）', 'Common overrides (before biome rules)')}
         options.update({b['id']: b['id'] for b in self.draft.data['biomes']})
         if self._rules_id not in options:
             self._rules_id = 'common'
@@ -448,8 +444,8 @@ class ContentEditors:
         self._rule_widgets = {}
         rules = self.draft.data['surface_overrides'] if self._rules_id == 'common' else next(
             b['surface'] for b in self.draft.data['biomes'] if b['id'] == self._rules_id)
-        parent.text(tr('按顺序匹配；区间为 [下界, 上界)', 'Match in order; bounds are [lower, upper)'),
-                    size=10, wrap=True, tooltip=tr(
+        parent.text(i18n('按顺序匹配；区间为 [下界, 上界)', 'Match in order; bounds are [lower, upper)'),
+                    size=10, wrap=True, tooltip=i18n(
                         '公共覆盖优先。各层取首条匹配；群系末条须无条件且含完整三层。',
                         'Common overrides take priority. Each layer uses its first match; the last biome rule must be unconditional and cover all three layers.'))
         for index, rule in enumerate(rules):
@@ -468,21 +464,21 @@ class ContentEditors:
             conditions = rule.get('when', {})
             for field in list(conditions):
                 self._field_row(card, conditions, field)
-            card.button(tr('＋条件', '+ Condition'), text_scaling=True, size=10, on_clicked=click(lambda r=rule: self._add_rule_field(r)))
+            card.button(i18n('＋条件', '+ Condition'), text_scaling=True, size=10, on_clicked=click(lambda r=rule: self._add_rule_field(r)))
             for role in ('top', 'under', 'deep'):
                 self._candidate_editor(card, rule, role)
-        parent.button(tr('＋规则', '+ Rule'), text_scaling=True, size=11, on_clicked=click(lambda: self._edit(
+        parent.button(i18n('＋规则', '+ Rule'), text_scaling=True, size=11, on_clicked=click(lambda: self._edit(
             lambda: rules.append({'top': 'stone', 'under': 'stone', 'deep': 'stone'}), redraw='rules')))
         self._refresh_rule_titles()
 
     def _refresh_rule_titles(self):
         for key, state in self._rule_widgets.items():
             material, extra, count, details = rule_summary(state['rule'])
-            material = material or tr('沿用后续规则', 'Use later rule')
+            material = material or i18n('沿用后续规则', 'Use later rule')
             if extra:
                 material += f' +{extra}'
-            conditions = (tr('{count} 条条件', 'Conditions: {count}').format(count=count)
-                          if count else tr('无条件', 'Unconditional'))
+            conditions = (i18n('{count} 条条件', 'Conditions: {count}').format(count=count)
+                          if count else i18n('无条件', 'Unconditional'))
             text = unreal.Text('{arrow}{index} · {material} · {conditions}').format(
                 arrow='▼ ' if key in self._expanded else '▶ ', index=state['index'],
                 material=material, conditions=conditions)
@@ -518,15 +514,15 @@ class ContentEditors:
         self._text(row, target['block'], change)
 
     def _blocks_editor(self, parent):
-        parent.text(tr('共享方块定义；输入不导入资源。材质覆盖在下次准备、放置时生效。', 'Shared block definitions; typing does not import. Material overrides apply on preparation and placement.'), size=11, wrap=True)
+        parent.text(i18n('共享方块定义；输入不导入资源。材质覆盖在下次准备、放置时生效。', 'Shared block definitions; typing does not import. Material overrides apply on preparation and placement.'), size=11, wrap=True)
         row = parent.row()
-        source = textbox(row, self._new_source, hint=tr('名称 / JSON 文件路径 / UE 复制引用', 'Name / JSON file path / UE copied reference'), fill=1,
+        source = textbox(row, self._new_source, hint=i18n('名称 / JSON 文件路径 / UE 复制引用', 'Name / JSON file path / UE copied reference'), fill=1,
                          on_text_changed=lambda value: setattr(self, '_new_source', str(value)))
-        template = {'cube': tr('实体地形', 'Solid terrain'), 'surface': tr('水面', 'Water surface'), 'decor': tr('植物', 'Plant')}
+        template = {'cube': i18n('实体地形', 'Solid terrain'), 'surface': i18n('水面', 'Water surface'), 'decor': i18n('植物', 'Plant')}
         usage = row.combo(template, selected=self._block_shape,
                           on_selection_changed=lambda name, _: setattr(self, '_block_shape', name))
-        row.button(tr('新增', 'Add'), text_scaling=True, size=10, on_clicked=click(lambda: self._new_block(str(source.get_text()))))
-        textbox(parent, getattr(self,'_block_search',''),hint=tr('搜索方块ID', 'Search block IDs'),
+        row.button(i18n('新增', 'Add'), text_scaling=True, size=10, on_clicked=click(lambda: self._new_block(str(source.get_text()))))
+        textbox(parent, getattr(self,'_block_search',''),hint=i18n('搜索方块ID', 'Search block IDs'),
                 on_text_changed=self._search_blocks)
         from .ui_choices import choice
         options = self._block_choices()
@@ -536,31 +532,31 @@ class ContentEditors:
         self._content_region(parent, 'block_details', self._selected_block_editor)
 
     def _selected_block_editor(self, parent):
-        template = {'cube': tr('实体地形', 'Solid terrain'), 'surface': tr('水面', 'Water surface'), 'decor': tr('植物', 'Plant')}
+        template = {'cube': i18n('实体地形', 'Solid terrain'), 'surface': i18n('水面', 'Water surface'), 'decor': i18n('植物', 'Plant')}
         if not self._block_id:
             return
         self._block_title = parent.text('ID ' + self._block_id,size=11)
-        self._block_source = parent.combo({'builtin':tr('内置模型','Builtin'), 'json':tr('JSON模型','JSON model'),
-                                          'mesh':tr('UE网格','UE mesh')},
+        self._block_source = parent.combo({'builtin':i18n('内置模型','Builtin'), 'json':i18n('JSON模型','JSON model'),
+                                          'mesh':i18n('UE网格','UE mesh')},
                                          on_selection_changed=self._block_source_kind)
         row = parent.row()
-        row.text(tr('用途', 'Usage'), size=10)
+        row.text(i18n('用途', 'Usage'), size=10)
         self._block_usage = row.combo(template,fill=1,
             on_selection_changed=lambda name, _: self._block_template(None,name))
         if not hasattr(self,'_block_options'):
             self._block_options = BlockOptions()
         parent.prop(self._block_options,categories=[],searching=False,pass_rootname=True,
                     on_property_changed=self._block_options_changed)
-        parent.text(tr('未勾选时跟随来源材质；覆盖作用于全部材质槽。预览颜色仅影响离线图片。',
+        parent.text(i18n('未勾选时跟随来源材质；覆盖作用于全部材质槽。预览颜色仅影响离线图片。',
                        'Unchecked values follow source materials; overrides affect all slots. Preview colour affects offline images only.'),size=10,wrap=True)
-        parent.button(tr('重置材质覆盖','Reset material overrides'),on_clicked=click(self._reset_block_material))
+        parent.button(i18n('重置材质覆盖','Reset material overrides'),on_clicked=click(self._reset_block_material))
         self._block_extra = parent.col()
         row = self._block_extra.row()
-        row.text(tr('合并方式','Merge'),size=10)
-        self._block_merge = row.combo({'none':tr('不合并','No merge'),'xz':tr('水平面合并','Horizontal merge'),
-                                      'xyz':tr('长方体合并','Cuboid merge')},fill=1,
+        row.text(i18n('合并方式','Merge'),size=10)
+        self._block_merge = row.combo({'none':i18n('不合并','No merge'),'xz':i18n('水平面合并','Horizontal merge'),
+                                      'xyz':i18n('长方体合并','Cuboid merge')},fill=1,
                                      on_selection_changed=lambda value,_:self._set_block_value('merge',value))
-        self._block_extra.text(tr('实体必须是完整、无偏移的单位立方体；植物不能合并。',
+        self._block_extra.text(i18n('实体必须是完整、无偏移的单位立方体；植物不能合并。',
                                  'Occluding cells require an unshifted unit cube; plants cannot merge.'),size=10,wrap=True)
         self._fill_block_options()
 
@@ -667,11 +663,11 @@ class ContentEditors:
                 value = (options.Builtin if name=='Builtin' else options.JSON.file_path if name=='JSON'
                          else options.Mesh.get_path_name() if options.Mesh else '')
                 if not value:
-                    raise ValueError(tr('请选择有效的方块来源','Choose a valid block source'))
+                    raise ValueError(i18n('请选择有效的方块来源','Choose a valid block source'))
                 source = normalize_source(value,self.pack.root)
                 expected = {'Builtin':'builtin','JSON':'json','Mesh':'mesh'}[name]
                 if next(iter(source)) != expected:
-                    raise ValueError(tr('来源类型不匹配','Source type does not match'))
+                    raise ValueError(i18n('来源类型不匹配','Source type does not match'))
                 item['source'] = source
             else:return
             parse_block(self._block_id,item,self.pack.root)

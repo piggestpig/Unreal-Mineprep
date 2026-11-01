@@ -1,0 +1,135 @@
+{
+  "ModManager": {
+    "模组管理器": {
+      "zh": "模组管理器",
+      "en": "Mod Manager",
+      "zh-Hant": "Mod 管理器"
+    },
+    "Props.advanced": {
+      "en": "Show Advanced Options",
+      "_native": "en",
+      "zh": "显示高级选项",
+      "zh-Hant": "顯示進階選項",
+      "zh-Hant-HK": "顯示高級選項"
+    },
+    "Props.category.Props": {
+      "en": "Options",
+      "_native": "en",
+      "zh": "选项",
+      "zh-Hant": "選項"
+    },
+    "安装模组": {
+      "zh": "安装模组",
+      "en": "Install Mod",
+      "zh-Hant": "安裝 Mod"
+    },
+    "模组": {
+      "zh": "模组",
+      "en": "Mod",
+      "zh-Hant": "Mod"
+    },
+    "版本": {
+      "zh": "版本",
+      "en": "Version"
+    },
+    "状态": {
+      "zh": "状态",
+      "en": "Status",
+      "zh-Hant": "狀態"
+    },
+    "操作": {
+      "zh": "操作",
+      "en": "Action"
+    },
+    "卸载": {
+      "zh": "卸载",
+      "en": "Uninstall",
+      "zh-Hant": "解除安裝"
+    },
+    "已启用": {
+      "zh": "已启用",
+      "en": "Enabled",
+      "zh-Hant": "已啟用"
+    },
+    "禁用": {
+      "zh": "禁用",
+      "en": "Disable",
+      "zh-Hant": "停用"
+    },
+    "打包": {
+      "zh": "打包",
+      "en": "Package"
+    },
+    "已禁用": {
+      "zh": "已禁用",
+      "en": "Disabled",
+      "zh-Hant": "已停用"
+    },
+    "启用": {
+      "zh": "启用",
+      "en": "Enable",
+      "zh-Hant": "啟用"
+    },
+    "显示高级选项": {
+      "zh": "显示高级选项",
+      "en": "Show Advanced Options",
+      "zh-Hant": "顯示進階選項",
+      "zh-Hant-HK": "顯示高級選項"
+    },
+    "启用、禁用、安装与打包 mod": {
+      "zh": "启用、禁用、安装与打包 mod",
+      "en": "Enable, disable, install, and package mods",
+      "zh-Hant": "啟用、停用、安裝與打包 mod"
+    },
+    "选择模组 (.py / .zip)": {
+      "zh": "选择模组 (.py / .zip)",
+      "en": "Select Mod (.py / .zip)",
+      "zh-Hant": "選擇 Mod (.py / .zip)"
+    },
+    "已安装模组: {name}": {
+      "zh": "已安装模组: {name}",
+      "en": "Installed mod: {name}",
+      "zh-Hant": "已安裝 Mod: {name}"
+    },
+    "打包模组": {
+      "zh": "打包模组",
+      "en": "Package Mod",
+      "zh-Hant": "打包 Mod"
+    },
+    "已打包 {count} 个文件，{size} KiB：{path}": {
+      "zh": "已打包 {count} 个文件，{size} KiB：{path}",
+      "en": "Packaged {count} files, {size} KiB: {path}",
+      "zh-Hant": "已打包 {count} 個檔案，{size} KiB：{path}"
+    },
+    "卸载 {display}": {
+      "zh": "卸载 {display}",
+      "en": "Uninstall {display}",
+      "zh-Hant": "解除安裝 {display}"
+    },
+    "你确定要删除这个模组吗？\n\"{stem}\"将会消失很久！（真的很久！）": {
+      "zh": "你确定要删除这个模组吗？\n\"{stem}\"将会消失很久！（真的很久！）",
+      "en": "Are you sure you want to delete this mod?\n\"{stem}\" will be lost forever! (A long time!)",
+      "zh-Hant": "確定要刪除這個 Mod 嗎？\n「{stem}」將會消失很久！（真的很久！）"
+    },
+    "已卸载模组: {stem}": {
+      "zh": "已卸载模组: {stem}",
+      "en": "Uninstalled mod: {stem}",
+      "zh-Hant": "已解除安裝 Mod: {stem}"
+    },
+    "Python / 压缩包": {
+      "zh": "Python / 压缩包",
+      "en": "Python / Archive",
+      "zh-Hant": "Python / 壓縮檔"
+    },
+    "覆盖安装": {
+      "zh": "覆盖安装",
+      "en": "Overwrite installation",
+      "zh-Hant": "覆蓋安裝"
+    },
+    "覆盖压缩包": {
+      "zh": "覆盖压缩包",
+      "en": "Overwrite Archive",
+      "zh-Hant": "覆蓋壓縮檔"
+    }
+  }
+}

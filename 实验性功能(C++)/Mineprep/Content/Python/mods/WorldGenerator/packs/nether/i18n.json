@@ -1,0 +1,666 @@
+{
+  "WorldGenerator.pack.nether": {
+    "pack.name": {
+      "zh": "下界",
+      "en": "Nether",
+      "zh-Hant": "地獄"
+    },
+    "pack.description": {
+      "zh": "默认四群系；所有群系预设加入玄武岩柱簇与零散静态熔池。",
+      "en": "Four biomes by default; All biomes adds basalt clusters and scattered static lava pockets.",
+      "zh-Hant": "預設四群系；所有群系預設加入玄武岩柱簇與零散靜態熔池。",
+      "zh-Hant-HK": "預設四群系；所有群系預設加入玄武巖柱簇與零散靜態熔池。"
+    },
+    "params.basalt.enabled": {
+      "zh": "玄武岩三角洲",
+      "en": "Basalt deltas",
+      "zh-Hant": "玄武岩三角洲",
+      "zh-Hant-HK": "玄武巖三角洲"
+    },
+    "params.basalt.columns_density": {
+      "zh": "岩柱簇出现强度",
+      "en": "Column cluster intensity",
+      "zh-Hant": "岩柱簇出現強度"
+    },
+    "params.basalt.columns_density.tooltip": {
+      "zh": "候选概率，不表示面积占比。",
+      "en": "Candidate probability, not area coverage.",
+      "zh-Hant": "候選機率，不表示面積占比。",
+      "zh-Hant-HK": "候選概率，不表示面積占比。"
+    },
+    "params.basalt.columns_spacing": {
+      "zh": "岩柱簇候选间距（格）",
+      "en": "Column cluster spacing (blocks)",
+      "zh-Hant": "岩柱簇候選間距（格）"
+    },
+    "params.basalt.pools_enabled": {
+      "zh": "静态熔池",
+      "en": "Static lava pools",
+      "zh-Hant": "靜態熔池"
+    },
+    "params.basalt.pools_density": {
+      "zh": "熔池出现强度",
+      "en": "Pool intensity",
+      "zh-Hant": "熔池出現強度"
+    },
+    "params.basalt.pools_density.tooltip": {
+      "zh": "候选概率，不表示面积占比；关闭岩浆海仍可生成熔池。",
+      "en": "Candidate probability, not coverage; independent of the lava sea switch.",
+      "zh-Hant": "候選機率，不表示面積占比；關閉熔岩海仍可生成熔池。",
+      "zh-Hant-HK": "候選概率，不表示面積占比；關閉熔巖海仍可生成熔池。"
+    },
+    "params.basalt.pools_spacing": {
+      "zh": "熔池候选间距（格）",
+      "en": "Pool spacing (blocks)",
+      "zh-Hant": "熔池候選間距（格）"
+    },
+    "params.basalt.biome_scale": {
+      "zh": "三角洲区域尺度（格）",
+      "en": "Delta region scale (blocks)",
+      "zh-Hant": "三角洲區域尺度（格）"
+    },
+    "params.basalt.biome_threshold": {
+      "zh": "三角洲区域阈值",
+      "en": "Delta region threshold",
+      "zh-Hant": "三角洲區域閾值"
+    },
+    "params.crimson.enabled": {
+      "zh": "绯红森林",
+      "en": "Crimson forest",
+      "zh-Hant": "緋紅森林",
+      "zh-Hant-HK": "猩紅森林"
+    },
+    "params.crimson.ground_enabled": {
+      "zh": "林地植物",
+      "en": "Forest ground plants",
+      "zh-Hant": "林地植物"
+    },
+    "params.crimson.fungus_density": {
+      "zh": "绯红菌概率",
+      "en": "Crimson fungus probability",
+      "zh-Hant": "緋紅蕈菇機率",
+      "zh-Hant-HK": "猩紅菌菇概率"
+    },
+    "params.crimson.fungus_density.tooltip": {
+      "zh": "每个合格洞底空气格的概率。",
+      "en": "Probability per eligible floor air cell.",
+      "zh-Hant": "每個合格洞底空氣格的機率。",
+      "zh-Hant-HK": "每個合格洞底空氣格的概率。"
+    },
+    "params.crimson.roots_density": {
+      "zh": "绯红菌索概率",
+      "en": "Crimson roots probability",
+      "zh-Hant": "緋紅蕈根機率",
+      "zh-Hant-HK": "猩紅菌根概率"
+    },
+    "params.crimson.roots_density.tooltip": {
+      "zh": "先选绯红菌，再在剩余空气格选菌索；不表示整个世界的覆盖率。",
+      "en": "Roots draw from cells left after fungi; not world area coverage.",
+      "zh-Hant": "先選緋紅蕈菇，再在剩餘空氣格選蕈根；不表示整個世界的覆蓋率。",
+      "zh-Hant-HK": "先選猩紅菌菇，再在剩餘空氣格選菌根；不表示整個世界的覆蓋率。"
+    },
+    "params.crimson.density": {
+      "zh": "菌树出现强度",
+      "en": "Fungus intensity",
+      "zh-Hant": "巨型蕈菇出現強度",
+      "zh-Hant-HK": "巨型菌菇出現強度"
+    },
+    "params.crimson.density.tooltip": {
+      "zh": "候选概率受斑块调制，不表示面积占比。",
+      "en": "Patch-modulated candidate probability, not area coverage.",
+      "zh-Hant": "候選機率受斑塊調節，不表示面積占比。",
+      "zh-Hant-HK": "候選概率受斑塊調節，不表示面積占比。"
+    },
+    "params.vegetation.simplified": {
+      "zh": "整株菌树",
+      "en": "Whole fungi",
+      "zh-Hant": "整株巨型蕈菇",
+      "zh-Hant-HK": "整株巨型菌菇"
+    },
+    "params.vegetation.simplified.tooltip": {
+      "zh": "两种森林各复用六款模型；关闭后逐方块生成更多造型。",
+      "en": "Reuse six models per forest; disable for richer voxel shapes.",
+      "zh-Hant": "兩種森林各重複使用六款模型；關閉後逐方塊生成更多造型。"
+    },
+    "params.warped.enabled": {
+      "zh": "诡异森林",
+      "en": "Warped forest",
+      "zh-Hant": "扭曲森林",
+      "zh-Hant-HK": "迷離森林"
+    },
+    "params.warped.density": {
+      "zh": "菌树出现强度",
+      "en": "Fungus intensity",
+      "zh-Hant": "巨型蕈菇出現強度",
+      "zh-Hant-HK": "巨型菌菇出現強度"
+    },
+    "params.warped.density.tooltip": {
+      "zh": "候选概率受斑块调制，不表示面积占比。",
+      "en": "Patch-modulated candidate probability, not area coverage.",
+      "zh-Hant": "候選機率受斑塊調節，不表示面積占比。",
+      "zh-Hant-HK": "候選概率受斑塊調節，不表示面積占比。"
+    },
+    "params.warped.spacing": {
+      "zh": "菌树候选间距（格）",
+      "en": "Fungus candidate spacing (blocks)",
+      "zh-Hant": "巨型蕈菇候選間距（格）",
+      "zh-Hant-HK": "巨型菌菇候選間距（格）"
+    },
+    "params.warped.biome_scale": {
+      "zh": "森林区域尺度（格）",
+      "en": "Forest region scale (blocks)",
+      "zh-Hant": "森林區域尺度（格）"
+    },
+    "params.warped.biome_threshold": {
+      "zh": "森林区域阈值",
+      "en": "Forest region threshold",
+      "zh-Hant": "森林區域閾值"
+    },
+    "params.warped.ground_enabled": {
+      "zh": "林地植物",
+      "en": "Forest ground plants",
+      "zh-Hant": "林地植物"
+    },
+    "params.warped.fungus_density": {
+      "zh": "诡异菌概率",
+      "en": "Warped fungus probability",
+      "zh-Hant": "扭曲蕈菇機率",
+      "zh-Hant-HK": "迷離菌菇概率"
+    },
+    "params.warped.roots_density": {
+      "zh": "诡异菌索概率",
+      "en": "Warped roots probability",
+      "zh-Hant": "扭曲蕈根機率",
+      "zh-Hant-HK": "迷離菌根概率"
+    },
+    "params.warped.sprouts_density": {
+      "zh": "下界苗概率",
+      "en": "Nether sprouts probability",
+      "zh-Hant": "地獄芽機率",
+      "zh-Hant-HK": "地獄芽概率"
+    },
+    "params.warped.sprouts_density.tooltip": {
+      "zh": "依次选择诡异菌、菌索、下界苗，每项从剩余合格格中抽取。",
+      "en": "Draw fungi, roots, then sprouts from remaining eligible cells.",
+      "zh-Hant": "依次選擇扭曲蕈菇、蕈根、地獄芽，每項從剩餘合格格中抽取。",
+      "zh-Hant-HK": "依次選擇迷離菌菇、菌根、地獄芽，每項從剩餘合格格中抽取。"
+    },
+    "params.warped.vines_enabled": {
+      "zh": "缠怨藤",
+      "en": "Twisting vines",
+      "zh-Hant": "扭曲藤"
+    },
+    "params.warped.vines_density": {
+      "zh": "缠怨藤出现强度",
+      "en": "Twisting vine intensity",
+      "zh-Hant": "扭曲藤出現強度"
+    },
+    "params.warped.vines_spacing": {
+      "zh": "缠怨藤候选间距（格）",
+      "en": "Vine candidate spacing (blocks)",
+      "zh-Hant": "扭曲藤候選間距（格）"
+    },
+    "params.crimson.spacing": {
+      "zh": "菌树候选间距（格）",
+      "en": "Fungus candidate spacing (blocks)",
+      "zh-Hant": "巨型蕈菇候選間距（格）",
+      "zh-Hant-HK": "巨型菌菇候選間距（格）"
+    },
+    "params.crimson.biome_scale": {
+      "zh": "森林区域尺度（格）",
+      "en": "Forest region scale (blocks)",
+      "zh-Hant": "森林區域尺度（格）"
+    },
+    "params.crimson.biome_threshold": {
+      "zh": "森林区域阈值",
+      "en": "Forest region threshold",
+      "zh-Hant": "森林區域閾值"
+    },
+    "params.lava_columns.enabled": {
+      "zh": "岩浆柱",
+      "en": "Lava columns",
+      "zh-Hant": "熔岩柱",
+      "zh-Hant-HK": "熔巖柱"
+    },
+    "params.lava_columns.density": {
+      "zh": "岩浆柱出现强度",
+      "en": "Lava column intensity",
+      "zh-Hant": "熔岩柱出現強度",
+      "zh-Hant-HK": "熔巖柱出現強度"
+    },
+    "params.lava_columns.density.tooltip": {
+      "zh": "候选位置的概率强度，受斑块分布调制，不表示面积占比。",
+      "en": "Candidate probability modulated by patches, not a fraction of world area.",
+      "zh-Hant": "候選位置的機率強度，受斑塊分布調節，不表示面積占比。",
+      "zh-Hant-HK": "候選位置的概率強度，受斑塊分布調節，不表示面積占比。"
+    },
+    "params.lava_columns.spacing": {
+      "zh": "岩浆柱候选间距（格）",
+      "en": "Lava column candidate spacing (blocks)",
+      "zh-Hant": "熔岩柱候選間距（格）",
+      "zh-Hant-HK": "熔巖柱候選間距（格）"
+    },
+    "params.fire.enabled": {
+      "zh": "普通火",
+      "en": "Fire",
+      "zh-Hant": "普通火"
+    },
+    "params.fire.density": {
+      "zh": "普通火概率",
+      "en": "Fire probability",
+      "zh-Hant": "普通火機率",
+      "zh-Hant-HK": "普通火概率"
+    },
+    "params.fire.density.tooltip": {
+      "zh": "每个合格空气格的概率；0.005表示0.5%。",
+      "en": "Probability per eligible air cell; 0.005 means 0.5%.",
+      "zh-Hant": "每個合格空氣格的機率；0.005表示0.5%。",
+      "zh-Hant-HK": "每個合格空氣格的概率；0.005表示0.5%。"
+    },
+    "params.fire.soul_enabled": {
+      "zh": "灵魂火",
+      "en": "Soul fire",
+      "zh-Hant": "靈魂火"
+    },
+    "params.fire.soul_density": {
+      "zh": "灵魂火概率",
+      "en": "Soul fire probability",
+      "zh-Hant": "靈魂火機率",
+      "zh-Hant-HK": "靈魂火概率"
+    },
+    "params.soul.fossils_enabled": {
+      "zh": "化石",
+      "en": "Fossils",
+      "zh-Hant": "化石"
+    },
+    "params.soul.fossil_density": {
+      "zh": "化石密度",
+      "en": "Fossil density",
+      "zh-Hant": "化石密度"
+    },
+    "params.soul.fossil_spacing": {
+      "zh": "化石候选间距（格）",
+      "en": "Fossil candidate spacing (blocks)",
+      "zh-Hant": "化石候選間距（格）"
+    },
+    "params.soul.enabled": {
+      "zh": "灵魂沙峡谷",
+      "en": "Soul sand valley",
+      "zh-Hant": "靈魂砂峽谷"
+    },
+    "params.soul.biome_scale": {
+      "zh": "群系尺度（格）",
+      "en": "Biome scale (blocks)",
+      "zh-Hant": "群系尺度（格）"
+    },
+    "params.soul.biome_threshold": {
+      "zh": "分布阈值",
+      "en": "Distribution threshold",
+      "zh-Hant": "分布閾值"
+    },
+    "params.soul.surface_depth": {
+      "zh": "覆盖厚度（格）",
+      "en": "Coating depth (blocks)",
+      "zh-Hant": "覆蓋厚度（格）"
+    },
+    "params.soul.pillars_enabled": {
+      "zh": "玄武岩柱",
+      "en": "Basalt pillars",
+      "zh-Hant": "玄武岩柱",
+      "zh-Hant-HK": "玄武巖柱"
+    },
+    "params.soul.pillar_density": {
+      "zh": "岩柱密度",
+      "en": "Pillar density",
+      "zh-Hant": "岩柱密度"
+    },
+    "params.soul.pillar_spacing": {
+      "zh": "候选间距（格）",
+      "en": "Candidate spacing (blocks)",
+      "zh-Hant": "候選間距（格）"
+    },
+    "params.world.y_min": {
+      "zh": "裁切下限",
+      "en": "Crop bottom",
+      "zh-Hant": "裁切下限"
+    },
+    "params.world.y_max": {
+      "zh": "裁切上限",
+      "en": "Crop top",
+      "zh-Hant": "裁切上限"
+    },
+    "params.world.sea_level": {
+      "zh": "岩浆水位（格）",
+      "en": "Lava level (blocks)",
+      "zh-Hant": "熔岩水位（格）",
+      "zh-Hant-HK": "熔巖水位（格）"
+    },
+    "params.surface.soil_depth": {
+      "zh": "参考覆盖厚度",
+      "en": "Reference soil depth",
+      "zh-Hant": "參考覆蓋厚度"
+    },
+    "params.surface.boundary_scale": {
+      "zh": "参考规则边界尺度",
+      "en": "Reference rule boundary scale",
+      "zh-Hant": "參考規則邊界尺度"
+    },
+    "params.surface.patch_scale": {
+      "zh": "参考材料斑块尺度",
+      "en": "Reference material patch scale",
+      "zh-Hant": "參考材料斑塊尺度"
+    },
+    "params.nether.floor_y": {
+      "zh": "物理底部",
+      "en": "Physical floor",
+      "zh-Hant": "物理底部"
+    },
+    "params.nether.floor_y.tooltip": {
+      "zh": "配方物理边界，与输出裁切分开。",
+      "en": "Physical recipe bound, independent of output cropping.",
+      "zh-Hant": "配方物理邊界，與輸出裁切分開。"
+    },
+    "params.nether.roof_y": {
+      "zh": "物理顶部",
+      "en": "Physical roof",
+      "zh-Hant": "物理頂部"
+    },
+    "params.nether.boundary_thickness": {
+      "zh": "底顶基础厚度（格）",
+      "en": "Floor/roof base thickness (blocks)",
+      "zh-Hant": "底頂基礎厚度（格）"
+    },
+    "params.nether.cavern_bias": {
+      "zh": "洞窟开阔程度",
+      "en": "Cavern openness",
+      "zh-Hant": "洞窟開闊程度"
+    },
+    "params.nether.cavern_bias.tooltip": {
+      "zh": "增大形成更多空气；洞底和洞顶仍保留。",
+      "en": "Larger values create more air while retaining floor and roof.",
+      "zh-Hant": "增大形成更多空氣；洞底和洞頂仍保留。"
+    },
+    "params.nether.scale_x": {
+      "zh": "X尺度",
+      "en": "X scale",
+      "zh-Hant": "X尺度"
+    },
+    "params.nether.scale_y": {
+      "zh": "Y尺度",
+      "en": "Y scale",
+      "zh-Hant": "Y尺度"
+    },
+    "params.nether.scale_z": {
+      "zh": "Z尺度",
+      "en": "Z scale",
+      "zh-Hant": "Z尺度"
+    },
+    "params.nether.detail_strength": {
+      "zh": "岩体细节强度",
+      "en": "Rock detail strength",
+      "zh-Hant": "岩體細節強度"
+    },
+    "params.nether.lava_enabled": {
+      "zh": "岩浆海",
+      "en": "Lava sea",
+      "zh-Hant": "熔岩海",
+      "zh-Hant-HK": "熔巖海"
+    },
+    "params.nether.rock_variation": {
+      "zh": "岩石变化",
+      "en": "Rock variation",
+      "zh-Hant": "岩石變化"
+    },
+    "params.nether.basalt_enabled": {
+      "zh": "玄武岩斑块",
+      "en": "Basalt patches",
+      "zh-Hant": "玄武岩斑塊",
+      "zh-Hant-HK": "玄武巖斑塊"
+    },
+    "params.nether.blackstone_depth": {
+      "zh": "底部黑石岩带厚度（格）",
+      "en": "Lower blackstone band (blocks)",
+      "zh-Hant": "底部黑石岩帶厚度（格）"
+    },
+    "params.ores.enabled": {
+      "zh": "暴露矿石",
+      "en": "Exposed ores",
+      "zh-Hant": "暴露礦石"
+    },
+    "params.ores.amount": {
+      "zh": "矿石数量",
+      "en": "Ore amount",
+      "zh-Hant": "礦石數量"
+    },
+    "params.ores.cluster_scale": {
+      "zh": "矿簇尺度（格）",
+      "en": "Ore cluster scale (blocks)",
+      "zh-Hant": "礦簇尺度（格）"
+    },
+    "params.ores.quartz.enabled": {
+      "zh": "下界石英矿",
+      "en": "Nether quartz ore",
+      "zh-Hant": "地獄石英礦"
+    },
+    "params.ores.quartz.density": {
+      "zh": "石英矿密度",
+      "en": "Quartz density",
+      "zh-Hant": "石英礦密度"
+    },
+    "params.ores.quartz.weight": {
+      "zh": "石英矿相对权重",
+      "en": "Quartz weight",
+      "zh-Hant": "石英礦相對權重"
+    },
+    "params.ores.gold.enabled": {
+      "zh": "下界金矿",
+      "en": "Nether gold ore",
+      "zh-Hant": "地獄金礦"
+    },
+    "params.ores.gold.weight": {
+      "zh": "金矿相对权重",
+      "en": "Gold weight",
+      "zh-Hant": "金礦相對權重"
+    },
+    "params.nether.magma_enabled": {
+      "zh": "岩浆块",
+      "en": "Magma blocks",
+      "zh-Hant": "熔岩塊",
+      "zh-Hant-HK": "熔巖塊"
+    },
+    "params.nether.magma_amount": {
+      "zh": "岩浆块数量",
+      "en": "Magma amount",
+      "zh-Hant": "熔岩塊數量",
+      "zh-Hant-HK": "熔巖塊數量"
+    },
+    "params.nether.magma_scale": {
+      "zh": "岩浆块斑块尺度（格）",
+      "en": "Magma patch scale (blocks)",
+      "zh-Hant": "熔岩塊斑塊尺度（格）",
+      "zh-Hant-HK": "熔巖塊斑塊尺度（格）"
+    },
+    "params.glowstone.enabled": {
+      "zh": "洞顶萤石",
+      "en": "Ceiling glowstone",
+      "zh-Hant": "洞頂螢光石",
+      "zh-Hant-HK": "洞頂熒光石"
+    },
+    "params.glowstone.density": {
+      "zh": "萤石密度",
+      "en": "Glowstone density",
+      "zh-Hant": "螢光石密度",
+      "zh-Hant-HK": "熒光石密度"
+    },
+    "params.glowstone.spacing": {
+      "zh": "萤石候选间距（格）",
+      "en": "Glowstone candidate spacing (blocks)",
+      "zh-Hant": "螢光石候選間距（格）",
+      "zh-Hant-HK": "熒光石候選間距（格）"
+    },
+    "pages.world": {
+      "zh": "世界范围",
+      "en": "World bounds",
+      "zh-Hant": "世界範圍"
+    },
+    "pages.nether": {
+      "zh": "下界形状",
+      "en": "Nether shape",
+      "zh-Hant": "地獄形狀"
+    },
+    "pages.soul": {
+      "zh": "灵魂沙峡谷",
+      "en": "Soul sand valley",
+      "zh-Hant": "靈魂砂峽谷"
+    },
+    "pages.crimson": {
+      "zh": "绯红森林",
+      "en": "Crimson forest",
+      "zh-Hant": "緋紅森林",
+      "zh-Hant-HK": "猩紅森林"
+    },
+    "pages.warped": {
+      "zh": "诡异森林",
+      "en": "Warped forest",
+      "zh-Hant": "扭曲森林",
+      "zh-Hant-HK": "迷離森林"
+    },
+    "pages.basalt": {
+      "zh": "玄武岩三角洲",
+      "en": "Basalt deltas",
+      "zh-Hant": "玄武岩三角洲",
+      "zh-Hant-HK": "玄武巖三角洲"
+    },
+    "pages.minerals": {
+      "zh": "矿物",
+      "en": "Minerals",
+      "zh-Hant": "礦物"
+    },
+    "pages.decorations": {
+      "zh": "地面装饰",
+      "en": "Ground decorations",
+      "zh-Hant": "地面裝飾"
+    },
+    "rows.world_y_min": {
+      "zh": "输出裁切高度（格）",
+      "en": "Output Y crop (blocks)",
+      "zh-Hant": "輸出裁切高度（格）"
+    },
+    "rows.world_y_min.components.world.y_min": {
+      "zh": "裁切下限",
+      "en": "Crop bottom",
+      "zh-Hant": "裁切下限"
+    },
+    "rows.world_y_min.components.world.y_max": {
+      "zh": "裁切上限",
+      "en": "Crop top",
+      "zh-Hant": "裁切上限"
+    },
+    "rows.nether_floor_y": {
+      "zh": "物理底部／顶部（格）",
+      "en": "Physical floor / roof (blocks)",
+      "zh-Hant": "物理底部／頂部（格）"
+    },
+    "rows.nether_floor_y.components.nether.floor_y": {
+      "zh": "物理底部",
+      "en": "Physical floor",
+      "zh-Hant": "物理底部"
+    },
+    "rows.nether_floor_y.components.nether.roof_y": {
+      "zh": "物理顶部",
+      "en": "Physical roof",
+      "zh-Hant": "物理頂部"
+    },
+    "rows.nether_scale_x": {
+      "zh": "岩体尺度 X/Y/Z（格）",
+      "en": "Rock scales X/Y/Z (blocks)",
+      "zh-Hant": "岩體尺度 X/Y/Z（格）"
+    },
+    "rows.nether_scale_x.components.nether.scale_x": {
+      "zh": "X尺度",
+      "en": "X scale",
+      "zh-Hant": "X尺度"
+    },
+    "rows.nether_scale_x.components.nether.scale_y": {
+      "zh": "Y尺度",
+      "en": "Y scale",
+      "zh-Hant": "Y尺度"
+    },
+    "rows.nether_scale_x.components.nether.scale_z": {
+      "zh": "Z尺度",
+      "en": "Z scale",
+      "zh-Hant": "Z尺度"
+    },
+    "biomes.basalt_deltas.name": {
+      "zh": "玄武岩三角洲",
+      "en": "Basalt deltas",
+      "zh-Hant": "玄武岩三角洲",
+      "zh-Hant-HK": "玄武巖三角洲"
+    },
+    "biomes.crimson_forest.name": {
+      "zh": "绯红森林",
+      "en": "Crimson forest",
+      "zh-Hant": "緋紅森林",
+      "zh-Hant-HK": "猩紅森林"
+    },
+    "biomes.nether_wastes.name": {
+      "zh": "下界荒地",
+      "en": "Nether wastes",
+      "zh-Hant": "地獄荒原"
+    },
+    "biomes.soul_sand_valley.name": {
+      "zh": "灵魂沙峡谷",
+      "en": "Soul sand valley",
+      "zh-Hant": "靈魂砂峽谷"
+    },
+    "biomes.warped_forest.name": {
+      "zh": "诡异森林",
+      "en": "Warped forest",
+      "zh-Hant": "扭曲森林",
+      "zh-Hant-HK": "迷離森林"
+    },
+    "presets.all_biomes.name": {
+      "zh": "所有群系",
+      "en": "All biomes",
+      "zh-Hant": "所有群系"
+    },
+    "presets.basalt_deltas.name": {
+      "zh": "玄武岩三角洲",
+      "en": "Basalt deltas",
+      "zh-Hant": "玄武岩三角洲",
+      "zh-Hant-HK": "玄武巖三角洲"
+    },
+    "presets.crimson_forest.name": {
+      "zh": "绯红森林",
+      "en": "Crimson forest",
+      "zh-Hant": "緋紅森林",
+      "zh-Hant-HK": "猩紅森林"
+    },
+    "presets.default.name": {
+      "zh": "下界混合群系",
+      "en": "Mixed Nether biomes",
+      "zh-Hant": "地獄混合群系"
+    },
+    "presets.nether_wastes.name": {
+      "zh": "下界荒地",
+      "en": "Nether wastes",
+      "zh-Hant": "地獄荒原"
+    },
+    "presets.soul_valley.name": {
+      "zh": "灵魂沙峡谷",
+      "en": "Soul sand valley",
+      "zh-Hant": "靈魂砂峽谷"
+    },
+    "presets.warped_forest.name": {
+      "zh": "诡异森林",
+      "en": "Warped forest",
+      "zh-Hant": "扭曲森林",
+      "zh-Hant-HK": "迷離森林"
+    },
+    "presets.wastes_valley.name": {
+      "zh": "荒地与灵魂沙峡谷",
+      "en": "Wastes and soul sand valley",
+      "zh-Hant": "荒地與靈魂砂峽谷"
+    }
+  }
+}

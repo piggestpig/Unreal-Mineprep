@@ -2,6 +2,7 @@
 import json
 import uuid
 import unreal
+from mineprep import i18n
 from . import importer
 from .assets import CACHE
 from .gltf import encode
@@ -9,7 +10,7 @@ from .gltf import encode
 
 def prerequisites():
     if not all(hasattr(unreal, n) for n in ('InterchangeManager', 'InterchangeGenericAssetsPipeline', 'ImportAssetParameters')):
-        raise RuntimeError(importer.message('请启用 Interchange 导入支持', 'Enable Interchange import support'))
+        raise RuntimeError(str(i18n('请启用 Interchange 导入支持', 'Enable Interchange import support')))
     material = unreal.load_asset(importer.MATERIAL)
     if not isinstance(material, unreal.MaterialInstanceConstant):
         raise RuntimeError('Missing skin material: ' + importer.MATERIAL)
@@ -59,7 +60,7 @@ def create_assets(entry, version, target, geometry, skin_path=None, reload=False
         temporary.write_bytes(data)
         temporary.replace(path)
     except OSError as exc:
-        raise RuntimeError(importer.message('无法写入模型缓存：', 'Cannot write model cache: ') + str(exc)) from exc
+        raise RuntimeError(str(i18n('无法写入模型缓存：', 'Cannot write model cache: ')) + str(exc)) from exc
 
     if existing:
         return reimport_asset(entry, version, target, geometry, skin_path, path, mapping, material_sources)

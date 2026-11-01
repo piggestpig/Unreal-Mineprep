@@ -51,6 +51,7 @@ class Resources:
         from .noise import NOISE_VERSION
         from .noise3 import VERSION as NOISE3_VERSION
         from .density import VERSION as DENSITY_VERSION
+        from .coarse import VERSION as COARSE_VERSION
         # Function/source identity still comes from the complete generation
         # fingerprint. Only explicitly reviewed parameter dependencies narrow.
         resource = 'density' if name.startswith('density/') else name
@@ -60,6 +61,11 @@ class Resources:
                         if k != (self.pack.water.get('enabled_param') if self.pack.water else None)})
         raw = json.dumps([VERSION, GENERATOR_VERSION, NOISE_VERSION, NOISE3_VERSION, DENSITY_VERSION, self.pack.generation_fingerprint,
                           self.seed, name, params,
+                          # Planner objects may retain geometry queries. Only reviewed
+                          # macro water and the separately-strided surface source share keys.
+                          *([self.pack.cell_step, COARSE_VERSION] if self.pack.cell_step != 1 and
+                            self.pack.layout is None and resource not in ('water','surface') else []),
+                          *([self.pack.layout.identity()] if self.pack.layout is not None and resource!='water' else []),
                           *([self.region.to_list() if self.region is not None else None]
                             if any(f.region_pass and f.region is None for f in self.pack.fields.values()) else [])],
                          sort_keys=True)
@@ -182,7 +188,10 @@ class SurfaceTiles:
     """
     def __init__(self, resources):
         self.resources = resources
+        self._sources = None
         self.key = resources.key('surface')
+        if resources.pack.cell_step != 1:
+            self.key = (self.key,resources.pack.cell_step)
 
     def _evaluate(self, bx, bz):
         from .data import Region
@@ -190,11 +199,13 @@ class SurfaceTiles:
         from .water import sample_water
         r = self.resources
         region = Region(bx * 2 * SURFACE_TILE, bz * 2 * SURFACE_TILE, 2 * SURFACE_TILE, 2 * SURFACE_TILE)
-        ctx = Context.for_region(r.pack.fields, r.params, r.seed, region, resources=r)
+        ctx = Context.for_region(r.pack.fields, r.params, r.seed, region, resources=r,step=r.pack.cell_step)
         height = ctx.get(r.pack.height_field)
         clipped = np.clip(height, r.params['world.y_min'], r.params['world.y_max'])
         ctx.put(r.pack.height_field, clipped)
         _, wet = sample_water(ctx, r.pack, clipped)
+        if r.pack.cell_step != 1:
+            height,wet = (np.repeat(np.repeat(a,r.pack.cell_step,axis=0),r.pack.cell_step,axis=1) for a in (height,wet))
         tiles = {}
         for dz in range(2):
             for dx in range(2):
@@ -214,8 +225,29 @@ class SurfaceTiles:
         for tx, tz in dict.fromkeys(coordinates):
             region = Region(tx * SURFACE_TILE, tz * SURFACE_TILE, SURFACE_TILE, SURFACE_TILE)
             if store is not None and store.covers(region):
-                index = store.region.slices(region)
-                result[(tx, tz)] = store.arrays['raw'][index], store.arrays['wet'][index]
+                result[(tx, tz)] = store.sample('raw',region), store.sample('wet',region)
+                continue
+            if self.resources.pack.layout is not None:
+                from dataclasses import replace
+                from .layout import intersection
+                from .store import active
+                r = self.resources
+                layout = r.pack.layout
+                if self._sources is None:
+                    self._sources = tuple(SurfaceTiles(Resources(replace(r.pack,layout=None,cell_step=step),
+                        r.params,r.seed,region=r.region,validate=False)) for step in (layout.outer_step,1))
+                # Reuse only pure single-precision tiles. The mixed overlay is
+                # transient and never enters the old surface cache.
+                with active(None):
+                    height,wet = self._sources[0].get(tx,tz)
+                    patch = None if layout.empty else intersection(region,layout.core)
+                    if patch is not None:
+                        fine_height,fine_wet = self._sources[1].get(tx,tz)
+                        index = region.slices(patch)
+                        height,wet = height.copy(),wet.copy()
+                        height[index],wet[index] = fine_height[index],fine_wet[index]
+                        height.setflags(write=False);wet.setflags(write=False)
+                result[(tx,tz)] = height,wet
                 continue
             result[(tx, tz)] = _surface.get((self.key, tx, tz), lambda: self._evaluate(tx // 2, tz // 2)[(tx, tz)])
         return result
@@ -245,9 +277,8 @@ class SurfaceTiles:
         from .store import current
         store, region = current(), Region(x0, z0, x1 - x0, z1 - z0)
         if store is not None and store.covers(region):
-            index = store.region.slices(region)
-            h = store.arrays['raw'][index]
-            return float(h.min()), float(h.max()), int(np.count_nonzero(store.arrays['wet'][index]))
+            h = store.sample('raw',region)
+            return float(h.min()), float(h.max()), int(np.count_nonzero(store.sample('wet',region)))
         lo, hi, wet_count = float('inf'), -float('inf'), 0
         for tz in range(z0 // SURFACE_TILE, (z1 - 1) // SURFACE_TILE + 1):
             for tx in range(x0 // SURFACE_TILE, (x1 - 1) // SURFACE_TILE + 1):

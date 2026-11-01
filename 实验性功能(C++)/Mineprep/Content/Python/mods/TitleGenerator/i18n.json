@@ -1,0 +1,481 @@
+{
+  "TitleGenerator": {
+    "Settings.Text": {
+      "en": "Title Text",
+      "_native": "en",
+      "zh": "标题文字",
+      "zh-Hant": "標題文字"
+    },
+    "Settings.category.Settings": {
+      "en": "Title Settings",
+      "_native": "en",
+      "zh": "标题设置",
+      "zh-Hant": "標題設定"
+    },
+    "Settings.Name": {
+      "en": "Actor Label",
+      "_native": "en",
+      "zh": "Actor 标签",
+      "zh-Hant": "Actor 標籤"
+    },
+    "Settings.Font": {
+      "en": "Font / Variant",
+      "_native": "en",
+      "zh": "字体 / 变体",
+      "zh-Hant": "字型 / 變體"
+    },
+    "Settings.Texture": {
+      "en": "Texture / Variant",
+      "_native": "en",
+      "zh": "纹理 / 变体",
+      "zh-Hant": "紋理 / 變體"
+    },
+    "Settings.Overlay": {
+      "en": "Overlay",
+      "_native": "en",
+      "zh": "叠加层",
+      "zh-Hant": "疊加層"
+    },
+    "Settings.Source": {
+      "en": "Color Source",
+      "_native": "en",
+      "zh": "颜色来源",
+      "zh-Hant": "顏色來源"
+    },
+    "Settings.Lighting": {
+      "en": "Lighting Mode",
+      "_native": "en",
+      "zh": "光照模式",
+      "zh-Hant": "光照模式"
+    },
+    "Settings.OutputMode": {
+      "en": "Output Mode",
+      "_native": "en",
+      "zh": "输出模式",
+      "zh-Hant": "輸出模式"
+    },
+    "Settings.Layout": {
+      "en": "Text Layout",
+      "_native": "en",
+      "zh": "文字布局",
+      "zh-Hant": "文字配置"
+    },
+    "Settings.SplitRatio": {
+      "en": "Split Ratio",
+      "_native": "en",
+      "zh": "分栏比例",
+      "zh-Hant": "分欄比例"
+    },
+    "Settings.File": {
+      "en": "Image File",
+      "_native": "en",
+      "zh": "图片文件",
+      "zh-Hant": "圖片檔案"
+    },
+    "Settings.Height": {
+      "en": "Height (cm)",
+      "_native": "en",
+      "zh": "字高（cm）",
+      "zh-Hant": "字高（cm）"
+    },
+    "Settings.CharacterSpacing": {
+      "en": "Letter Spacing",
+      "_native": "en",
+      "zh": "字距",
+      "zh-Hant": "字距"
+    },
+    "Settings.RowSpacing": {
+      "en": "Row Spacing",
+      "_native": "en",
+      "zh": "行距",
+      "zh-Hant": "行距"
+    },
+    "Settings.TopColor": {
+      "en": "Top Color",
+      "_native": "en",
+      "zh": "顶部颜色",
+      "zh-Hant": "頂部顏色"
+    },
+    "Settings.BottomColor": {
+      "en": "Bottom Color",
+      "_native": "en",
+      "zh": "底部颜色",
+      "zh-Hant": "底部顏色"
+    },
+    "Settings.Tint": {
+      "en": "Tint",
+      "_native": "en",
+      "zh": "整体染色",
+      "zh-Hant": "整體染色"
+    },
+    "Settings.OverlayTint": {
+      "en": "Overlay Tint",
+      "_native": "en",
+      "zh": "叠加层染色",
+      "zh-Hant": "疊加層染色"
+    },
+    "Settings.OverlayOpacity": {
+      "en": "Overlay Opacity",
+      "_native": "en",
+      "zh": "叠加层不透明度",
+      "zh-Hant": "疊加層不透明度"
+    },
+    "Settings.Blend": {
+      "en": "Blend Mode",
+      "_native": "en",
+      "zh": "混合方式",
+      "zh-Hant": "混合方式"
+    },
+    "Settings.AutoRow": {
+      "en": "Auto Increment Row",
+      "_native": "en",
+      "zh": "自动递增行号",
+      "zh-Hant": "自動遞增行號"
+    },
+    "Settings.Row": {
+      "en": "Row Number",
+      "_native": "en",
+      "zh": "指定行号",
+      "zh-Hant": "指定行號"
+    },
+    "Settings.Thickness": {
+      "en": "Depth Multiplier",
+      "_native": "en",
+      "zh": "厚度倍率",
+      "zh-Hant": "厚度倍率"
+    },
+    "Settings.Terminators": {
+      "en": "Terminators",
+      "_native": "en",
+      "zh": "两端装饰",
+      "zh-Hant": "兩端裝飾"
+    },
+    "Settings.DisableShifting": {
+      "en": "Disable Kerning",
+      "_native": "en",
+      "zh": "禁用字距微调",
+      "zh-Hant": "停用字距微調"
+    },
+    "Settings.CustomBorder": {
+      "en": "Custom Outline Color",
+      "_native": "en",
+      "zh": "自定义描边颜色",
+      "zh-Hant": "自訂描邊顏色"
+    },
+    "Settings.BorderColor": {
+      "en": "Outline Color",
+      "_native": "en",
+      "zh": "描边颜色",
+      "zh-Hant": "描邊顏色"
+    },
+    "Settings.EdgeBrightness": {
+      "en": "Side Brightness (%)",
+      "_native": "en",
+      "zh": "侧面亮度（%）",
+      "zh-Hant": "側面亮度（%）"
+    },
+    "Settings.Location": {
+      "en": "Spawn Location",
+      "_native": "en",
+      "zh": "生成位置",
+      "zh-Hant": "產生位置",
+      "zh-Hant-HK": "生成位置"
+    },
+    "刷新资源": {
+      "zh": "刷新资源",
+      "en": "Refresh Resources",
+      "zh-Hant": "重新整理資源",
+      "zh-Hant-HK": "刷新資源"
+    },
+    "就绪": {
+      "zh": "就绪",
+      "en": "Ready",
+      "zh-Hant": "就緒"
+    },
+    "支持多行输入，中间空行保留行距。大写 A 为苦力怕字形，小写 a 为普通字母 A。": {
+      "zh": "支持多行输入，中间空行保留行距。大写 A 为苦力怕字形，小写 a 为普通字母 A。",
+      "en": "Supports multiple rows; inner blank lines keep row spacing. Uppercase A uses the Creeper glyph; lowercase a is regular.",
+      "zh-Hant": "支援多行輸入，中間空行保留行距。大寫 A 為苦力怕字形，小寫 a 為普通字母 A。",
+      "zh-Hant-HK": "支援多行輸入，中間空行保留行距。大寫 A 為 Creeper 字形，小寫 a 為普通字母 A。"
+    },
+    "颜色来源": {
+      "zh": "颜色来源",
+      "en": "Color Source",
+      "zh-Hant": "顏色來源"
+    },
+    "纹理 / 变体": {
+      "zh": "纹理 / 变体",
+      "en": "Texture / Variant",
+      "zh-Hant": "紋理 / 變體"
+    },
+    "无": {
+      "zh": "无",
+      "en": "None",
+      "zh-Hant": "無"
+    },
+    "混合方式": {
+      "zh": "混合方式",
+      "en": "Blend"
+    },
+    "输出模式": {
+      "zh": "输出模式",
+      "en": "Output Mode",
+      "zh-Hant": "輸出模式"
+    },
+    "留空时取文本首个非空行的前16个字符；本次生成的Actor使用此标签，重名自动添加数字后缀。": {
+      "zh": "留空时取文本首个非空行的前16个字符；本次生成的Actor使用此标签，重名自动添加数字后缀。",
+      "en": "Leave blank to use the first 16 characters of the first nonempty row. Applies to Actors created in this batch; duplicates gain a numeric suffix.",
+      "zh-Hant": "留空時使用文字首個非空行的前 16 個字元；本次產生的 Actor 使用此標籤，重名時自動加上數字後綴。"
+    },
+    "新建标题": {
+      "zh": "新建标题",
+      "en": "New Title",
+      "zh-Hant": "新增標題"
+    },
+    "追加文字": {
+      "zh": "追加文字",
+      "en": "Append Text",
+      "zh-Hant": "附加文字"
+    },
+    "追加：选中已有标题的根物体或任意输出对象。": {
+      "zh": "追加：选中已有标题的根物体或任意输出对象。",
+      "en": "Append: select a title root or output object.",
+      "zh-Hant": "附加：選取既有標題的根物件或任一輸出物件。"
+    },
+    "每行一个完整网格；追加只生成新行。": {
+      "zh": "每行一个完整网格；追加只生成新行。",
+      "en": "One mesh per row; appending keeps existing rows.",
+      "zh-Hant": "每行一個完整網格；附加時只產生新行。",
+      "zh-Hant-HK": "每行一個完整網格；附加時只生成新行。"
+    },
+    "每字一个 Actor，适合独立调整与逐字动画。": {
+      "zh": "每字一个 Actor，适合独立调整与逐字动画。",
+      "en": "One Actor per letter for individual editing and animation.",
+      "zh-Hant": "每字一個 Actor，適合個別調整與逐字動畫。"
+    },
+    "相同字形共用实例化网格体，减少场景中的 Actor 数量。": {
+      "zh": "相同字形共用实例化网格体，减少场景中的 Actor 数量。",
+      "en": "Repeated letters share instanced static meshes to reduce Actor count.",
+      "zh-Hant": "相同字形共用實例化網格體，減少場景中的 Actor 數量。"
+    },
+    "通过 PCG 生成实例，适合批量展示；不提供逐字 Actor。": {
+      "zh": "通过 PCG 生成实例，适合批量展示；不提供逐字 Actor。",
+      "en": "PCG instances for batch display; no per-letter Actors.",
+      "zh-Hant": "透過 PCG 產生實例，適合批次展示；不提供逐字 Actor。",
+      "zh-Hant-HK": "透過 PCG 生成實例，適合批量展示；不提供逐字 Actor。"
+    },
+    "通过 Niagara 生成实例，适合批量展示；不提供逐字 Actor。": {
+      "zh": "通过 Niagara 生成实例，适合批量展示；不提供逐字 Actor。",
+      "en": "Niagara instances for batch display; no per-letter Actors.",
+      "zh-Hant": "透過 Niagara 產生實例，適合批次展示；不提供逐字 Actor。",
+      "zh-Hant-HK": "透過 Niagara 生成實例，適合批量展示；不提供逐字 Actor。"
+    },
+    "正在处理…": {
+      "zh": "正在处理…",
+      "en": "Working…",
+      "zh-Hant": "正在處理…"
+    },
+    "输入标题，Enter 换行": {
+      "zh": "输入标题，Enter 换行",
+      "en": "Enter title text; Enter adds a row",
+      "zh-Hant": "輸入標題，Enter 換行"
+    },
+    "字体 / 变体": {
+      "zh": "字体 / 变体",
+      "en": "Font / Variant",
+      "zh-Hant": "字型 / 變體"
+    },
+    "文字布局": {
+      "zh": "文字布局",
+      "en": "Layout",
+      "zh-Hant": "文字配置"
+    },
+    "预制": {
+      "zh": "预制",
+      "en": "Preset",
+      "zh-Hant": "預設"
+    },
+    "渐变": {
+      "zh": "渐变",
+      "en": "Gradient",
+      "zh-Hant": "漸層"
+    },
+    "本地": {
+      "zh": "本地",
+      "en": "Local",
+      "zh-Hant": "本機"
+    },
+    "光照模式": {
+      "zh": "光照模式",
+      "en": "Lighting"
+    },
+    "叠加层": {
+      "zh": "叠加层",
+      "en": "Overlay",
+      "zh-Hant": "疊加層"
+    },
+    "正常": {
+      "zh": "正常",
+      "en": "Normal"
+    },
+    "正片叠底": {
+      "zh": "正片叠底",
+      "en": "Multiply",
+      "zh-Hant": "色彩增值"
+    },
+    "滤色": {
+      "zh": "滤色",
+      "en": "Screen",
+      "zh-Hant": "濾色"
+    },
+    "叠加": {
+      "zh": "叠加",
+      "en": "Overlay",
+      "zh-Hant": "覆蓋"
+    },
+    "合并网格体": {
+      "zh": "合并网格体",
+      "en": "Merged Mesh",
+      "zh-Hant": "合併網格體"
+    },
+    "独立 Actor（逐字）": {
+      "zh": "独立 Actor（逐字）",
+      "en": "Separate Actors",
+      "zh-Hant": "獨立 Actor（逐字）"
+    },
+    "实例（CPU）": {
+      "zh": "实例（CPU）",
+      "en": "Instances (CPU)",
+      "zh-Hant": "實例（CPU）"
+    },
+    "PCG（GPU）": {
+      "zh": "PCG（GPU）",
+      "en": "PCG (GPU)",
+      "zh-Hant": "PCG（GPU）"
+    },
+    "粒子（GPU）": {
+      "zh": "粒子（GPU）",
+      "en": "Particles (GPU)",
+      "zh-Hant": "粒子（GPU）"
+    },
+    "请先点击“刷新资源”下载素材。": {
+      "zh": "请先点击“刷新资源”下载素材。",
+      "en": "Click Refresh resources to download the assets first.",
+      "zh-Hant": "請先點擊「重新整理資源」下載素材。",
+      "zh-Hant-HK": "請先點擊「刷新資源」下載素材。"
+    },
+    "字体示例": {
+      "zh": "字体示例",
+      "en": "Font example",
+      "zh-Hant": "字型範例"
+    },
+    "基础字形预览": {
+      "zh": "基础字形预览",
+      "en": "Base glyph preview",
+      "zh-Hant": "基本字形預覽"
+    },
+    "点击“刷新资源”下载素材": {
+      "zh": "点击“刷新资源”下载素材",
+      "en": "Click Refresh resources to download assets",
+      "zh-Hant": "點擊「重新整理資源」下載素材",
+      "zh-Hant-HK": "點擊「刷新資源」下載素材"
+    },
+    "预览图缺失 · 仍可正常生成": {
+      "zh": "预览图缺失 · 仍可正常生成",
+      "en": "Preview unavailable · can still generate",
+      "zh-Hant": "預覽圖缺失 · 仍可正常產生",
+      "zh-Hant-HK": "預覽圖缺失 · 仍可正常生成"
+    },
+    "请点击“刷新资源”补齐示例图片。": {
+      "zh": "请点击“刷新资源”补齐示例图片。",
+      "en": "Click Refresh resources to restore the example image.",
+      "zh-Hant": "請點擊「重新整理資源」補齊範例圖片。",
+      "zh-Hant-HK": "請點擊「刷新資源」補齊範例圖片。"
+    },
+    "请先选中一个标题根物体或单字 Actor，再追加文字。": {
+      "zh": "请先选中一个标题根物体或单字 Actor，再追加文字。",
+      "en": "Select a title root or letter Actor to append text.",
+      "zh-Hant": "請先選取一個標題根物件或單字 Actor，再附加文字。"
+    },
+    "主标题": {
+      "zh": "主标题",
+      "en": "Main Title",
+      "zh-Hant": "主標題"
+    },
+    "底部文字": {
+      "zh": "底部文字",
+      "en": "Bottom Text",
+      "zh-Hant": "底部文字"
+    },
+    "小字": {
+      "zh": "小字",
+      "en": "Small Text",
+      "zh-Hant": "小字"
+    },
+    "按字库模型单位计算，随字号一起缩放。": {
+      "zh": "按字库模型单位计算，随字号一起缩放。",
+      "en": "In font model units; scales with title size.",
+      "zh-Hant": "以字型模型單位計算，隨字級一同縮放。"
+    },
+    "无光照": {
+      "zh": "无光照",
+      "en": "Unlit",
+      "zh-Hant": "無光照"
+    },
+    "场景受光": {
+      "zh": "场景受光",
+      "en": "Lit",
+      "zh-Hant": "場景受光"
+    },
+    "示例缺失，请刷新资源。": {
+      "zh": "示例缺失，请刷新资源。",
+      "en": "Example missing; refresh resources.",
+      "zh-Hant": "缺少範例，請重新整理資源。",
+      "zh-Hant-HK": "缺少範例，請刷新資源。"
+    },
+    "已提交 {lines} 行（{count} 字），等待 GPU 生成": {
+      "zh": "已提交 {lines} 行（{count} 字），等待 GPU 生成",
+      "en": "Submitted {lines} rows ({count} letters); waiting for GPU generation",
+      "zh-Hant": "已提交 {lines} 行（{count} 字），等待 GPU 產生",
+      "zh-Hant-HK": "已提交 {lines} 行（{count} 字），等待 GPU 生成"
+    },
+    "已生成 {lines} 行（{count} 字，共 {actors} 个 Actor）": {
+      "zh": "已生成 {lines} 行（{count} 字，共 {actors} 个 Actor）",
+      "en": "Generated {lines} rows ({count} letters, {actors} Actors)",
+      "zh-Hant": "已產生 {lines} 行（{count} 字，共 {actors} 個 Actor）",
+      "zh-Hant-HK": "已生成 {lines} 行（{count} 字，共 {actors} 個 Actor）"
+    },
+    "仅用于新建标题；追加文字跟随原根物体。": {
+      "zh": "仅用于新建标题；追加文字跟随原根物体。",
+      "en": "Applies to new titles; appended text follows its root.",
+      "zh-Hant": "僅適用於新增標題；附加文字沿用原根物件。"
+    },
+    "资源已缓存 · {fonts} 种字体／变体 · {files} 个文件": {
+      "zh": "资源已缓存 · {fonts} 种字体／变体 · {files} 个文件",
+      "en": "Resources cached · {fonts} fonts/variants · {files} files",
+      "zh-Hant": "資源已快取 · {fonts} 種字型／變體 · {files} 個檔案"
+    },
+    "正在下载资源包 · {mb:.1f} MB": {
+      "zh": "正在下载资源包 · {mb:.1f} MB",
+      "en": "Downloading resources · {mb:.1f} MB",
+      "zh-Hant": "正在下載資源包 · {mb:.1f} MB"
+    },
+    "正在缓存资源 · {done}/{total}": {
+      "zh": "正在缓存资源 · {done}/{total}",
+      "en": "Caching resources · {done}/{total}",
+      "zh-Hant": "正在快取資源 · {done}/{total}"
+    },
+    "mod_info.Name": {
+      "zh": "像素标题生成器",
+      "en": "Pixel Title Generator",
+      "zh-Hant": "像素標題產生器",
+      "zh-Hant-HK": "像素標題生成器"
+    },
+    "mod_info.Description": {
+      "zh": "逐字生成立体像素标题",
+      "en": "Generate 3D pixel titles",
+      "zh-Hant": "逐字產生立體像素標題",
+      "zh-Hant-HK": "逐字生成立體像素標題"
+    }
+  }
+}

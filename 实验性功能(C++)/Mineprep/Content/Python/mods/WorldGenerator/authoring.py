@@ -62,8 +62,10 @@ def create_pack(pack_id, *, extends='vanilla', root=None, name=None):
     with tempfile.TemporaryDirectory(prefix='.create-', dir=root) as staging:
         draft = Path(staging) / pack_id
         draft.mkdir()
-        write_json(draft / 'pack.json', dict(format_version=2, id=pack_id,
-                   name=name or pack_id, extends=extends, modules=['landscape']))
+        write_json(draft / 'pack.json', dict(format_version=3, id=pack_id,
+                   extends=extends, modules=['landscape']))
+        from .localization import write_entries, literal
+        write_entries(draft, pack_id, {'pack.name': literal(name or pack_id)})
         (draft / 'landscape.py').write_text('', encoding='utf-8')
         (draft / 'README.md').write_text(
             f'# {name or pack_id}\n\nInherits `{extends}` without changing its output.\n\n'
@@ -88,7 +90,7 @@ def create_pack(pack_id, *, extends='vanilla', root=None, name=None):
             'Choose an anchor whose priority fits your climate rules. '
             'Pack.blocks is a name tuple; block_defs is the definition mapping. Prefer api.describe(). '
             'Climate intervals are closed; surface and locate upper bounds are exclusive. '
-            'Keep reports outside the pack directory: Python/JSON files affect its fingerprint. '
+            'Keep reports outside the pack directory: Python/JSON files except i18n.json affect its fingerprint. '
             'Do not copy planning_params: inherited packs invalidate conservatively.\n\n'
             'Full instructions: WorldGenerator/README.md and docs/CONTENT_PACK_GUIDE.md.\n',
             encoding='utf-8')

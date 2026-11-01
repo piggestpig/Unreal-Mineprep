@@ -1665,7 +1665,7 @@ def _is_packed_structure_data(ue_data) -> bool:
 
 
 def import_structure_textures(files, destination=None):
-    """将生成的 BPT/BRT EXR 贴图导入为 UE 资产并写入方块映射元数据。"""
+    """导入线性FP32、无mipmap且不流送的BPT/BRT资产，并写入方块映射。"""
     destination = destination or paths.game + 'mc/structure'
     textures = []
     for key in ('BPT', 'BRT'):
@@ -1673,11 +1673,15 @@ def import_structure_textures(files, destination=None):
         if not imported:
             raise RuntimeError(f'{key} texture import failed')
         texture = imported[0]
+        texture.set_editor_properties(dict(srgb=False,
+            mip_gen_settings=unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS, never_stream=True))
         prep_texture(texture, unreal.TextureCompressionSettings.TC_HDR_F32)
         if 'side' in files and (texture.blueprint_get_size_x() != files['side']
                                 or texture.blueprint_get_size_y() != files['side']):
             raise RuntimeError('imported structure texture size does not match encoded data')
         unreal.EditorAssetLibrary.set_metadata_tag(texture, '方块映射', pformat(files['mapping']))
+        if not unreal.EditorAssetLibrary.save_loaded_asset(texture, only_if_is_dirty=False):
+            raise RuntimeError(f'{key} structure texture save failed')
         textures.append(texture)
     return textures[0], textures[1], files['mapping']
 

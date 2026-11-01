@@ -10,11 +10,25 @@ import numpy as np
 
 from .block_colors import color_table
 
-VIEWS = ("landscape", "surface", "vegetation", "biomes", "height", "temperature", "humidity", "water_system", "caves", "cave_sections", "underground_water", "heightmap", "vegetation_mask", "clearance_mask")
-OVERVIEW_VIEWS = ('landscape', 'surface', 'biomes', 'height', 'temperature', 'humidity')
+VIEWS = ("landscape", "surface", "vegetation", "biomes", "height", "temperature", "humidity", "water_system", "caves", "cave_sections", "underground_water", "heightmap", "vegetation_mask", "clearance_mask", "lod")
+OVERVIEW_VIEWS = ('landscape', 'surface', 'biomes', 'height', 'temperature', 'humidity','lod')
 TERRAIN_FIELDS = ("continentalness", "erosion", "weirdness", "peaks_valleys")
 LIGHT = np.array([-1.0, 2.0, -1.0]) / np.sqrt(6.0)  # towards the light, MC x/y/z
 VOID_COLOR = np.array([0, 0, 0], np.uint8)
+
+
+def lod_view(data):
+    """Physical output footprint: black empty, green full, amber 2, blue 4."""
+    x,z = data.region.coordinates()
+    layout = data.pack.layout
+    steps = layout.steps(x,z) if layout is not None else np.full(data.region.shape,data.spec.cell_step)
+    palette = np.array(((0,0,0),(65,185,100),(205,165,65),(0,0,0),(65,120,190)),np.uint8)
+    rgb = palette[steps]
+    if layout is not None and layout.core is not None:
+        import cv2
+        c,r = layout.core,data.region
+        cv2.rectangle(rgb,(c.x0-r.x0,c.z0-r.z0),(c.x0+c.width-1-r.x0,c.z0+c.depth-1-r.z0),(235,235,235),1)
+    return rgb
 
 
 def hillshade(heights):
@@ -91,6 +105,7 @@ def _reference_view(data, name):
     """Shared reference rendering; deliberately does not inspect entity output."""
     if name not in overview_views(data.pack):
         raise ValueError(f'view {name!r} requires a full preview or an available reference field')
+    if name == 'lod': return lod_view(data)
     if name == 'heightmap':
         return heightmap_rgb(data.pack.heightmap, data.region, data.params)
     if name in ('vegetation_mask','clearance_mask'):
@@ -103,6 +118,9 @@ def _reference_view(data, name):
             water = colors[data.pack.blocks.index(data.pack.water['block'])]
             rgb[data.water_mask] = .75 * water + .25 * rgb[data.water_mask]
         image = rgb.astype(np.uint8)
+        if name == 'landscape' and data.pack.layout is not None and data.pack.layout.empty:
+            x,z = data.region.coordinates()
+            image[data.pack.layout.inside(x,z)] = VOID_COLOR
         if name == 'landscape' and data.pack.density is not None and data.pack.density.base == 'volume':
             import cv2
             caption = np.full((24, max(240, image.shape[1]), 3), 245, np.uint8)
@@ -123,6 +141,7 @@ def _reference_view(data, name):
 
 
 def view(world, name):
+    if name == 'lod': return lod_view(world)
     if name in ('vegetation_mask','clearance_mask'):
         return mask_rgb(world.pack.masks[name.removesuffix('_mask')], world.region)
     if name == 'landscape' and world.pack.density is not None and world.pack.density.base == 'volume':
@@ -170,6 +189,9 @@ def view(world, name):
     if name in ('surface', 'landscape', 'vegetation'):
         colors = color_table(world.pack.blocks, world.pack.block_defs).astype(np.float64)
         rgb = np.clip(colors[world.columns[..., 0]] * shade, 0, 255)
+        if world.pack.layout is not None and world.pack.layout.empty:
+            x,z = world.region.coordinates()
+            rgb[world.pack.layout.inside(x,z)] = VOID_COLOR
         if name == 'landscape':
             if world.geometry_views is not None:
                 actual, materials = actual_surface(world)
@@ -200,6 +222,12 @@ def view(world, name):
             arrays=world.arrays
             shape=np.array([d.shape in ('cube','surface') for d in arrays.block_defs])
             use=shape[arrays.types]
+            if arrays.sizes is not None:
+                top,material = _box_projection(arrays,use,world.params['world.y_min'])
+                outputs={n for processor in world.pack.surface_processors for n in processor.blocks}
+                changed = (top>=world.params['world.y_min']) & np.array([n in outputs for n in arrays.names])[material]
+                rgb[changed] = color_table(arrays.names,world.pack.block_defs)[material[changed]]*shade[changed]
+                use = np.zeros(len(use),bool)
             p,t=arrays.xyz[use],arrays.types[use]
             if len(p):
                 order=np.lexsort((p[:,1],p[:,2],p[:,0]));p,t=p[order],t[order]
@@ -222,17 +250,41 @@ def view(world, name):
     return field_rgb(name, values, world.params['world.sea_level'])
 
 
+def _box_projection(arrays, use, y_min):
+    from ..core.coarse import tops
+    r = arrays.region
+    p = arrays.xyz[use]
+    s = arrays.sizes[use]
+    t = arrays.types[use]
+    absolute = arrays.xyz.astype(np.int64)+[r.x0,0,r.z0]
+    top = tops(absolute,arrays.sizes,use,r,y_min)
+    material = np.zeros(r.cells,np.uint32)
+    for dz in range(int(s[:,2].max(initial=0))):
+        for dx in range(int(s[:,0].max(initial=0))):
+            valid = (s[:,0]>dx)&(s[:,2]>dz)
+            ids = np.flatnonzero(valid)
+            col = (p[ids,2]+dz)*r.width+p[ids,0]+dx
+            highest = p[ids,1]+s[ids,1]-1 == top[col]
+            material[col[highest]] = t[ids[highest]]
+    return top.reshape(r.shape),material.reshape(r.shape)
+
+
 def actual_surface(world):
     """Highest opaque terrain cells/materials from the unmerged sparse shell."""
     r, arrays = world.region, world.arrays
     tops = np.full(r.cells, world.params['world.y_min'] - 1, np.int32)
     materials = np.full(r.cells, world.pack.blocks.index(world.pack.blocks[0]), np.uint16)
+    if not arrays.count: return tops.reshape(r.shape),materials.reshape(r.shape)
     terrain = np.array([d.occludes for d in arrays.block_defs], bool)[arrays.types]
     if world.feature_cells is not None and world.feature_cells.count:
         from ..core.postprocess import _PointIndex
         found,at=_PointIndex(arrays.xyz).lookup(world.feature_cells.xyz)
         terrain[at[found]]=False
     xyz, types = arrays.xyz[terrain], arrays.types[terrain]
+    if arrays.sizes is not None:
+        top,material = _box_projection(arrays,terrain,world.params['world.y_min'])
+        ids = np.array([world.pack.blocks.index(n) for n in arrays.names],np.uint16)
+        return top,ids[material]
     columns = xyz[:, 2] * r.width + xyz[:, 0]
     np.maximum.at(tops, columns, xyz[:, 1])
     highest = xyz[:, 1] == tops[columns]
@@ -255,8 +307,9 @@ def _model_slice(world,axis,at):
 def section(world, row=None, height_px=None):
     """Side view of one z row, with water at each column's local elevation."""
     row = world.region.depth // 2 if row is None else row
-    if world.pack.density is not None:
-        return occupancy_rgb(world.spec, 'z', world.region.z0 + row, world=world, features=True)
+    if world.pack.density is not None or world.pack.layout is not None:
+        return occupancy_rgb(world.spec, 'z', world.region.z0 + row, world=world, features=True,
+                             materials=world.spec.cell_step != 1 or world.pack.layout is not None)
     heights = world.heights[row]
     tops = np.ceil(heights).astype(np.int64) - 1
     levels = (world.water_levels[row] if world.water_levels is not None
@@ -312,11 +365,21 @@ def occupancy_rgb(spec, axis='z', at=None, *, world=None, features=False, materi
             indices = {'x': 0, 'y': 1, 'z': 2}
             offsets = {'x': world.region.x0, 'y': 0, 'z': world.region.z0}
             chosen = np.flatnonzero(xyz[:, indices[axis]] == cut['at'] - offsets[axis])
+            if world.arrays.sizes is not None:
+                sizes = world.arrays.sizes
+                normal = indices[axis]
+                at_local = cut['at']-offsets[axis]
+                chosen = np.flatnonzero((xyz[:,normal]<=at_local)&(xyz[:,normal]+sizes[:,normal]>at_local))
             points = xyz[chosen]
             rows, cols = (points[:, indices[a]] - (world.params['world.y_min'] if a == 'y' else 0)
                           for a in cut['axes'])
             palette = color_table(world.arrays.names, world.pack.block_defs)
-            rgb[rows, cols] = palette[world.arrays.types[chosen]]
+            if world.arrays.sizes is None:
+                rgb[rows, cols] = palette[world.arrays.types[chosen]]
+            else:
+                for i,row,col in zip(chosen,rows,cols):
+                    a,b = (indices[k] for k in cut['axes'])
+                    rgb[row:row+sizes[i,a],col:col+sizes[i,b]] = palette[world.arrays.types[i]]
         from ..core.fluids import section_mask
         rgb[section_mask(world,axis,cut['at'])&~cut['solid']]=(35,155,205)
         data = world.feature_cells
@@ -349,8 +412,29 @@ def volume_surface(world, max_y=None):
     heights = np.full(world.region.shape, lo - 1, np.int32)
     materials = np.zeros(world.region.shape, np.uint16)
     points = world.landscape_surfaces
-    if points is not None and len(points):
-        p = points[points[:, 1] < max_y]
+    from ..core.projection import expand_surfaces
+    p = np.empty((0,4),np.int32) if points is None else expand_surfaces(points[points[:,1]<max_y])
+    if world.stats.get('surface_added',0) or world.stats.get('surface_replaced',0):
+        from ..core.postprocess import SurfaceQuery,_PointIndex
+        a=world.arrays
+        outputs={n for processor in world.pack.surface_processors for n in processor.blocks}
+        selected=np.array([n in outputs and d.shape in ('cube','surface')
+                           for n,d in zip(a.names,a.block_defs)])[a.types]
+        ids=np.array([world.pack.blocks.index(n) for n in a.names],np.uint16)[a.types]
+        records=np.column_stack((a.xyz[selected],ids[selected]))
+        if a.sizes is not None:records=np.column_stack((records,a.sizes[selected,0],a.sizes[selected,2]))
+        q=expand_surfaces(records)
+        cubes=np.array([world.pack.block_defs[n].shape=='cube' for n in world.pack.blocks])[q[:,3]]
+        # Added opaque cells can cover previously collected terrain faces.
+        hidden,_=_PointIndex(q[cubes,:3]).lookup(p[:,:3]+[0,1,0])
+        p=p[~hidden]
+        keep=np.where(cubes,q[:,1]<max_y,q[:,1]<=max_y)
+        probe=np.flatnonzero(keep&cubes)
+        query=SurfaceQuery(world,a.xyz+[world.region.x0,0,world.region.z0],ids,world.region)
+        if len(probe):
+            keep[probe] &= ~query.occupied(q[probe,:3]+[world.region.x0,1,world.region.z0])
+        p=np.r_[p,q[keep]]
+    if len(p):
         x, y, z, t = p.T
         np.maximum.at(heights, (z, x), y)
         chosen = heights[z, x] == y
@@ -585,6 +669,8 @@ def contact_sheet(world, path, *, box=320, extra_lines=()):
              if n in ('landscape', 'vegetation', "surface", "biomes", "height", "water_system") or n in world.fields]
     if world.pack.density is not None:
         names.append('caves')
+    if world.pack.layout is not None:
+        names.append('lod')
     pad, label_h = 8, 22
     cols = 3
     rows = (len(names) + cols - 1) // cols
@@ -655,6 +741,9 @@ def _summary(world):
              f"{s['seconds']:.3f}s  {s['tiles']} tiles of {s['tile_size']}  {s['execution']} x{s['workers']}"]
     if spec.params:
         lines.append("overrides " + ", ".join(f"{k}={v}" for k, v in spec.params)[:150])
+    if spec.core is not None:
+        lines.append(f"fixed core {spec.core}  empty={spec.core_empty}  outer step={spec.cell_step}  "
+                     f"physical cells {s['lod_cells']}")
     if 'feature_instances' in s:
         lines.append(f"features {s['feature_instances']}  cells {s['feature_cells']}  "
                      f"added {s['feature_added_instances']}  stage {s['stages'].get('features', 0.):.3f}s")
@@ -662,5 +751,6 @@ def _summary(world):
         lines.append('height-surface features unsupported in volume: '+', '.join(s['feature_unsupported']))
     fractions = world.biome_fractions()
     for biome in world.pack.biomes:
-        lines.append((biome.color, f"{biome.name[1]} ({biome.id}) {fractions[biome.id]:.1%}"))
+        from ..localization import source_text
+        lines.append((biome.color, f"{source_text(biome.name, 'en')} ({biome.id}) {fractions[biome.id]:.1%}"))
     return lines

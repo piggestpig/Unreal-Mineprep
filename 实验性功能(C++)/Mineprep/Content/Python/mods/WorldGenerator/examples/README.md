@@ -2,6 +2,10 @@
 
 这里保存生成程序和它们使用的小内容包。运行后才会生成高度图、模型和预览图片，安装包不附带这些输出。
 
+群系分布图的最小对照见[biome_map_workflow.py](biome_map_workflow.py)，生成透明PNG、带色差PNG、容差32／0对照预览和WorldSpec；运行方式见[群系图](../docs/BIOME_MAP.md)。
+
+[biome_paint_workflow.py](biome_paint_workflow.py)使用真实分类画布绘制森林／沙漠并擦出自动选择区域，检查撤销重做后输出相同，生成PNG／色板及同地形前后预览。引擎内分类RT的可选检查见[paint_rt_check.py](paint_rt_check.py)。
+
 ## 山谷驿站
 
 河道穿过树林，石拱桥连接两岸。桥头是带门廊的木石驿站，旁边有柴棚、货物和歇脚的平台，背后是山脊。
@@ -37,6 +41,8 @@ runpy.run_path(r'E:/ue/Mineprep_5_8/Intermediate/MyValleyOutpost/place_in_editor
 `scene.png`查看整体，`buildings.png`查看建筑，`inn.png`、`bridge.png`查看细节，`inn_site.png`、`shed_site.png`查看屋舍与周围坡面的衔接。`checks.json`记录碰撞、接地、数量与耗时。图片采用离线平均色，实际贴图、透明部分和光照在 UE 中查看。
 
 ## 其他示例
+
+[paint_rt_check.py](paint_rt_check.py)在UE中检查绘图RT的编译、数值误差、取消、历史与图层切换，并可分别测512／2048画布的CPU提交成本；执行方法写在文件开头。不生成地形或改动关卡，验证性读回不用于日常绘图。
 
 植被与空地对照使用[mask_workflow.py](mask_workflow.py)，例如`--output E:/maps/mask-study --size 128`。输出包含两张遮罩、修改前后预览、配置和PCG放置脚本；遮罩用法见[说明](../docs/MASKS.md)。
 

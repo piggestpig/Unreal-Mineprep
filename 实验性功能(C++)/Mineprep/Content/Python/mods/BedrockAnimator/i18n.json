@@ -1,0 +1,79 @@
+{
+  "BedrockAnimator": {
+    "基岩版动画转换器": {
+      "zh": "基岩版动画转换器",
+      "en": "Bedrock Animation Converter",
+      "zh-Hant": "基岩版動畫轉換器"
+    },
+    "Props.category.Props": {
+      "en": "Properties",
+      "zh": "属性",
+      "zh-Hant": "屬性",
+      "_native": "en"
+    },
+    "Props.Actor": {
+      "en": "Target Actor",
+      "zh": "目标角色",
+      "zh-Hant": "目標角色",
+      "_native": "en"
+    },
+    "Props.JsonPath": {
+      "en": "Animation JSON",
+      "zh": "动画 JSON",
+      "zh-Hant": "動畫 JSON",
+      "_native": "en"
+    },
+    "Props.CreateNewSequence": {
+      "en": "New Level Sequence",
+      "zh": "新建关卡序列",
+      "zh-Hant": "新增關卡序列",
+      "_native": "en"
+    },
+    "Props.LevelSequenceName": {
+      "en": "Level Sequence Name",
+      "zh": "关卡序列名称",
+      "zh-Hant": "關卡序列名稱",
+      "_native": "en"
+    },
+    "Props.AnimSequenceName": {
+      "en": "Anim Sequence Name",
+      "zh": "动画序列名称",
+      "zh-Hant": "動畫序列名稱",
+      "_native": "en"
+    },
+    "Props.StartAtPlayhead": {
+      "en": "Start at Playhead",
+      "zh": "从播放头开始",
+      "zh-Hant": "從播放頭開始",
+      "_native": "en"
+    },
+    "Props.TimeScale": {
+      "en": "Time Scale",
+      "zh": "时间缩放",
+      "zh-Hant": "時間縮放",
+      "_native": "en"
+    },
+    "Props.BoneMap": {
+      "en": "Bone Mapping",
+      "zh": "骨骼映射",
+      "zh-Hant": "骨骼對應",
+      "_native": "en",
+      "zh-Hant-HK": "骨骼映射"
+    },
+    "将基岩版 animation.json 导入 Sequencer 或烘焙为动画序列": {
+      "zh": "将基岩版 animation.json 导入 Sequencer 或烘焙为动画序列",
+      "en": "Import Bedrock animation.json into Sequencer or bake to an Animation Sequence",
+      "zh-Hant": "將基岩版 animation.json 匯入 Sequencer 或烘焙為動畫序列"
+    },
+    "将动画写入 Sequencer": {
+      "zh": "写入 Sequencer",
+      "en": "Key to Sequencer",
+      "zh-Hant": "寫入 Sequencer"
+    },
+    "烘焙动画序列": {
+      "zh": "烘焙动画序列",
+      "en": "Bake Anim Sequence",
+      "zh-Hant": "烘焙動畫序列"
+    }
+  }
+}

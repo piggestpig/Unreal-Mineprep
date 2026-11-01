@@ -15,19 +15,21 @@ def slope(height):
     return result
 
 
-def biomes_for(ctx, pack):
+def biomes_for(ctx, pack, wet=None):
     selected = pack.biome_selector(ctx) if pack.biome_selector is not None else None
     if selected is None:
-        return select_biomes(ctx, pack.biomes, pack.biome_parameters)
-    if isinstance(selected, str):
+        values = select_biomes(ctx, pack.biomes, pack.biome_parameters)
+    elif isinstance(selected, str):
         ids = [b.id for b in pack.biomes]
         if selected not in ids:
             raise ValueError(f'pack {pack.id}: unknown selected biome {selected!r}')
-        return np.full(ctx.shape, ids.index(selected), np.uint16)
-    values = np.asarray(selected)
-    if values.shape != ctx.shape or values.dtype.kind not in 'iu' or np.any(values < 0) or np.any(values >= len(pack.biomes)):
-        raise ValueError('biome_selector must return integer biome indices with the context shape')
-    return values.astype(np.uint16, copy=False)
+        values = np.full(ctx.shape, ids.index(selected), np.uint16)
+    else:
+        values = np.asarray(selected)
+        if values.shape != ctx.shape or values.dtype.kind not in 'iu' or np.any(values < 0) or np.any(values >= len(pack.biomes)):
+            raise ValueError('biome_selector must return integer biome indices with the context shape')
+        values = values.astype(np.uint16, copy=False)
+    return pack.biome_map.apply(ctx, pack, values, wet) if pack.biome_map is not None else values
 
 
 @dataclass(frozen=True)
@@ -78,13 +80,13 @@ def evaluate(ctx, pack, *, include_surface=True):
     raw = ctx.get(pack.height_field)
     height = np.clip(raw, ctx.params['world.y_min'], ctx.params['world.y_max'])
     ctx.put(pack.height_field, height)
-    ctx.put('slope', slope(height))
+    ctx.put('slope', slope(height) / ctx.step)
     fields_seconds = perf_counter() - started
     started = perf_counter()
     levels, wet = sample_water(ctx, pack, height)
     water_seconds = perf_counter() - started
     started = perf_counter()
-    biomes = biomes_for(ctx, pack) if include_surface else None
+    biomes = biomes_for(ctx, pack, wet) if include_surface else None
     columns = apply_surface(ctx, biomes, pack.biomes, {n:i for i,n in enumerate(pack.blocks)}, pack.surface_overrides) if include_surface else None
     if include_surface and pack.terrain_materials is not None:
         from .materials import colour_tops

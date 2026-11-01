@@ -5,7 +5,7 @@ Output crops never participate; arrays are transient, not a world voxel cache.
 """
 import numpy as np
 from .data import MAX_COORD, check_cancel, require_int
-from .density import DensityContext
+from .geometry import density_values
 
 
 class VolumeQuery:
@@ -29,9 +29,9 @@ class VolumeQuery:
 
     def _sample(self, x, y, z):
         check_cancel(getattr(self.resources,'cancel_event',None))
-        ctx = DensityContext(self.pack,self.params,self.seed,x,y,z,resources=self.resources)
-        values = ctx.get(self.field)
-        self.resources.report.peak('volume_query_work_bytes',ctx.work_bytes+values.nbytes)
+        values,working = density_values(self.pack,self.params,self.seed,x,y,z,None,
+                                       resources=self.resources,field=self.field)
+        self.resources.report.peak('volume_query_work_bytes',working)
         return values > 0
 
     def occupied(self, points):

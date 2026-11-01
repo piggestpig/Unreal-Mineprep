@@ -85,3 +85,5 @@ def rejected(pack, category, batch, roots):
 def check_sources(pack, *, full=False):
     for mask in (pack.masks or {}).values():
         mask.source.checked(full=full)
+    if pack.biome_map is not None:
+        pack.biome_map.source.checked(full=full)

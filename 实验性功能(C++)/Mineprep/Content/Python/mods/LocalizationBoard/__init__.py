@@ -1,10 +1,10 @@
-from mineprep import bilingual
+from mineprep import i18n
 
 mod_info = {
-    'Name': bilingual('本地化翻译控制板', 'Localization Board'),
-    'Description': bilingual(
-        '扫描资产并整理变量显示名 CSV',
-        'Scan assets and refresh variable display-name CSVs',
+    'Name': i18n('本地化控制板', 'Localization Board'),
+    'Description': i18n(
+        '扫描资产并提取变量显示名至 CSV',
+        'Scan assets and export variable display names to CSV',
     ),
     'Version': '2.0',
     'CreatedBy': 'Pig',

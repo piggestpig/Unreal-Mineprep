@@ -1,6 +1,5 @@
 {
   "id": "pond",
-  "name": {"zh": "水塘", "en": "Pond"},
   "color": "#538D92",
   "climate": [{"water_kind": [4, 4]}],
   "surface": [

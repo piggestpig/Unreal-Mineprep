@@ -308,14 +308,38 @@ Use this instead of globbing `paths.blocks` or grepping the plugin for `.nbt`. F
 
 Recorded only in **`blockstates/*.json`** (`"uvlock": true`), **not** in NBT.
 
-Mineprep approach: material corrects UV from instance orientation; importer marks faces via **vertex color Alpha** (`create_color_seam=True`):
+Mineprep separates texture scale compensation from top/bottom direction locking.
+The importer writes white RGB and per-face **vertex color Alpha**, using
+`create_color_seam=True` so neighbouring faces keep independent values:
 
-- `uvlock` if blockstate has `uvlock:true` **or** model contains a 0–16 six-face cube (**except** `*_leaves`)
-- Synthesized fluid cubes (water/lava, any `fluid_level`) always write the same axis Alpha. Their JSON has no elements and no blockstate `uvlock`
-- Alpha by **UE** face axis: X(east/west)=**0.94**, Y(north/south)=**0.96**, Z(up/down)=**0.98**
-- No write → default Alpha 1 (no lock)
+| Alpha | Meaning |
+| --- | --- |
+| 1 / unmarked | Original UV; also used by `Blocks.bake`, which already bakes UV transforms |
+| 0.92 | Top/bottom: compensate XY scale, follow the model's orientation |
+| 0.94 | UE X-normal faces (east/west): compensate YZ scale |
+| 0.96 | UE Y-normal faces (north/south): compensate XZ scale |
+| 0.98 | Top/bottom: compensate XY scale and request direction locking |
 
-Re-import with `import_block(..., reload=True)` if the StaticMesh already exists (skip path otherwise). An existing **block** mesh whose `MineprepModelFrame` tag is not `cell-center-1` raises `ValueError` when the source is JSON and `reload=False`; pass `reload=True` or clear that mesh. Item meshes are not checked. In the same editor session, a missing target asset of the same style is duplicated from an existing mesh and only its materials are replaced, so collision is not rebuilt.
+A model referenced by any `uvlock:true` blockstate gets locked top/bottom faces.
+Otherwise a model containing a complete 0–16 six-face cube gets scale compensation
+only. Leaves also get scale compensation, with unlocked top/bottom faces. Other
+models keep original UV unless selected by the blockstate rule. This is a
+model-level default, not an exact per-placement blockstate selection. Renaming the
+output asset does not change its UV policy. Synthesized water/lava cubes always
+use locked top/bottom faces, including nonzero `fluid_level`.
+
+The material must decode 0.92 as XY compensation without direction locking;
+this replaces a separate `lockTop` input. Updating Python alone does not update
+material graphs or existing meshes.
+
+JSON block meshes are reused only when metadata matches both
+`MineprepModelFrame=cell-center-1` and `MineprepMeshStyleVersion=4`. A stale mesh
+logs an import warning and returns `None`; explicitly use `import_block(...,
+reload=True)` to rebuild it at the same asset path. No automatic asset migration
+or deletion occurs. Item and external-mesh imports keep their existing cache
+rules. In-session geometry sharing includes the full UV policy: meshes with
+different top/bottom locking cannot reuse the same prototype. Equal-style meshes
+can still share geometry and collision while retaining their own materials.
 
 ## Resource paths (`mineprep.paths`)
 

@@ -1,0 +1,130 @@
+{
+  "LocalizationBoard": {
+    "Props.category.Props": {
+      "en": "Properties",
+      "zh": "属性",
+      "zh-Hant": "屬性",
+      "_native": "en"
+    },
+    "Props.ScanPath": {
+      "en": "Scan Path",
+      "zh": "扫描路径",
+      "zh-Hant": "掃描路徑",
+      "_native": "en"
+    },
+    "Props.SetEnumKey": {
+      "en": "Write Enum DisplayName Keys",
+      "zh": "写入枚举显示名 Key",
+      "zh-Hant": "寫入列舉顯示名稱 Key",
+      "_native": "en",
+      "zh-Hant-HK": "寫入枚舉顯示名稱 Key"
+    },
+    "PromptProps.category.PromptProps": {
+      "en": "Prompt",
+      "zh": "提示词",
+      "zh-Hant": "提示詞",
+      "_native": "en"
+    },
+    "PromptProps.Prompt": {
+      "en": "Prompt",
+      "zh": "提示词",
+      "zh-Hant": "提示詞",
+      "_native": "en"
+    },
+    "已刷新待翻译表：{untranslated} / {total} 行": {
+      "zh": "已刷新待翻译表：{untranslated} / {total} 行",
+      "en": "Refreshed untranslated table: {untranslated} / {total} rows",
+      "zh-Hant": "已重新整理待翻譯表：{untranslated} / {total} 列",
+      "zh-Hant-HK": "已刷新待翻譯表：{untranslated} / {total} 行"
+    },
+    "本地化控制板": {
+      "zh": "本地化控制板",
+      "en": "Localization Board",
+      "zh-Hant": "本地化控制板"
+    },
+    "扫描资产并提取变量显示名至 CSV": {
+      "zh": "扫描资产并提取变量显示名至 CSV",
+      "en": "Scan assets and export variable display names to CSV",
+      "zh-Hant": "掃描資產並擷取變數顯示名稱至 CSV",
+      "zh-Hant-HK": "掃描資產並擷取變量顯示名稱至 CSV"
+    },
+    "找不到变量显示名 CSV": {
+      "zh": "找不到变量显示名 CSV",
+      "en": "Variable display-name CSV not found",
+      "zh-Hant": "找不到變數顯示名稱 CSV",
+      "zh-Hant-HK": "找不到變量顯示名稱 CSV"
+    },
+    "扫描路径为空": {
+      "zh": "扫描路径为空",
+      "en": "Scan path is empty",
+      "zh-Hant": "掃描路徑為空"
+    },
+    "未找到 C++ 函数 unreal.mineprep.gather_property_names": {
+      "zh": "未找到 C++ 函数 unreal.mineprep.gather_property_names",
+      "en": "C++ function unreal.mineprep.gather_property_names not found",
+      "zh-Hant": "找不到 C++ 函式 unreal.mineprep.gather_property_names",
+      "zh-Hant-HK": "找不到 C++ 函數 unreal.mineprep.gather_property_names"
+    },
+    "没有可扫描的资产": {
+      "zh": "没有可扫描的资产",
+      "en": "No matching assets to scan",
+      "zh-Hant": "沒有可掃描的資產"
+    },
+    "收集中 {index}/{total}  新增 {added}  复用 {reused}  失败 {failed}\n{path}": {
+      "zh": "收集中 {index}/{total}  新增 {added}  复用 {reused}  失败 {failed}\n{path}",
+      "en": "Gathering {index}/{total}  added {added}  reused {reused}  failed {failed}\n{path}",
+      "zh-Hant": "收集中 {index}/{total}  新增 {added}  重用 {reused}  失敗 {failed}\n{path}"
+    },
+    "开始收集": {
+      "zh": "开始收集",
+      "en": "Gather",
+      "zh-Hant": "開始收集"
+    },
+    "取消": {
+      "zh": "取消",
+      "en": "Cancel"
+    },
+    "刷新待翻译表": {
+      "zh": "刷新待翻译表",
+      "en": "Refresh Untranslated",
+      "zh-Hant": "重新整理待翻譯表",
+      "zh-Hant-HK": "刷新待翻譯表"
+    },
+    "打开 CSV 文件夹": {
+      "zh": "打开 CSV 文件夹",
+      "en": "Open CSV Folder",
+      "zh-Hant": "開啟 CSV 資料夾",
+      "zh-Hant-HK": "打開 CSV 資料夾"
+    },
+    "空闲。设置扫描路径后点击「开始收集」。": {
+      "zh": "空闲。设置扫描路径后点击「开始收集」。",
+      "en": "Idle. Set the scan path, then click Gather.",
+      "zh-Hant": "閒置。設定掃描路徑後點擊「開始收集」。"
+    },
+    "正在列出资产…": {
+      "zh": "正在列出资产…",
+      "en": "Listing assets…",
+      "zh-Hant": "正在列出資產…"
+    },
+    "未找到 C++ 函数 unreal.mineprep.gather_property_names，请先编译 Mineprep 插件。": {
+      "zh": "未找到 C++ 函数 unreal.mineprep.gather_property_names，请先编译 Mineprep 插件。",
+      "en": "C++ function unreal.mineprep.gather_property_names not found. Compile the Mineprep plugin first.",
+      "zh-Hant": "找不到 C++ 函式 unreal.mineprep.gather_property_names，請先編譯 Mineprep 外掛。",
+      "zh-Hant-HK": "找不到 C++ 函數 unreal.mineprep.gather_property_names，請先編譯 Mineprep 插件。"
+    },
+    "新增 {added}，复用 {reused}，失败 {failed}，共 {total} 行，待翻译 {untranslated} 行": {
+      "zh": "新增 {added}，复用 {reused}，失败 {failed}，共 {total} 行，待翻译 {untranslated} 行",
+      "en": "Added {added}, reused {reused}, failed {failed} ({total} total, {untranslated} untranslated)",
+      "zh-Hant": "新增 {added}，重用 {reused}，失敗 {failed}，共 {total} 列，待翻譯 {untranslated} 列",
+      "zh-Hant-HK": "新增 {added}，重用 {reused}，失敗 {failed}，共 {total} 行，待翻譯 {untranslated} 行"
+    },
+    "已取消。": {
+      "zh": "已取消。",
+      "en": "Cancelled. "
+    },
+    "完成。": {
+      "zh": "完成。",
+      "en": "Done. "
+    }
+  }
+}

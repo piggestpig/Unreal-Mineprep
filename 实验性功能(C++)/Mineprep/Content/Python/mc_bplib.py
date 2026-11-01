@@ -17,6 +17,7 @@ except ModuleNotFoundError:
 import difflib
 from typing import Any, List, Optional
 from mc_utils import prints, warn, throw, world
+from mc_localization import i18n
 
 
 class BPLibCaller:
@@ -116,8 +117,14 @@ class BPLibCaller:
         err_msg = str(exc)
         if "Failed to find function" in err_msg or "not found" in err_msg:
             matches = difflib.get_close_matches(func_name, self.functions, n=3, cutoff=0.3)
-            suggestion = f"\n你是否想调用: {', '.join(repr(m) for m in matches)}?" if matches else ""
-            throw(f"蓝图函数库 '{self.display_name}' 中未找到函数 '{func_name}'。{suggestion}")
+            suggestion = '\n' + str(i18n.bplib.did_you_mean(
+                '你是否想调用: {matches}?', 'Did you mean: {matches}?').format(
+                    matches=', '.join(repr(m) for m in matches))) if matches else ''
+            message = i18n.bplib.call_function_missing(
+                "蓝图函数库 '{library}' 中未找到函数 '{function}'。",
+                "Function '{function}' was not found in Blueprint library '{library}'.").format(
+                    library=str(self.display_name), function=str(func_name))
+            throw(str(message) + suggestion)
         throw(exc)
 
     def __call__(self, func_name: str, *args, **kwargs) -> Any:
@@ -147,13 +154,21 @@ class BPLibCaller:
         """打印函数库帮助信息或所有可用函数清单"""
         if func_name:
             if func_name in self.functions:
-                prints(f"[{self.display_name}] 函数: {func_name}")
+                prints(i18n.bplib.function('[{library}] 函数: {function}', '[{library}] Function: {function}').format(
+                    library=str(self.display_name), function=str(func_name)))
             else:
                 matches = difflib.get_close_matches(func_name, self.functions, n=3, cutoff=0.3)
-                warn(f"[{self.display_name}] 未找到函数 '{func_name}'" + (f"，相似函数: {matches}" if matches else ""))
+                message = i18n.bplib.function_missing(
+                    "[{library}] 未找到函数 '{function}'", "[{library}] Function '{function}' not found").format(
+                        library=str(self.display_name), function=str(func_name))
+                suggestion = str(i18n.bplib.similar_functions(
+                    '，相似函数: {matches}', ', similar functions: {matches}').format(matches=str(matches))) if matches else ''
+                warn(str(message) + suggestion)
             return
 
-        lines = [f"=== {self.display_name} 可用函数列表 ({len(self.functions)} 个) ==="]
+        lines = [str(i18n.bplib.function_list(
+            '=== {library} 可用函数列表 ({count} 个) ===', '=== {library} available functions ({count}) ===').format(
+                library=str(self.display_name), count=str(len(self.functions))))]
         for i, fn in enumerate(self.functions, 1):
             lines.append(f"{i:2d}. {fn}")
         prints("\n".join(lines), duration=10.0)

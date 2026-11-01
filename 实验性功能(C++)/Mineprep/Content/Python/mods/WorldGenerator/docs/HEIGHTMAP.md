@@ -1,5 +1,7 @@
 # 自定义高度图
 
+0.72.0起可在自定义页直接[绘图](PAINTING.md)，从零增量或现有图像副本开始，不必先准备外部图片。
+
 “自定义”页同时提供独立的[植被分布与留空区域](MASKS.md)，不启用高度图也可使用。
 
 支持 vanilla 及保留其高度链（`height_lowlands → height_custom → height_islands → height_badlands → height_before_rivers`）的派生包。声明格式见 [EXTENSIONS](EXTENSIONS.md)，缓存失效见 [CACHE](CACHE.md)。

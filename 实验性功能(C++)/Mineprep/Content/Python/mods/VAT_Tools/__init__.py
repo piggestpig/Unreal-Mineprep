@@ -1,8 +1,8 @@
-from mineprep import bilingual
+from mineprep import i18n
 
 mod_info = {
-    'Name': bilingual('VAT顶点动画工具', 'VAT Tools'),
-    'Description': bilingual(
+    'Name': i18n('VAT顶点动画工具', 'VAT Tools'),
+    'Description': i18n(
         '烘焙顶点动画纹理，用于大型群体粒子',
         'Bake VAT textures for large crowd particles',
     ),

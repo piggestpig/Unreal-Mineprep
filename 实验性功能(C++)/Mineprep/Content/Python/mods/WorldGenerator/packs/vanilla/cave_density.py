@@ -215,6 +215,10 @@ def connected_solid(ctx,base):
     return base if result is None else result
 
 
+# Internal sampling boundary: approve/apply connections after mixed base mapping.
+connected_solid.fn._after_mapping = True
+
+
 @density('cave_wall_a',res=2)
 def wall_a(ctx):
     return wall_noise(ctx,'cave/band-a',(13,11,13))

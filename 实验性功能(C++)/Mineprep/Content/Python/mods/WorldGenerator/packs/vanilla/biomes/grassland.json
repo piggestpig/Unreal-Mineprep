@@ -1,8 +1,7 @@
 {
   "id": "grassland",
-  "name": {"zh": "草原", "en": "Grassland"},
   "color": "#5B9143",
-  "vegetation_tint": [1.00, 1.00, 1.00],
+  "vegetation_tint": [1.0, 1.0, 1.0],
   "fallback": true,
   "climate": [],
   "notes": "Used only outside every ordinary climate box, independent of fallback position.",

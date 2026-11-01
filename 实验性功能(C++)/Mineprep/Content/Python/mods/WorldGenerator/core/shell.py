@@ -48,7 +48,7 @@ class WorldArrays:
     types: np.ndarray       # uint32[N] index into names
     names: tuple
     solid_count: int
-    sizes: object = None    # int32[N,3] extents after merging, else None
+    sizes: object = None    # int32[N,3] coarse or merged box extents; None means unit cells
     visible_count: object = None
     block_defs: tuple = ()   # shared declarations aligned with names
     y_offsets: tuple = ()    # per type fractional MC Y, e.g. fractional sea level

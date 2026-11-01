@@ -1,6 +1,5 @@
 {
   "id": "crimson_forest",
-  "name": {"zh": "绯红森林", "en": "Crimson forest"},
   "color": "#992E36",
   "climate": [{"crimson_region": ["$crimson.biome_threshold", 2]}],
   "surface": [{"top": "netherrack", "under": "netherrack", "deep": "netherrack"}],

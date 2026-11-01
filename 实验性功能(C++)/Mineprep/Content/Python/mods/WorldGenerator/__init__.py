@@ -1,9 +1,9 @@
 """WorldGenerator package. Importing it outside Unreal remains supported."""
 
 # The Mod scanner imports this package. Load editor modules only on register.
+# Localized display metadata lives in mod_manifest.toml.
 mod_info = {
-    "Description": "Pack-driven Minecraft-style world generation: preview, prepare and place in the editor.",
-    "Version": "0.64.7",
+    "Version": "0.76.0",
     "EnabledByDefault": True,
     "ReloadWithMineprep": True,
     "Advanced": False,

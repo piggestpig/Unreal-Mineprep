@@ -1,6 +1,6 @@
 schema_version = 2
 Name = ['像素标题生成器', 'Pixel Title Generator']
-Description = '逐字生成立体标题 / Generate independently animated title letters'
+Description = { "zh" = "逐字生成立体像素标题", en = "Generate 3D pixel titles", "zh-Hant" = "逐字產生立體像素標題" }
 Version = '2.0'
 CreatedBy = 'Pig'
 Credits = '[Minecraft Title Generator](https://github.com/ewanhowell5195/MinecraftTitleGenerator)'

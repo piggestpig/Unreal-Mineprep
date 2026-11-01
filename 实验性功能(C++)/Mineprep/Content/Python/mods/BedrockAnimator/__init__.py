@@ -1,10 +1,10 @@
-from mineprep import bilingual
+from mineprep import i18n
 
 mod_info = {
-    'Name': bilingual('基岩版动画转换器', 'Bedrock Animation Converter'),
-    'Description': bilingual(
-        '把基岩版 animation.json 转换为动画序列',
-        'Convert Bedrock animation.json to an anim sequence',
+    'Name': i18n('基岩版动画转换器', 'Bedrock Animation Converter'),
+    'Description': i18n(
+        '将基岩版 animation.json 导入 Sequencer 或烘焙为动画序列',
+        'Import Bedrock animation.json into Sequencer or bake to an Animation Sequence',
     ),
     'Version': '2.0',
     'CreatedBy': 'Pig',

@@ -170,7 +170,7 @@ right = row.col(fill=1, padding=3)
 # ... populate right ...
 layout.prop(
     self.options, 'HideRight',
-    localize('隐藏右栏', '隐藏右栏', 'Hide Right', '隱藏右欄'),
+    '隐藏右栏',
     align=(1, 3),
     on_property_changed=lambda _: right.hide(self.options.HideRight),
 )
@@ -356,7 +356,7 @@ conditions, inline toggles, numeric controls, pickers and their Python boundarie
 
 ```python
 class Props(mineprep.PropertyGroup):
-    Mesh: unreal.SkeletalMesh
+    Mesh: unreal.SkeletalMesh = (None, {'DisplayName': '网格'})
     Path: str = ''
     Index: int = (0, {'ClampMin': 0})
     Json: unreal.FilePath = (
@@ -368,7 +368,6 @@ class Props(mineprep.PropertyGroup):
     })
     Anims: list[unreal.AnimSequence] = [None, None, None]
 
-Props.localize('Mesh', '网格', 'Mesh', '網格')  # OK before instantiate
 p = Props()   # REQUIRED
 p.Mesh = skm
 ```
@@ -444,17 +443,8 @@ props.uobject.set_editor_property('Data', sp)
 
 ### Localization
 
-`localize` is a **class method**, not a metadata key. Call the concrete group
-class's method, for example `Options.localize('Speed', '速度', 'Speed', '速度')`,
-before displaying the field. Do not write `{'localize': ...}`. The helper uses
-the generated UE class name and field name as the translation key
-(`GeneratedClass_GUID…:Speed`); category translations use `UObjectCategory`.
-Let the helper construct these identities rather than guessing the generated name.
-
-```python
-Cls.localize('Field', zh, en, zh_tw)           # property
-Cls.localize('ClassDisplay', zh, en, zh_tw)  # category-ish when not a prop name
-```
+For personal panels, ordinary labels and `DisplayName` metadata are sufficient.
+For multilingual property sets, see [property localization](localization.md#property-groups).
 
 ## Mod `draw` order
 

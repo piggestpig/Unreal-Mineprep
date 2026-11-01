@@ -126,9 +126,15 @@ def bodies_touch(a,b):
     return False
 
 
-def layers(bodies, region, y_min, y_max):
+def layers(bodies, region, y_min, y_max, *, layout=None):
     points=[];levels=[];indices=[];used=[]
     for body in sorted(bodies,key=lambda b:b.id):
+        if layout is not None and layout.empty:
+            p,runs = body.xyz,body.runs
+            p = p[layout.terrain(p[:,0],p[:,2])]
+            runs = runs[layout.terrain(runs[:,0],runs[:,1])]
+            p.setflags(write=False);runs.setflags(write=False)
+            body = FluidBody(body.id,body.level,p,runs,body.source)
         p=body.xyz
         keep=(p[:,0]>=region.x0)&(p[:,0]<region.x0+region.width)&(p[:,2]>=region.z0)&(p[:,2]<region.z0+region.depth)&(p[:,1]>=y_min)&(p[:,1]<y_max)
         runs=body.runs
@@ -151,7 +157,7 @@ def layers(bodies, region, y_min, y_max):
     return result
 
 
-def combine(parts, region, params):
+def combine(parts, region, params, *, layout=None):
     bodies={}
     for part in parts:
         if part is not None:
@@ -160,7 +166,7 @@ def combine(parts, region, params):
                                        or not np.array_equal(b.runs,bodies[b.id].runs)):
                     raise ValueError('inconsistent static fluid body across tiles')
                 bodies[b.id]=b
-    return layers(bodies.values(),region,params['world.y_min'],params['world.y_max'])
+    return layers(bodies.values(),region,params['world.y_min'],params['world.y_max'],layout=layout)
 
 
 def occlude_surfaces(part, opaque_points, model_index=None):
@@ -221,7 +227,7 @@ def sample_layers(pack, params, seed, region, resources):
             frozen.setflags(write=False);arrays.append(frozen)
         validated.append(FluidBody(b.id,float(b.level),*arrays,b.source))
         ids.add(b.id)
-    return layers(validated,region,params['world.y_min'],params['world.y_max'])
+    return layers(validated,region,params['world.y_min'],params['world.y_max'],layout=pack.layout)
 
 
 def section_mask(world,axis,at):
@@ -283,13 +289,14 @@ def basin_candidates(pack, params, seed, region, resources):
         solid=np.empty(shape,bool);x,z=sub.coordinates();tops=np.ceil(h).astype(np.int32)-1
         peak=solid.nbytes
         started=perf_counter()
+        samples_before=resources.report.get('density_queries')
         for y in range(lo,hi,32):
             check_cancel(cancel)
             yy=np.arange(y,min(y+32,hi),dtype=np.int32)[None,:,None]
             chunk,work=sample(pack,params,seed,x[:,None,:],yy,z[:,None,:],tops,resources=resources)
             solid[:,y-lo:y-lo+len(yy.ravel()),:]=chunk;peak=max(peak,work+solid.nbytes)
         resources.report.add('groundwater_sampling', perf_counter()-started)
-        resources.report.add('groundwater_samples', solid.size)
+        resources.report.add('groundwater_samples', resources.report.get('density_queries')-samples_before)
         resources.report.peak('groundwater_work_bytes', peak)
         air=~solid
         floor=air[:,1:,:]&solid[:,:-1,:]

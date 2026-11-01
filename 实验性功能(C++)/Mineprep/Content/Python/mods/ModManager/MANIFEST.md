@@ -30,10 +30,12 @@ paths_exclude_pattern = ["/Saved/", "/tests/", "/tools/", "/docs/dev/"]
 ```toml
 Name = "Example Mod"
 Name = ["示例模组", "Example Mod"]
-Name = { chinese = "示例模组", english = "Example Mod" }
+Name = { "zh" = "示例 mod", en = "Example Mod", ja = "サンプル mod" }
 ```
 
-字符串原样保留；数组展开为 `bilingual(*value)`，可写一个或两个字符串；字典展开为 `bilingual(**value)`，使用 `chinese` 和可选的 `english`。省略英文时沿用中文。
+字符串原样保留；数组展开为 `i18n(*value)`，按 `mcvars.Languages` 的顺序填写（默认中文、英语、繁体中文），数量不超过语言配置。字典展开为 `i18n(**value)`，使用语言代码，必须提供首个语言（默认 `zh`）的非空原文；其他语言可按需添加。数组的第一个字符串也须非空。缺译时回退到原文。
+
+词条写入该 mod 根目录的 `i18n.json`，使用 `mod_info.Name`、`mod_info.Description` 作为稳定 key；已有 JSON 译文优先。清单扫描不会为读取名称或简介而导入 mod。旧的 `chinese/english` 字典不再支持。
 
 ## 加载与状态
 

@@ -113,13 +113,34 @@ def mask_values(values):
     return result
 
 
+def biome_map_values(values):
+    from .core.data import Region, require_int
+    from .core.spec import BiomeMapInput
+    defaults = dict(Enabled=False, Path='', Palette='', Tolerance=32, Origin=[0,0], Size=[512,512])
+    if not isinstance(values, dict) or set(values)-set(defaults):
+        raise ValueError('invalid biome map preferences')
+    result = {**defaults, **values}
+    if values.get('Path') and 'Tolerance' not in values:
+        result['Tolerance'] = 0
+    if type(result['Enabled']) is not bool or not isinstance(result['Path'], str) or not isinstance(result['Palette'], str):
+        raise ValueError('invalid biome map source')
+    region = Region(*result['Origin'], *result['Size'])
+    require_int('biome map tolerance', result['Tolerance'], 0, 255)
+    if result['Enabled'] and result['Palette'].strip():
+        BiomeMapInput(result['Path'] or 'palette.png', region, json.loads(result['Palette']), result['Tolerance'])
+    if result['Enabled'] and (not result['Path'] or Path(result['Path']).suffix.lower() != '.png'):
+        raise ValueError('Select a PNG biome map before enabling it')
+    return result
+
+
 def preferences(data):
     """Validate before publishing; canonical MC property names never swap axes."""
     from .ui_model import page_id
     from .core.data import Region, require_int
     if not isinstance(data, dict) or data.get('version', 2) != 2:
         raise ValueError('preferences must be an object')
-    ranges = dict(Seed=42, Origin=[0,0], Size=[512,512])
+    ranges = dict(Seed=42, Origin=[0,0], Size=[512,512], CellStep=1,
+                  CoreEnabled=False, CoreEmpty=False, CoreA=[0,0], CoreB=[512,512], CoreInitialized=False)
     output = dict(OutputName='World', Offset=[0.,0.,0.], ISMChunkCount=1, GPUTypeGroupCount=1, Workers=4, Budgets=[2147483647,2000000],
                   BCTEnabled=True, BCTCellSize=4, BCTColorMode='rgb', BCTPower=1.)
     for label, defaults in (('range', ranges), ('output', output)):
@@ -131,11 +152,24 @@ def preferences(data):
         if set(incoming)-set(defaults): raise ValueError(f'unknown {label} preferences')
         defaults.update(incoming)
     require_int('Seed', ranges['Seed'], -2**63, 2**63 - 1)
+    if type(ranges['CellStep']) is not int or ranges['CellStep'] not in (1,2,4):
+        raise ValueError('CellStep must be 1, 2 or 4')
+    for name in ('CoreEnabled','CoreEmpty','CoreInitialized'):
+        if type(ranges[name]) is not bool:
+            raise ValueError(f'{name} must be true/false')
+    from .core.spec import WorldSpec
+    WorldSpec(core=(ranges['CoreA'],ranges['CoreB']))
     for name,value,count in (('Origin',ranges['Origin'],2),('Size',ranges['Size'],2),('Offset',output['Offset'],3),('Budgets',output['Budgets'],2)):
         if not isinstance(value,(list,tuple)) or len(value)!=count:
             raise ValueError(f'{name}: expected {count} components')
     Region(*ranges['Origin'], *ranges['Size'])
-    for value in output['Budgets']: require_int('Budgets',value,1,2**31-1)
+    budgets = []
+    for value in output['Budgets']:
+        if isinstance(value,float) and math.isfinite(value) and value.is_integer():
+            value = int(value)
+        require_int('Budgets',value,1,2**40)
+        budgets.append(value)
+    output['Budgets'] = budgets
     for key, lo, hi in (('ISMChunkCount', 1, ranges['Size'][0] * ranges['Size'][1]), ('Workers', 1, 16)):
         require_int(key, output[key], lo, hi)
     require_int('BCTCellSize', output['BCTCellSize'], 1, 16)
@@ -154,13 +188,16 @@ def preferences(data):
             raise ValueError(f'{key} must be finite')
     result = dict(version=2, content_format=2, range=ranges, output=output,
                   custom=custom_values(data.get('custom', {})))
+    from .painting import brush_values
+    result['paint'] = brush_values(data.get('paint', {}))
     masks = data.get('masks', {})
     if not isinstance(masks, dict) or set(masks)-{'vegetation','clearance'}:
         raise ValueError('invalid masks preferences')
     result['masks'] = {kind: mask_values(masks.get(kind, {})) for kind in ('vegetation','clearance')}
+    result['biome_map'] = biome_map_values(data.get('biome_map', {}))
     for key, default, choices in (('backend', 'pcg', ('pcg', 'ism', 'niagara')),
                                   ('merge', 'cuboids', ('none', 'runs', 'rectangles', 'cuboids')),
-                                  ('custom_image_type', 'heightmap', ('heightmap', 'vegetation', 'clearance')),
+                                  ('custom_image_type', 'heightmap', ('heightmap', 'vegetation', 'clearance', 'biome_map')),
                                   ('execution', 'processes', ('serial', 'threads', 'processes'))):
         value = data.get(key, default)
         if value not in choices:
@@ -272,15 +309,28 @@ def load_group(group, path, validate, *, size=(512, 512)):
         if not isinstance(data, dict):
             return False
         names = type(group)._prop_names_
+        converted = False
+        if 'Budgets' in names and isinstance(data.get('Budgets'),str):
+            # IntPoint snapshots use integer text; Vector2D exports decimals.
+            legacy = re.fullmatch(r'\(X=(-?\d+),\s*Y=(-?\d+)\)',data['Budgets'])
+            if legacy:
+                budget = type(group.Budgets)(*(int(v) for v in legacy.groups()))
+                data = dict(data,Budgets=budget.export_text())
+                converted = True
+        if 'CellStep' in names and 'CellStep' not in data:
+            data = dict(data,CellStep=1)
+            converted = True
         if 'ISMChunkCount' in names and ('RenderTileSize' in data or
                 ('GPUTypeGroupCount' in names and 'GPUTypeGroupCount' not in data)):
             data = output_values(data, size)
             if 'GPUTypeGroupCount' in names:
                 data.setdefault('GPUTypeGroupCount', 1)
+            converted = True
+        if converted:
             with tempfile.TemporaryDirectory() as directory:
-                converted = Path(directory) / 'output.json'
-                write_json(converted, data)
-                staged = _staged_group(group, data, converted, validate)
+                converted_path = Path(directory) / 'group.json'
+                write_json(converted_path, data)
+                staged = _staged_group(group, data, converted_path, validate)
         else:
             staged = _staged_group(group, data, path, validate)
     except (OSError, ValueError, TypeError, OverflowError):

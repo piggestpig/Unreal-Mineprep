@@ -1,12 +1,16 @@
 {
   "id": "ocean",
-  "name": {"zh": "海洋", "en": "Ocean"},
   "color": "#3F76A0",
   "climate": [{"shore_depth": [0, null]}],
   "notes": "All sea-level submerged terrain, including disconnected depressions; independent of water visibility.",
   "surface": [
     {"when": {"surface_rock": {"min": 0}}, "top": "stone", "under": "stone", "deep": "stone"},
-    {"when": {"shore_depth": {"max": "$surface.shallow_depth"}, "seabed_deposit_kind": {"min": 0}}, "top": "gravel", "under": "sand", "deep": "stone"},
+    {
+      "when": {"shore_depth": {"max": "$surface.shallow_depth"}, "seabed_deposit_kind": {"min": 0}},
+      "top": "gravel",
+      "under": "sand",
+      "deep": "stone"
+    },
     {"when": {"shore_depth": {"max": "$surface.shallow_depth"}}, "top": "dirt", "under": "dirt", "deep": "stone"},
     {"top": "sand", "under": "sand", "deep": "stone"}
   ],

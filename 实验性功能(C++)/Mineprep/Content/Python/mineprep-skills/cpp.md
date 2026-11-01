@@ -59,6 +59,7 @@ Do not recommend `inject_display_name` / `set_property_tooltip` (`DeprecatedFunc
 
 | Python | Use when |
 |--------|----------|
+| `register_polyglot_texts(text_data) -> Array[Text]` | Batch-register `PolyglotTextData` on the game thread. Results preserve input order; invalid entries return empty Text. `Internationalization` detects this optional function and falls back to Python registration on older builds; cached reads do not call it |
 | `finish_build_texture(texture) -> bool` | Complete an imported source texture's async build, rebuilding invalid platform data synchronously if needed. Optional binding; game thread only. Prefer the preparation entrypoint; see [Texture2D completion](pitfalls/common.md#source-texture2d-completion). Not a painted-RT refresh or a visual correctness test |
 | `show_editor_notification(message, sub_text, state=NONE, duration=3.0, use_throbber=False)` | Editor toast. Prefer `mineprep.prints` / `warn` for ordinary script feedback |
 | `set_editor_ui_scale(scale) -> float` | Slate UI scale. `scale < 0` returns current without changing |
@@ -88,7 +89,7 @@ Not console APIs. Do not invent Python wrappers. Mention only if the user is in 
 |------|------------|
 | `UMineprepSubsystem` | Hotkey register/load. Running one goes through `mineprep.hotkey(...)` → Editor Shortcuts `execute_shortcut` |
 | `AddKeyframes` | Details row keyframes for Niagara / color grading |
-| `CustomDetailsPanel` | Details customization for `Pawn` (Mover) and `SkeletalMeshActor` |
+| `CustomDetailsPanel` | Details customization for `Pawn` (Mover), `SkeletalMeshActor` and ISM/HISM. ISM/HISM show an instance count and a per-component Show/Hide All Instances button. Bulk arrays are created only when shown and removed when hidden; their visibility bypasses the Level Editor's defaults-only filter only for the explicitly shown component. Bulk editing requires single-component selection; viewport single-instance editing and native class-default customization remain available. No CVar is needed |
 | `Mineprep.TickInterval` | Console variable for the editor ticker (hotkey BP `Run`) |
 
 Engine binding crashes still use this machine's Engine install (`Engine/Source` **only if it exists**) — not these plugin files.

@@ -1,0 +1,313 @@
+{
+  "VanillaMobLoader": {
+    "MC原版生物加载器": {
+      "zh": "MC原版生物加载器",
+      "en": "Vanilla Mob Loader",
+      "zh-Hant": "MC 原版生物載入器"
+    },
+    "LoaderOptions.category.LoaderOptions": {
+      "en": "Import Options",
+      "zh": "导入选项",
+      "zh-Hant": "匯入選項",
+      "_native": "en"
+    },
+    "LoaderOptions.ShowDetails": {
+      "en": "Show Details",
+      "zh": "显示详情",
+      "zh-Hant": "顯示詳情",
+      "_native": "en"
+    },
+    "LoaderOptions.SavePath": {
+      "en": "Save Path",
+      "zh": "保存路径",
+      "zh-Hant": "儲存路徑",
+      "_native": "en"
+    },
+    "LoaderOptions.SaveName": {
+      "en": "Save Name",
+      "zh": "保存名称",
+      "zh-Hant": "儲存名稱",
+      "_native": "en"
+    },
+    "LoaderOptions.LayerExpansion": {
+      "en": "Layer Expand (px)",
+      "zh": "层外扩 (px)",
+      "zh-Hant": "層外擴 (px)",
+      "_native": "en"
+    },
+    "LoaderOptions.RandomScale": {
+      "en": "Z-Fight Offset (px)",
+      "zh": "防闪烁偏移 (px)",
+      "zh-Hant": "防閃爍偏移 (px)",
+      "_native": "en"
+    },
+    "LoaderOptions.ModelScale": {
+      "en": "Model Scale",
+      "zh": "模型缩放",
+      "zh-Hant": "模型縮放",
+      "_native": "en"
+    },
+    "LoaderOptions.LayerExpansion.tooltip": {
+      "zh": "组合多个模型时按选择顺序逐层向外微扩，避免不同模型层贴图闪烁",
+      "en": "Expand each selected model layer outward in selection order to avoid z-fighting",
+      "zh-Hant": "組合多個模型時，依選取順序將各層向外微幅擴張，避免不同模型層的貼圖閃爍"
+    },
+    "LoaderOptions.RandomScale.tooltip": {
+      "zh": "按部位名称固定生成微小扩缩偏移（可正可负），避免同一模型内部共面闪烁",
+      "en": "Deterministic per-part tiny inflate/deflate offset to avoid coplanar z-fighting",
+      "zh-Hant": "依部位名稱產生固定的微幅縮放偏移（可正可負），避免同一模型內共平面閃爍"
+    },
+    "变体": {
+      "zh": "变体",
+      "en": "Variants",
+      "zh-Hant": "變體"
+    },
+    "浏览、导入并放置 Minecraft 原版生物模型": {
+      "zh": "浏览、导入并放置 Minecraft 原版生物模型",
+      "en": "Browse, import, and place vanilla Minecraft mobs",
+      "zh-Hant": "瀏覽、匯入並放置 Minecraft 原版生物模型"
+    },
+    "请启用 Geometry Script 插件": {
+      "zh": "请启用 Geometry Script 插件",
+      "en": "Enable the Geometry Script plugin",
+      "zh-Hant": "請啟用 Geometry Script 外掛",
+      "zh-Hant-HK": "請啟用 Geometry Script 插件"
+    },
+    "模板材质缺少“纹理贴图”参数": {
+      "zh": "模板材质缺少“纹理贴图”参数",
+      "en": "Template material has no skin texture parameter",
+      "zh-Hant": "範本材質缺少「紋理貼圖」參數"
+    },
+    "未包含皮肤贴图，已使用默认材质": {
+      "zh": "未包含皮肤贴图，已使用默认材质",
+      "en": "No skin texture; assigned default material",
+      "zh-Hant": "未包含皮膚紋理，已使用預設材質"
+    },
+    "没有有效的关卡视口，无法放置": {
+      "zh": "没有有效的关卡视口，无法放置",
+      "en": "No valid level viewport for placement",
+      "zh-Hant": "沒有有效的關卡視埠，無法放置"
+    },
+    "放置原版生物": {
+      "zh": "放置原版生物",
+      "en": "Place Vanilla Mob",
+      "zh-Hant": "放置原版生物"
+    },
+    "找不到模板材质：": {
+      "zh": "找不到模板材质：",
+      "en": "Missing template material: ",
+      "zh-Hant": "找不到範本材質："
+    },
+    "目标资产的生物组合不同，请点击“重新导入生物”或更换保存名称": {
+      "zh": "目标资产的生物组合不同，请点击“重新导入生物”或更换保存名称",
+      "en": "Existing asset uses a different mob combination; reimport or change the save name",
+      "zh-Hant": "目標資產的生物組合不同，請點擊「重新匯入生物」或更換儲存名稱"
+    },
+    "皮肤 PNG 导入失败": {
+      "zh": "皮肤 PNG 导入失败",
+      "en": "Skin PNG import failed",
+      "zh-Hant": "皮膚 PNG 匯入失敗"
+    },
+    "目标目录存在冲突资产，未覆盖：": {
+      "zh": "目标目录存在冲突资产，未覆盖：",
+      "en": "Conflicting assets; nothing overwritten: ",
+      "zh-Hant": "目標目錄存在衝突資產，未覆蓋："
+    },
+    "目标资产名称被占用：": {
+      "zh": "目标资产名称被占用：",
+      "en": "Asset name is occupied: ",
+      "zh-Hant": "目標資產名稱已被使用："
+    },
+    "存在未完成的资产，请先在内容浏览器检查：": {
+      "zh": "存在未完成的资产，请先在内容浏览器检查：",
+      "en": "Inspect the incomplete asset in the Content Browser: ",
+      "zh-Hant": "存在未完成的資產，請先在內容瀏覽器檢查："
+    },
+    "目标路径被外部资产占用：": {
+      "zh": "目标路径被外部资产占用：",
+      "en": "Foreign asset at destination: ",
+      "zh-Hant": "目標路徑已有外部資產："
+    },
+    "全部": {
+      "zh": "全部",
+      "en": "All"
+    },
+    "常规": {
+      "zh": "常规",
+      "en": "Regular",
+      "zh-Hant": "一般"
+    },
+    "幼体": {
+      "zh": "幼体",
+      "en": "Babies",
+      "zh-Hant": "幼體"
+    },
+    "自定义": {
+      "zh": "自定义",
+      "en": "Custom",
+      "zh-Hant": "自訂"
+    },
+    "历史版本": {
+      "zh": "历史版本",
+      "en": "Legacy",
+      "zh-Hant": "舊版"
+    },
+    "未支持": {
+      "zh": "未支持",
+      "en": "Unsupported",
+      "zh-Hant": "不支援"
+    },
+    "*需要联网下载资源，模型来自 Blockbench CEM Template Loader\n 按住Shift进行多选，按顺序组合模型": {
+      "zh": "*需要联网下载资源，模型来自 Blockbench CEM Template Loader\n 按住Shift进行多选，按顺序组合模型",
+      "en": "*Internet required to download resources from Blockbench CEM Template Loader\n Hold Shift to select multiple mobs and combine them in order",
+      "zh-Hant": "*需要連線下載資源，模型來自 Blockbench CEM Template Loader\n 按住 Shift 可多選，依順序組合模型"
+    },
+    "刷新资源": {
+      "zh": "刷新资源",
+      "en": "Refresh Assets",
+      "zh-Hant": "重新整理資源",
+      "zh-Hant-HK": "刷新資源"
+    },
+    "清除": {
+      "zh": "清除",
+      "en": "Clear"
+    },
+    "放置生物": {
+      "zh": "放置生物",
+      "en": "Place Mob",
+      "zh-Hant": "放置生物"
+    },
+    "重新导入生物": {
+      "zh": "重新导入生物",
+      "en": "Reimport Mob",
+      "zh-Hant": "重新匯入生物"
+    },
+    "选择模板查看详情": {
+      "zh": "选择模板查看详情",
+      "en": "Select a template to view details",
+      "zh-Hant": "選取範本以查看詳細資訊"
+    },
+    "正在下载模板目录": {
+      "zh": "正在下载模板目录",
+      "en": "Downloading catalog",
+      "zh-Hant": "正在下載範本目錄"
+    },
+    "搜索名称或 ID…": {
+      "zh": "搜索名称或 ID…",
+      "en": "Search name or ID…",
+      "zh-Hant": "搜尋名稱或 ID…"
+    },
+    "没有匹配的模板": {
+      "zh": "没有匹配的模板",
+      "en": "No matching templates",
+      "zh-Hant": "沒有符合的範本"
+    },
+    "尚未下载模板目录，请点击「刷新资源」获取最新信息。": {
+      "zh": "尚未下载模板目录，请点击「刷新资源」获取最新信息。",
+      "en": "No template catalog. Click Refresh assets to download the latest information.",
+      "zh-Hant": "尚未下載範本目錄，請點擊「重新整理資源」取得最新資訊。",
+      "zh-Hant-HK": "尚未下載範本目錄，請點擊「刷新資源」取得最新資訊。"
+    },
+    "设置未保存：缓存目录不可写": {
+      "zh": "设置未保存：缓存目录不可写",
+      "en": "Settings not saved: cache is not writable",
+      "zh-Hant": "未儲存設定：快取目錄無法寫入"
+    },
+    "仅应用主皮肤，附加贴图暂不加载": {
+      "zh": "仅应用主皮肤，附加贴图暂不加载",
+      "en": "Primary skin only; additional textures are not loaded",
+      "zh-Hant": "僅套用主要皮膚，暫不載入額外貼圖"
+    },
+    "组合骨骼冲突": {
+      "zh": "组合骨骼冲突",
+      "en": "Conflicting bones",
+      "zh-Hant": "組合骨骼衝突"
+    },
+    "资源下载停滞": {
+      "zh": "资源下载停滞",
+      "en": "Download stalled",
+      "zh-Hant": "資源下載停滯"
+    },
+    "连续 10 秒没有资源下载完成。可继续等待，或停止本次刷新。": {
+      "zh": "连续 10 秒没有资源下载完成。可继续等待，或停止本次刷新。",
+      "en": "No resource completed for 10 seconds. Continue waiting or stop this refresh.",
+      "zh-Hant": "已連續 10 秒沒有資源下載完成。可繼續等待，或停止本次重新整理。",
+      "zh-Hant-HK": "已連續 10 秒沒有資源下載完成。可繼續等待，或停止本次刷新。"
+    },
+    "正在读取缓存并补齐缩略图": {
+      "zh": "正在读取缓存并补齐缩略图",
+      "en": "Loading cached thumbnails and downloading missing ones",
+      "zh-Hant": "正在讀取快取並補齊縮圖"
+    },
+    "全部资源刷新完成": {
+      "zh": "全部资源刷新完成",
+      "en": "Asset refresh complete",
+      "zh-Hant": "所有資源已重新整理",
+      "zh-Hant-HK": "所有資源已刷新"
+    },
+    "刷新完成，但部分缓存未保存": {
+      "zh": "刷新完成，但部分缓存未保存",
+      "en": "Refresh complete; some cache was not saved",
+      "zh-Hant": "重新整理完成，但部分快取未儲存",
+      "zh-Hant-HK": "刷新完成，但部分快取未儲存"
+    },
+    "部分缩略图不可用": {
+      "zh": "部分缩略图不可用",
+      "en": "Some thumbnails unavailable",
+      "zh-Hant": "部分縮圖無法使用"
+    },
+    "父模板：{name}": {
+      "zh": "父模板：{name}",
+      "en": "Parent: {name}",
+      "zh-Hant": "父範本：{name}"
+    },
+    "加载失败：": {
+      "zh": "加载失败：",
+      "en": "Import failed: ",
+      "zh-Hant": "載入失敗："
+    },
+    "资源下载较慢，正在继续等待…": {
+      "zh": "资源下载较慢，正在继续等待…",
+      "en": "Download is slow; still waiting…",
+      "zh-Hant": "資源下載較慢，正在繼續等待…"
+    },
+    "已取消": {
+      "zh": "已取消",
+      "en": "Cancelled"
+    },
+    "刷新停止，请重试": {
+      "zh": "刷新停止，请重试",
+      "en": "Refresh stopped; please retry",
+      "zh-Hant": "重新整理已停止，請重試",
+      "zh-Hant-HK": "刷新已停止，請重試"
+    },
+    "继续运行将使用主模型的骨骼，忽略后续多选模型的冲突骨骼。": {
+      "zh": "继续运行将使用主模型的骨骼，忽略后续多选模型的冲突骨骼。",
+      "en": "Continue to keep the first selected bone definitions and ignore later conflicting bones.",
+      "zh-Hant": "繼續執行將使用主要模型的骨骼，忽略後續選取模型中有衝突的骨骼。"
+    },
+    "已更新：": {
+      "zh": "已更新：",
+      "en": "Updated: "
+    },
+    "已放置：": {
+      "zh": "已放置：",
+      "en": "Placed: "
+    },
+    "仅使用主皮肤": {
+      "zh": "仅使用主皮肤",
+      "en": "Primary skin only",
+      "zh-Hant": "僅使用主要皮膚"
+    },
+    "请启用 Interchange 导入支持": {
+      "zh": "请启用 Interchange 导入支持",
+      "en": "Enable Interchange import support",
+      "zh-Hant": "請啟用 Interchange 匯入支援"
+    },
+    "无法写入模型缓存：": {
+      "zh": "无法写入模型缓存：",
+      "en": "Cannot write model cache: ",
+      "zh-Hant": "無法寫入模型快取："
+    }
+  }
+}

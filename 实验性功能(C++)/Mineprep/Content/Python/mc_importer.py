@@ -69,16 +69,19 @@ FLUID_FLOW_TEXTURE_BY_BLOCK = {
     "bubble_column": "block/water_flow",
 }
 FLUID_HORIZONTAL_FACES = frozenset({"up", "down"})
-# uvlock 顶点色 Alpha：按 UE 轴向标记面（材质据此修正 UV）
+# 顶点色 Alpha：区分面轴和顶底面锁向；RGB 保留为白色。
 # UE X=东/西, UE Y=南/北(MC Z), UE Z=顶/底(MC Y)
-UVLOCK_FACE_AXIS_ALPHA = {
+UV_FACE_AXIS_ALPHA = {
     "east": 0.94,
     "west": 0.94,
     "north": 0.96,
     "south": 0.96,
-    "up": 0.98,
-    "down": 0.98,
+    "up": 0.92,
+    "down": 0.92,
 }
+UV_UNCHANGED = 0
+UV_TILED = 1
+UV_LOCKED = 2  # 顶底面使用 0.98；侧面与 UV_TILED 相同。
 _CUBE_FACE_NAMES = frozenset(FACE_NAMES)
 BASE_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面1_材质实例.LabPBR单面1_材质实例"
 ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面2_材质实例.LabPBR单面2_材质实例"
@@ -90,7 +93,7 @@ ANIMATION_PARAMETER_NAME = "动画速度/步长/列数/渐变"
 # blockstates 中出现过 uvlock:true 的模型名（不含 .json）缓存
 _UVLOCK_MODEL_NAMES_CACHE = None
 # 样式 key → 已建碰撞的原型网格路径。仅当前编辑器会话有效。
-_MESH_STYLE_VERSION = 3
+_MESH_STYLE_VERSION = 4
 _MESH_STYLE_CACHE = {}
 
 
@@ -963,7 +966,7 @@ def _model_uses_uvlock(model_name) -> bool:
 
 
 def _is_leaves_model(model_name) -> bool:
-    """树叶方块（正方体但不做 uvlock）"""
+    """树叶补偿缩放，但顶底面方向随模型。"""
     stem = _sanitize_asset_name(str(model_name).lower().replace("minecraft:", ""))
     if stem.endswith(".json"):
         stem = stem[:-5]
@@ -1013,9 +1016,9 @@ def _mesh_selection_from_triangles(mesh, triangle_ids):
     return selection
 
 
-def _apply_uvlock_vertex_colors(mesh, triangles_by_alpha):
+def _apply_uv_vertex_colors(mesh, triangles_by_alpha):
     """按轴向写入顶点色 Alpha（create_color_seam 避免邻面串色）。
-    triangles_by_alpha: {0.94|0.96|0.98: [triangle_id, ...]}
+    triangles_by_alpha: {0.92|0.94|0.96|0.98: [triangle_id, ...]}
     """
     for alpha, triangle_ids in triangles_by_alpha.items():
         if not triangle_ids:
@@ -1527,11 +1530,11 @@ def _style_key(collected) -> tuple:
     """几何样式 key。不含贴图路径和方块名。"""
     if collected[0] == "fluid":
         return (_MESH_STYLE_VERSION, MODEL_FRAME, "fluid", _q(collected[1]))
-    _, apply_uvlock, faces = collected
+    _, uv_mode, faces = collected
     return (
         _MESH_STYLE_VERSION,
         MODEL_FRAME,
-        bool(apply_uvlock),
+        uv_mode,
         tuple(
             (face["from"], face["to"], face["rotation"], face["face_name"], _uv_key(face["uv_corners"]), face["slot"])
             for face in faces
@@ -1599,24 +1602,27 @@ def _clone_styled_mesh(style_key, target_path, materials):
     for index, material in enumerate(materials):
         mesh.set_material(index, material)
     unreal.EditorAssetLibrary.set_metadata_tag(mesh, 'MineprepModelFrame', MODEL_FRAME)
+    unreal.EditorAssetLibrary.set_metadata_tag(mesh, 'MineprepMeshStyleVersion', str(_MESH_STYLE_VERSION))
     unreal.EditorAssetLibrary.save_loaded_asset(mesh)
     unreal.log(f"import_block (json): duplicated style from {proto}")
     return mesh
 
 
-def _append_block_face(mesh, face_name, face_vertices, uv_corners, material_index, apply_uvlock, uvlock_tris_by_alpha):
-    """写入一个面，并在需要时记下 uvlock 三角形"""
+def _append_block_face(mesh, face_name, face_vertices, uv_corners, material_index, uv_mode, uv_tris_by_alpha):
+    """写入一个面，并按缩放／锁向策略记录顶点色三角形。"""
     triangle_ids = _append_quad_with_uvs(mesh, face_vertices, uv_corners, material_index)
-    if apply_uvlock:
-        alpha = UVLOCK_FACE_AXIS_ALPHA.get(face_name)
+    if uv_mode != UV_UNCHANGED:
+        alpha = UV_FACE_AXIS_ALPHA.get(face_name)
         if alpha is not None:
-            uvlock_tris_by_alpha[alpha].extend(triangle_ids)
+            if uv_mode == UV_LOCKED and face_name in FLUID_HORIZONTAL_FACES:
+                alpha = 0.98
+            uv_tris_by_alpha[alpha].extend(triangle_ids)
 
 
-def _finish_uvlock(mesh, uvlock_tris_by_alpha):
+def _finish_uv_colors(mesh, uv_tris_by_alpha):
     """有轴向标记时写入顶点色"""
-    if any(uvlock_tris_by_alpha.values()):
-        _apply_uvlock_vertex_colors(mesh, uvlock_tris_by_alpha)
+    if any(uv_tris_by_alpha.values()):
+        _apply_uv_vertex_colors(mesh, uv_tris_by_alpha)
 
 
 def _fluid_dynamic_mesh(height_ratio):
@@ -1625,7 +1631,7 @@ def _fluid_dynamic_mesh(height_ratio):
     bounds_to = [16.0, 16.0 * height_ratio, 16.0]
     full_face_uv = [0.0, 0.0, 16.0, 16.0]
     target_mesh = _new_dynamic_mesh()
-    uvlock_tris_by_alpha = {0.94: [], 0.96: [], 0.98: []}
+    uv_tris_by_alpha = {0.92: [], 0.94: [], 0.96: [], 0.98: []}
     corners = _build_element_corners(bounds_from, bounds_to, None)
     for face_name in FACE_NAMES:
         material_index = 0 if face_name in FLUID_HORIZONTAL_FACES else 1
@@ -1642,15 +1648,15 @@ def _fluid_dynamic_mesh(height_ratio):
             0,
             use_down_winding=use_down_winding,
         )
-        _append_block_face(target_mesh, face_name, face_vertices, uv_corners, material_index, True, uvlock_tris_by_alpha)
-    _finish_uvlock(target_mesh, uvlock_tris_by_alpha)
+        _append_block_face(target_mesh, face_name, face_vertices, uv_corners, material_index, UV_LOCKED, uv_tris_by_alpha)
+    _finish_uv_colors(target_mesh, uv_tris_by_alpha)
     return target_mesh
 
 
-def _dynamic_mesh_from_faces(apply_uvlock, faces):
+def _dynamic_mesh_from_faces(uv_mode, faces):
     """由已收集的面构建 DynamicMesh"""
     target_mesh = _new_dynamic_mesh()
-    uvlock_tris_by_alpha = {0.94: [], 0.96: [], 0.98: []}
+    uv_tris_by_alpha = {0.92: [], 0.94: [], 0.96: [], 0.98: []}
     for face in faces:
         _append_block_face(
             target_mesh,
@@ -1658,10 +1664,10 @@ def _dynamic_mesh_from_faces(apply_uvlock, faces):
             face["vertices"],
             face["uv_corners"],
             face["slot"],
-            apply_uvlock,
-            uvlock_tris_by_alpha,
+            uv_mode,
+            uv_tris_by_alpha,
         )
-    _finish_uvlock(target_mesh, uvlock_tris_by_alpha)
+    _finish_uv_colors(target_mesh, uv_tris_by_alpha)
     return target_mesh
 
 
@@ -1682,10 +1688,10 @@ def _collect_fluid(model_path, model_data, block_name, fluid_level):
     return ("fluid", _fluid_height_ratio(fluid_level), still_texture_source, flow_texture_source)
 
 
-def _collect_block_model(model_path, model_data, asset_name, fluid_level=0):
+def _collect_block_model(model_path, model_data, fluid_level=0):
     """收集可渲染面，供样式 key 和网格构建共用。
 
-    返回 ('item', texture) | ('fluid', height, still, flow) | ('block', uvlock, faces) | None。
+    返回 ('item', texture) | ('fluid', height, still, flow) | ('block', uv_mode, faces) | None。
     """
     elements = model_data.get("elements") or []
     textures = model_data.get("textures") or {}
@@ -1695,16 +1701,19 @@ def _collect_block_model(model_path, model_data, asset_name, fluid_level=0):
         return ("item", _resolve_texture_reference(model_path, textures, "layer0"))
 
     if not elements:
-        block_name = str(asset_name or model_path.stem).lower().replace("minecraft:", "")
+        block_name = model_path.stem.lower().replace("minecraft:", "")
         if _is_fluid_block_name(block_name):
             return _collect_fluid(model_path, model_data, block_name, fluid_level)
         warn(f"导入方块失败: {model_path} (无可渲染元素)")
         return None
 
-    model_stem = asset_name or model_path.stem
-    apply_uvlock = (not _is_leaves_model(model_stem)) and (
-        _model_uses_uvlock(model_stem) or _model_data_is_full_cube(model_data)
-    )
+    model_stem = model_path.stem
+    if not _is_leaves_model(model_stem) and _model_uses_uvlock(model_stem):
+        uv_mode = UV_LOCKED
+    elif _model_data_is_full_cube(model_data):
+        uv_mode = UV_TILED
+    else:
+        uv_mode = UV_UNCHANGED
     slot_of = {}
     faces = []
 
@@ -1768,15 +1777,15 @@ def _collect_block_model(model_path, model_data, asset_name, fluid_level=0):
     if not faces:
         warn(f"导入方块失败: {model_path} (未产生材质)")
         return None
-    return ("block", apply_uvlock, faces)
+    return ("block", uv_mode, faces)
 
 
 def _dynamic_mesh_from_collected(collected):
     """由收集结果构建 DynamicMesh。物品不在此处理。"""
     if collected[0] == "fluid":
         return _fluid_dynamic_mesh(collected[1])
-    _, apply_uvlock, faces = collected
-    return _dynamic_mesh_from_faces(apply_uvlock, faces)
+    _, uv_mode, faces = collected
+    return _dynamic_mesh_from_faces(uv_mode, faces)
 
 
 def _first_static_mesh(imported_assets) -> unreal.StaticMesh:
@@ -1860,7 +1869,7 @@ def import_block(
     reload=False,
     fluid_level=0,
 ) -> unreal.StaticMesh:
-    """从模型路径或默认包中的模型名称导入方块网格；支持流体高度 fluid_level。"""
+    """从模型路径或名称导入方块网格；支持 fluid_level，旧 UV 编码需 reload=True。"""
     source, source_name, destination_path = _resolve_import_source(filepath, "block", destination_path)
     suffix = source.suffix.lower()
     base_name = _sanitize_asset_name(asset_name or source_name)
@@ -1887,10 +1896,13 @@ def import_block(
                     if category == 'block' and unreal.EditorAssetLibrary.get_metadata_tag(
                             existing_mesh, 'MineprepModelFrame') != MODEL_FRAME:
                         raise ValueError(f'{target_mesh_path}: expected {MODEL_FRAME}; clear the old mesh or re-import with reload=True')
+                    if category == 'block' and unreal.EditorAssetLibrary.get_metadata_tag(
+                            existing_mesh, 'MineprepMeshStyleVersion') != str(_MESH_STYLE_VERSION):
+                        raise ValueError(f'{target_mesh_path}: mesh UV encoding is outdated; re-import with reload=True')
                     unreal.log(f"import_block (json): Asset already exists, skipping: {target_mesh_path}")
                     return existing_mesh
 
-            collected = _collect_block_model(source, model_data, base_name, fluid_level)
+            collected = _collect_block_model(source, model_data, fluid_level)
             if collected is None:
                 return None
 
@@ -1923,6 +1935,7 @@ def import_block(
                     materials,
                 )
                 unreal.EditorAssetLibrary.set_metadata_tag(mesh_asset, 'MineprepModelFrame', MODEL_FRAME)
+                unreal.EditorAssetLibrary.set_metadata_tag(mesh_asset, 'MineprepMeshStyleVersion', str(_MESH_STYLE_VERSION))
                 _remember_style(style_key, target_mesh_path, _generate_collision(mesh_asset))
                 unreal.log(f"import_block created from json: {mesh_asset.get_path_name()}")
                 return mesh_asset

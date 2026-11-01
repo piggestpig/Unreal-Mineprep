@@ -24,7 +24,7 @@ from .naming import validate_output_name
 BACKENDS = ('ism', 'pcg', 'niagara')
 from mc_structure_tex import ENCODING_VERSION
 from mc_math import TYPE_GROUP_VERSION
-RESOURCE_VERSION = 'wg-resource-11-tree-scale'
+RESOURCE_VERSION = 'wg-resource-12-resident-structure-textures'
 PREVIEW_VERSION = 'r36-volume-floor-decor-1'
 OVERVIEW_VERSION = 'reference-overview-2'
 
@@ -32,7 +32,7 @@ OVERVIEW_VERSION = 'reference-overview-2'
 def _complete_textures(job, output, meshes, textures):
     pending=output.unready_textures(meshes,textures)
     if pending:
-        job.progress('完成纹理构建 / Completing textures')
+        job.progress(('完成纹理构建', 'Completing textures'))
         native=output.native_texture_finish()
         if native is None:
             frame=_editor().SystemLibrary.get_frame_count()
@@ -44,7 +44,9 @@ def _complete_textures(job, output, meshes, textures):
             output.finish_texture(texture,native)
     remaining=output.unready_textures(meshes,textures)
     for texture in remaining:
-        job.warnings.append('纹理仍未就绪 / texture still not ready: '+texture.get_path_name())
+        from mineprep import i18n
+        job.warnings.append(str(i18n('纹理仍未就绪：{path}', 'Texture still not ready: {path}').format(
+            path=texture.get_path_name())))
     return remaining
 
 
@@ -54,15 +56,15 @@ _world_cache = {}     # world key -> World (most recent two)
 _prepared_cache = {}  # (resource key, backend, type group count, BCT key), most recent two
 _pumping = False      # UE calls may re-enter Slate; never interleave two jobs' steps.
 PHASE_TEXT = {
-    'heightmap': '读取自定义高度图 / Reading custom heightmap',
-    'planning': '规划与初始化 / Planning and initialization',
-    'reference': '计算参考地形 / Reference terrain',
-    'reference_publish': '绘制参考预览 / Drawing reference preview',
-    'entities': '生成实体 / Generating entities',
-    'assembly': '组装结果与模型索引 / Assembling results and model index',
-    'column_features': '生成列景观 / Column features',
-    'surface_processing': '处理积雪与表面 / Surface processing',
-    'finalize': '检查生成结果 / Checking results',
+    'heightmap': ('读取自定义高度图', 'Reading custom heightmap'),
+    'planning': ('规划与初始化', 'Planning and initialization'),
+    'reference': ('计算参考地形', 'Reference terrain'),
+    'reference_publish': ('绘制参考预览', 'Drawing reference preview'),
+    'entities': ('生成地形', 'Generating terrain'),
+    'assembly': ('组装结果与模型索引', 'Assembling results and model index'),
+    'column_features': ('生成附加景物', 'Additional features'),
+    'surface_processing': ('处理积雪与表面', 'Surface processing'),
+    'finalize': ('检查生成结果', 'Checking results'),
 }
 
 
@@ -111,10 +113,13 @@ class Job:
                     error=self.error, warnings=list(self.warnings))
 
     def progress(self, text):
-        self.stage = text
+        if isinstance(text, tuple):
+            from mineprep import i18n
+            text = i18n(*text[:2]).format(**(text[2] if len(text) > 2 else {}))
+        self.stage = str(text)
         if self._on_progress:
             try:
-                self._on_progress(text)
+                self._on_progress(self.stage)
             except Exception as exc:
                 self.warnings.append(f'progress callback: {exc}')
         check_cancel(self.event)
@@ -343,7 +348,7 @@ def _world(job, request, execution, workers, max_cells, max_instances, on_stage=
     """Generator: cached World or one built on the worker thread."""
     from .core.scene import SceneInput
     if isinstance(request, SceneInput):
-        job.progress('检查场景组合 / Checking scene composition')
+        job.progress(('检查场景组合', 'Checking scene composition'))
         return (yield from job.wait(_submit(request.validate, max_cells, max_instances, job.event)))
     cached = _world_cache.get(request.key)
     if cached is None:
@@ -354,10 +359,12 @@ def _world(job, request, execution, workers, max_cells, max_instances, on_stage=
         if count > max_instances:
             raise ValueError(f'output records {count:,} exceed max_instances={max_instances:,}')
         pack = request.pack
-        job.progress('复用已有结果 / Reusing world result')
+        job.progress(('复用已有结果', 'Reusing world result'))
         if (cached.spec == request.spec and cached.pack.fingerprint == pack.fingerprint
                 and (request.heightmap_source is None or
                      cached.pack.heightmap.source.stamp == request.heightmap_source.stamp)
+                and (request.biome_source is None or
+                     cached.pack.biome_map.source.stamp == request.biome_source.stamp)
                 and all(cached.pack.masks[k].source.stamp == v.source.stamp
                         for k,v in (pack.masks or {}).items())):
             return cached
@@ -370,7 +377,7 @@ def _world(job, request, execution, workers, max_cells, max_instances, on_stage=
         build_world, request.spec, _input=request, execution=execution, workers=workers, cancel_event=job.event,
         max_cells=max_cells, max_instances=max_instances,
         on_stage=on_stage, on_phase=report_phase,
-        progress=lambda done, total: job.report(f'{PHASE_TEXT["entities"]} / Tiles {done}/{total}')))
+        progress=lambda done, total: job.report(('生成地形 {done}/{total}', 'Generating tiles {done}/{total}', {'done': done, 'total': total}))))
     return world
 
 
@@ -396,11 +403,11 @@ def preview_overview(spec, *, execution='serial', workers=4, max_cells=MAX_CELLS
         keep = tuple(n for n in overview_views(pack) if n in ('temperature','humidity'))
         if (data is None or data.key != request.key or data.pack.fingerprint != request.fingerprint
                 or any(n not in data.fields for n in keep)):
-            job.progress('参考概览 / Reference overview')
+            job.progress(('参考概览', 'Reference overview'))
             data = yield from job.wait(_submit(build_overview, spec, _input=request,
                 execution=execution, workers=workers, max_cells=max_cells, keep_fields=keep,
                 cancel_event=job.event,
-                progress=lambda done,total: job.report(f'参考概览 / Tiles {done}/{total}')))
+                progress=lambda done,total: job.report(('参考概览 {done}/{total}', 'Overview tiles {done}/{total}', {'done': done, 'total': total}))))
         def draw():
             draw_started = perf_counter()
             images = write_overview_views(data, folder, names)
@@ -442,7 +449,7 @@ def preview_world(spec, *, execution='serial', workers=4, max_cells=MAX_CELLS,
             job.publish_stage(name,PreviewResult(key,reference,images,seconds,dict(metrics)))
         world = yield from _world(job, request, execution, workers, max_cells, max_instances,
                                   stage if on_stage is not None else None)
-        job.progress('写入预览图 / Writing preview images')
+        job.progress(('写入预览图', 'Writing preview images'))
         from .adapters.preview import write_views, cave_positions3
         def write():
             draw = perf_counter()
@@ -564,7 +571,7 @@ def preview_sections(world, *, at_z, at_y, at_x=None, on_progress=None, on_done=
     """Reuse a generated World. Slice coordinates do not affect resource caches."""
     _editor()
     request = _GenerationInput.capture(world.spec, defer_heightmap=True)
-    if world.spec.heightmap is None and request.key != world.key:
+    if request.key and request.key != world.key:
         raise ValueError('world is outdated; regenerate its preview')
     r, p = world.region, world.params
     require_int('at_z', at_z, r.z0, r.z0 + r.depth - 1)
@@ -580,7 +587,7 @@ def preview_sections(world, *, at_z, at_y, at_x=None, on_progress=None, on_done=
         if request.key != world.key:
             raise ValueError('world is outdated; regenerate its preview')
         from .adapters.preview import write_views
-        job.progress('更新洞穴剖面 / Updating cave sections')
+        job.progress(('更新洞穴剖面', 'Updating cave sections'))
         images = yield from job.wait(_submit(write_views, world, folder, names=('cave_sections',), cave_positions_=positions))
         return PreviewResult(world.key, world, images, perf_counter() - started, dict(world.stats), positions)
     return Job(operation, on_progress, on_done, pack=world.pack)
@@ -690,11 +697,11 @@ def prepare_world(spec, *, backend='pcg', merge='cuboids', execution='serial', w
         # Keep the last completed record as a model base if a repair is cancelled.
         # Full cache hits always revalidate its complete current resource set.
         if base is not None:
-            job.progress('复用准备基底 / Reusing prepared geometry')
+            job.progress(('复用准备基底', 'Reusing prepared geometry'))
             data, meshes, mesh_keys = base.data, base.meshes, base.mesh_keys
             merge_seconds = 0.0
         else:
-            job.progress('合并可见方块 / Merging visible cells')
+            job.progress(('合并可见方块', 'Merging visible cells'))
 
             def merge_data():
                 merge_started = perf_counter()
@@ -702,7 +709,7 @@ def prepare_world(spec, *, backend='pcg', merge='cuboids', execution='serial', w
             data, merge_seconds = yield from job.wait(_submit(merge_data))
             meshes = []
             for block_name in data.names:
-                job.progress('准备模型 / Model: ' + block_name)
+                job.progress(('准备模型 {name}', 'Preparing model: {name}', {"name": block_name}))
                 check_cancel(job.event)
                 meshes.append(output.prepare_mesh(resources.get(block_name),refresh=refresh_resources))
                 yield
@@ -715,7 +722,7 @@ def prepare_world(spec, *, backend='pcg', merge='cuboids', execution='serial', w
                 definitions={}
                 pool_revision=uuid.uuid4().hex[:12] if refresh_resources else None
                 for template_id,source in sorted(template_sources.items()):
-                    job.progress('准备整树模型 / Template: '+template_id)
+                    job.progress(('准备整树模型 {name}', 'Preparing template: {name}', {"name": template_id}))
                     check_cancel(job.event)
                     mesh=output.prepare_template(source,refresh=refresh_resources,pool_revision=pool_revision)
                     meshes.append(mesh)
@@ -746,7 +753,7 @@ def prepare_world(spec, *, backend='pcg', merge='cuboids', execution='serial', w
             ready_groups = []
             previous_groups = {g.key: g for g in base.type_groups} if base is not None else {}
             for index,group in enumerate(groups,1):
-                job.progress('准备结构纹理 / Structure textures')
+                job.progress(('准备结构纹理', 'Structure textures'))
                 check_cancel(job.event)
                 previous = previous_groups.get(group.key)
                 if previous is not None and output.valid_group(previous,folder=folder,index=index):
@@ -764,7 +771,7 @@ def prepare_world(spec, *, backend='pcg', merge='cuboids', execution='serial', w
                         payloads = {data.names[i]: data.payload(indices[i]) for i in group.type_ids}
                         return write_structure_textures(payloads, directory)
                     files = yield from job.wait(_submit(encode))
-                    job.progress('导入结构纹理 / Import textures')
+                    job.progress(('导入结构纹理', 'Import textures'))
                     check_cancel(job.event)
                     pair = (output.cached_textures(group.key,folder=folder,index=index)
                             or output.import_textures(files, group.key,folder=folder,index=index,world_key=world_key))
@@ -776,20 +783,20 @@ def prepare_world(spec, *, backend='pcg', merge='cuboids', execution='serial', w
         colour_texture = None
         colour_seconds = import_seconds = 0.0
         if biome_key:
-            job.progress('准备群系颜色纹理 / Biome colour texture')
+            job.progress(('准备群系颜色纹理', 'Biome colour texture'))
             if texture_target is None:
                 texture_target = output.texture_folder(actual_key, groups, name=name)
             folder,world_key = texture_target
             colour_texture = output.cached_biome_texture(biome_key,folder=folder)
             if colour_texture is None:
-                job.progress('生成群系颜色 / Generating biome colours')
+                job.progress(('生成群系颜色', 'Generating biome colours'))
                 files = yield from job.wait(_submit(bct.write, world,
                     SAVED_DIR / 'cache' / biome_key / 'structure_BCT.exr',
                     cell_size=biome_cell_size, biome_color_mode=biome_color_mode,
                     biome_color_power=biome_color_power,
                     cancel=job.event, _palette=colours, _key=biome_key))
                 colour_seconds = files['seconds'] + key_seconds
-                job.progress('导入群系纹理 / Importing biome texture')
+                job.progress(('导入群系纹理', 'Importing biome texture'))
                 started_import = perf_counter()
                 colour_texture = (output.cached_biome_texture(biome_key,folder=folder)
                                   or output.import_biome_texture(files,folder=folder,world_key=world_key))
@@ -840,7 +847,7 @@ def place_world(prepared, *, location=(0, 0, 0), chunk_count=None,
     level = output.level_path()
 
     def operation(job):
-        job.progress('准备放置 / Preparing placement')
+        job.progress(('准备放置', 'Preparing placement'))
         from .core.masks import check_sources
         yield from job.wait(_submit(check_sources, prepared.world.pack, full=True))
         if prepared.world.pack.heightmap is not None:
@@ -855,7 +862,7 @@ def place_world(prepared, *, location=(0, 0, 0), chunk_count=None,
         if not output.valid_prepared(prepared):
             raise ValueError('prepared resources are no longer valid; prepare again')
         output.validate_backend(prepared.data, prepared.backend, prepared.type_groups)
-        job.progress('放置中（一次提交）/ Committing Actors')
+        job.progress(('放置中（一次提交）', 'Committing Actors'))
         check_sources(prepared.world.pack)
         if prepared.world.pack.heightmap is not None:
             prepared.world.pack.heightmap.source.checked()

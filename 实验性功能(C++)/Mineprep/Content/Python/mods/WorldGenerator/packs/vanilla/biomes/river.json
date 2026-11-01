@@ -1,12 +1,16 @@
 {
   "id": "river",
-  "name": {"zh": "河流", "en": "River"},
   "color": "#287FAA",
   "climate": [{"water_kind": [2, 2]}],
   "notes": "Newly submerged river corridors; high dry valleys retain land biomes.",
   "surface": [
     {"when": {"surface_rock": {"min": 0}}, "top": "stone", "under": "stone", "deep": "stone"},
-    {"when": {"shore_depth": {"max": "$surface.shallow_depth"}}, "top": [["gravel", 5], ["dirt", 3], ["sand", 2]], "under": "dirt", "deep": "stone"},
+    {
+      "when": {"shore_depth": {"max": "$surface.shallow_depth"}},
+      "top": [["gravel", 5], ["dirt", 3], ["sand", 2]],
+      "under": "dirt",
+      "deep": "stone"
+    },
     {"top": [["gravel", 5], ["dirt", 3], ["sand", 2]], "under": "sand", "deep": "stone"}
   ],
   "features": {

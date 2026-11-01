@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass, asdict
 
 from mc_utils import prints, uclass
+from mc_localization import i18n
 
 
 class _LazyUClass:
@@ -132,11 +133,14 @@ class config(metaclass=ConfigMeta):
     @classmethod
     def help(cls):
         """打印帮助信息"""
-        help_text = """
-        直接使用mineprep.config()会打印所有配置项
-        - 读取配置：value = mineprep.config['Settings']['key']
-        - 写入配置：mineprep.config['Settings']['key'] = value
-        """.strip()
+        help_text = i18n.config.help(
+            "直接使用mineprep.config()会打印所有配置项\n"
+            "        - 读取配置：value = mineprep.config['Settings']['key']\n"
+            "        - 写入配置：mineprep.config['Settings']['key'] = value",
+            "Calling mineprep.config() prints all settings\n"
+            "        - Read: value = mineprep.config['Settings']['key']\n"
+            "        - Write: mineprep.config['Settings']['key'] = value",
+        )
         prints(help_text)
 
 

@@ -8,8 +8,7 @@ class SkinEditorOptions(mineprep.PropertyGroup):
     Body: bool = True
     Head: bool = True
 
-SkinEditorOptions.localize('Body', '身体', 'Body', '身體')
-SkinEditorOptions.localize('Head', '头部', 'Head', '頭部')
+SkinEditorOptions.localize()
 
 
 _VIEW_KEY = unreal.Key()
@@ -33,19 +32,7 @@ class SkinPaintTools(mineprep.PropertyGroup):
     ExportPath: str = ''
     Advanced: bool = True
 
-SkinPaintTools.localize('SkinPaintTools', '画笔与保存', 'Brush & Save', '畫筆與保存')
-SkinPaintTools.localize('Texture', '皮肤纹理', 'Skin Texture', '皮膚紋理')
-SkinPaintTools.localize('Overlay', '叠加纹理', 'Overlay Texture', '疊加紋理')
-SkinPaintTools.localize('ViewSize', '画布大小', 'Canvas Size', '畫布大小')
-SkinPaintTools.localize('BrushSize', '画笔尺寸', 'Brush Size', '畫筆尺寸')
-SkinPaintTools.localize('Color', '颜色', 'Color', '顏色')
-SkinPaintTools.localize('Round', '圆形笔触', 'Round Brush', '圓形筆觸')
-SkinPaintTools.localize('WriteAlpha', '直接写入透明度', 'Direct Set Alpha', '直接寫入透明度')
-SkinPaintTools.localize('PeekKey', '查看原图按键', 'View Source Key', '查看原圖按鍵')
-SkinPaintTools.localize('PickKey', '吸取颜色按键', 'Pick Color Key', '吸取顏色按鍵')
-SkinPaintTools.localize('SavePath', '保存路径', 'Save Path', '保存路徑')
-SkinPaintTools.localize('ExportPath', '导出PNG路径', 'Export PNG Path', '導出PNG路徑')
-SkinPaintTools.localize('Advanced', '高级选项', 'Advanced Options', '高級選項')
+SkinPaintTools.localize()
 
 
 script = """\
@@ -70,8 +57,7 @@ def main(tex, overlay):
 class SkinCodeTools(mineprep.PropertyGroup):
     Code: str = (script, {'MultiLine': True})
 
-SkinCodeTools.localize('SkinCodeTools', '自定义代码', 'Script', '自定義代碼')
-SkinCodeTools.localize('Code', '代码', 'Code', '代碼')
+SkinCodeTools.localize()
 
 
 class SkinBatchTools(mineprep.PropertyGroup):
@@ -79,7 +65,4 @@ class SkinBatchTools(mineprep.PropertyGroup):
     Textures: list[unreal.Texture2D] = []
     NewTextures: list[unreal.Texture2D] = []
 
-SkinBatchTools.localize('SkinBatchTools', '批量处理', 'Batch Process', '批量處理')
-SkinBatchTools.localize('BesideOriginal', '保存至原纹理旁边', 'Save Beside Original', '保存至原紋理旁邊')
-SkinBatchTools.localize('Textures', '纹理', 'Textures', '紋理')
-SkinBatchTools.localize('NewTextures', '新纹理', 'New Textures', '新紋理')
+SkinBatchTools.localize()

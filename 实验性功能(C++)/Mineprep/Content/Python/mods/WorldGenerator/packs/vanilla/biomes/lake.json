@@ -1,6 +1,5 @@
 {
   "id": "lake",
-  "name": {"zh": "湖泊", "en": "Lake"},
   "color": "#397DAA",
   "climate": [{"water_kind": [3, 3]}],
   "surface": [

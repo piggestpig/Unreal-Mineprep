@@ -4,10 +4,8 @@ from functools import partial
 import mineprep
 import unreal
 
+from mineprep import i18n
 from . import catalog, ops
-
-B = mineprep.bilingual
-
 
 def _linear(hex_color):
     values = [int(hex_color[i:i+2], 16)/255 for i in (1, 3, 5)]
@@ -52,23 +50,14 @@ class Settings(mineprep.PropertyGroup):
     Location: unreal.Vector = unreal.Vector(0, 0, 0)
 
 
-LABELS = {field: (zh, en) for field, zh, en in (
-    ('Name', 'Actor标签', 'Actor label'), ('File', '图片文件', 'Image file'),
-    ('Height', '字号 · cm', 'Size · cm'), ('CharacterSpacing', '字距', 'Letter spacing'),
-    ('RowSpacing', '行距', 'Row spacing'),
-    ('TopColor', '顶部颜色', 'Top colour'), ('BottomColor', '底部颜色', 'Bottom colour'),
-    ('Tint', '整体染色', 'Tint'), ('OverlayTint', '叠加层染色', 'Overlay tint'),
-    ('OverlayOpacity', '不透明度', 'Opacity'), ('AutoRow', '自动递增行号', 'Automatic row'),
-    ('Row', '指定行号', 'Row number'), ('Thickness', '厚度倍率', 'Depth multiplier'),
-    ('Terminators', '两端装饰', 'Terminators'), ('DisableShifting', '关闭字距微调', 'Disable kerning'),
-    ('CustomBorder', '自定义描边颜色', 'Custom outline colour'), ('BorderColor', '描边颜色', 'Outline colour'),
-    ('EdgeBrightness', '侧面亮度 · %', 'Edge light · %'), ('Location', '新标题位置', 'New title position'),
-)}
+Settings.localize()
+
+
 MUTED = unreal.LinearColor(.55, .58, .62, 1)
 OUTPUT_LABELS = {
-    'merged': ('完整模型', 'Merged model'), 'actors': ('多个 Actor', 'Multiple Actors'),
-    'ism': ('实例化网格体（CPU）', 'Instanced meshes (CPU)'), 'pcg': ('PCG（GPU）', 'PCG (GPU)'),
-    'niagara': ('Niagara（GPU）', 'Niagara (GPU)'),
+    'merged': ('合并网格体', 'Merged Mesh'), 'actors': ('独立 Actor（逐字）', 'Separate Actors'),
+    'ism': ('实例（CPU）', 'Instances (CPU)'), 'pcg': ('PCG（GPU）', 'PCG (GPU)'),
+    'niagara': ('粒子（GPU）', 'Particles (GPU)'),
 }
 OUTPUT_HELP = {
     'merged': ('每行一个完整网格；追加只生成新行。', 'One mesh per row; appending keeps existing rows.'),
@@ -80,7 +69,7 @@ OUTPUT_HELP = {
 
 
 class TitleGenerator(mineprep.Mod):
-    _label_ = B('像素标题生成器', 'Pixel Title Generator')
+    _label_ = i18n.mod_info.Name()
     _unique_ = True
 
     def __init__(self, context=None):
@@ -115,20 +104,20 @@ class TitleGenerator(mineprep.Mod):
         self._frame = self.layout.sizebox(height=700, align=(0, 0))
         layout = self._frame.col(align=(0, 0))
         header = layout.row()
-        self._refresh_button = header.button(B('刷新资源', 'Refresh resources'), size=10, on_clicked=self._refresh)
-        self._status = header.text(B('就绪', 'Ready'), size=10, color=MUTED, wrap=True, fill=1, align=(0, 2))
+        self._refresh_button = header.button(i18n('刷新资源', 'Refresh Resources'), size=10, on_clicked=self._refresh)
+        self._status = header.text(i18n('就绪', 'Ready'), size=10, color=MUTED, wrap=True, fill=1, align=(0, 2))
         body = self._body = layout.col(fill=1, align=(0, 0))
         self._splitter = body.splitter(ratio=self._split_ratio, fill=1)
         left = self._splitter.first.scrollbox(fill=1).col()
         right = self._splitter.second.scrollbox(fill=1).col()
         self._text = left.textbox(
-            p.Text, hint=B('输入标题，Enter 换行', 'Enter title text; Enter adds a row'),
+            p.Text, hint=i18n('输入标题，Enter 换行', 'Enter title text; Enter adds a row'),
             on_text_changed=lambda value: setattr(p, 'Text', str(value)))
-        self._text.set_tool_tip_text(B('支持多行输入，中间空行保留行距。大写 A 为苦力怕字形，小写 a 为普通字母 A。',
+        self._text.set_tool_tip_text(i18n('支持多行输入，中间空行保留行距。大写 A 为苦力怕字形，小写 a 为普通字母 A。',
                                       'Supports multiple rows; inner blank lines keep row spacing. Uppercase A uses the Creeper glyph; lowercase a is regular.'))
         for field, label, choices in (
-            ('Font', B('字体／变体', 'Font / variant'), self._data['fonts']),
-            ('Layout', B('文字布局', 'Layout'), {'top': B('主标题', 'Top'), 'bottom': B('底部', 'Bottom'), 'small': B('小字', 'Small')}),
+            ('Font', i18n('字体 / 变体', 'Font / Variant'), self._data['fonts']),
+            ('Layout', i18n('文字布局', 'Layout'), {'top': i18n('主标题', 'Main Title'), 'bottom': i18n('底部文字', 'Bottom Text'), 'small': i18n('小字', 'Small Text')}),
         ):
             row = left.row()
             row.sizebox(100, align=(1, 2)).text(label, size=10, color=MUTED)
@@ -141,40 +130,40 @@ class TitleGenerator(mineprep.Mod):
                 self._font_combo = combo
         for field in ('Height', 'CharacterSpacing', 'RowSpacing', 'Thickness', 'AutoRow', 'Row',
                       'Terminators', 'DisableShifting', 'Location'):
-            node = left.prop(p, field, text=B(*LABELS[field]))
+            node = left.prop(p, field)
             if field in ('CharacterSpacing', 'RowSpacing'):
-                node.set_tool_tip_text(B('按字库模型单位计算，随字号一起缩放。', 'In font model units; scales with title size.'))
+                node.set_tool_tip_text(i18n('按字库模型单位计算，随字号一起缩放。', 'In font model units; scales with title size.'))
             elif field == 'Location':
-                node.set_tool_tip_text(B('仅用于新建标题；追加文字跟随原根物体。', 'Applies to new titles; appended text follows its root.'))
+                node.set_tool_tip_text(i18n('仅用于新建标题；追加文字跟随原根物体。', 'Applies to new titles; appended text follows its root.'))
 
         preview = right.overlay()
         self._preview_image = preview.image(size=unreal.Vector2D(96, 44), align=2)
         self._preview_hint = preview.text('', size=10, color=MUTED, align=(2, 2), wrap=True)
         right.spacer(5)
         row = right.row()
-        row.sizebox(100, align=(1, 2)).text(B('颜色来源', 'Colour source'), size=10, color=MUTED)
-        row.combo({'premade': B('预制', 'Preset'), 'gradient': B('渐变', 'Gradient'), 'file': B('本地', 'Local')},
+        row.sizebox(100, align=(1, 2)).text(i18n('颜色来源', 'Color Source'), size=10, color=MUTED)
+        row.combo({'premade': i18n('预制', 'Preset'), 'gradient': i18n('渐变', 'Gradient'), 'file': i18n('本地', 'Local')},
                   selected=p.Source, on_selection_changed=partial(self._change, 'Source'), fill=1)
         self._premade = right.col()
         if self._data['textures'] and p.Texture not in self._data['textures']:
             p.Texture = next(iter(self._data['textures']))
         row = self._premade.row()
-        row.sizebox(100, align=(1, 2)).text(B('贴图／变体', 'Texture / variant'), size=10, color=MUTED)
+        row.sizebox(100, align=(1, 2)).text(i18n('纹理 / 变体', 'Texture / Variant'), size=10, color=MUTED)
         build = partial(self._choice_widget, 'Texture', self._data['textures'])
         self._texture_combo = row.combo(self._data['textures'], selected=p.Texture,
             on_selection_changed=partial(self._change, 'Texture'), on_generate_content_widget=build,
             on_generate_item_widget=build, fill=1)
         self._file = right.col()
-        self._file.prop(p, 'File', text=B(*LABELS['File']))
+        self._file.prop(p, 'File')
         self._gradient = right.col()
         for field in ('TopColor', 'BottomColor', 'EdgeBrightness'):
-            self._gradient.prop(p, field, text=B(*LABELS[field]))
-        overlays = {'off': B('无', 'None'), **self._data['overlays']}
+            self._gradient.prop(p, field)
+        overlays = {'off': i18n('无', 'None'), **self._data['overlays']}
         if p.Overlay not in overlays:
             p.Overlay = 'off'
         for field, label, choices in (
-            ('Lighting', B('光照模式', 'Lighting'), {'unlit': B('无光照', 'Unlit'), 'lit': B('场景受光', 'Lit')}),
-            ('Overlay', B('叠加层', 'Overlay'), overlays),
+            ('Lighting', i18n('光照模式', 'Lighting'), {'unlit': i18n('无光照', 'Unlit'), 'lit': i18n('场景受光', 'Lit')}),
+            ('Overlay', i18n('叠加层', 'Overlay'), overlays),
         ):
             row = right.row()
             row.sizebox(100, align=(1, 2)).text(label, size=10, color=MUTED)
@@ -183,35 +172,35 @@ class TitleGenerator(mineprep.Mod):
                 build = partial(self._choice_widget, field, choices)
                 callbacks = dict(on_generate_content_widget=build, on_generate_item_widget=build)
             row.combo(choices, selected=getattr(p, field), on_selection_changed=partial(self._change, field), fill=1, **callbacks)
-        right.prop(p, 'Tint', text=B(*LABELS['Tint']))
+        right.prop(p, 'Tint')
         self._overlay = right.col()
         row = self._overlay.row()
-        row.sizebox(100, align=(1, 2)).text(B('混合方式', 'Blend'), size=10, color=MUTED)
-        row.combo({'normal': B('正常', 'Normal'), 'multiply': B('正片叠底', 'Multiply'),
-                   'screen': B('滤色', 'Screen'), 'overlay': B('叠加', 'Overlay')},
+        row.sizebox(100, align=(1, 2)).text(i18n('混合方式', 'Blend'), size=10, color=MUTED)
+        row.combo({'normal': i18n('正常', 'Normal'), 'multiply': i18n('正片叠底', 'Multiply'),
+                   'screen': i18n('滤色', 'Screen'), 'overlay': i18n('叠加', 'Overlay')},
                   selected=p.Blend, on_selection_changed=partial(self._change, 'Blend'), fill=1)
         for field in ('OverlayOpacity', 'OverlayTint'):
-            self._overlay.prop(p, field, text=B(*LABELS[field]))
+            self._overlay.prop(p, field)
         for field in ('CustomBorder', 'BorderColor'):
-            right.prop(p, field, text=B(*LABELS[field]))
+            right.prop(p, field)
 
         footer = body.col()
         output = footer.row()
         mode = output.row(fill=1)
-        mode.sizebox(100, align=(1, 2)).text(B('输出模式', 'Output mode'), size=10, color=MUTED)
-        self._mode_combo = mode.combo({k: B(*v) for k, v in OUTPUT_LABELS.items()}, selected=p.OutputMode,
+        mode.sizebox(100, align=(1, 2)).text(i18n('输出模式', 'Output Mode'), size=10, color=MUTED)
+        self._mode_combo = mode.combo({k: i18n(*v) for k, v in OUTPUT_LABELS.items()}, selected=p.OutputMode,
                                       on_selection_changed=partial(self._change, 'OutputMode'), fill=1)
-        label = output.prop(p, 'Name', text=B(*LABELS['Name']), fill=1)
-        label.set_tool_tip_text(B('留空时取文本首个非空行的前16个字符；本次生成的Actor使用此标签，重名自动添加数字后缀。',
+        label = output.prop(p, 'Name', text=i18n.Settings.Name(), fill=1)
+        label.set_tool_tip_text(i18n('留空时取文本首个非空行的前16个字符；本次生成的Actor使用此标签，重名自动添加数字后缀。',
                                  'Leave blank to use the first 16 characters of the first nonempty row. Applies to Actors created in this batch; duplicates gain a numeric suffix.'))
         actions = footer.row()
-        self._new_button = actions.button(B('新建标题', 'New title'), on_clicked=self._new, fill=1)
-        self._append_button = actions.button(B('追加文字', 'Append text'), on_clicked=self._append, fill=1)
+        self._new_button = actions.button(i18n('新建标题', 'New Title'), on_clicked=self._new, fill=1)
+        self._append_button = actions.button(i18n('追加文字', 'Append Text'), on_clicked=self._append, fill=1)
         self._new_button.set_is_enabled(bool(self._data['fonts']))
         self._append_button.set_is_enabled(bool(self._data['fonts']))
-        actions.set_tool_tip_text(B('追加：选中已有标题的根物体或任意输出对象。', 'Append: select a title root or output object.'))
+        actions.set_tool_tip_text(i18n('追加：选中已有标题的根物体或任意输出对象。', 'Append: select a title root or output object.'))
         if not self._data['fonts']:
-            self._status.set_text(B('请先点击“刷新资源”下载素材。', 'Click Refresh resources to download the assets first.'))
+            self._status.set_text(i18n('请先点击“刷新资源”下载素材。', 'Click Refresh resources to download the assets first.'))
         self._visibility()
         self._preview_request = None
         self._request_preview()
@@ -251,7 +240,7 @@ class TitleGenerator(mineprep.Mod):
         row.text(label, size=10, fill=1, align=(0, 2))
         hint = str(label)
         if thumbnail is None:
-            hint += '\n'+str(B('示例缺失，请刷新资源。', 'Example missing; refresh resources.'))
+            hint += '\n'+str(i18n('示例缺失，请刷新资源。', 'Example missing; refresh resources.'))
         row.set_tool_tip_text(hint)
         return row.target  # ComboBoxKey 委托需要返回原生 UWidget
 
@@ -259,7 +248,7 @@ class TitleGenerator(mineprep.Mod):
         for node, source in ((self._premade, 'premade'), (self._file, 'file'), (self._gradient, 'gradient')):
             node.hide(self.props.Source != source)
         self._overlay.hide(self.props.Overlay == 'off')
-        self._mode_combo.set_tool_tip_text(B(*OUTPUT_HELP[self.props.OutputMode]))
+        self._mode_combo.set_tool_tip_text(i18n(*OUTPUT_HELP[self.props.OutputMode]))
 
     def _request_preview(self):
         p = self.props
@@ -270,14 +259,14 @@ class TitleGenerator(mineprep.Mod):
         self._preview_texture = None
         self._preview_image.set_brush_resource_object(None)
         self._preview_image.set_color_and_opacity(unreal.LinearColor(1, 1, 1, 0))
-        self._preview_image.set_tool_tip_text(B('字体示例', 'Font example') if p.Source == 'premade' else B('基础字形预览', 'Base glyph preview'))
+        self._preview_image.set_tool_tip_text(i18n('字体示例', 'Font example') if p.Source == 'premade' else i18n('基础字形预览', 'Base glyph preview'))
         if not self._data['fonts']:
-            self._preview_hint.set_text(B('点击“刷新资源”下载素材', 'Click Refresh resources to download assets'))
+            self._preview_hint.set_text(i18n('点击“刷新资源”下载素材', 'Click Refresh resources to download assets'))
             return
         thumbnail = self._thumbnail(*key[:2])
         if thumbnail is None:
-            self._preview_hint.set_text(B('示例暂不可用 · 可继续生成', 'Example unavailable · generation is available'))
-            self._preview_hint.set_tool_tip_text(B('请点击“刷新资源”补齐示例图片。', 'Click Refresh resources to restore the example image.'))
+            self._preview_hint.set_text(i18n('预览图缺失 · 仍可正常生成', 'Preview unavailable · can still generate'))
+            self._preview_hint.set_tool_tip_text(i18n('请点击“刷新资源”补齐示例图片。', 'Click Refresh resources to restore the example image.'))
         else:
             self._show_preview(*thumbnail)
 
@@ -305,7 +294,7 @@ class TitleGenerator(mineprep.Mod):
         self._runner, self._action = runner, action
         self._body.set_is_enabled(False)
         self._refresh_button.set_is_enabled(False)
-        self._status.set_text(B('正在处理…', 'Working…'))
+        self._status.set_text(i18n('正在处理…', 'Working…'))
 
     def _new(self):
         self._generate()
@@ -319,7 +308,7 @@ class TitleGenerator(mineprep.Mod):
     def _append(self):
         selected = list(mineprep.selected().target)
         if len(selected) != 1:
-            self._status.set_text(B('请选中一个标题空物体或字形，再追加文字。', 'Select one title root or letter to append text.'))
+            self._status.set_text(i18n('请先选中一个标题根物体或单字 Actor，再追加文字。', 'Select a title root or letter Actor to append text.'))
             return
         self._generate(selected[0])
 
@@ -337,9 +326,9 @@ class TitleGenerator(mineprep.Mod):
             if runner is not None and self._action == 'catalog':
                 p = self._refresh_progress
                 if p.get('stage') == 'download':
-                    self._status.set_text(str(B('正在下载资源包 · {mb:.1f} MB', 'Downloading resources · {mb:.1f} MB')).format(mb=p.get('downloaded', 0)/1024**2))
+                    self._status.set_text(str(i18n('正在下载资源包 · {mb:.1f} MB', 'Downloading resources · {mb:.1f} MB')).format(mb=p.get('downloaded', 0)/1024**2))
                 elif p.get('stage') == 'cache':
-                    self._status.set_text(B('正在缓存资源 · {done}/{total}', 'Caching resources · {done}/{total}').format(done=p['done'], total=p['total']))
+                    self._status.set_text(i18n('正在缓存资源 · {done}/{total}', 'Caching resources · {done}/{total}').format(done=p['done'], total=p['total']))
             return
         self._runner = None
         self._body.set_is_enabled(True)
@@ -352,10 +341,10 @@ class TitleGenerator(mineprep.Mod):
             self._preview_textures.clear()
             self.redraw()
             summary = runner.result['resources']
-            self._status.set_text(B('资源已缓存 · {fonts} 种字体／变体 · {files} 个文件', 'Resources cached · {fonts} fonts/variants · {files} files').format(fonts=summary['font_count'], files=summary['file_count']))
+            self._status.set_text(i18n('资源已缓存 · {fonts} 种字体／变体 · {files} 个文件', 'Resources cached · {fonts} fonts/variants · {files} files').format(fonts=summary['font_count'], files=summary['file_count']))
         else:
             result = runner.result
-            text = B('已提交 {lines} 行（{count} 字），等待 GPU 生成', 'Submitted {lines} rows ({count} letters); waiting for GPU generation') if result['render_state'] == 'pending' else B(
+            text = i18n('已提交 {lines} 行（{count} 字），等待 GPU 生成', 'Submitted {lines} rows ({count} letters); waiting for GPU generation') if result['render_state'] == 'pending' else i18n(
                 '已生成 {lines} 行（{count} 字，共 {actors} 个 Actor）', 'Generated {lines} rows ({count} letters, {actors} Actors)')
             self._status.set_text(text.format(lines=result['line_count'], count=result['character_count'], actors=len(result['actors'])))
             self._status.set_tool_tip_text(result['line_path'])

@@ -1,0 +1,2210 @@
+{
+  "WorldGenerator": {
+    "BiomeColor.Tint": {
+      "_native": "en",
+      "en": "Vegetation colour multiplier",
+      "zh": "植被颜色倍率",
+      "zh-Hant": "植被顏色倍率"
+    },
+    "BiomeColor.MapColor": {
+      "_native": "en",
+      "en": "Map colour",
+      "zh": "地图标识色",
+      "zh-Hant": "地圖標識色"
+    },
+    "BiomeColor.category.BiomeColor": {
+      "_native": "en",
+      "en": "Biome colours",
+      "zh": "群系颜色",
+      "zh-Hant": "群系顏色"
+    },
+    "BiomeColor.H": {
+      "_native": "en",
+      "en": "Hue",
+      "zh": "色相",
+      "zh-Hant": "色相"
+    },
+    "BiomeColor.S": {
+      "_native": "en",
+      "en": "Saturation",
+      "zh": "饱和度",
+      "zh-Hant": "飽和度"
+    },
+    "BiomeColor.V": {
+      "_native": "en",
+      "en": "Value",
+      "zh": "明度",
+      "zh-Hant": "明度"
+    },
+    "BlockOptions.category.BlockOptions": {
+      "_native": "en",
+      "en": "Block options",
+      "zh": "方块设置",
+      "zh-Hant": "方塊設定"
+    },
+    "BlockOptions.Builtin": {
+      "_native": "en",
+      "en": "Builtin model",
+      "zh": "内置模型",
+      "zh-Hant": "內建模型",
+      "zh-Hant-HK": "內置模型"
+    },
+    "BlockOptions.JSON": {
+      "_native": "en",
+      "en": "Model JSON file",
+      "zh": "模型JSON文件",
+      "zh-Hant": "模型JSON檔案"
+    },
+    "BlockOptions.Mesh": {
+      "_native": "en",
+      "en": "Source mesh",
+      "zh": "来源网格",
+      "zh-Hant": "來源網格"
+    },
+    "BlockOptions.Emission": {
+      "_native": "en",
+      "en": "Emission",
+      "zh": "发光亮度",
+      "zh-Hant": "發光亮度"
+    },
+    "BlockOptions.Lighting": {
+      "_native": "en",
+      "en": "Lighting",
+      "zh": "照明强度",
+      "zh-Hant": "照明強度"
+    },
+    "BlockOptions.Color": {
+      "_native": "en",
+      "en": "Preview colour",
+      "zh": "预览颜色",
+      "zh-Hant": "預覽顏色"
+    },
+    "BlockOptions.Offset": {
+      "_native": "en",
+      "en": "Offset (blocks)",
+      "zh": "偏移（格）",
+      "zh-Hant": "偏移（格）"
+    },
+    "BlockOptions.Scale": {
+      "_native": "en",
+      "en": "Scale",
+      "zh": "缩放",
+      "zh-Hant": "縮放"
+    },
+    "BlockOptions.ShowGeometry": {
+      "_native": "en",
+      "en": "Advanced geometry",
+      "zh": "高级几何设置",
+      "zh-Hant": "高級幾何設定"
+    },
+    "BlockOptions.Occludes": {
+      "_native": "en",
+      "en": "Complete opaque cube",
+      "zh": "完整不透明立方体",
+      "zh-Hant": "完整不透明立方體"
+    },
+    "MapPaintTools.Value": {
+      "_native": "en",
+      "en": "Target value",
+      "zh": "目标数值",
+      "zh-Hant": "目標數值"
+    },
+    "MapPaintTools.Diameter": {
+      "_native": "en",
+      "en": "Brush diameter (blocks)",
+      "zh": "笔刷直径（格）",
+      "zh-Hant": "筆刷直徑（格）"
+    },
+    "MapPaintTools.Hardness": {
+      "_native": "en",
+      "en": "Hardness",
+      "zh": "硬度",
+      "zh-Hant": "硬度"
+    },
+    "MapPaintTools.Strength": {
+      "_native": "en",
+      "en": "Strength",
+      "zh": "强度",
+      "zh-Hant": "強度"
+    },
+    "MapPaintTools.Visible": {
+      "_native": "en",
+      "en": "Show paint layer",
+      "zh": "显示绘图层",
+      "zh-Hant": "顯示繪圖層"
+    },
+    "MaskOptions.Enabled": {
+      "_native": "en",
+      "en": "Enable",
+      "zh": "启用",
+      "zh-Hant": "啟用"
+    },
+    "MaskOptions.Path": {
+      "_native": "en",
+      "en": "Mask file",
+      "zh": "遮罩文件",
+      "zh-Hant": "遮罩檔案"
+    },
+    "MaskOptions.Origin": {
+      "_native": "en",
+      "en": "Mapping origin (X/Y, blocks)",
+      "zh": "覆盖原点（X/Y，格）",
+      "zh-Hant": "覆蓋原點（X/Y，格）"
+    },
+    "MaskOptions.Size": {
+      "_native": "en",
+      "en": "Mapping size (width/depth, blocks)",
+      "zh": "覆盖尺寸（宽/长，格）",
+      "zh-Hant": "覆蓋尺寸（寬/長，格）"
+    },
+    "HeightmapTexture.Texture": {
+      "_native": "en",
+      "en": "Input texture",
+      "zh": "输入纹理",
+      "zh-Hant": "輸入紋理"
+    },
+    "LandscapeView.MaxY": {
+      "_native": "en",
+      "en": "Preview height",
+      "zh": "预览高度",
+      "zh-Hant": "預覽高度"
+    },
+    "CaveSlice.VerticalY": {
+      "_native": "en",
+      "en": "Vertical cut (UE Y, blocks)",
+      "zh": "纵剖位置（水平 Y，格）",
+      "zh-Hant": "縱剖位置（水平 Y，格）"
+    },
+    "CaveSlice.VerticalX": {
+      "_native": "en",
+      "en": "Side cut (UE X, blocks)",
+      "zh": "侧剖位置（水平 X，格）",
+      "zh-Hant": "側剖位置（水平 X，格）"
+    },
+    "CaveSlice.HorizontalZ": {
+      "_native": "en",
+      "en": "Horizontal cut (UE Z, blocks)",
+      "zh": "水平剖面高度（Z，格）",
+      "zh-Hant": "水平剖面高度（Z，格）"
+    },
+    "WorldRange.category.WorldRange": {
+      "_native": "en",
+      "en": "Region",
+      "zh": "生成范围",
+      "zh-Hant": "生成範圍"
+    },
+    "WorldRange.Seed": {
+      "_native": "en",
+      "en": "Seed",
+      "zh": "种子",
+      "zh-Hant": "種子"
+    },
+    "WorldRange.Origin": {
+      "_native": "en",
+      "en": "Origin (X/Y, blocks)",
+      "zh": "生成原点（X/Y，格）",
+      "zh-Hant": "生成原點（X/Y，格）"
+    },
+    "WorldRange.Size": {
+      "_native": "en",
+      "en": "Size (width/length, blocks)",
+      "zh": "生成尺寸（宽/长，格）",
+      "zh-Hant": "生成尺寸（寬/長，格）"
+    },
+    "WorldRange.CoreEnabled": {
+      "_native": "en",
+      "en": "Enable LOD",
+      "zh": "启用LOD",
+      "zh-Hant": "啟用LOD"
+    },
+    "WorldRange.CoreEmpty": {
+      "_native": "en",
+      "en": "Leave LOD empty",
+      "zh": "LOD留空",
+      "zh-Hant": "LOD留空"
+    },
+    "WorldRange.CoreA": {
+      "_native": "en",
+      "en": "LOD boundary A (absolute X/Y, blocks)",
+      "zh": "LOD边界点 A（绝对 X/Y，格）",
+      "zh-Hant": "LOD邊界點 A（絕對 X/Y，格）"
+    },
+    "WorldRange.CoreB": {
+      "_native": "en",
+      "en": "LOD boundary B (inclusive)",
+      "zh": "LOD边界点 B（含端点）",
+      "zh-Hant": "LOD邊界點 B（含端點）"
+    },
+    "WorldOutput.category.WorldOutput": {
+      "_native": "en",
+      "en": "Output & performance",
+      "zh": "输出与性能",
+      "zh-Hant": "輸出與性能"
+    },
+    "WorldOutput.OutputName": {
+      "_native": "en",
+      "en": "Output name",
+      "zh": "输出名称",
+      "zh-Hant": "輸出名稱"
+    },
+    "WorldOutput.Offset": {
+      "_native": "en",
+      "en": "Placement offset (UE X/Y/Z, cm)",
+      "zh": "放置偏移（UE X/Y/Z，厘米）",
+      "zh-Hant": "放置偏移（UE X/Y/Z，厘米）"
+    },
+    "WorldOutput.ISMChunkCount": {
+      "_native": "en",
+      "en": "ISM chunk count",
+      "zh": "ISM 区块数",
+      "zh-Hant": "ISM 區塊數"
+    },
+    "WorldOutput.GPUTypeGroupCount": {
+      "_native": "en",
+      "en": "Model groups",
+      "zh": "模型分组数",
+      "zh-Hant": "模型分組數"
+    },
+    "WorldOutput.Workers": {
+      "_native": "en",
+      "en": "Threads / processes",
+      "zh": "线程/进程数",
+      "zh-Hant": "執行緒/處理程序數",
+      "zh-Hant-HK": "線程/進程數"
+    },
+    "WorldOutput.Budgets": {
+      "_native": "en",
+      "en": "Limits (preprocess cells / final instances)",
+      "zh": "数量上限 (预处理格数/最终实例数)",
+      "zh-Hant": "數量上限 (預處理格數/最終實例數)"
+    },
+    "WorldOutput.BCTEnabled": {
+      "_native": "en",
+      "en": "Biome colour texture",
+      "zh": "群系颜色纹理",
+      "zh-Hant": "群系顏色紋理"
+    },
+    "WorldOutput.BCTColorMode": {
+      "_native": "en",
+      "en": "Biome colour mode",
+      "zh": "群系颜色模式",
+      "zh-Hant": "群系顏色模式"
+    },
+    "WorldOutput.BCTCellSize": {
+      "_native": "en",
+      "en": "Biome colour texture (blocks/pixel)",
+      "zh": "群系颜色纹理（格/像素）",
+      "zh-Hant": "群系顏色紋理（格/像素）"
+    },
+    "WorldOutput.BCTPower": {
+      "_native": "en",
+      "en": "Biome colour exponent",
+      "zh": "群系色彩指数",
+      "zh-Hant": "群系色彩指數"
+    },
+    "WorldCustom.category.WorldCustom": {
+      "_native": "en",
+      "en": "Custom heightmap",
+      "zh": "自定义高度图",
+      "zh-Hant": "自訂高度圖"
+    },
+    "WorldCustom.Enabled": {
+      "_native": "en",
+      "en": "Enable heightmap",
+      "zh": "启用高度图",
+      "zh-Hant": "啟用高度圖"
+    },
+    "WorldCustom.Path": {
+      "_native": "en",
+      "en": "Heightmap file",
+      "zh": "高度图文件",
+      "zh-Hant": "高度圖檔案"
+    },
+    "WorldCustom.Mode": {
+      "_native": "en",
+      "en": "Terrain mode",
+      "zh": "地形模式",
+      "zh-Hant": "地形模式"
+    },
+    "WorldCustom.InputRange": {
+      "_native": "en",
+      "en": "Input range",
+      "zh": "输入范围",
+      "zh-Hant": "輸入範圍"
+    },
+    "WorldCustom.AutoOutput": {
+      "_native": "en",
+      "en": "Automatic output range",
+      "zh": "自动输出范围",
+      "zh-Hant": "自動輸出範圍"
+    },
+    "WorldCustom.OutputRange": {
+      "_native": "en",
+      "en": "Manual output range (blocks)",
+      "zh": "手动输出范围（格）",
+      "zh-Hant": "手動輸出範圍（格）"
+    },
+    "WorldCustom.Origin": {
+      "_native": "en",
+      "en": "Mapping origin (X/Y, blocks)",
+      "zh": "覆盖原点（X/Y，格）",
+      "zh-Hant": "覆蓋原點（X/Y，格）"
+    },
+    "WorldCustom.Size": {
+      "_native": "en",
+      "en": "Mapping size (width/depth, blocks)",
+      "zh": "覆盖尺寸（宽/长，格）",
+      "zh-Hant": "覆蓋尺寸（寬/長，格）"
+    },
+    "mod_info.Name": {
+      "zh": "MC世界生成器",
+      "en": "MC World Generator",
+      "zh-Hant": "MC世界生成器"
+    },
+    "WorldRange.CellStep": {
+      "_native": "en",
+      "en": "Horizontal resolution",
+      "zh": "水平精度",
+      "zh-Hant": "水平精度"
+    },
+    "WorldRange.CoreInitialized": {
+      "_native": "en",
+      "en": "LOD initialized",
+      "zh": "已初始化LOD",
+      "zh-Hant": "已初始化LOD"
+    },
+    "WorldOutput.UIIsISM": {
+      "_native": "en",
+      "en": "Uses ISM",
+      "zh": "使用ISM",
+      "zh-Hant": "使用ISM"
+    },
+    "WorldOutput.UIUsesWorkers": {
+      "_native": "en",
+      "en": "Uses workers",
+      "zh": "使用工作进程",
+      "zh-Hant": "使用工作處理程序",
+      "zh-Hant-HK": "使用工作進程"
+    },
+    "WorldOutput.ISMChunkCount.tooltip": {
+      "_native": "en",
+      "zh": "空间区块总数，不是Actor数量；每块按模型类型建立Actor",
+      "en": "Spatial chunks, not Actor count; one Actor per model type",
+      "zh-Hant": "空間區塊總數，不是Actor數量；每塊按模型類型建立Actor"
+    },
+    "WorldOutput.GPUTypeGroupCount.tooltip": {
+      "_native": "en",
+      "zh": "将模型分成多个输出组，每组一个 Actor，同种模型不拆分",
+      "en": "Split models into output groups, one Actor per group; model types are not split",
+      "zh-Hant": "將模型分成多個輸出組，每組一個 Actor，同種模型不拆分"
+    },
+    "WorldOutput.Budgets.tooltip": {
+      "_native": "en",
+      "zh": "预处理格数：宽×长×输出高度；最终实例数：合并后的总实例数",
+      "en": "Preprocess cells: width × depth × output height; final instances: total merged count",
+      "zh-Hant": "預處理格數：寬×長×輸出高度；最終實例數：合併後的總實例數"
+    },
+    "WorldOutput.BCTCellSize.tooltip": {
+      "_native": "en",
+      "zh": "每像素覆盖的格数；颜色约8格过渡",
+      "en": "Blocks per pixel; approximately eight-block blending",
+      "zh-Hant": "每像素覆蓋的格數；顏色約8格過渡"
+    },
+    "WorldOutput.BCTPower.tooltip": {
+      "_native": "en",
+      "zh": "对正数 RGB 或 HSV 数值逐项乘方后再编码和混合；1 保持默认",
+      "en": "Exponent applied to positive RGB/HSV values before encoding and blending; 1 keeps defaults",
+      "zh-Hant": "對正數 RGB 或 HSV 數值逐項乘方後再編碼和混合；1 保持預設值"
+    },
+    "WorldCustom.SourceKind": {
+      "_native": "en",
+      "en": "Source type",
+      "zh": "来源类型",
+      "zh-Hant": "來源類型"
+    },
+    "WorldCustom.AssetPath": {
+      "_native": "en",
+      "en": "Asset path",
+      "zh": "资产路径",
+      "zh-Hant": "資產路徑"
+    },
+    "MaskOptions.SourceKind": {
+      "_native": "en",
+      "en": "Source type",
+      "zh": "来源类型",
+      "zh-Hant": "來源類型"
+    },
+    "MaskOptions.AssetPath": {
+      "_native": "en",
+      "en": "Asset path",
+      "zh": "资产路径",
+      "zh-Hant": "資產路徑"
+    },
+    "BiomeColor.Tint.tooltip": {
+      "_native": "en",
+      "zh": "线性RGB乘法倍率，1不变；允许大于1",
+      "en": "Linear RGB multiplier; 1 is neutral, HDR values allowed",
+      "zh-Hant": "線性RGB乘法倍率，1不變；允許大於1"
+    },
+    "BiomeColor.H.tooltip": {
+      "_native": "en",
+      "zh": "1不变；0.9为−36°，范围±180°",
+      "en": "1 is neutral; 0.9 shifts −36°, range ±180°",
+      "zh-Hant": "1不變；0.9為−36°，範圍±180°"
+    },
+    "BlockOptions.IsBuiltin": {
+      "_native": "en",
+      "en": "Builtin model",
+      "zh": "内置模型",
+      "zh-Hant": "內建模型",
+      "zh-Hant-HK": "內置模型"
+    },
+    "BlockOptions.IsJSON": {
+      "_native": "en",
+      "en": "JSON model",
+      "zh": "JSON模型",
+      "zh-Hant": "JSON模型"
+    },
+    "BlockOptions.IsMesh": {
+      "_native": "en",
+      "en": "Mesh model",
+      "zh": "网格模型",
+      "zh-Hant": "網格模型"
+    },
+    "BlockOptions.OverrideEmission": {
+      "_native": "en",
+      "en": "Override emission",
+      "zh": "覆盖发光",
+      "zh-Hant": "覆蓋發光"
+    },
+    "BlockOptions.OverrideLighting": {
+      "_native": "en",
+      "en": "Override lighting",
+      "zh": "覆盖照明",
+      "zh-Hant": "覆蓋照明"
+    },
+    "BlockOptions.OverrideColor": {
+      "_native": "en",
+      "en": "Override preview colour",
+      "zh": "覆盖预览颜色",
+      "zh-Hant": "覆蓋預覽顏色"
+    },
+    "BlockOptions.Offset.tooltip": {
+      "_native": "en",
+      "zh": "UE XYZ，Z为高度；单位格",
+      "en": "UE XYZ, Z up, blocks",
+      "zh-Hant": "UE XYZ，Z為高度；單位格"
+    },
+    "BlockOptions.Scale.tooltip": {
+      "_native": "en",
+      "zh": "UE XYZ，Z为高度",
+      "en": "UE XYZ, Z up",
+      "zh-Hant": "UE XYZ，Z為高度"
+    },
+    "controls.advanced": {
+      "zh": "显示高级参数",
+      "en": "Show advanced parameters",
+      "zh-Hant": "顯示高級參數"
+    },
+    "controls.parameters": {
+      "zh": "参数",
+      "en": "Parameters",
+      "zh-Hant": "參數"
+    },
+    "边界必须是有限数字、空白或 $参数名": {
+      "zh": "边界必须是有限数字、空白或 $参数名",
+      "en": "Bounds must be finite numbers, blank or $parameter references.",
+      "zh-Hant": "邊界必須是有限數字、空白或 $參數名"
+    },
+    "删除": {
+      "zh": "删除",
+      "en": "Delete",
+      "zh-Hant": "刪除"
+    },
+    "群系列表：顺序决定重叠/等距优先级": {
+      "zh": "群系列表：顺序决定重叠/等距优先级",
+      "en": "Biome order resolves overlaps and equal distances.",
+      "zh-Hant": "群系列表：順序決定重疊/等距優先級"
+    },
+    "复制当前群系并新增": {
+      "zh": "复制当前群系并新增",
+      "en": "Duplicate selected biome",
+      "zh-Hant": "複製當前群系並新增"
+    },
+    "兜底群系（不参与普通气候盒竞争）": {
+      "zh": "兜底群系（不参与普通气候盒竞争）",
+      "en": "Fallback biome (excluded from normal climate candidates)",
+      "zh-Hant": "兜底群系（不參與普通氣候盒競爭）"
+    },
+    "盒内条件为“且”；盒间为“或”；区间包含两端。空白为无界，支持 $参数名。": {
+      "zh": "盒内条件为“且”；盒间为“或”；区间包含两端。空白为无界，支持 $参数名。",
+      "en": "AND within a box; OR between boxes. Bounds are inclusive. Blank is unbounded; $parameter references are supported.",
+      "zh-Hant": "盒內條件為“且”；盒間為“或”；區間包含兩端。空白為無界，支持 $參數名。"
+    },
+    "＋气候盒（或）": {
+      "zh": "＋气候盒（或）",
+      "en": "+ Climate box (OR)",
+      "zh-Hant": "＋氣候盒（或）"
+    },
+    "＋候选": {
+      "zh": "＋候选",
+      "en": "+ Candidate",
+      "zh-Hant": "＋候選"
+    },
+    "替换为批量输入": {
+      "zh": "替换为批量输入",
+      "en": "Replace with batch input",
+      "zh-Hant": "替換為批量輸入"
+    },
+    "公共覆盖（优先于群系规则）": {
+      "zh": "公共覆盖（优先于群系规则）",
+      "en": "Common overrides (before biome rules)",
+      "zh-Hant": "公共覆蓋（優先於群系規則）"
+    },
+    "按顺序匹配；区间为 [下界, 上界)": {
+      "zh": "按顺序匹配；区间为 [下界, 上界)",
+      "en": "Match in order; bounds are [lower, upper)",
+      "zh-Hant": "按順序匹配；區間為 [地獄, 上界)"
+    },
+    "＋规则": {
+      "zh": "＋规则",
+      "en": "+ Rule",
+      "zh-Hant": "＋規則"
+    },
+    "共享方块定义；输入不导入资源。材质覆盖在下次准备、放置时生效。": {
+      "zh": "共享方块定义；输入不导入资源。材质覆盖在下次准备、放置时生效。",
+      "en": "Shared block definitions; typing does not import. Material overrides apply on preparation and placement.",
+      "zh-Hant": "共享方塊定義；輸入不匯入資源。材質覆蓋在下次準備、放置時生效。"
+    },
+    "实体地形": {
+      "zh": "实体地形",
+      "en": "Solid terrain",
+      "zh-Hant": "實體地形"
+    },
+    "水面": {
+      "zh": "水面",
+      "en": "Water surface",
+      "zh-Hant": "水面"
+    },
+    "植物": {
+      "zh": "植物",
+      "en": "Plant",
+      "zh-Hant": "植物"
+    },
+    "新增": {
+      "zh": "新增",
+      "en": "Add",
+      "zh-Hant": "新增"
+    },
+    "用途": {
+      "zh": "用途",
+      "en": "Usage",
+      "zh-Hant": "用途"
+    },
+    "未勾选时跟随来源材质；覆盖作用于全部材质槽。预览颜色仅影响离线图片。": {
+      "zh": "未勾选时跟随来源材质；覆盖作用于全部材质槽。预览颜色仅影响离线图片。",
+      "en": "Unchecked values follow source materials; overrides affect all slots. Preview colour affects offline images only.",
+      "zh-Hant": "未勾選時跟隨來源材質；覆蓋作用於全部材質槽。預覽顏色僅影響離線圖片。"
+    },
+    "重置材质覆盖": {
+      "zh": "重置材质覆盖",
+      "en": "Reset material overrides",
+      "zh-Hant": "重置材質覆蓋"
+    },
+    "合并方式": {
+      "zh": "合并方式",
+      "en": "Merge",
+      "zh-Hant": "合併方式"
+    },
+    "实体必须是完整、无偏移的单位立方体；植物不能合并。": {
+      "zh": "实体必须是完整、无偏移的单位立方体；植物不能合并。",
+      "en": "Occluding cells require an unshifted unit cube; plants cannot merge.",
+      "zh-Hant": "實體必須是完整、無偏移的單位立方體；植物不能合併。"
+    },
+    "下限": {
+      "zh": "下限",
+      "en": "Lower",
+      "zh-Hant": "下限"
+    },
+    "上限": {
+      "zh": "上限",
+      "en": "Upper",
+      "zh-Hant": "上限"
+    },
+    "扰动": {
+      "zh": "扰动",
+      "en": "Jitter",
+      "zh-Hant": "擾動"
+    },
+    "搜索名称或 ID": {
+      "zh": "搜索名称或 ID",
+      "en": "Search name or ID",
+      "zh-Hant": "搜尋名稱或 ID"
+    },
+    "请选择群系": {
+      "zh": "请选择群系",
+      "en": "Select a biome",
+      "zh-Hant": "請選擇群系"
+    },
+    "＋条件": {
+      "zh": "＋条件",
+      "en": "+ Condition",
+      "zh-Hant": "＋條件"
+    },
+    "批量粘贴：每行一个方块名或路径，初始等权": {
+      "zh": "批量粘贴：每行一个方块名或路径，初始等权",
+      "en": "Paste one block name or path per line; initial weights are equal.",
+      "zh-Hant": "批量粘貼：每行一個方塊名或路徑，初始等權"
+    },
+    "公共覆盖优先。各层取首条匹配；群系末条须无条件且含完整三层。": {
+      "zh": "公共覆盖优先。各层取首条匹配；群系末条须无条件且含完整三层。",
+      "en": "Common overrides take priority. Each layer uses its first match; the last biome rule must be unconditional and cover all three layers.",
+      "zh-Hant": "公共覆蓋優先。各層取首條匹配；群系末條須無條件且含完整三層。"
+    },
+    "沿用后续规则": {
+      "zh": "沿用后续规则",
+      "en": "Use later rule",
+      "zh-Hant": "沿用後續規則"
+    },
+    "无条件": {
+      "zh": "无条件",
+      "en": "Unconditional",
+      "zh-Hant": "無條件"
+    },
+    "名称 / JSON 文件路径 / UE 复制引用": {
+      "zh": "名称 / JSON 文件路径 / UE 复制引用",
+      "en": "Name / JSON file path / UE copied reference",
+      "zh-Hant": "名稱 / JSON 檔案路徑 / UE 複製引用"
+    },
+    "搜索方块ID": {
+      "zh": "搜索方块ID",
+      "en": "Search block IDs",
+      "zh-Hant": "搜尋方塊ID"
+    },
+    "内置模型": {
+      "zh": "内置模型",
+      "en": "Builtin",
+      "zh-Hant": "內建模型",
+      "zh-Hant-HK": "內置模型"
+    },
+    "JSON模型": {
+      "zh": "JSON模型",
+      "en": "JSON model",
+      "zh-Hant": "JSON模型"
+    },
+    "UE网格": {
+      "zh": "UE网格",
+      "en": "UE mesh",
+      "zh-Hant": "UE網格"
+    },
+    "不合并": {
+      "zh": "不合并",
+      "en": "No merge",
+      "zh-Hant": "不合併"
+    },
+    "水平面合并": {
+      "zh": "水平面合并",
+      "en": "Horizontal merge",
+      "zh-Hant": "水平面合併"
+    },
+    "长方体合并": {
+      "zh": "长方体合并",
+      "en": "Cuboid merge",
+      "zh-Hant": "長方體合併"
+    },
+    "同一个盒/规则中的字段不能重复": {
+      "zh": "同一个盒/规则中的字段不能重复",
+      "en": "A field cannot occur twice in one box or rule.",
+      "zh-Hant": "同一個盒/規則中的欄位不能重複"
+    },
+    "所有字段已在当前条件中": {
+      "zh": "所有字段已在当前条件中",
+      "en": "All available fields are already used.",
+      "zh-Hant": "所有欄位已在當前條件中"
+    },
+    "ID {id}（已有 ID 保持稳定）": {
+      "zh": "ID {id}（已有 ID 保持稳定）",
+      "en": "ID {id} (existing IDs remain stable)",
+      "zh-Hant": "ID {id}（已有 ID 保持穩定）"
+    },
+    "中文名称": {
+      "zh": "中文名称",
+      "en": "Chinese name",
+      "zh-Hant": "中文名稱"
+    },
+    "英文名称": {
+      "zh": "英文名称",
+      "en": "English name",
+      "zh-Hant": "英文名稱"
+    },
+    "没有可复制的群系，请恢复预设或重新载入资源包": {
+      "zh": "没有可复制的群系，请恢复预设或重新载入资源包",
+      "en": "No biome to duplicate; reset or reload the pack.",
+      "zh-Hant": "沒有可複製的群系，請重設或重新載入資源包"
+    },
+    "顶层": {
+      "zh": "顶层",
+      "en": "Top",
+      "zh-Hant": "頂層"
+    },
+    "覆盖层": {
+      "zh": "覆盖层",
+      "en": "Under",
+      "zh-Hant": "覆蓋層"
+    },
+    "深层": {
+      "zh": "深层",
+      "en": "Deep",
+      "zh-Hant": "深層"
+    },
+    "方块名 / JSON 路径 / StaticMesh 引用": {
+      "zh": "方块名 / JSON 路径 / StaticMesh 引用",
+      "en": "Block name / JSON path / StaticMesh reference",
+      "zh-Hant": "方塊名 / JSON 路徑 / StaticMesh 引用"
+    },
+    " [兜底]": {
+      "zh": " [兜底]",
+      "en": " [fallback]",
+      "zh-Hant": " [兜底]"
+    },
+    "气候盒 {index} · 且{or}": {
+      "zh": "气候盒 {index} · 且{or}",
+      "en": "Climate box {index} · AND{or}",
+      "zh-Hant": "氣候盒 {index} · 且{or}"
+    },
+    "{count} 条条件": {
+      "zh": "{count} 条条件",
+      "en": "Conditions: {count}",
+      "zh-Hant": "{count} 條條件"
+    },
+    "（或）": {
+      "zh": "（或）",
+      "en": " (OR)",
+      "zh-Hant": "（或）"
+    },
+    "请选择有效的方块来源": {
+      "zh": "请选择有效的方块来源",
+      "en": "Choose a valid block source",
+      "zh-Hant": "請選擇有效的方塊來源"
+    },
+    "来源类型不匹配": {
+      "zh": "来源类型不匹配",
+      "en": "Source type does not match",
+      "zh-Hant": "來源類型不匹配"
+    },
+    "恢复默认": {
+      "zh": "恢复默认",
+      "en": "Reset",
+      "zh-Hant": "重設"
+    },
+    "保存用户资源包": {
+      "zh": "保存用户资源包",
+      "en": "Save Pack",
+      "zh-Hant": "儲存用戶資源包"
+    },
+    "另存预设": {
+      "zh": "另存预设",
+      "en": "Save Preset",
+      "zh-Hant": "另存預設"
+    },
+    "预设库": {
+      "zh": "预设库",
+      "en": "Preset Lib",
+      "zh-Hant": "預設庫"
+    },
+    "资源包｜": {
+      "zh": "资源包｜",
+      "en": "Pack | ",
+      "zh-Hant": "資源包｜"
+    },
+    "资源包默认": {
+      "zh": "资源包默认",
+      "en": "Pack Default",
+      "zh-Hant": "資源包預設值"
+    },
+    "景观": {
+      "zh": "景观",
+      "en": "Landscape",
+      "zh-Hant": "景觀"
+    },
+    "地表方块": {
+      "zh": "地表方块",
+      "en": "Surface blocks",
+      "zh-Hant": "地表方塊"
+    },
+    "固定分区": {
+      "zh": "固定分区",
+      "en": "Fixed regions",
+      "zh-Hant": "固定分區"
+    },
+    "植被分布": {
+      "zh": "植被分布",
+      "en": "Vegetation",
+      "zh-Hant": "植被分布"
+    },
+    "群系": {
+      "zh": "群系",
+      "en": "Biomes",
+      "zh-Hant": "群系"
+    },
+    "高度": {
+      "zh": "高度",
+      "en": "Height",
+      "zh-Hant": "高度"
+    },
+    "温度": {
+      "zh": "温度",
+      "en": "Temperature",
+      "zh-Hant": "溫度"
+    },
+    "湿度": {
+      "zh": "湿度",
+      "en": "Humidity",
+      "zh-Hant": "濕度"
+    },
+    "水系": {
+      "zh": "水系",
+      "en": "Water systems",
+      "zh-Hant": "水系"
+    },
+    "自定义高度图": {
+      "zh": "自定义高度图",
+      "en": "Custom heightmap",
+      "zh-Hant": "自訂高度圖"
+    },
+    "植被遮罩": {
+      "zh": "植被遮罩",
+      "en": "Vegetation mask",
+      "zh-Hant": "植被遮罩"
+    },
+    "留空遮罩": {
+      "zh": "留空遮罩",
+      "en": "Clearance mask",
+      "zh-Hant": "留空遮罩"
+    },
+    "洞穴总览": {
+      "zh": "洞穴总览",
+      "en": "Cave overview",
+      "zh-Hant": "洞穴總覽"
+    },
+    "精确剖面": {
+      "zh": "精确剖面",
+      "en": "Exact sections",
+      "zh-Hant": "精確剖面"
+    },
+    "地下水": {
+      "zh": "地下水",
+      "en": "Underground Water",
+      "zh-Hant": "地下水"
+    },
+    "单线程": {
+      "zh": "单线程",
+      "en": "Single thread",
+      "zh-Hant": "單執行緒",
+      "zh-Hant-HK": "單線程"
+    },
+    "多线程": {
+      "zh": "多线程",
+      "en": "Threads",
+      "zh-Hant": "多執行緒",
+      "zh-Hant-HK": "多線程"
+    },
+    "多进程": {
+      "zh": "多进程",
+      "en": "Processes",
+      "zh-Hant": "多處理程序",
+      "zh-Hant-HK": "多進程"
+    },
+    "实例（CPU）": {
+      "zh": "实例（CPU）",
+      "en": "Instances (CPU)",
+      "zh-Hant": "實例（CPU）"
+    },
+    "粒子（GPU）": {
+      "zh": "粒子（GPU）",
+      "en": "Particles (GPU)",
+      "zh-Hant": "粒子（GPU）"
+    },
+    "世界与范围": {
+      "zh": "世界与范围",
+      "en": "World & region",
+      "zh-Hant": "世界與範圍"
+    },
+    "方块": {
+      "zh": "方块",
+      "en": "Blocks",
+      "zh-Hant": "方塊"
+    },
+    "自定义": {
+      "zh": "自定义",
+      "en": "Custom",
+      "zh-Hant": "自訂"
+    },
+    "输出与性能": {
+      "zh": "输出与性能",
+      "en": "Output & performance",
+      "zh-Hant": "輸出與性能"
+    },
+    "世界范围": {
+      "zh": "世界范围",
+      "en": "World region",
+      "zh-Hant": "世界範圍"
+    },
+    "地形": {
+      "zh": "地形",
+      "en": "Terrain",
+      "zh-Hant": "地形"
+    },
+    "输出": {
+      "zh": "输出",
+      "en": "Output",
+      "zh-Hant": "輸出"
+    },
+    "MC世界生成器": {
+      "zh": "MC世界生成器",
+      "en": "MC World Generator",
+      "zh-Hant": "MC世界生成器"
+    },
+    "保存资源包": {
+      "zh": "保存资源包",
+      "en": "Save Pack",
+      "zh-Hant": "儲存資源包"
+    },
+    "更新剖面": {
+      "zh": "更新剖面",
+      "en": "Update sections",
+      "zh-Hant": "更新剖面"
+    },
+    "仅更新图像；不重新生成或准备资源": {
+      "zh": "仅更新图像；不重新生成或准备资源",
+      "en": "Updates images only; keeps generated world and prepared resources.",
+      "zh-Hant": "僅更新圖像；不重新生成或準備資源"
+    },
+    "尚无预览\n点击“生成预览”查看当前草稿": {
+      "zh": "尚无预览\n点击“生成预览”查看当前草稿",
+      "en": "No preview yet\nClick Generate preview to view this draft",
+      "zh-Hant": "尚無預覽\n點擊“生成預覽”查看當前草稿"
+    },
+    "适应范围": {
+      "zh": "适应范围",
+      "en": "Fit view",
+      "zh-Hant": "適應範圍"
+    },
+    "清除选框": {
+      "zh": "清除选框",
+      "en": "Clear core",
+      "zh-Hant": "清除選框"
+    },
+    "自动概览": {
+      "zh": "自动概览",
+      "en": "Auto overview",
+      "zh-Hant": "自動概覽"
+    },
+    "生成预览": {
+      "zh": "生成预览",
+      "en": "Generate preview",
+      "zh-Hant": "生成預覽"
+    },
+    "准备资源": {
+      "zh": "准备资源",
+      "en": "Prepare resources",
+      "zh-Hant": "準備資源"
+    },
+    "放置到场景": {
+      "zh": "放置到场景",
+      "en": "Place in level",
+      "zh-Hant": "放置到場景"
+    },
+    "取消": {
+      "zh": "取消",
+      "en": "Cancel",
+      "zh-Hant": "取消"
+    },
+    "就绪": {
+      "zh": "就绪",
+      "en": "Ready",
+      "zh-Hant": "就緒"
+    },
+    "ISM分区时不启用群系颜色纹理": {
+      "zh": "ISM分区时不启用群系颜色纹理",
+      "en": "Biome colour texture is disabled for split ISM output",
+      "zh-Hant": "ISM分區時不啟用群系顏色紋理"
+    },
+    "材质覆盖已更新；请重新准备资源": {
+      "zh": "材质覆盖已更新；请重新准备资源",
+      "en": "Material overrides updated; prepare resources again",
+      "zh-Hant": "材質覆蓋已更新；請重新準備資源"
+    },
+    "颜色已更新；下次准备仅更新群系纹理": {
+      "zh": "颜色已更新；下次准备仅更新群系纹理",
+      "en": "Colours updated; preparation will update the biome texture",
+      "zh-Hant": "顏色已更新；下次準備僅更新群系紋理"
+    },
+    "群系颜色模式": {
+      "zh": "群系颜色模式",
+      "en": "Biome colour mode",
+      "zh-Hant": "群系顏色模式"
+    },
+    "当前草稿未保存": {
+      "zh": "当前草稿未保存",
+      "en": "This draft has unsaved changes",
+      "zh-Hant": "當前草稿未儲存"
+    },
+    "保存": {
+      "zh": "保存",
+      "en": "Save",
+      "zh-Hant": "儲存"
+    },
+    "放弃": {
+      "zh": "放弃",
+      "en": "Discard",
+      "zh-Hant": "放棄"
+    },
+    "载入参考预览": {
+      "zh": "载入参考预览",
+      "en": "Loading reference preview",
+      "zh-Hant": "載入參考預覽"
+    },
+    "载入预览图片": {
+      "zh": "载入预览图片",
+      "en": "Loading preview images",
+      "zh-Hant": "載入預覽圖片"
+    },
+    "曲线已应用；切线与插值已按生成样条重建": {
+      "zh": "曲线已应用；切线与插值已按生成样条重建",
+      "en": "Curves applied; tangents and interpolation match the generating spline.",
+      "zh-Hant": "曲線已應用；切線與插值已按生成樣條重建"
+    },
+    "选择生成资源包：算法、参数、群系与方块规则。": {
+      "zh": "选择生成资源包：算法、参数、群系与方块规则。",
+      "en": "Choose a generation pack: algorithms, parameters, biomes and block rules.",
+      "zh-Hant": "選擇生成資源包：演算法、參數、群系與方塊規則。",
+      "zh-Hant-HK": "選擇生成資源包：算法、參數、群系與方塊規則。"
+    },
+    "恢复生成参数及分辨率默认值，禁用LOD并重置边界点；保留种子、生成范围、输出设置及规则草稿。": {
+      "zh": "恢复生成参数及分辨率默认值，禁用LOD并重置边界点；保留种子、生成范围、输出设置及规则草稿。",
+      "en": "Reset generation parameters and resolution; disable LOD and reset its boundaries. Keep seed, region, output settings and rule drafts.",
+      "zh-Hant": "恢復生成參數及解析度預設值，禁用LOD並重置邊界點；保留種子、生成範圍、輸出設定及規則草稿。",
+      "zh-Hant-HK": "恢復生成參數及解像度預設值，禁用LOD並重置邊界點；保留種子、生成範圍、輸出設定及規則草稿。"
+    },
+    "保存群系、地表、方块、植被及当前参数；内置/外部资源包另存为继承资源包。": {
+      "zh": "保存群系、地表、方块、植被及当前参数；内置/外部资源包另存为继承资源包。",
+      "en": "Save biomes, surfaces, blocks, vegetation and parameters. Built-in/external packs are saved as derived user packs.",
+      "zh-Hant": "儲存群系、地表、方塊、植被及當前參數；內建/外部資源包另存為繼承資源包。",
+      "zh-Hant-HK": "儲存群系、地表、方塊、植被及當前參數；內置/外部資源包另存為繼承資源包。"
+    },
+    "直接保存生成参数到独立预设库；规则草稿保留。": {
+      "zh": "直接保存生成参数到独立预设库；规则草稿保留。",
+      "en": "Save generation parameters to the independent library; retain content drafts.",
+      "zh-Hant": "直接儲存生成參數到獨立預設庫；規則草稿保留。"
+    },
+    "打开预设库：加载、管理、导入或导出参数预设。": {
+      "zh": "打开预设库：加载、管理、导入或导出参数预设。",
+      "en": "Open the preset library to load, manage, import or export parameter presets.",
+      "zh-Hant": "打開預設庫：載入、管理、匯入或匯出參數預設。"
+    },
+    "找到上次会话草稿": {
+      "zh": "找到上次会话草稿",
+      "en": "Previous session draft found",
+      "zh-Hant": "找到上次會話草稿"
+    },
+    "恢复": {
+      "zh": "恢复",
+      "en": "Restore",
+      "zh-Hant": "恢復"
+    },
+    "展开预览": {
+      "zh": "展开预览",
+      "en": "Show preview",
+      "zh-Hant": "展開預覽"
+    },
+    "收起预览": {
+      "zh": "收起预览",
+      "en": "Hide preview",
+      "zh-Hant": "收起預覽"
+    },
+    "显示高级参数": {
+      "zh": "显示高级参数",
+      "en": "Show advanced parameters",
+      "zh-Hant": "顯示高級參數"
+    },
+    "曲线待自动应用": {
+      "zh": "曲线待自动应用",
+      "en": "Curve edits will apply shortly",
+      "zh-Hant": "曲線待自動應用"
+    },
+    "配置已变化": {
+      "zh": "配置已变化",
+      "en": "Configuration changed",
+      "zh-Hant": "配置已變化"
+    },
+    "数量上限已变化；每次生成和放置都会重新检查": {
+      "zh": "数量上限已变化；每次生成和放置都会重新检查",
+      "en": "Limits changed; generation and placement check them each time.",
+      "zh-Hant": "數量上限已變化；每次生成和放置都會重新檢查"
+    },
+    "RGB倍率": {
+      "zh": "RGB倍率",
+      "en": "RGB multipliers",
+      "zh-Hant": "RGB倍率"
+    },
+    "HSV调整": {
+      "zh": "HSV调整",
+      "en": "HSV adjustments",
+      "zh-Hant": "HSV調整"
+    },
+    "范围超过 512²；本次请手动生成预览": {
+      "zh": "范围超过 512²；本次请手动生成预览",
+      "en": "Region exceeds 512²; generate this preview manually.",
+      "zh-Hant": "範圍超過 512²；本次請手動生成預覽"
+    },
+    "请等待或取消当前任务": {
+      "zh": "请等待或取消当前任务",
+      "en": "Wait for or cancel the current task.",
+      "zh-Hant": "請等待或取消當前任務"
+    },
+    "请先生成当前世界的预览": {
+      "zh": "请先生成当前世界的预览",
+      "en": "Generate a preview of the current world first.",
+      "zh-Hant": "請先生成當前世界的預覽"
+    },
+    "准备结果已过期、超出数量上限或尚未准备；请重新准备资源": {
+      "zh": "准备结果已过期、超出数量上限或尚未准备；请重新准备资源",
+      "en": "Resources are missing, outdated or over the limit; prepare again.",
+      "zh-Hant": "準備結果已過期、超出數量上限或尚未準備；請重新準備資源"
+    },
+    "预览图片载入失败": {
+      "zh": "预览图片载入失败",
+      "en": "Failed to load preview images.",
+      "zh-Hant": "預覽圖片載入失敗"
+    },
+    "完成": {
+      "zh": "完成",
+      "en": "Completed",
+      "zh-Hant": "完成"
+    },
+    "分辨率": {
+      "zh": "分辨率",
+      "en": "Resolution",
+      "zh-Hant": "解析度",
+      "zh-Hant-HK": "解像度"
+    },
+    "曲线修改后自动应用，切线随生成样条重建。": {
+      "zh": "曲线修改后自动应用，切线随生成样条重建。",
+      "en": "Curve edits apply automatically; tangents follow the generating spline.",
+      "zh-Hant": "曲線修改後自動應用，切線隨生成樣條重建。"
+    },
+    "水面方块": {
+      "zh": "水面方块",
+      "en": "Water block",
+      "zh-Hant": "水面方塊"
+    },
+    "未保存 ●": {
+      "zh": "未保存 ●",
+      "en": "Unsaved ●",
+      "zh-Hant": "未儲存 ●"
+    },
+    "已保存": {
+      "zh": "已保存",
+      "en": "Saved",
+      "zh-Hant": "已儲存"
+    },
+    "参考概览 · 不含树木、冰体、覆雪和洞穴": {
+      "zh": "参考概览 · 不含树木、冰体、覆雪和洞穴",
+      "en": "Reference overview · excludes trees, ice bodies, covers and caves",
+      "zh-Hant": "參考概覽 · 不含樹木、冰體、覆雪和洞穴"
+    },
+    "此视图需要手动生成完整预览": {
+      "zh": "此视图需要手动生成完整预览",
+      "en": "Generate a full preview manually for this view.",
+      "zh-Hant": "此視圖需要手動生成完整預覽"
+    },
+    "{labels}\n高度 {low}–{high}": {
+      "zh": "{labels}\n高度 {low}–{high}",
+      "en": "{labels}\nHeight {low}–{high}",
+      "zh-Hant": "{labels}\n高度 {low}–{high}"
+    },
+    "1 格（完整）": {
+      "zh": "1 格（完整）",
+      "en": "1 block (full)",
+      "zh-Hant": "1 格（完整）"
+    },
+    "2 格": {
+      "zh": "2 格",
+      "en": "2 blocks",
+      "zh-Hant": "2 格"
+    },
+    "4 格": {
+      "zh": "4 格",
+      "en": "4 blocks",
+      "zh-Hant": "4 格"
+    },
+    "群系纹理：{width} × {height} 像素": {
+      "zh": "群系纹理：{width} × {height} 像素",
+      "en": "Biome texture: {width} × {height} pixels",
+      "zh-Hant": "群系紋理：{width} × {height} 像素"
+    },
+    "旧概览 · 配置已变化": {
+      "zh": "旧概览 · 配置已变化",
+      "en": "Old overview · configuration changed",
+      "zh-Hant": "舊概覽 · 配置已變化"
+    },
+    "已恢复上次会话草稿{warning}": {
+      "zh": "已恢复上次会话草稿{warning}",
+      "en": "Previous session draft restored{warning}",
+      "zh-Hant": "已恢復上次會話草稿{warning}"
+    },
+    "已取消": {
+      "zh": "已取消",
+      "en": "Cancelled",
+      "zh-Hant": "已取消"
+    },
+    "仅降低水平精度。启用LOD后，框内为1格或留空，框外使用此分辨率；支持洞穴、地下水、湖海连接、下界与末地。向留空区泄漏的地下水候选会被拒绝。": {
+      "zh": "仅降低水平精度。启用LOD后，框内为1格或留空，框外使用此分辨率；支持洞穴、地下水、湖海连接、下界与末地。向留空区泄漏的地下水候选会被拒绝。",
+      "en": "Horizontal detail only. With LOD enabled, the selection is full detail or empty; this resolution applies outside. Caves, groundwater, surface connections, Nether and End support fixed regions. Underground water candidates leaking into the empty selection are rejected.",
+      "zh-Hant": "僅降低水平精度。啟用LOD後，框內為1格或留空，框外使用此解析度；支持洞穴、地下水、湖海連接、地獄與終界。向留空區泄漏的地下水候選會被拒絕。",
+      "zh-Hant-HK": "僅降低水平精度。啟用LOD後，框內為1格或留空，框外使用此解像度；支持洞穴、地下水、湖海連接、地獄與終界。向留空區泄漏的地下水候選會被拒絕。"
+    },
+    "仅降低水平精度，垂直保持1格。此资源包暂不支持框选LOD，已保存的边界点保留。": {
+      "zh": "仅降低水平精度，垂直保持1格。此资源包暂不支持框选LOD，已保存的边界点保留。",
+      "en": "Horizontal resolution only; vertical cells stay one block. Fixed-region LOD is not yet supported; saved boundaries are retained.",
+      "zh-Hant": "僅降低水平精度，垂直保持1格。此資源包暫不支持框選LOD，已儲存的邊界點保留。"
+    },
+    "参考地表 · 完整生成中": {
+      "zh": "参考地表 · 完整生成中",
+      "en": "Reference surface · Full generation in progress",
+      "zh-Hant": "參考地表 · 完整生成中"
+    },
+    "；上次有未完成输入，请重新检查": {
+      "zh": "；上次有未完成输入，请重新检查",
+      "en": "; unfinished input was found; please review.",
+      "zh-Hant": "；上次有未完成輸入，請重新檢查"
+    },
+    "参考计算 {generation} 秒 · 总等待 {total} 秒（悬停查看详细统计）": {
+      "zh": "参考计算 {generation} 秒 · 总等待 {total} 秒（悬停查看详细统计）",
+      "en": "Reference {generation} s · wait {total} s (hover for details)",
+      "zh-Hant": "參考計算 {generation} 秒 · 總等待 {total} 秒（懸停查看詳細統計）"
+    },
+    "详细统计\n参考计算：{generation} 秒；绘图：{draw} 秒；导入：{import_time} 秒\n本次等待：{total} 秒": {
+      "zh": "详细统计\n参考计算：{generation} 秒；绘图：{draw} 秒；导入：{import_time} 秒\n本次等待：{total} 秒",
+      "en": "Detailed stats\nReference: {generation} s; image: {draw} s; import: {import_time} s\nRequest wait: {total} s",
+      "zh-Hant": "詳細統計\n參考計算：{generation} 秒；繪圖：{draw} 秒；匯入：{import_time} 秒\n本次等待：{total} 秒"
+    },
+    "复用完整缓存": {
+      "zh": "复用完整缓存",
+      "en": "full cache",
+      "zh-Hant": "重複使用完整快取",
+      "zh-Hant-HK": "重複使用完整緩存"
+    },
+    "旧预览 · 配置已变化": {
+      "zh": "旧预览 · 配置已变化",
+      "en": "Old preview · configuration changed",
+      "zh-Hant": "舊預覽 · 配置已變化"
+    },
+    "准备基底已缓存；颜色已变化，请重新准备": {
+      "zh": "准备基底已缓存；颜色已变化，请重新准备",
+      "en": "Geometry cached; colours changed, prepare again",
+      "zh-Hant": "準備基底已快取；顏色已變化，請重新準備",
+      "zh-Hant-HK": "準備基底已緩存；顏色已變化，請重新準備"
+    },
+    "复用几何基底": {
+      "zh": "复用几何基底",
+      "en": "reused geometry",
+      "zh-Hant": "重複使用幾何基底"
+    },
+    "新建资源": {
+      "zh": "新建资源",
+      "en": "fresh build",
+      "zh-Hant": "新建資源"
+    },
+    "详细统计\n合并前实例：{visible}；合并后实例：{instances}\n准备：{seconds} 秒（合并 {merge} 秒）；状态：{cache}": {
+      "zh": "详细统计\n合并前实例：{visible}；合并后实例：{instances}\n准备：{seconds} 秒（合并 {merge} 秒）；状态：{cache}",
+      "en": "Detailed stats\nPre-merge instances: {visible}; merged instances: {instances}\nPreparation: {seconds} s (merge {merge} s); state: {cache}",
+      "zh-Hant": "詳細統計\n合併前實例：{visible}；合併後實例：{instances}\n準備：{seconds} 秒（合併 {merge} 秒）；狀態：{cache}"
+    },
+    "合并前实例 {visible} · 模型 {models}（{templates} 种） · 生成 {generation} 秒 · 总等待 {total} 秒（悬停查看详细统计）": {
+      "zh": "合并前实例 {visible} · 模型 {models}（{templates} 种） · 生成 {generation} 秒 · 总等待 {total} 秒（悬停查看详细统计）",
+      "en": "Pre-merge instances {visible} · models {models} ({templates} types) · build {generation} s · wait {total} s (hover for details)",
+      "zh-Hant": "合併前實例 {visible} · 模型 {models}（{templates} 種） · 生成 {generation} 秒 · 總等待 {total} 秒（懸停查看詳細統計）"
+    },
+    "详细统计\n合并前实例：{visible}；模型：{models}；种类：{templates}\n生成流程：{generation} 秒；单图：{preview} 秒；导入：{import_time} 秒\n表面处理：{surface} 秒；参考绘图：{reference_draw} 秒；参考导入：{reference_import} 秒\n首图：{first} 秒；本次等待：{total} 秒": {
+      "zh": "详细统计\n合并前实例：{visible}；模型：{models}；种类：{templates}\n生成流程：{generation} 秒；单图：{preview} 秒；导入：{import_time} 秒\n表面处理：{surface} 秒；参考绘图：{reference_draw} 秒；参考导入：{reference_import} 秒\n首图：{first} 秒；本次等待：{total} 秒",
+      "en": "Detailed stats\nPre-merge instances: {visible}; models: {models}; types: {templates}\nGeneration flow: {generation} s; image: {preview} s; import: {import_time} s\nSurface processing: {surface} s; reference image: {reference_draw} s; reference import: {reference_import} s\nFirst image: {first} s; request wait: {total} s",
+      "zh-Hant": "詳細統計\n合併前實例：{visible}；模型：{models}；種類：{templates}\n生成流程：{generation} 秒；單圖：{preview} 秒；匯入：{import_time} 秒\n表面處理：{surface} 秒；參考繪圖：{reference_draw} 秒；參考匯入：{reference_import} 秒\n首圖：{first} 秒；本次等待：{total} 秒"
+    },
+    "合并前实例 {visible} → 合并后实例 {instances} · 准备 {seconds} 秒（{cache}，悬停查看详细统计）": {
+      "zh": "合并前实例 {visible} → 合并后实例 {instances} · 准备 {seconds} 秒（{cache}，悬停查看详细统计）",
+      "en": "Pre-merge instances {visible} → merged instances {instances} · prepared in {seconds} s ({cache}, hover for details)",
+      "zh-Hant": "合併前實例 {visible} → 合併後實例 {instances} · 準備 {seconds} 秒（{cache}，懸停查看詳細統計）"
+    },
+    "新增 Actor {actors}；放置 {seconds} 秒": {
+      "zh": "新增 Actor {actors}；放置 {seconds} 秒",
+      "en": "New actors {actors}; placement {seconds} s",
+      "zh-Hant": "新增 Actor {actors}；放置 {seconds} 秒"
+    },
+    "条带": {
+      "zh": "条带",
+      "en": "Runs",
+      "zh-Hant": "條帶"
+    },
+    "矩形": {
+      "zh": "矩形",
+      "en": "Rectangles",
+      "zh-Hant": "矩形"
+    },
+    "长方体": {
+      "zh": "长方体",
+      "en": "Cuboids",
+      "zh-Hant": "長方體"
+    },
+    "选择高度图": {
+      "zh": "选择高度图",
+      "en": "Choose heightmap",
+      "zh-Hant": "選擇高度圖"
+    },
+    "清除": {
+      "zh": "清除",
+      "en": "Clear",
+      "zh-Hant": "清除"
+    },
+    "使用当前世界范围": {
+      "zh": "使用当前世界范围",
+      "en": "Use current world region",
+      "zh-Hant": "使用當前世界範圍"
+    },
+    "查看图像": {
+      "zh": "查看图像",
+      "en": "Preview image",
+      "zh-Hant": "查看圖像"
+    },
+    "「直接使用高度图」按图中高度生成地形；「叠加到主地形」在原地形上增减高度。": {
+      "zh": "「直接使用高度图」按图中高度生成地形；「叠加到主地形」在原地形上增减高度。",
+      "en": "“Use heightmap directly” applies image heights; “Add to terrain” offsets the base terrain.",
+      "zh-Hant": "「直接使用高度圖」按圖中高度生成地形；「疊加到主地形」在原地形上增減高度。"
+    },
+    "高度图来源已变化，正在刷新": {
+      "zh": "高度图来源已变化，正在刷新",
+      "en": "Heightmap source changed; refreshing",
+      "zh-Hant": "高度圖來源已變化，正在刷新"
+    },
+    "当前资源包未保留vanilla高度链，不能接入高度图。": {
+      "zh": "当前资源包未保留vanilla高度链，不能接入高度图。",
+      "en": "This pack does not retain the vanilla height chain.",
+      "zh-Hant": "當前資源包未保留vanilla高度鏈，不能接入高度圖。"
+    },
+    "彩色输入取R通道。PNG按位深归一化，EXR保留格数。": {
+      "zh": "彩色输入取R通道。PNG按位深归一化，EXR保留格数。",
+      "en": "Colour inputs use red. PNG normalizes by bit depth; EXR keeps block values.",
+      "zh-Hant": "彩色輸入取R通道。PNG按位深歸一化，EXR保留格數。"
+    },
+    "直接使用高度图": {
+      "zh": "直接使用高度图",
+      "en": "Use heightmap directly",
+      "zh-Hant": "直接使用高度圖"
+    },
+    "叠加到主地形": {
+      "zh": "叠加到主地形",
+      "en": "Add to terrain",
+      "zh-Hant": "疊加到主地形"
+    },
+    "自动输出范围": {
+      "zh": "自动输出范围",
+      "en": "Automatic output range",
+      "zh-Hant": "自動輸出範圍"
+    },
+    "请选择并启用高度图": {
+      "zh": "请选择并启用高度图",
+      "en": "Choose and enable a heightmap",
+      "zh-Hant": "請選擇並啟用高度圖"
+    },
+    "高度图就绪": {
+      "zh": "高度图就绪",
+      "en": "Heightmap ready",
+      "zh-Hant": "高度圖就緒"
+    },
+    "图片覆盖范围固定，改变世界范围不会拉伸图片。": {
+      "zh": "图片覆盖范围固定，改变世界范围不会拉伸图片。",
+      "en": "Image mapping stays fixed when the world region changes.",
+      "zh-Hant": "圖片覆蓋範圍固定，改變世界範圍不會拉伸圖片。"
+    },
+    "数值映射": {
+      "zh": "数值映射",
+      "en": "Value mapping",
+      "zh-Hant": "數值映射"
+    },
+    "PNG归一化到0～1；EXR保留原值。按输入／输出范围线性映射，范围外线性外推。": {
+      "zh": "PNG归一化到0～1；EXR保留原值。按输入／输出范围线性映射，范围外线性外推。",
+      "en": "PNG normalizes to 0–1; EXR keeps raw values. Mapping is linear and extrapolates.",
+      "zh-Hant": "PNG歸一化到0～1；EXR保留原值。按輸入／輸出範圍線性映射，範圍外線性外推。"
+    },
+    "归一化输入使用世界高度范围；浮点EXR保留原高度。关闭后手动指定输出范围。": {
+      "zh": "归一化输入使用世界高度范围；浮点EXR保留原高度。关闭后手动指定输出范围。",
+      "en": "Normalized input uses world height bounds; floating EXR preserves heights. Disable to set output bounds.",
+      "zh-Hant": "歸一化輸入使用世界高度範圍；浮點EXR保留原高度。關閉後手動指定輸出範圍。"
+    },
+    "输出范围（格）": {
+      "zh": "输出范围（格）",
+      "en": "Output range (blocks)",
+      "zh-Hant": "輸出範圍（格）"
+    },
+    "叠加模式下，负值降低地形。": {
+      "zh": "叠加模式下，负值降低地形。",
+      "en": "Negative additions lower terrain.",
+      "zh-Hant": "疊加模式下，負值降低地形。"
+    },
+    "高度图资产缺失；请重新选择": {
+      "zh": "高度图资产缺失；请重新选择",
+      "en": "Heightmap asset missing; select it again",
+      "zh-Hant": "高度圖資產缺失；請重新選擇"
+    },
+    "文件 {width}×{depth}，{dtype}；读入 {low}～{high}\n映射 {mapped_low}～{mapped_high} 格{clip}": {
+      "zh": "文件 {width}×{depth}，{dtype}；读入 {low}～{high}\n映射 {mapped_low}～{mapped_high} 格{clip}",
+      "en": "File {width}×{depth}, {dtype}; input {low}–{high}\nMapped {mapped_low}–{mapped_high} blocks{clip}",
+      "zh-Hant": "檔案 {width}×{depth}，{dtype}；讀入 {low}～{high}\n映射 {mapped_low}～{mapped_high} 格{clip}"
+    },
+    "高度图输入：{low}～{high} 格（{mode}）": {
+      "zh": "高度图输入：{low}～{high} 格（{mode}）",
+      "en": "Heightmap input: {low}–{high} blocks ({mode})",
+      "zh-Hant": "高度圖輸入：{low}～{high} 格（{mode}）"
+    },
+    "读取／映射／绘图 {seconds} 秒；导入 {imported} 秒": {
+      "zh": "读取／映射／绘图 {seconds} 秒；导入 {imported} 秒",
+      "en": "Read / map / image {seconds} s; import {imported} s",
+      "zh-Hant": "讀取／映射／繪圖 {seconds} 秒；匯入 {imported} 秒"
+    },
+    "；超出世界高度将裁切": {
+      "zh": "；超出世界高度将裁切",
+      "en": "; world height bounds will clip",
+      "zh-Hant": "；超出世界高度將裁切"
+    },
+    "绝对高度": {
+      "zh": "绝对高度",
+      "en": "absolute",
+      "zh-Hant": "絕對高度"
+    },
+    "增量": {
+      "zh": "增量",
+      "en": "delta",
+      "zh-Hant": "增量"
+    },
+    "留空区域": {
+      "zh": "留空区域",
+      "en": "Clear areas",
+      "zh-Hant": "留空區域"
+    },
+    "高度图": {
+      "zh": "高度图",
+      "en": "Heightmap",
+      "zh-Hant": "高度圖"
+    },
+    "选择遮罩": {
+      "zh": "选择遮罩",
+      "en": "Choose mask",
+      "zh-Hant": "選擇遮罩"
+    },
+    "PNG按位深归一化，EXR使用0～1原值；彩色输入取R通道。": {
+      "zh": "PNG按位深归一化，EXR使用0～1原值；彩色输入取R通道。",
+      "en": "PNG normalizes by bit depth; EXR uses values from 0 to 1. Colour inputs use red.",
+      "zh-Hant": "PNG按位深歸一化，EXR使用0～1原值；彩色輸入取R通道。"
+    },
+    "白色保持原有密度，黑色不生成，灰色减少植物。": {
+      "zh": "白色保持原有密度，黑色不生成，灰色减少植物。",
+      "en": "White keeps existing density; black removes plants; grey reduces density.",
+      "zh-Hant": "白色保持原有密度，黑色不生成，灰色減少植物。"
+    },
+    "白色区域不生成植物和零散景物，树冠也会避让。": {
+      "zh": "白色区域不生成植物和零散景物，树冠也会避让。",
+      "en": "White areas exclude plants and small scenery, including overhanging crowns.",
+      "zh-Hant": "白色區域不生成植物和零散景物，樹冠也會避讓。"
+    },
+    "遮罩就绪": {
+      "zh": "遮罩就绪",
+      "en": "Mask ready",
+      "zh-Hant": "遮罩就緒"
+    },
+    "切换编辑项，不改变启用状态。": {
+      "zh": "切换编辑项，不改变启用状态。",
+      "en": "Switch editors without changing enabled inputs.",
+      "zh-Hant": "切換編輯項，不改變啟用狀態。"
+    },
+    "地图绘图": {
+      "zh": "地图绘图",
+      "en": "Map painting",
+      "zh-Hant": "地圖繪圖"
+    },
+    "撤销": {
+      "zh": "撤销",
+      "en": "Undo",
+      "zh-Hant": "復原"
+    },
+    "重做": {
+      "zh": "重做",
+      "en": "Redo",
+      "zh-Hant": "重做"
+    },
+    "保存绘图": {
+      "zh": "保存绘图",
+      "en": "Save painting",
+      "zh-Hant": "儲存繪圖"
+    },
+    "导出图像": {
+      "zh": "导出图像",
+      "en": "Export image",
+      "zh-Hant": "匯出圖像"
+    },
+    "左键绘制当前图层。笔画结束后自动保存副本；不改写原图。留空遮罩只清理植物和景物。": {
+      "zh": "左键绘制当前图层。笔画结束后自动保存副本；不改写原图。留空遮罩只清理植物和景物。",
+      "en": "Left paints this layer. Completed strokes save a copy; original images stay intact. Clearance removes scenery only.",
+      "zh-Hant": "左鍵繪製當前圖層。筆畫結束後自動儲存副本；不改寫原圖。留空遮罩只清理植物和景物。"
+    },
+    "笔画已保存": {
+      "zh": "笔画已保存",
+      "en": "Stroke saved",
+      "zh-Hant": "筆畫已儲存"
+    },
+    "首笔新建零增量图，保留原地形。": {
+      "zh": "首笔新建零增量图，保留原地形。",
+      "en": "The first stroke creates a zero-delta image over the original terrain.",
+      "zh-Hant": "首筆新建零增量圖，保留原地形。"
+    },
+    "当前资源包不支持高度图": {
+      "zh": "当前资源包不支持高度图",
+      "en": "This pack does not support heightmaps",
+      "zh-Hant": "當前資源包不支持高度圖"
+    },
+    "目标高度／增量（格）": {
+      "zh": "目标高度／增量（格）",
+      "en": "Target height / delta (blocks)",
+      "zh-Hant": "目標高度／增量（格）"
+    },
+    "目标数值（0～1）": {
+      "zh": "目标数值（0～1）",
+      "en": "Target value (0–1)",
+      "zh-Hant": "目標數值（0～1）"
+    },
+    "图像已导出": {
+      "zh": "图像已导出",
+      "en": "Image exported",
+      "zh-Hant": "圖像已匯出"
+    },
+    "导出绘图": {
+      "zh": "导出绘图",
+      "en": "Export painting",
+      "zh-Hant": "匯出繪圖"
+    },
+    "绘图未保存：{error}": {
+      "zh": "绘图未保存：{error}",
+      "en": "Painting not saved: {error}",
+      "zh-Hant": "繪圖未儲存：{error}"
+    },
+    "绘图显示失败：{error}": {
+      "zh": "绘图显示失败：{error}",
+      "en": "Paint display failed: {error}",
+      "zh-Hant": "繪圖顯示失敗：{error}"
+    },
+    "另存": {
+      "zh": "另存",
+      "en": "Save as",
+      "zh-Hant": "另存"
+    },
+    "预设名称": {
+      "zh": "预设名称",
+      "en": "Preset name",
+      "zh-Hant": "預設名稱"
+    },
+    "全部范围": {
+      "zh": "全部范围",
+      "en": "All scopes",
+      "zh-Hant": "全部範圍"
+    },
+    "整套": {
+      "zh": "整套",
+      "en": "Whole",
+      "zh-Hant": "整套"
+    },
+    "确认": {
+      "zh": "确认",
+      "en": "Confirm",
+      "zh-Hant": "確認"
+    },
+    "保存规则差异和当前参数；群系、地表、方块、植被由所有预设共享。原资源包不被覆盖，同 ID 用户资源包与预设会更新。": {
+      "zh": "保存规则差异和当前参数；群系、地表、方块、植被由所有预设共享。原资源包不被覆盖，同 ID 用户资源包与预设会更新。",
+      "en": "Save content differences and parameters. All presets share biomes, surfaces, blocks and vegetation. The source pack is preserved; matching user pack and preset IDs are updated.",
+      "zh-Hant": "儲存規則差異和當前參數；群系、地表、方塊、植被由所有預設共享。原資源包不被覆蓋，同 ID 用戶資源包與預設會更新。"
+    },
+    "确认保存": {
+      "zh": "确认保存",
+      "en": "Confirm save",
+      "zh-Hant": "確認儲存"
+    },
+    "用户｜": {
+      "zh": "用户｜",
+      "en": "User | ",
+      "zh-Hant": "用戶｜"
+    },
+    "恢复本板块默认值": {
+      "zh": "恢复本板块默认值",
+      "en": "Reset section defaults",
+      "zh-Hant": "恢復本板塊預設值"
+    },
+    "另存本板块预设": {
+      "zh": "另存本板块预设",
+      "en": "Save section preset as",
+      "zh-Hant": "另存本板塊預設"
+    },
+    "参数预设已保存；规则草稿保留。": {
+      "zh": "参数预设已保存；规则草稿保留。",
+      "en": "Parameter preset saved; content drafts retained.",
+      "zh-Hant": "參數預設已儲存；規則草稿保留。"
+    },
+    "搜索预设": {
+      "zh": "搜索预设",
+      "en": "Search presets",
+      "zh-Hant": "搜尋預設"
+    },
+    "高级功能": {
+      "zh": "高级功能",
+      "en": "Advanced functions",
+      "zh-Hant": "高級功能"
+    },
+    "我的世界": {
+      "zh": "我的世界",
+      "en": "My world",
+      "zh-Hant": "我的世界"
+    },
+    "用户默认": {
+      "zh": "用户默认",
+      "en": "User default",
+      "zh-Hant": "用戶預設"
+    },
+    "更新现有用户资源包：{path}": {
+      "zh": "更新现有用户资源包：{path}",
+      "en": "Update user pack: {path}",
+      "zh-Hant": "更新現有用戶資源包：{path}"
+    },
+    "新建继承资源包：{path}": {
+      "zh": "新建继承资源包：{path}",
+      "en": "Create derived pack: {path}",
+      "zh-Hant": "新建繼承資源包：{path}"
+    },
+    "用户资源包已保存；请重新准备资源。": {
+      "zh": "用户资源包已保存；请重新准备资源。",
+      "en": "User pack saved. Prepare resources again.",
+      "zh-Hant": "用戶資源包已儲存；請重新準備資源。"
+    },
+    " · 来源已更新": {
+      "zh": " · 来源已更新",
+      "en": " · Source updated",
+      "zh-Hant": " · 來源已更新"
+    },
+    " · 来源已删除或不可用": {
+      "zh": " · 来源已删除或不可用",
+      "en": " · Source deleted or unavailable",
+      "zh-Hant": " · 來源已刪除或不可用"
+    },
+    " · 已调整": {
+      "zh": " · 已调整",
+      "en": " · Adjusted",
+      "zh-Hant": " · 已調整"
+    },
+    "显示全部条目（含不兼容）及管理操作": {
+      "zh": "显示全部条目（含不兼容）及管理操作",
+      "en": "Show all entries (including incompatible) and management actions",
+      "zh-Hant": "顯示全部條目（含不相容）及管理操作",
+      "zh-Hant-HK": "顯示全部條目（含不兼容）及管理操作"
+    },
+    "没有匹配的预设": {
+      "zh": "没有匹配的预设",
+      "en": "No matching presets",
+      "zh-Hant": "沒有匹配的預設"
+    },
+    "更新预设": {
+      "zh": "更新预设",
+      "en": "Update preset",
+      "zh-Hant": "更新預設"
+    },
+    "删除预设": {
+      "zh": "删除预设",
+      "en": "Delete preset",
+      "zh-Hant": "刪除預設"
+    },
+    "覆盖文件": {
+      "zh": "覆盖文件",
+      "en": "Overwrite file",
+      "zh-Hant": "覆蓋檔案"
+    },
+    "确认此操作？": {
+      "zh": "确认此操作？",
+      "en": "Confirm this operation?",
+      "zh-Hant": "確認此操作？"
+    },
+    "资源包预设只读": {
+      "zh": "资源包预设只读",
+      "en": "Resource pack presets are read-only",
+      "zh-Hant": "資源包預設只讀"
+    },
+    "没有有效预设": {
+      "zh": "没有有效预设",
+      "en": "No valid preset",
+      "zh-Hant": "沒有有效預設"
+    },
+    "导出预设": {
+      "zh": "导出预设",
+      "en": "Export preset",
+      "zh-Hant": "匯出預設"
+    },
+    "导入预设": {
+      "zh": "导入预设",
+      "en": "Import preset",
+      "zh-Hant": "匯入預設"
+    },
+    " · 不兼容": {
+      "zh": " · 不兼容",
+      "en": " · Incompatible",
+      "zh-Hant": " · 不相容",
+      "zh-Hant-HK": " · 不兼容"
+    },
+    "\n预览范围已变化，请刷新后框选": {
+      "zh": "\n预览范围已变化，请刷新后框选",
+      "en": "\nBounds changed: refresh the preview before selecting",
+      "zh-Hant": "\n預覽範圍已變化，請刷新後框選"
+    },
+    "左键绘图 · 中键平移 · 右键LOD · 滚轮缩放": {
+      "zh": "左键绘图 · 中键平移 · 右键LOD · 滚轮缩放",
+      "en": "Left: paint · Middle: pan · Right: LOD · Wheel: zoom",
+      "zh-Hant": "左鍵繪圖 · 中鍵平移 · 右鍵LOD · 滾輪縮放"
+    },
+    "左键绘图 · 中键平移 · 滚轮缩放": {
+      "zh": "左键绘图 · 中键平移 · 滚轮缩放",
+      "en": "Left: paint · Middle: pan · Wheel: zoom",
+      "zh-Hant": "左鍵繪圖 · 中鍵平移 · 滾輪縮放"
+    },
+    "左键留空 · 中键平移 · 右键LOD": {
+      "zh": "左键留空 · 中键平移 · 右键LOD",
+      "en": "Left: empty LOD · Middle: pan · Right: LOD",
+      "zh-Hant": "左鍵留空 · 中鍵平移 · 右鍵LOD"
+    },
+    "中键平移 · 滚轮缩放": {
+      "zh": "中键平移 · 滚轮缩放",
+      "en": "Middle: pan · Wheel: zoom",
+      "zh-Hant": "中鍵平移 · 滾輪縮放"
+    },
+    "\n{mode} ({x0}, {z0}) → ({x1}, {z1}) · {width} × {depth}": {
+      "zh": "\n{mode} ({x0}, {z0}) → ({x1}, {z1}) · {width} × {depth}",
+      "en": "\n{mode} ({x0}, {z0}) → ({x1}, {z1}) · {width} × {depth}",
+      "zh-Hant": "\n{mode} ({x0}, {z0}) → ({x1}, {z1}) · {width} × {depth}"
+    },
+    "LOD留空": {
+      "zh": "LOD留空",
+      "en": "Empty LOD",
+      "zh-Hant": "LOD留空"
+    },
+    "请在与当前范围一致的俯视预览中框选": {
+      "zh": "请在与当前范围一致的俯视预览中框选",
+      "en": "Select on a map preview matching the current bounds",
+      "zh-Hant": "請在與當前範圍一致的俯視預覽中框選"
+    },
+    "台繁名称": {
+      "zh": "台繁名称",
+      "en": "Taiwan Traditional name",
+      "zh-Hant": "臺繁名稱"
+    },
+    "港繁差异": {
+      "zh": "港繁差异",
+      "en": "Hong Kong override",
+      "zh-Hant": "港繁差異"
+    },
+    "遮罩预览 {seconds} 秒": {
+      "zh": "遮罩预览 {seconds} 秒",
+      "en": "Mask preview {seconds} s",
+      "zh-Hant": "遮罩預覽 {seconds} 秒"
+    },
+    "mod_info.Description": {
+      "zh": "资源包驱动的MC世界生成、预览与场景放置",
+      "en": "Pack-driven Minecraft world generation, preview and placement",
+      "zh-Hant": "資源包驅動的MC世界生成、預覽與場景放置"
+    },
+    "位置 ({x}, {z}) · 数值 {value}": {
+      "zh": "位置 ({x}, {z}) · 数值 {value}",
+      "en": "Position ({x}, {z}) · value {value}",
+      "zh-Hant": "位置 ({x}, {z}) · 數值 {value}"
+    },
+    "HeightmapTexture.category.HeightmapTexture": {
+      "_native": "en",
+      "en": "Input texture",
+      "zh": "输入纹理",
+      "zh-Hant": "輸入紋理"
+    },
+    "MapPaintTools.category.MapPaintTools": {
+      "_native": "en",
+      "en": "Paint tools",
+      "zh": "绘图工具",
+      "zh-Hant": "繪圖工具"
+    },
+    "MaskOptions.category.MaskOptions": {
+      "_native": "en",
+      "en": "Distribution mask",
+      "zh": "分布遮罩",
+      "zh-Hant": "分布遮罩"
+    },
+    "LandscapeView.category.LandscapeView": {
+      "_native": "en",
+      "en": "Landscape preview",
+      "zh": "景观预览",
+      "zh-Hant": "景觀預覽"
+    },
+    "CaveSlice.category.CaveSlice": {
+      "_native": "en",
+      "en": "Section preview",
+      "zh": "剖面预览",
+      "zh-Hant": "剖面預覽"
+    },
+    "读取自定义高度图": {
+      "zh": "读取自定义高度图",
+      "en": "Reading custom heightmap",
+      "zh-Hant": "讀取自訂高度圖"
+    },
+    "规划与初始化": {
+      "zh": "规划与初始化",
+      "en": "Planning and initialization",
+      "zh-Hant": "規劃與初始化"
+    },
+    "计算参考地形": {
+      "zh": "计算参考地形",
+      "en": "Reference terrain",
+      "zh-Hant": "計算參考地形"
+    },
+    "绘制参考预览": {
+      "zh": "绘制参考预览",
+      "en": "Drawing reference preview",
+      "zh-Hant": "繪製參考預覽"
+    },
+    "生成地形": {
+      "zh": "生成地形",
+      "en": "Generating terrain",
+      "zh-Hant": "生成地形"
+    },
+    "组装结果与模型索引": {
+      "zh": "组装结果与模型索引",
+      "en": "Assembling results and model index",
+      "zh-Hant": "組裝結果與模型索引"
+    },
+    "生成附加景物": {
+      "zh": "生成附加景物",
+      "en": "Additional features",
+      "zh-Hant": "生成附加景物"
+    },
+    "处理积雪与表面": {
+      "zh": "处理积雪与表面",
+      "en": "Surface processing",
+      "zh-Hant": "處理積雪與表面"
+    },
+    "检查生成结果": {
+      "zh": "检查生成结果",
+      "en": "Checking results",
+      "zh-Hant": "檢查生成結果"
+    },
+    "完成纹理构建": {
+      "zh": "完成纹理构建",
+      "en": "Completing textures",
+      "zh-Hant": "完成紋理構建"
+    },
+    "检查场景组合": {
+      "zh": "检查场景组合",
+      "en": "Checking scene composition",
+      "zh-Hant": "檢查場景組合"
+    },
+    "复用已有结果": {
+      "zh": "复用已有结果",
+      "en": "Reusing world result",
+      "zh-Hant": "重複使用已有結果"
+    },
+    "写入预览图": {
+      "zh": "写入预览图",
+      "en": "Writing preview images",
+      "zh-Hant": "寫入預覽圖"
+    },
+    "更新洞穴剖面": {
+      "zh": "更新洞穴剖面",
+      "en": "Updating cave sections",
+      "zh-Hant": "更新洞穴剖面"
+    },
+    "准备放置": {
+      "zh": "准备放置",
+      "en": "Preparing placement",
+      "zh-Hant": "準備放置"
+    },
+    "放置中（一次提交）": {
+      "zh": "放置中（一次提交）",
+      "en": "Committing Actors",
+      "zh-Hant": "放置中（一次提交）"
+    },
+    "参考概览": {
+      "zh": "参考概览",
+      "en": "Reference overview",
+      "zh-Hant": "參考概覽"
+    },
+    "复用准备基底": {
+      "zh": "复用准备基底",
+      "en": "Reusing prepared geometry",
+      "zh-Hant": "重複使用準備基底"
+    },
+    "合并可见方块": {
+      "zh": "合并可见方块",
+      "en": "Merging visible cells",
+      "zh-Hant": "合併可見方塊"
+    },
+    "准备群系颜色纹理": {
+      "zh": "准备群系颜色纹理",
+      "en": "Biome colour texture",
+      "zh-Hant": "準備群系顏色紋理"
+    },
+    "准备模型 {name}": {
+      "zh": "准备模型 {name}",
+      "en": "Preparing model: {name}",
+      "zh-Hant": "準備模型 {name}"
+    },
+    "准备结构纹理": {
+      "zh": "准备结构纹理",
+      "en": "Structure textures",
+      "zh-Hant": "準備結構紋理"
+    },
+    "生成群系颜色": {
+      "zh": "生成群系颜色",
+      "en": "Generating biome colours",
+      "zh-Hant": "生成群系顏色"
+    },
+    "导入群系纹理": {
+      "zh": "导入群系纹理",
+      "en": "Importing biome texture",
+      "zh-Hant": "匯入群系紋理"
+    },
+    "准备整树模型 {name}": {
+      "zh": "准备整树模型 {name}",
+      "en": "Preparing template: {name}",
+      "zh-Hant": "準備整樹模型 {name}"
+    },
+    "导入结构纹理": {
+      "zh": "导入结构纹理",
+      "en": "Import textures",
+      "zh-Hant": "匯入結構紋理"
+    },
+    "生成地形 {done}/{total}": {
+      "zh": "生成地形 {done}/{total}",
+      "en": "Generating tiles {done}/{total}",
+      "zh-Hant": "生成地形 {done}/{total}"
+    },
+    "参考概览 {done}/{total}": {
+      "zh": "参考概览 {done}/{total}",
+      "en": "Overview tiles {done}/{total}",
+      "zh-Hant": "參考概覽 {done}/{total}"
+    },
+    "section_reset": {
+      "zh": "恢复",
+      "en": "Reset",
+      "zh-Hant": "恢復"
+    },
+    "纹理仍未就绪：{path}": {
+      "zh": "纹理仍未就绪：{path}",
+      "en": "Texture still not ready: {path}",
+      "zh-Hant": "紋理仍未就緒：{path}"
+    },
+    "资源包 ID": {
+      "zh": "资源包 ID",
+      "en": "Pack ID",
+      "zh-Hant": "資源包 ID"
+    },
+    "资源包名称": {
+      "zh": "资源包名称",
+      "en": "Pack Name",
+      "zh-Hant": "資源包名稱"
+    },
+    "预设 ID": {
+      "zh": "预设 ID",
+      "en": "Preset ID",
+      "zh-Hant": "預設 ID"
+    },
+    "预设显示名": {
+      "zh": "预设显示名",
+      "en": "Preset name",
+      "zh-Hant": "預設顯示名"
+    },
+    "加载": {
+      "zh": "加载",
+      "en": "Load",
+      "zh-Hant": "載入"
+    },
+    "更新": {
+      "zh": "更新",
+      "en": "Update",
+      "zh-Hant": "更新"
+    },
+    "重命名": {
+      "zh": "重命名",
+      "en": "Rename",
+      "zh-Hant": "重命名"
+    },
+    "导入JSON": {
+      "zh": "导入JSON",
+      "en": "Import JSON",
+      "zh-Hant": "匯入JSON"
+    },
+    "导出JSON": {
+      "zh": "导出JSON",
+      "en": "Export JSON",
+      "zh-Hant": "匯出JSON"
+    },
+    "选择群系图": {
+      "zh": "选择群系图",
+      "en": "Choose biome map",
+      "zh-Hant": "選擇群系圖"
+    },
+    "查看群系": {
+      "zh": "查看群系",
+      "en": "Preview biomes",
+      "zh-Hant": "查看群系"
+    },
+    "8位PNG按原色匹配；透明、未匹配颜色及图片外区域沿用原群系。高度和水系保持原规则。": {
+      "zh": "8位PNG按原色匹配；透明、未匹配颜色及图片外区域沿用原群系。高度和水系保持原规则。",
+      "en": "8-bit PNG uses exact colours. Transparent, unmatched and outside pixels keep the original biome. Height and water retain their rules.",
+      "zh-Hant": "8位PNG按原色匹配；透明、未匹配顏色及圖片外區域沿用原群系。高度和水系保持原規則。"
+    },
+    "色板JSON留空时使用下列默认颜色；自定义示例：{\"#ff0000\":\"forest\"}。": {
+      "zh": "色板JSON留空时使用下列默认颜色；自定义示例：{\"#ff0000\":\"forest\"}。",
+      "en": "Leave palette JSON empty for the colours below; custom example: {\"#ff0000\":\"forest\"}.",
+      "zh-Hant": "色盤JSON留空時使用下列預設顏色；自訂範例：{\"#ff0000\":\"forest\"}。",
+      "zh-Hant-HK": "色板JSON留空時使用下列預設顏色；自訂範例：{\"#ff0000\":\"forest\"}。"
+    },
+    "群系图支持主世界及其派生资源包。": {
+      "zh": "群系图支持主世界及其派生资源包。",
+      "en": "Biome maps support the Overworld and derived packs.",
+      "zh-Hant": "群系圖支援主世界及其派生資源包。"
+    },
+    "BiomeMapOptions.Enabled": {
+      "en": "Enabled",
+      "_native": "en",
+      "zh": "启用",
+      "zh-Hant": "啟用"
+    },
+    "BiomeMapOptions.category.BiomeMapOptions": {
+      "en": "Biome map",
+      "_native": "en",
+      "zh": "群系图",
+      "zh-Hant": "群系圖"
+    },
+    "BiomeMapOptions.Path": {
+      "en": "Path",
+      "_native": "en",
+      "zh": "图像路径",
+      "zh-Hant": "圖像路徑"
+    },
+    "BiomeMapOptions.Palette": {
+      "en": "Palette",
+      "_native": "en",
+      "zh": "色板 JSON",
+      "zh-Hant": "色盤 JSON",
+      "zh-Hant-HK": "色板 JSON"
+    },
+    "BiomeMapOptions.Origin": {
+      "en": "Origin",
+      "_native": "en",
+      "zh": "图像原点",
+      "zh-Hant": "圖像原點"
+    },
+    "BiomeMapOptions.Size": {
+      "en": "Size",
+      "_native": "en",
+      "zh": "映射尺寸",
+      "zh-Hant": "映射尺寸"
+    },
+    "群系分布图": {
+      "zh": "群系分布图",
+      "en": "Biome distribution map",
+      "zh-Hant": "群系分布圖"
+    },
+    "PCG（GPU）": {
+      "zh": "PCG（GPU）",
+      "en": "PCG (GPU)",
+      "zh-Hant": "PCG（GPU）"
+    },
+    "PNG标记色通过下表指定群系；容差按每个RGB通道计算，0为精确匹配。透明、未匹配及图外区域沿用原群系。": {
+      "zh": "PNG标记色通过下表指定群系；容差按每个RGB通道计算，0为精确匹配。透明、未匹配及图外区域沿用原群系。",
+      "en": "Assign PNG marker colours below. Tolerance applies to each RGB channel; 0 matches exactly. Transparent, unmatched and outside pixels keep the original biome.",
+      "zh-Hant": "PNG標記色透過下表指定群系；容差按每個RGB通道計算，0為精確匹配。透明、未匹配及圖外區域沿用原群系。"
+    },
+    "标记色独立于地图显示色。容差只修复小色差，不还原混色；高度和水系保持原规则。": {
+      "zh": "标记色独立于地图显示色。容差只修复小色差，不还原混色；高度和水系保持原规则。",
+      "en": "Marker colours are independent of map display colours. Tolerance handles small colour differences, not blended categories. Height and water retain their rules.",
+      "zh-Hant": "標記色獨立於地圖顯示色。容差只修復小色差，不還原混色；高度和水系保持原規則。"
+    },
+    "恢复默认色板": {
+      "zh": "恢复默认色板",
+      "en": "Reset marker palette",
+      "zh-Hant": "還原預設色盤",
+      "zh-Hant-HK": "還原預設色板"
+    },
+    "添加": {
+      "zh": "添加",
+      "en": "Add",
+      "zh-Hant": "新增"
+    },
+    "这个标记色已存在，请选择其他颜色。": {
+      "zh": "这个标记色已存在，请选择其他颜色。",
+      "en": "This marker colour already exists. Choose another colour.",
+      "zh-Hant": "這個標記色已存在，請選擇其他顏色。"
+    },
+    "输入像素：已匹配 {matched}，未匹配 {unmatched}，透明 {transparent}": {
+      "zh": "输入像素：已匹配 {matched}，未匹配 {unmatched}，透明 {transparent}",
+      "en": "Input pixels: matched {matched}, unmatched {unmatched}, transparent {transparent}",
+      "zh-Hant": "輸入像素：已匹配 {matched}，未匹配 {unmatched}，透明 {transparent}"
+    },
+    "BiomeMapOptions.Tolerance": {
+      "en": "Colour tolerance",
+      "_native": "en",
+      "zh": "颜色容差",
+      "zh-Hant": "顏色容差"
+    },
+    "BiomeMapColor.Color": {
+      "en": "Marker colour",
+      "_native": "en",
+      "zh": "标记色",
+      "zh-Hant": "標記色"
+    },
+    "BiomeMapColor.category.BiomeMapColor": {
+      "en": "Biome marker",
+      "_native": "en",
+      "zh": "群系标记色",
+      "zh-Hant": "群系標記色"
+    },
+    "自动群系（擦除）": {
+      "zh": "自动群系（擦除）",
+      "en": "Automatic biome (erase)",
+      "zh-Hant": "自動群系（擦除）"
+    },
+    "左键绘制所选群系；选择“自动群系”可擦除。笔画结束后保存PNG副本，不改写导入的原图。": {
+      "zh": "左键绘制所选群系；选择“自动群系”可擦除。笔画结束后保存PNG副本，不改写导入的原图。",
+      "en": "Left paints the selected biome. Choose Automatic biome to erase. Completed strokes save a PNG copy and leave imported originals intact.",
+      "zh-Hant": "左鍵繪製所選群系；選擇「自動群系」可擦除。筆畫結束後儲存PNG副本，不改寫匯入的原圖。"
+    },
+    "当前资源包不支持此绘图项": {
+      "zh": "当前资源包不支持此绘图项",
+      "en": "This pack does not support this paint input",
+      "zh-Hant": "目前資源包不支援此繪圖項目"
+    },
+    "首笔新建透明群系图；未绘制区域沿用自动选择。": {
+      "zh": "首笔新建透明群系图；未绘制区域沿用自动选择。",
+      "en": "The first stroke creates a transparent biome map. Unpainted areas keep automatic selection.",
+      "zh-Hant": "首筆新建透明群系圖；未繪製區域沿用自動選擇。"
+    },
+    "自动群系": {
+      "zh": "自动群系",
+      "en": "Automatic biome",
+      "zh-Hant": "自動群系"
+    },
+    "位置 ({x}, {z}) · 群系 {name}": {
+      "zh": "位置 ({x}, {z}) · 群系 {name}",
+      "en": "Position ({x}, {z}) · biome {name}",
+      "zh-Hant": "位置 ({x}, {z}) · 群系 {name}"
+    }
+  }
+}

@@ -1,10 +1,11 @@
 """Heightmap editor controls and source-owned preview flow."""
 from pathlib import Path
 import mineprep
+from mineprep import i18n
 import unreal
 from . import ops
 from .core.data import Region
-from .editor import click, tr
+from .editor import click
 from .props import operation_values
 
 
@@ -24,7 +25,7 @@ class HeightmapPanel:
     def _heightmap_editor(self, parent):
         from .core.heightmap import supported
         if not supported(self.pack):
-            parent.text(tr('当前资源包未保留vanilla高度链，不能接入高度图。',
+            parent.text(i18n('当前资源包未保留vanilla高度链，不能接入高度图。',
                            'This pack does not retain the vanilla height chain.'), size=11, wrap=True)
             return
         c = self.custom_options
@@ -32,41 +33,41 @@ class HeightmapPanel:
             self._native_changed('custom', c, self._on_custom_changed, name)
         parent.prop(c, 'Enabled', on_property_changed=changed)
         row = parent.row()
-        row.button(tr('选择高度图', 'Choose heightmap'), size=11,
+        row.button(i18n('选择高度图', 'Choose heightmap'), size=11,
                    on_clicked=click(self._heightmap_pick))
-        row.button(tr('清除', 'Clear'), size=11, on_clicked=click(self._heightmap_clear))
+        row.button(i18n('清除', 'Clear'), size=11, on_clicked=click(self._heightmap_clear))
         parent.prop(self._heightmap_texture, 'Texture', on_property_changed=self._heightmap_texture_changed,
-            tooltip=tr('彩色输入取R通道。PNG按位深归一化，EXR保留格数。',
+            tooltip=i18n('彩色输入取R通道。PNG按位深归一化，EXR保留格数。',
                        'Colour inputs use red. PNG normalizes by bit depth; EXR keeps block values.'))
-        self._heightmap_mode_combo = parent.combo({'faithful': tr('直接使用高度图', 'Use heightmap directly'),
-                      'add': tr('叠加到主地形', 'Add to terrain')}, selected=self.custom_options.Mode,
+        self._heightmap_mode_combo = parent.combo({'faithful': i18n('直接使用高度图', 'Use heightmap directly'),
+                      'add': i18n('叠加到主地形', 'Add to terrain')}, selected=self.custom_options.Mode,
                      on_selection_changed=self._heightmap_mode)
         for name in ('Origin', 'Size'):
             parent.prop(c, name, on_property_changed=changed,
-                tooltip=tr('图片覆盖范围固定，改变世界范围不会拉伸图片。',
+                tooltip=i18n('图片覆盖范围固定，改变世界范围不会拉伸图片。',
                            'Image mapping stays fixed when the world region changes.'))
         row = parent.row()
-        row.button(tr('使用当前世界范围', 'Use current world region'), size=11,
+        row.button(i18n('使用当前世界范围', 'Use current world region'), size=11,
                    on_clicked=click(self._heightmap_rebind))
-        row.button(tr('查看图像', 'Preview image'), size=11,
+        row.button(i18n('查看图像', 'Preview image'), size=11,
                    on_clicked=click(lambda: self._on_view('heightmap', 'selected')))
         opened = self._folds.get('custom_mapping', False)
-        parent.button(('▼ ' if opened else '▶ ') + str(tr('数值映射', 'Value mapping')), size=11,
+        parent.button(('▼ ' if opened else '▶ ') + str(i18n('数值映射', 'Value mapping')), size=11,
                       on_clicked=click(self._toggle_custom_mapping))
         if opened:
             mapping = parent.col()
             mapping.prop(c, 'InputRange', on_property_changed=changed,
-                tooltip=tr('PNG归一化到0～1；EXR保留原值。按输入／输出范围线性映射，范围外线性外推。',
+                tooltip=i18n('PNG归一化到0～1；EXR保留原值。按输入／输出范围线性映射，范围外线性外推。',
                            'PNG normalizes to 0–1; EXR keeps raw values. Mapping is linear and extrapolates.'))
-            self._heightmap_auto_check = mapping.checkbox(tr('自动输出范围', 'Automatic output range'), size=11,
+            self._heightmap_auto_check = mapping.checkbox(i18n('自动输出范围', 'Automatic output range'), size=11,
                 on_check_state_changed=self._heightmap_auto_output,
-                tooltip=tr('归一化输入使用世界高度范围；浮点EXR保留原高度。关闭后手动指定输出范围。',
+                tooltip=i18n('归一化输入使用世界高度范围；浮点EXR保留原高度。关闭后手动指定输出范围。',
                            'Normalized input uses world height bounds; floating EXR preserves heights. Disable to set output bounds.'))
-            self._heightmap_output = mapping.prop(c, 'OutputRange', text=tr('输出范围（格）', 'Output range (blocks)'),
-                on_property_changed=changed, tooltip=tr('叠加模式下，负值降低地形。', 'Negative additions lower terrain.'))
+            self._heightmap_output = mapping.prop(c, 'OutputRange', text=i18n('输出范围（格）', 'Output range (blocks)'),
+                on_property_changed=changed, tooltip=i18n('叠加模式下，负值降低地形。', 'Negative additions lower terrain.'))
         self._heightmap_info = parent.text('', size=10, wrap=True)
         self._refresh_heightmap_editor()
-        parent.text(tr('「直接使用高度图」按图中高度生成地形；「叠加到主地形」在原地形上增减高度。',
+        parent.text(i18n('「直接使用高度图」按图中高度生成地形；「叠加到主地形」在原地形上增减高度。',
                        '“Use heightmap directly” applies image heights; “Add to terrain” offsets the base terrain.'), size=10, wrap=True)
 
     def _heightmap_auto_output(self, checked):
@@ -100,12 +101,12 @@ class HeightmapPanel:
                     self._last_native[id(self.custom_options)] = operation_values(self.custom_options)
                 finally:
                     self._suspend = previous
-            info_text.set_text(tr('文件 {width}×{depth}，{dtype}；读入 {low}～{high}\n映射 {mapped_low}～{mapped_high} 格{clip}',
+            info_text.set_text(i18n('文件 {width}×{depth}，{dtype}；读入 {low}～{high}\n映射 {mapped_low}～{mapped_high} 格{clip}',
                            'File {width}×{depth}, {dtype}; input {low}–{high}\nMapped {mapped_low}–{mapped_high} blocks{clip}').format(
                 width=info['width'], depth=info['depth'], dtype=info['dtype'],
                 low=f"{info['input_min']:.3f}", high=f"{info['input_max']:.3f}",
                 mapped_low=f"{info['mapped_min']:.3f}", mapped_high=f"{info['mapped_max']:.3f}",
-                clip=tr('；超出世界高度将裁切', '; world height bounds will clip') if info['clipped'] else ''))
+                clip=i18n('；超出世界高度将裁切', '; world height bounds will clip') if info['clipped'] else ''))
 
     def _heightmap_rebind(self):
         c, r = self.custom_options, self.range_options
@@ -118,6 +119,7 @@ class HeightmapPanel:
                                        filetypes=[('Heightmap', '*.png *.exr')])
         if not path:
             return
+        self._discard_paint('heightmap')
         self._heightmap_source.clear()
         self._set_heightmap_texture(None)
         self.custom_options.SourceKind, self.custom_options.AssetPath = 'file', ''
@@ -143,7 +145,7 @@ class HeightmapPanel:
         self._set_heightmap_texture(texture)
         if c.SourceKind == 'asset' and texture is None:
             if c.Enabled:
-                self._errors['heightmap'] = str(tr('高度图资产缺失；请重新选择', 'Heightmap asset missing; select it again'))
+                self._errors['heightmap'] = str(i18n('高度图资产缺失；请重新选择', 'Heightmap asset missing; select it again'))
 
     def _heightmap_texture_changed(self, _name=None):
         if self._suspend or self._closed:
@@ -154,6 +156,7 @@ class HeightmapPanel:
         if texture is None:
             self._heightmap_clear()
             return
+        self._discard_paint('heightmap')
         self._heightmap_source.clear()
         c = self.custom_options
         c.SourceKind, c.AssetPath, c.Path, c.Enabled = 'asset', texture.get_path_name(), '', True
@@ -192,7 +195,7 @@ class HeightmapPanel:
             return False
         self._on_custom_changed()
         self._schedule.cancel()  # Import notifications never schedule a world overview.
-        self._errors['heightmap'] = str(tr('高度图来源已变化，正在刷新', 'Heightmap source changed; refreshing'))
+        self._errors['heightmap'] = str(i18n('高度图来源已变化，正在刷新', 'Heightmap source changed; refreshing'))
         self._on_view('heightmap')
         return True
 
@@ -202,6 +205,7 @@ class HeightmapPanel:
             self.preview_heightmap()
 
     def _heightmap_clear(self):
+        self._discard_paint('heightmap')
         source = getattr(self, '_heightmap_source', None)
         if source is not None:
             source.clear()
@@ -226,7 +230,6 @@ class HeightmapPanel:
         # input immediately. Source selection/refresh (no name) discards it.
         result = self._heightmap_result if name is not None else None
         self._heightmap_result = None
-        self._textures.pop('heightmap', None)
         self._overview_textures.pop('heightmap', None)
         self._view_failures.clear()
         self._last_native[id(self.custom_options)] = operation_values(self.custom_options)
@@ -237,7 +240,7 @@ class HeightmapPanel:
         if self._closed or not self._sync_heightmap_source(force=force) or self._busy():
             return
         if not self.custom_options.Path or not (self.custom_options.Enabled or force):
-            self._set_status(tr('请选择并启用高度图', 'Choose and enable a heightmap'))
+            self._set_status(i18n('请选择并启用高度图', 'Choose and enable a heightmap'))
             return
         self._errors.pop('heightmap', None)
         spec = self._custom_spec(self.spec(), force=force)
@@ -263,8 +266,8 @@ class HeightmapPanel:
                 return
             if job.state != 'completed':
                 self._view_failures.add(('heightmap', self.spec().key))
-                self._errors['heightmap'] = str(job.error or tr('已取消', 'Cancelled'))
-                self._set_status(job.error or tr('已取消', 'Cancelled'))
+                self._errors['heightmap'] = str(job.error or i18n('已取消', 'Cancelled'))
+                self._set_status(job.error or i18n('已取消', 'Cancelled'))
                 self._on_view('heightmap')
                 return
             result = job.result
@@ -278,17 +281,17 @@ class HeightmapPanel:
             job.check_source()
             self._heightmap_result = result
             self._textures.update(textures)
-            self._legend_text.set_text(tr('高度图输入：{low}～{high} 格（{mode}）',
+            self._legend_text.set_text(i18n('高度图输入：{low}～{high} 格（{mode}）',
                                          'Heightmap input: {low}–{high} blocks ({mode})').format(
                 low=f"{result.info['mapped_min']:.3f}", high=f"{result.info['mapped_max']:.3f}",
-                mode=tr('绝对高度', 'absolute') if result.spec.heightmap.mode == 'faithful' else tr('增量', 'delta')))
-            self._stats_text.set_text(tr('读取／映射／绘图 {seconds} 秒；导入 {imported} 秒',
+                mode=i18n('绝对高度', 'absolute') if result.spec.heightmap.mode == 'faithful' else i18n('增量', 'delta')))
+            self._stats_text.set_text(i18n('读取／映射／绘图 {seconds} 秒；导入 {imported} 秒',
                                         'Read / map / image {seconds} s; import {imported} s').format(
                 seconds=f'{result.seconds:.3f}', imported=f'{imported:.3f}'))
             self._refresh_heightmap_editor()
             self._on_view('heightmap' if select_input else self.view)
             self._schedule.cancel()
-            self._set_status(tr('高度图就绪', 'Heightmap ready'))
+            self._set_status(i18n('高度图就绪', 'Heightmap ready'))
         except Exception as exc:
             self._textures.pop('heightmap', None)
             self._heightmap_result = None

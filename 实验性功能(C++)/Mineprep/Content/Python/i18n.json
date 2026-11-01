@@ -1,0 +1,179 @@
+{
+  "Core": {
+    "menu.render": {
+      "zh": "渲染",
+      "en": "Render",
+      "zh-Hant": "渲染"
+    },
+    "menu.debug": {
+      "zh": "调试与开发",
+      "en": "Debug & Dev",
+      "zh-Hant": "除錯與開發",
+      "zh-Hant-HK": "調試與開發"
+    },
+    "menu.modules": {
+      "zh": "核心模块",
+      "en": "Core Modules",
+      "zh-Hant": "核心模組"
+    },
+    "menu.mods": {
+      "zh": "模组",
+      "en": "Mods",
+      "zh-Hant": "模組"
+    },
+    "help.overview": {
+      "zh": "查看输出日志或前往https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API获取更多信息",
+      "en": "Check Output Log or go to https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API for more information",
+      "zh-Hant": "查看輸出記錄或前往https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API取得更多資訊",
+      "zh-Hant-HK": "查看輸出日誌或前往https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API取得更多資訊"
+    },
+    "help.panels": {
+      "zh": "【mineprep.panel() 可用的对象->类别】",
+      "en": "Available objects -> classes for mineprep.panel()",
+      "zh-Hant": "【mineprep.panel() 可用的物件->類別】"
+    },
+    "help.hotkeys": {
+      "zh": "【mineprep.hotkey() 全部快捷键】",
+      "en": "All shortcuts for mineprep.hotkey()",
+      "zh-Hant": "【mineprep.hotkey() 全部快速鍵】",
+      "zh-Hant-HK": "【mineprep.hotkey() 全部快捷鍵】"
+    },
+    "help.panel_missing": {
+      "zh": "未找到\"{name}\", 运行 mineprep.panel() 在日志中打印所有控件",
+      "en": "No widget found for \"{name}\", run mineprep.panel() to print all available widgets",
+      "zh-Hant": "找不到「{name}」，執行 mineprep.panel() 可在記錄中列出所有控制項",
+      "zh-Hant-HK": "找不到「{name}」，執行 mineprep.panel() 可在日誌中列出所有控制項"
+    },
+    "help.suggestions": {
+      "zh": "你可能在寻找:",
+      "en": "You may be looking for:",
+      "zh-Hant": "你可能在尋找:"
+    },
+    "hotkey.chord": {
+      "zh": "按键",
+      "en": "Chord",
+      "zh-Hant": "按鍵"
+    },
+    "hotkey.tooltip": {
+      "zh": "提示",
+      "en": "Tooltip",
+      "zh-Hant": "提示"
+    },
+    "mod.close_panels_failed": {
+      "zh": "未能关闭所有的{mod}模组面板：{instance}",
+      "en": "Failed to close all {mod} mod panels: {instance}",
+      "zh-Hant": "未能關閉所有的{mod}模組面板：{instance}"
+    },
+    "bplib.function": {
+      "zh": "[{library}] 函数: {function}",
+      "en": "[{library}] Function: {function}",
+      "zh-Hant": "[{library}] 函式: {function}",
+      "zh-Hant-HK": "[{library}] 函數: {function}"
+    },
+    "bplib.function_missing": {
+      "zh": "[{library}] 未找到函数 '{function}'",
+      "en": "[{library}] Function '{function}' not found",
+      "zh-Hant": "[{library}] 找不到函式 '{function}'",
+      "zh-Hant-HK": "[{library}] 找不到函數 '{function}'"
+    },
+    "bplib.similar_functions": {
+      "zh": "，相似函数: {matches}",
+      "en": ", similar functions: {matches}",
+      "zh-Hant": "，相似函式: {matches}",
+      "zh-Hant-HK": "，相似函數: {matches}"
+    },
+    "bplib.function_list": {
+      "zh": "=== {library} 可用函数列表 ({count} 个) ===",
+      "en": "=== {library} available functions ({count}) ===",
+      "zh-Hant": "=== {library} 可用函式清單 ({count} 個) ===",
+      "zh-Hant-HK": "=== {library} 可用函數清單 ({count} 個) ==="
+    },
+    "config.help": {
+      "zh": "直接使用mineprep.config()会打印所有配置项\n        - 读取配置：value = mineprep.config['Settings']['key']\n        - 写入配置：mineprep.config['Settings']['key'] = value",
+      "en": "Calling mineprep.config() prints all settings\n        - Read: value = mineprep.config['Settings']['key']\n        - Write: mineprep.config['Settings']['key'] = value",
+      "zh-Hant": "直接使用mineprep.config()會列出所有設定項目\n        - 讀取設定：value = mineprep.config['Settings']['key']\n        - 寫入設定：mineprep.config['Settings']['key'] = value",
+      "zh-Hant-HK": "直接使用mineprep.config()會列出所有配置項\n        - 讀取配置：value = mineprep.config['Settings']['key']\n        - 寫入配置：mineprep.config['Settings']['key'] = value"
+    },
+    "culture.same_source_target": {
+      "zh": "源语言和目标语言必须不同",
+      "en": "Source and target languages must differ",
+      "zh-Hant": "來源語言與目標語言必須不同"
+    },
+    "culture.builtin_target": {
+      "zh": "{target} 是引擎自带语言，不会覆盖",
+      "en": "{target} is built into the engine and will not be overwritten",
+      "zh-Hant": "{target} 是引擎內建語言，不會覆寫",
+      "zh-Hant-HK": "{target} 是引擎內置語言，不會覆蓋"
+    },
+    "culture.will_copy": {
+      "zh": "将复制 {count} 个目录：{source} → {target}",
+      "en": "Will copy {count} directories: {source} → {target}",
+      "zh-Hant": "將複製 {count} 個目錄：{source} → {target}"
+    },
+    "culture.copied": {
+      "zh": "已复制 {count} 个目录：{source} → {target}",
+      "en": "Copied {count} directories: {source} → {target}",
+      "zh-Hant": "已複製 {count} 個目錄：{source} → {target}"
+    },
+    "dialog.warning": {
+      "zh": "警告",
+      "en": "Warning",
+      "zh-Hant": "警告"
+    },
+    "dialog.info": {
+      "zh": "提示",
+      "en": "Information",
+      "zh-Hant": "提示"
+    },
+    "dialog.continue": {
+      "zh": "是否继续运行？",
+      "en": "Continue running?",
+      "zh-Hant": "是否繼續執行？",
+      "zh-Hant-HK": "是否繼續運行？"
+    },
+    "dialog.select_file": {
+      "zh": "选择文件",
+      "en": "Select File",
+      "zh-Hant": "選擇檔案"
+    },
+    "dialog.select_directory": {
+      "zh": "选择文件夹",
+      "en": "Select Directory",
+      "zh-Hant": "選擇資料夾"
+    },
+    "dialog.save_file": {
+      "zh": "保存文件",
+      "en": "Save File",
+      "zh-Hant": "儲存檔案",
+      "zh-Hant-HK": "保存檔案"
+    },
+    "panel.main_missing": {
+      "zh": "未找到插件面板 {path}",
+      "en": "Plugin panel not found: {path}",
+      "zh-Hant": "找不到外掛面板 {path}",
+      "zh-Hant-HK": "找不到插件面板 {path}"
+    },
+    "spawn.target_missing": {
+      "zh": "{button}: {target} 不存在",
+      "en": "{button}: {target} does not exist",
+      "zh-Hant": "{button}: {target} 不存在"
+    },
+    "bplib.call_function_missing": {
+      "zh": "蓝图函数库 '{library}' 中未找到函数 '{function}'。",
+      "en": "Function '{function}' was not found in Blueprint library '{library}'.",
+      "zh-Hant": "在藍圖函式庫 '{library}' 中找不到函式 '{function}'。",
+      "zh-Hant-HK": "在藍圖函數庫 '{library}' 中找不到函數 '{function}'。"
+    },
+    "bplib.did_you_mean": {
+      "zh": "你是否想调用: {matches}?",
+      "en": "Did you mean: {matches}?",
+      "zh-Hant": "你是否想呼叫: {matches}?",
+      "zh-Hant-HK": "你是否想調用: {matches}?"
+    },
+    "mod.unregistered": {
+      "zh": "[未注册 mod] {mod}",
+      "en": "[Unregistered mod] {mod}",
+      "zh-Hant": "[未註冊 mod] {mod}"
+    }
+  }
+}

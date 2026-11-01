@@ -30,7 +30,6 @@ class Options(mineprep.PropertyGroup):
         'EditCondition': '!AutoRange',
     })
 
-Options.localize('Speed', '速度', 'Speed', '速度')  # Class method, not a meta key.
 options = Options()
 # Inside an existing Mod.draw or ui script: layout.prop(options)
 ```
@@ -69,7 +68,7 @@ Saving fields: [PropertyGroup](ui.md#propertygroup).
 | Opaque-only color | `HideAlphaChannel=True` | Keep Alpha for painting or transparency |
 | Asset selection | Typed UObject; `AllowedClasses` for soft paths | Typed Texture2D/StaticMesh already narrows the picker; validate operations too |
 | Files/directories | `unreal.FilePath` + `FilePathFilter`; `unreal.DirectoryPath` | Package paths are not filesystem paths; changing an existing string type requires migration |
-| Display text | `DisplayName`, `ToolTip` | For localized field labels, call the concrete group's class method as above; `localize` is not a metadata key |
+| Display text | `DisplayName`, `ToolTip`, `ShortTooltip` | Plain strings are sufficient; optional [property localization](localization.md#property-groups) uses the `Group.localize()` class method, not a metadata key |
 | Order within a category | `DisplayPriority`, `DisplayAfter` | PropertyGroup already assigns declaration-order priority |
 
 Vector/custom struct widgets may process metadata differently from scalar widgets.

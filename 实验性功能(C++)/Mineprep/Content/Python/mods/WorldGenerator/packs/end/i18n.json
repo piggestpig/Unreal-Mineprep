@@ -1,0 +1,214 @@
+{
+  "WorldGenerator.pack.end": {
+    "pack.name": {
+      "zh": "末地",
+      "en": "The End",
+      "zh-Hant": "終界"
+    },
+    "pack.description": {
+      "zh": "末地石浮岛与紫颂树；完整布局保留中央岛、黑曜石柱和宽阔虚空。",
+      "en": "Floating End-stone islands and chorus trees; full layout adds the central island and obsidian pillars.",
+      "zh-Hant": "終界石浮島與歌萊樹；完整布局保留中央島、黑曜石柱和寬闊虛空。"
+    },
+    "params.world.y_min": {
+      "zh": "裁切下限",
+      "en": "Crop bottom",
+      "zh-Hant": "裁切下限"
+    },
+    "params.world.y_max": {
+      "zh": "裁切上限",
+      "en": "Crop top",
+      "zh-Hant": "裁切上限"
+    },
+    "params.world.sea_level": {
+      "zh": "诊断参考高度",
+      "en": "Diagnostic height reference",
+      "zh-Hant": "診斷參考高度"
+    },
+    "params.surface.soil_depth": {
+      "zh": "表层深度",
+      "en": "Surface depth",
+      "zh-Hant": "表層深度"
+    },
+    "params.surface.boundary_scale": {
+      "zh": "表层边界尺度",
+      "en": "Surface boundary scale",
+      "zh-Hant": "表層邊界尺度"
+    },
+    "params.surface.patch_scale": {
+      "zh": "材料斑块尺度",
+      "en": "Material patch scale",
+      "zh-Hant": "材料斑塊尺度"
+    },
+    "params.end.layout": {
+      "zh": "布局（outer／full）",
+      "en": "Layout (outer/full)",
+      "zh-Hant": "布局（outer／full）"
+    },
+    "params.end.center_x": {
+      "zh": "主岛中心X（格）",
+      "en": "Main island center X",
+      "zh-Hant": "主島中心X（格）"
+    },
+    "params.end.center_z": {
+      "zh": "主岛中心Y（格）",
+      "en": "Main island center Y",
+      "zh-Hant": "主島中心Y（格）"
+    },
+    "params.end.main_radius": {
+      "zh": "主岛半径（格）",
+      "en": "Main island radius",
+      "zh-Hant": "主島半徑（格）"
+    },
+    "params.end.outer_start": {
+      "zh": "外岛起始距离（格）",
+      "en": "Outer island start distance",
+      "zh-Hant": "外島起始距離（格）"
+    },
+    "params.end.scale": {
+      "zh": "外岛尺度（格）",
+      "en": "Outer island scale",
+      "zh-Hant": "外島尺度（格）"
+    },
+    "params.end.density": {
+      "zh": "外岛疏密",
+      "en": "Outer island density",
+      "zh-Hant": "外島疏密"
+    },
+    "params.end.height": {
+      "zh": "浮岛高度（格）",
+      "en": "Island elevation",
+      "zh-Hant": "浮島高度（格）"
+    },
+    "params.end.relief": {
+      "zh": "外岛高低变化（格）",
+      "en": "Outer island height variation",
+      "zh-Hant": "外島高低變化（格）"
+    },
+    "params.end.thickness": {
+      "zh": "浮岛厚度（格）",
+      "en": "Island thickness",
+      "zh-Hant": "浮島厚度（格）"
+    },
+    "params.chorus.enabled": {
+      "zh": "生成紫颂树",
+      "en": "Generate chorus trees",
+      "zh-Hant": "生成歌萊樹"
+    },
+    "params.chorus.whole_tree": {
+      "zh": "整棵紫颂树",
+      "en": "Whole chorus trees",
+      "zh-Hant": "整棵歌萊樹"
+    },
+    "params.chorus.whole_tree.tooltip": {
+      "zh": "关闭后逐方块输出，沿用相同的树形、选址和避让。",
+      "en": "Disable for individual blocks with the same shapes, placement and clearance.",
+      "zh-Hant": "關閉後逐方塊輸出，沿用相同的樹形、選址和避讓。"
+    },
+    "params.chorus.density": {
+      "zh": "紫颂树密度",
+      "en": "Chorus density",
+      "zh-Hant": "歌萊樹密度"
+    },
+    "params.chorus.spacing": {
+      "zh": "候选间距（格）",
+      "en": "Candidate spacing",
+      "zh-Hant": "候選間距（格）"
+    },
+    "params.chorus.max_slope": {
+      "zh": "最大坡度",
+      "en": "Maximum slope",
+      "zh-Hant": "最大坡度"
+    },
+    "params.monuments.pillars": {
+      "zh": "黑曜石柱",
+      "en": "Obsidian pillars",
+      "zh-Hant": "黑曜石柱"
+    },
+    "params.monuments.portal": {
+      "zh": "返回传送门祭坛",
+      "en": "Exit portal fountain",
+      "zh-Hant": "返回傳送門祭壇"
+    },
+    "pages.world": {
+      "zh": "世界",
+      "en": "World",
+      "zh-Hant": "世界"
+    },
+    "pages.end": {
+      "zh": "浮岛",
+      "en": "Islands",
+      "zh-Hant": "浮島"
+    },
+    "pages.chorus": {
+      "zh": "紫颂树",
+      "en": "Chorus trees",
+      "zh-Hant": "歌萊樹"
+    },
+    "pages.monuments": {
+      "zh": "中央岛屿",
+      "en": "Central island",
+      "zh-Hant": "中央島嶼"
+    },
+    "pages.surface": {
+      "zh": "地表",
+      "en": "Surface",
+      "zh-Hant": "地表"
+    },
+    "sections.world": {
+      "zh": "世界范围",
+      "en": "World range",
+      "zh-Hant": "世界範圍"
+    },
+    "sections.end": {
+      "zh": "浮岛",
+      "en": "Islands",
+      "zh-Hant": "浮島"
+    },
+    "sections.chorus": {
+      "zh": "紫颂树",
+      "en": "Chorus trees",
+      "zh-Hant": "歌萊樹"
+    },
+    "sections.monuments": {
+      "zh": "中央岛屿",
+      "en": "Central island",
+      "zh-Hant": "中央島嶼"
+    },
+    "sections.surface": {
+      "zh": "地表",
+      "en": "Surface",
+      "zh-Hant": "地表"
+    },
+    "biomes.end_barrens.name": {
+      "zh": "边缘荒地",
+      "en": "End barrens",
+      "zh-Hant": "終界荒地"
+    },
+    "biomes.end_highlands.name": {
+      "zh": "末地高地",
+      "en": "End highlands",
+      "zh-Hant": "終界高地"
+    },
+    "biomes.end_midlands.name": {
+      "zh": "中型空岛",
+      "en": "End midlands",
+      "zh-Hant": "終界平地"
+    },
+    "biomes.small_end_islands.name": {
+      "zh": "小型空岛",
+      "en": "Small End islands",
+      "zh-Hant": "終界小島"
+    },
+    "biomes.the_end.name": {
+      "zh": "中央末地",
+      "en": "The End",
+      "zh-Hant": "中央終界"
+    },
+    "presets.full_end.name": {
+      "zh": "主岛-虚空-外岛",
+      "en": "Main island, void and outer islands",
+      "zh-Hant": "主島-虛空-外島"
+    }
+  }
+}

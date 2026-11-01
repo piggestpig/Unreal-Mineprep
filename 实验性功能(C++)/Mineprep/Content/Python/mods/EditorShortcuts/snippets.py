@@ -56,7 +56,7 @@ def move_to_front():
     actors = mineprep.selected()
     if actors:
         loc = mineprep.EditorBPLib['编辑器视口线条追踪'](True)
-        with unreal.ScopedEditorTransaction(mineprep.bilingual('移动到面前', 'Move To Front')):
+        with unreal.ScopedEditorTransaction(mineprep.i18n('移动到面前', 'Move To Front')):
             actors.set_actor_location(loc, False, False)
 
 
@@ -64,7 +64,7 @@ def key_visible():
     actors = mineprep.selected()
     if actors:
         f = mineprep.sequencer.frame()
-        with unreal.ScopedEditorTransaction(mineprep.bilingual('添加可视性关键帧', 'Add Visibility Keyframe')):
+        with unreal.ScopedEditorTransaction(mineprep.i18n('添加可视性关键帧', 'Add Visibility Keyframe')):
             actors.key('bHidden', True, f - 1)
             actors.key('bHidden', False, f)
 
@@ -73,7 +73,7 @@ def key_hidden():
     actors = mineprep.selected()
     if actors:
         f = mineprep.sequencer.frame()
-        with unreal.ScopedEditorTransaction(mineprep.bilingual('设置隐藏关键帧', 'Add Hidden Keyframe')):
+        with unreal.ScopedEditorTransaction(mineprep.i18n('设置隐藏关键帧', 'Add Hidden Keyframe')):
             actors.key('bHidden', False, f - 1)
             actors.key('bHidden', True, f)
 
@@ -99,7 +99,7 @@ def swap_positions():
     actors = mineprep.selected[:]
     if len(actors) >= 2:
         transforms = [(a.get_actor_location(), a.get_actor_rotation()) for a in actors]
-        with unreal.ScopedEditorTransaction(mineprep.bilingual('交换对象位置', 'Swap Actor Positions')):
+        with unreal.ScopedEditorTransaction(mineprep.i18n('交换对象位置', 'Swap Actor Positions')):
             for i, a in enumerate(actors):
                 next_loc, next_rot = transforms[(i + 1) % len(actors)]
                 a.set_actor_location_and_rotation(next_loc, next_rot, False, True)
@@ -141,7 +141,7 @@ def align_camera():
         if cams:
             cam = cams[0]
     if cam:
-        with unreal.ScopedEditorTransaction(mineprep.bilingual('对齐摄像机至视图', 'Align Camera to View')):
+        with unreal.ScopedEditorTransaction(mineprep.i18n('对齐摄像机至视图', 'Align Camera to View')):
             loc, rot = ue_subsystem.get_level_viewport_camera_info()
             cam.set_actor_location_and_rotation(loc, rot, False, False)
             if level_subsystem:
@@ -185,7 +185,7 @@ def attach_to_last():
                 comp = item['comp']
                 rule = unreal.AttachmentRule.KEEP_WORLD
                 socket = unreal.Name(socket_name) if socket_name else unreal.Name()
-                with unreal.ScopedEditorTransaction(mineprep.bilingual('绑定父级', 'Set Parent')):
+                with unreal.ScopedEditorTransaction(mineprep.i18n('绑定父级', 'Set Parent')):
                     for child in children:
                         root = child.root_component
                         if root:
@@ -229,7 +229,7 @@ def attach_to_empty():
             if parent:
                 mineprep.EditorBPLib['设置Actor标签+后缀'](parent, '空物体', unreal.Actor)
                 rule = unreal.AttachmentRule.KEEP_WORLD
-                with unreal.ScopedEditorTransaction(mineprep.bilingual('绑定至空物体', 'Attach to Null Actor')):
+                with unreal.ScopedEditorTransaction(mineprep.i18n('绑定至空物体', 'Attach to Null Actor')):
                     for child in actors:
                         child.attach_to_actor(parent, unreal.Name(), rule, rule, rule, False)
                     mineprep.select_actors([parent])

@@ -1,0 +1,12 @@
+{
+  "AutomationTest": {
+    "自动化测试": {
+      "zh": "自动化测试",
+      "en": "Automation Test"
+    },
+    "运行编辑器自动化测试项目": {
+      "zh": "运行编辑器自动化测试项目",
+      "en": "Run editor automation tests"
+    }
+  }
+}

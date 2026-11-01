@@ -9,7 +9,7 @@ import numpy as np
 from .blocks import BlockDef
 from .building import Placement, _readonly
 from .data import Region, check_cancel, require_int
-from .pack import Params, load_pack
+from .pack import Params
 from .shell import WorldArrays
 from .spec import WorldSpec
 from .templates import TemplateDefinition, TemplateInstance, ModelIndex
@@ -200,6 +200,7 @@ def compose(terrain, *placements, max_cells=MAX_CELLS, max_instances=MAX_INSTANC
         removed[at] = added_index.occupied(_world_points(data)[at])
     if removed.any():
         data = replace(data, xyz=_readonly(data.xyz[~removed], np.int32), types=_readonly(data.types[~removed], np.uint32),
+            sizes=None if data.sizes is None else _readonly(data.sizes[~removed],np.int32),
             rotations=None if data.rotations is None else _readonly(data.rotations[~removed], np.uint8),
             instance_y_offsets=None if data.instance_y_offsets is None else _readonly(data.instance_y_offsets[~removed], np.float64),
             visible_count=int((~removed).sum()))

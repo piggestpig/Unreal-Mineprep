@@ -2,11 +2,12 @@
 from copy import deepcopy
 from pathlib import Path
 import mineprep
+from mineprep import i18n
 import unreal
 from .core.spec import WorldSpec
 from .core.presets import reset_section, section_keys
-from .editor import click, tr, name_text, textbox
-from .props import read_params, write_params
+from .editor import click, name_text, textbox
+from .props import read_params, write_params, operation_values
 from .preset_library import preset_ref, _digest
 from .naming import safe_name
 from .ui_model import page_id
@@ -25,15 +26,26 @@ class PresetPanel:
                 self._load_parameter_preset(preset)
 
     def _reset_params(self):
-        previous = self._values()
-        values = dict(previous)
+        values = dict(self._values())
         values.update({key: definition.default for key, definition in self.pack.params.items()
                        if page_id(definition.page, self.pack) not in ('blocks', 'output')})
         self._set_parameter_values(values, values)
         self._section_marks = {page_id(d.page, self.pack): {} for d in self.pack.params.values()
                                if page_id(d.page, self.pack) not in ('blocks', 'output')}
         self._mark_preset('', self._values())
-        self._parameters_published(previous)
+        suspended, self._suspend = self._suspend, True
+        try:
+            r = self.range_options
+            r.CellStep = 1
+            r.CoreEnabled = r.CoreEmpty = r.CoreInitialized = False
+            r.CoreA, r.CoreB = unreal.IntPoint(0,0), unreal.IntPoint(512,512)
+            self._last_native[id(r)] = operation_values(r)
+            combo = getattr(self,'_cell_step_combo',None)
+            if combo is not None:
+                combo.set_selected_option(unreal.Name('1'))
+        finally:
+            self._suspend = suspended
+        self._on_range('CoreEnabled')
 
     def _preset_label(self, preset_id, section=None, *, values=None):
         mark = self._global_mark if section is None else self._section_marks.get(section,{})
@@ -44,20 +56,20 @@ class PresetPanel:
                 source,ident = preset_ref(preset_id).split(':',1)
                 label = name_text(self.pack.presets[ident].name) if source == 'pack' else record['name']
                 if mark.get('digest') and mark['digest'] != _digest(record):
-                    status = tr(' · 来源已更新',' · Source updated')
+                    status = i18n(' · 来源已更新',' · Source updated')
             except (OSError,ValueError,TypeError):
                 label = mark.get('name',preset_id)
-                status = tr(' · 来源已删除或不可用',' · Source deleted or unavailable')
-            prefix = tr('用户｜','User | ') if preset_id.startswith('library:') else tr('资源包｜','Pack | ')
+                status = i18n(' · 来源已删除或不可用',' · Source deleted or unavailable')
+            prefix = i18n('用户｜','User | ') if preset_id.startswith('library:') else i18n('资源包｜','Pack | ')
             label = unreal.Text('{prefix}{name}').format(prefix=prefix,name=label)
         else:
-            label = tr('资源包默认','Pack Default')
+            label = i18n('资源包默认','Pack Default')
         current = self._values() if values is None else values
         saved = self._global_values if section is None else self._section_marks.get(section, {}).get('values', {})
         adjusted = any(k not in current or self.pack.params[k].coerce(current[k]) != self.pack.params[k].coerce(v)
                        for k,v in saved.items())
         adjusted |= self._curves_pending and (section is None or any(self.pack.params[k].type == 'curve' for k in saved))
-        return unreal.Text('{name}{suffix}{status}').format(name=label, suffix=tr(' · 已调整', ' · Adjusted') if adjusted else '',status=status)
+        return unreal.Text('{name}{suffix}{status}').format(name=label, suffix=i18n(' · 已调整', ' · Adjusted') if adjusted else '',status=status)
 
     def _render_global_preset(self):
         self._global_choice = None
@@ -65,7 +77,7 @@ class PresetPanel:
 
     def _sync_global_preset(self, values=None):
         selected = preset_ref(self._global_mark['id']) if self._global_mark['id'] else 'defaults:all'
-        options = {'defaults:all': tr('资源包默认', 'Pack Default')}
+        options = {'defaults:all': i18n('资源包默认', 'Pack Default')}
         options.update(self._preset_options())
         options[selected] = self._preset_label('' if selected == 'defaults:all' else selected, values=values)
         if self._global_choice is None:
@@ -76,7 +88,7 @@ class PresetPanel:
 
     def _entry_label(self, entry):
         name = name_text(self.pack.presets[entry['id']].name) if entry['source'] == 'pack' else entry['name']
-        return unreal.Text('{prefix}{name}').format(name=name,prefix=tr('资源包｜','Pack | ') if entry['source']=='pack' else tr('用户｜','User | '))
+        return unreal.Text('{prefix}{name}').format(name=name,prefix=i18n('资源包｜','Pack | ') if entry['source']=='pack' else i18n('用户｜','User | '))
 
     def _preset_options(self, section=None):
         identity = (id(self.pack), getattr(self, '_library_stamp', None))
@@ -100,18 +112,18 @@ class PresetPanel:
         row = self._section_slot.row()
         self._section_choice_parent = row
         self._sync_section_preset()
-        row.button(tr('恢复', 'Reset'), size=10, text_scaling=True,
-                   tooltip=tr('恢复本板块默认值', 'Reset section defaults'),
+        row.button(i18n.section_reset('恢复', 'Reset'), size=10, text_scaling=True,
+                   tooltip=i18n('恢复本板块默认值', 'Reset section defaults'),
                    on_clicked=click(lambda: self._on_section_preset(section, '')))
-        row.button(tr('另存', 'Save as'), size=10, text_scaling=True,
-                   tooltip=tr('另存本板块预设', 'Save section preset as'),
+        row.button(i18n('另存', 'Save as'), size=10, text_scaling=True,
+                   tooltip=i18n('另存本板块预设', 'Save section preset as'),
                    on_clicked=click(lambda: self._save_form(True, section)))
 
     def _sync_section_preset(self, values=None):
         section = self.page
         selected = self._section_marks.get(section, {}).get('id', '')
         selected = preset_ref(selected) if selected else 'defaults:section'
-        options = {'defaults:section': tr('资源包默认', 'Pack Default')}
+        options = {'defaults:section': i18n('资源包默认', 'Pack Default')}
         options.update(self._preset_options(section))
         options[selected] = self._preset_label('' if selected == 'defaults:section' else selected, section, values=values)
         if self._section_choice is None:
@@ -220,7 +232,7 @@ class PresetPanel:
             self._library_stamp = self._library.stamp()
             self._notice.clear_children()
             self._parameters_published(previous)
-            self._set_status(tr('参数预设已保存；规则草稿保留。','Parameter preset saved; content drafts retained.'))
+            self._set_status(i18n('参数预设已保存；规则草稿保留。','Parameter preset saved; content drafts retained.'))
             return ref
         except Exception as exc:
             self._set_status(str(exc))
@@ -233,15 +245,15 @@ class PresetPanel:
         if getattr(self,'_library_state',None) is not None:
             self._library_state = dict(self._library_state)
         self._notice.clear_children()
-        self._notice.text(tr('预设名称','Preset name'),size=11)
+        self._notice.text(i18n('预设名称','Preset name'),size=11)
         row = self._notice.row()
         box = textbox(row,initial,fill=1)
-        row.button(tr('保存','Save'),size=11,text_scaling=True,on_clicked=click(lambda: action(str(box.get_text()))))
-        row.button(tr('取消','Cancel'),size=11,text_scaling=True,
+        row.button(i18n('保存','Save'),size=11,text_scaling=True,on_clicked=click(lambda: action(str(box.get_text()))))
+        row.button(i18n('取消','Cancel'),size=11,text_scaling=True,
                    on_clicked=click(self._library_return if return_to_library else self._cancel_switch))
 
     def _library_button(self, row, zh, en, action, *, color=None, enabled=True, tooltip=''):
-        button = row.button(tr(zh,en),size=10,text_scaling=True,on_clicked=click(action),tooltip=tooltip)
+        button = row.button(i18n(zh,en),size=10,text_scaling=True,on_clicked=click(action),tooltip=tooltip)
         button.set_is_enabled(enabled)
         if color:
             rgb = LIBRARY_COLORS[color]
@@ -269,7 +281,7 @@ class PresetPanel:
         self._library_manager(**state)
 
     def _library_manager(self, search='', scope='*', include_all=False, selected=''):
-        scopes = {'*':tr('全部范围','All scopes'),'whole':tr('整套','Whole')}
+        scopes = {'*':i18n('全部范围','All scopes'),'whole':i18n('整套','Whole')}
         scopes.update({k:self._page_label(k) for k in self._section_marks})
         scope = scope if scope in scopes else '*'
         entries = [e for e in self._library.entries(self.pack,None if scope=='whole' else scope,include_all=include_all)
@@ -282,7 +294,7 @@ class PresetPanel:
             state = self._library_state = {}
             form = self._library_form = dict(state=state)
             row = self._notice.row()
-            row.text(tr('搜索预设','Search presets'),size=10, align=(1,2))
+            row.text(i18n('搜索预设','Search presets'),size=10, align=(1,2))
             form['search'] = textbox(row,search,fill=1,on_text_committed=lambda value,reason:
                 self._library_refresh(state,search=str(value)))
             def change(**changes):
@@ -300,8 +312,8 @@ class PresetPanel:
                 return state['selected']
             button(row,'load','加载','Load',lambda:self._load_parameter_preset(
                 current(),form['by_ref'][current()]['section'] if state['scope'] in ('*','whole') else state['scope']))
-            form['advanced'] = row.checkbox(tr('高级功能','Advanced functions'),size=10,
-                tooltip=tr('显示全部条目（含不兼容）及管理操作',
+            form['advanced'] = row.checkbox(i18n('高级功能','Advanced functions'),size=10,
+                tooltip=i18n('显示全部条目（含不兼容）及管理操作',
                            'Show all entries (including incompatible) and management actions'))
             form['advanced'].on_check_state_changed.add_callable(lambda checked:change(include_all=checked))
             actions = form['actions'] = self._notice.row()
@@ -328,7 +340,7 @@ class PresetPanel:
                 form['search'].set_text(search)
             refresh_choice(form['scope'],scopes,scope)
             refresh_choice(form['entries'],{e['ref']:unreal.Text('{name}{error}').format(
-                name=self._entry_label(e),error='' if e['compatible'] else tr(' · 不兼容',' · Incompatible'))
+                name=self._entry_label(e),error='' if e['compatible'] else i18n(' · 不兼容',' · Incompatible'))
                 for e in entries},selected)
             form['entries']['widget'].set_is_enabled(bool(entries))
             form['advanced'].set_is_checked(include_all)
@@ -339,13 +351,13 @@ class PresetPanel:
                            copy=valid,export=valid,delete=user)
             for key, button in form['buttons'].items():
                 button.set_is_enabled(enabled[key])
-                reason = (entry.get('error') or tr('资源包预设只读','Resource pack presets are read-only')
+                reason = (entry.get('error') or i18n('资源包预设只读','Resource pack presets are read-only')
                           if key in ('update','rename','delete') else entry.get('error') or
-                          tr('没有有效预设','No valid preset'))
+                          i18n('没有有效预设','No valid preset'))
                 button.set_tool_tip_text('' if enabled[key] else reason)
             form['details'].set_text(
                 f"{entry['pack']} / {entry['section'] or 'whole'} / {entry['ref']}\n{entry.get('path') or ''}\n{entry['error']}"
-                if entry else tr('没有匹配的预设','No matching presets'))
+                if entry else i18n('没有匹配的预设','No matching presets'))
         finally:
             self._suspend = suspended
 
@@ -354,7 +366,7 @@ class PresetPanel:
             if ref:
                 filename = safe_name(self._library.get(ref)['name'])
                 filename = filename if filename.lower().endswith('.json') else filename+'.json'
-                path = mineprep.asksaveasfilename(title=str(tr('导出预设','Export preset')),
+                path = mineprep.asksaveasfilename(title=str(i18n('导出预设','Export preset')),
                     defaultextension='.json',initialfile=filename,filetypes=[('JSON','*.json')])
                 if path:
                     if not Path(path).suffix:
@@ -362,7 +374,7 @@ class PresetPanel:
                     # The native Save dialog already confirms replacing its chosen target.
                     self._library_action('overwrite',ref,path)
             else:
-                path = mineprep.askopenfilename(title=str(tr('导入预设','Import preset')),filetypes=[('JSON','*.json')])
+                path = mineprep.askopenfilename(title=str(i18n('导入预设','Import preset')),filetypes=[('JSON','*.json')])
                 if path:
                     self._library_action('import',None,path)
         except Exception as exc:
@@ -372,13 +384,13 @@ class PresetPanel:
         if getattr(self,'_library_state',None) is not None:
             self._library_state = dict(self._library_state)
         self._notice.clear_children()
-        label = {'update':tr('更新预设','Update preset'),'delete':tr('删除预设','Delete preset'),
-                 'overwrite':tr('覆盖文件','Overwrite file')}.get(action,action)
+        label = {'update':i18n('更新预设','Update preset'),'delete':i18n('删除预设','Delete preset'),
+                 'overwrite':i18n('覆盖文件','Overwrite file')}.get(action,action)
         self._notice.text(unreal.Text('{question} {action}: {target}').format(
-            question=tr('确认此操作？','Confirm this operation?'),action=label,target=path or ref),size=11,wrap=True)
+            question=i18n('确认此操作？','Confirm this operation?'),action=label,target=path or ref),size=11,wrap=True)
         row = self._notice.row()
-        row.button(tr('确认','Confirm'),size=11,text_scaling=True,on_clicked=click(lambda:self._library_action(action,ref,path)))
-        row.button(tr('取消','Cancel'),size=11,text_scaling=True,on_clicked=click(self._library_return))
+        row.button(i18n('确认','Confirm'),size=11,text_scaling=True,on_clicked=click(lambda:self._library_action(action,ref,path)))
+        row.button(i18n('取消','Cancel'),size=11,text_scaling=True,on_clicked=click(self._library_return))
 
     def _library_action(self, action, ref, value=None):
         try:
@@ -420,35 +432,36 @@ class PresetPanel:
         self._library_state = None
         self._notice.clear_children()
         managed = self.pack.root.parent == self.draft.user_root
-        self._notice.text(tr('保存资源包', 'Save Pack'), size=11)
+        self._notice.text(i18n('保存资源包', 'Save Pack'), size=11)
         def field(row, zh, en, value):
-            row.sizebox(width=92).text(tr(zh, en), size=10)
+            row.sizebox(width=92).text(i18n(zh, en), size=10)
             return textbox(row, value, fill=1)
         row = self._notice.row()
         pack_box = field(row, '资源包 ID', 'Pack ID', self.pack.id if managed else 'my_world')
-        name_box = field(row, '资源包名称', 'Pack Name', name_text(self.pack.name) if managed else tr('我的世界', 'My world'))
+        from .localization import source_text
+        name_box = field(row, '资源包名称', 'Pack Name', source_text(self.pack.name) if managed else i18n('我的世界', 'My world'))
         row = self._notice.row()
         preset_box = field(row, '预设 ID', 'Preset ID', self.preset if managed else 'user_default')
         preset_name_box = field(row, '预设显示名', 'Preset name',
-                                name_text(self.pack.presets[self.preset].name) if self.preset else tr('用户默认', 'User default'))
+                                source_text(self.pack.presets[self.preset].name) if self.preset else i18n('用户默认', 'User default'))
         target = self._notice.text('', size=9, wrap=True)
         def show_target():
             pack_id = str(pack_box.get_text()).strip()
             directory = self.draft.user_root / pack_id
-            action = tr('更新现有用户资源包：{path}', 'Update user pack: {path}') if managed and pack_id == self.pack.id else \
-                     tr('新建继承资源包：{path}', 'Create derived pack: {path}')
+            action = i18n('更新现有用户资源包：{path}', 'Update user pack: {path}') if managed and pack_id == self.pack.id else \
+                     i18n('新建继承资源包：{path}', 'Create derived pack: {path}')
             target.set_text(action.format(path=str(directory)))
         pack_box.on_text_changed.add_callable(lambda _: show_target())
         preset_box.on_text_changed.add_callable(lambda _: show_target())
         show_target()
-        self._notice.text(tr('保存规则差异和当前参数；群系、地表、方块、植被由所有预设共享。原资源包不被覆盖，同 ID 用户资源包与预设会更新。',
+        self._notice.text(i18n('保存规则差异和当前参数；群系、地表、方块、植被由所有预设共享。原资源包不被覆盖，同 ID 用户资源包与预设会更新。',
                              'Save content differences and parameters. All presets share biomes, surfaces, blocks and vegetation. The source pack is preserved; matching user pack and preset IDs are updated.'),
                           size=9, wrap=True)
         row = self._notice.row()
-        row.button(tr('确认保存', 'Confirm save'), text_scaling=True, size=11, on_clicked=click(lambda: self._save(
+        row.button(i18n('确认保存', 'Confirm save'), text_scaling=True, size=11, on_clicked=click(lambda: self._save(
             str(pack_box.get_text()).strip(), str(preset_box.get_text()).strip(),
             str(name_box.get_text()), preset_name=str(preset_name_box.get_text()))))
-        row.button(tr('取消', 'Cancel'), text_scaling=True, size=11, on_clicked=click(self._cancel_switch))
+        row.button(i18n('取消', 'Cancel'), text_scaling=True, size=11, on_clicked=click(self._cancel_switch))
 
     def _save(self, pack_id, preset, name, preset_only=False, preset_name=None, section=None):
         if preset_only:
@@ -458,15 +471,14 @@ class PresetPanel:
                 return
             if self._errors:
                 raise ValueError(next(iter(self._errors.values())))
-            pack_name = self.pack.name if name == str(name_text(self.pack.name)) else {'zh': name, 'en': name}
-            saved = self.draft.save(pack_id, name=pack_name, preset=preset, params=self._values(), preset_name=preset_name)
+            saved = self.draft.save(pack_id, name=name, preset=preset, params=self._values(), preset_name=preset_name)
             pending = self._pending_switch
             self._pending_switch = None
             self.cancel_job()
             self._select_pack(saved.pack.id, preset, draft=saved)
             self._changed()
             self.redraw()
-            self._set_status(tr('用户资源包已保存；请重新准备资源。', 'User pack saved. Prepare resources again.'))
+            self._set_status(i18n('用户资源包已保存；请重新准备资源。', 'User pack saved. Prepare resources again.'))
             if pending:
                 pending()
         except Exception as exc:

@@ -7,6 +7,7 @@ import hashlib
 import numpy as np
 from ...core.cache import Memo
 from ...core.data import Region, check_cancel
+from ...core.layout import intersection
 from ...core.fluids import FluidBody
 from ...core.planning import Resources
 from ...core.store import biomes as biome_ids
@@ -67,6 +68,8 @@ def interval_mask(records, x, y, z, result):
 class CellPlans:
     def __init__(self, pack, params, seed):
         self.pack, self.params, self.seed = pack, params, seed
+        step = pack.cell_step if pack.layout is None else pack.layout.outer_step
+        self.radius = type(self).radius + (step-1)*(1 if pack.layout is None else 2)
         self.spacing = params['basalt.'+self.kind+'_spacing']
         self.cells = Memo()
 
@@ -156,7 +159,12 @@ class Pools(CellPlans):
         footprint = {(int(center[0]+dx), int(center[1]+dz))
                for dz in range(-radius, radius+1) for dx in range(-radius, radius+1)
                if abs(dx)+abs(dz) < radius or (abs(dx)+abs(dz) == radius and rng.random() < .65)}
-        directions = ((1,0),(-1,0),(0,1),(0,-1))
+        if self.pack.layout is not None:
+            air,_ = runs[int(rng.integers(len(runs)))]
+            return self.mixed_pool(footprint,air,query,resources,rng)
+        step = self.pack.cell_step
+        if step != 1: footprint = {(x//step*step,z//step*step) for x,z in footprint}
+        directions = ((step,0),(-step,0),(0,step),(0,-step))
         halo = {(x+dx,z+dz) for x,z in footprint for dx,dz in directions}
         positions = np.asarray(sorted(footprint | halo),np.int64)
         lookup = {tuple(point):i for i,point in enumerate(positions)}
@@ -185,7 +193,50 @@ class Pools(CellPlans):
             if not allowed or rng.random() >= .3:
                 top = None
             tops.append((int(x),int(z),top))
+        if step != 1:
+            wet = {(x+dx,z+dz) for x,z in wet for dx in range(step) for dz in range(step)}
+            tops = [(x+dx,z+dz,top) for x,z,top in tops for dx in range(step) for dz in range(step)]
         return int(level),int(air),tuple(sorted(wet)),tuple(tops)
+
+    def mixed_pool(self,footprint,air,query,resources,rng):
+        """Validate complete sample footprints on a small physical window, including seams."""
+        layout,level = self.pack.layout,air-2
+        xz = np.asarray(sorted(footprint),np.int64)
+        origins = np.column_stack(layout.origins(*xz.T))
+        step = layout.outer_step
+        lo,hi = origins.min(0)-step,origins.max(0)+2*step
+        x,z = np.meshgrid(np.arange(lo[0],hi[0]),np.arange(lo[1],hi[1]))
+        points = np.column_stack((x.ravel(),z.ravel()))
+        mapped = np.column_stack(layout.origins(*points.T))
+        groups,inverse = np.unique(mapped,axis=0,return_inverse=True)
+        wanted = set(map(tuple,origins))
+        proposed = np.fromiter((tuple(p) in wanted for p in groups),bool,len(groups))
+        # The window includes the shore halo; only wholly coarse windows share profiles.
+        window = Region(int(lo[0]),int(lo[1]),int(hi[0]-lo[0]),int(hi[1]-lo[1]))
+        if intersection(window,layout.core) is None:
+            rock = self.profiles(query,groups,level-2,air+1)[:,inverse]
+        else:
+            rock = self.profiles(query,points,level-2,air+1)
+        plane = rock[2].reshape(x.shape)
+        surrounded = np.zeros_like(plane)
+        surrounded[1:-1,1:-1] = plane[:-2,1:-1]&plane[2:,1:-1]&plane[1:-1,:-2]&plane[1:-1,2:]
+        good = rock[:3].all(0)&~rock[4]&surrounded.ravel()
+        good &= selected(self.pack,self.params,self.seed,points,resources)
+        proposed[np.unique(inverse[~good])] = False
+        proposed &= fbm2(groups[:,0]/3,groups[:,1]/3,seed=self.seed,
+                         salt='nether/basalt-pool-shape',octaves=1)>-.1
+        wet = set(map(tuple,points[proposed[inverse]]))
+        if not wet: return ()
+        edge = {(a+dx,b+dz) for a,b in wet for dx,dz in ((1,0),(-1,0),(0,1),(0,-1))}-wet
+        edge_origins = set(map(tuple,np.column_stack(layout.origins(*np.asarray(sorted(edge)).T))))
+        lookup = {tuple(p):i for i,p in enumerate(points)}
+        tops = {}
+        for origin in sorted(edge_origins):
+            i = lookup[origin]
+            top = air-1 if rock[3,i] and not rock[4,i] else (level if not rock[3,i] else None)
+            tops[origin] = top if rng.random()<.3 else None
+        edges = tuple((int(a),int(b),tops[tuple(o)]) for (a,b),o in zip(points,mapped) if tuple(o) in tops)
+        return int(level),int(air),tuple(sorted(wet)),edges
 
     def reserved(self, xz, resources):
         result = np.zeros(len(xz), bool)

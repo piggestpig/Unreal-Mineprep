@@ -1,6 +1,5 @@
 {
   "id": "warped_forest",
-  "name": {"zh": "诡异森林", "en": "Warped forest"},
   "color": "#267E83",
   "climate": [{"warped_region": ["$warped.biome_threshold", 2]}],
   "surface": [{"top": "netherrack", "under": "netherrack", "deep": "netherrack"}],

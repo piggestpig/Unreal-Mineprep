@@ -1,6 +1,5 @@
 """Parameter-only preset operations shared by editor and offline scripts."""
 from ..ui_model import page_id
-from .spec import WorldSpec
 
 
 def section_keys(pack, section):

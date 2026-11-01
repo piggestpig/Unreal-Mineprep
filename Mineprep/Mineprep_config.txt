@@ -1,7 +1,7 @@
 {
     "Settings": {
         "init": "false",
-        "ue_language": "zh-Hans",
+        "ue_language": "zh-Hant",
         "b_viewport_selected": "true",
         "b_asset_folder": "false",
         "asset_folder": "/Game/mc/import",
@@ -13,7 +13,7 @@
         "roughness": "0.7",
         "b_collision": "true",
         "b_gradient_animated_texture": "false",
-        "texture_pack_path": "E:/github/Unreal-Mineprep/Blender扩展资源/mc_default",
+        "texture_pack_path": "E:/blender/mc/材质/AVPBR Retextured R5",
         "lang_index": "1",
         "blender_path": "E:\\blender\\blender-5.2.0-windows-x64\\blender.exe",
         "GPU": "1",
@@ -33,7 +33,7 @@
         "open_file_after_render": "true",
         "render_finish_sound": "",
         "ui_scale": "1.0",
-        "python_tooltip": "true",
+        "python_tooltip": "false",
         "optimize_default": false
     },
     "ProjectSettings": {

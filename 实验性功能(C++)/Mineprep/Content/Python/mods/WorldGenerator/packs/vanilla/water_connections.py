@@ -7,9 +7,8 @@ import hashlib
 import math
 from time import perf_counter
 import numpy as np
-from ...core import connections
+from ...core import connections, geometry
 from ...core.data import Region, check_cancel
-from ...core.density import DensityContext
 from ...core.fluids import FluidBody, FluidSource, compress_runs, enabled as fluids_enabled
 from ...core.store import reference
 
@@ -37,11 +36,11 @@ def probe(pack,p,seed,r,lo,hi,h,res):
     for y0 in range(lo,hi,32):
         check_cancel(getattr(res,'cancel_event',None))
         yy=np.arange(y0,min(y0+32,hi))[None,:,None]
-        ctx=DensityContext(pack,p,seed,xx,yy,zz,tops=tops,resources=res)
-        values=ctx.get('cave_solid')
-        air[:,y0-lo:y0-lo+values.shape[1],:]=values<=0
-        connections.count(res,'samples',values.size)
-        peak=max(peak,ctx.work_bytes+air.nbytes)
+        before=res.report.get('density_queries')
+        solid,working=geometry.sample(pack,p,seed,xx,yy,zz,tops,resources=res,field='cave_solid')
+        air[:,y0-lo:y0-lo+solid.shape[1],:]=~solid
+        connections.count(res,'samples',res.report.get('density_queries')-before)
+        peak=max(peak,working+air.nbytes)
     connections.count(res,'sampling_seconds',perf_counter()-started)
     res.water_connection_work_bytes=max(getattr(res,'water_connection_work_bytes',0),peak)
     return air
@@ -49,7 +48,8 @@ def probe(pack,p,seed,r,lo,hi,h,res):
 
 def candidate(pack,p,seed,res,mouth,source,ident):
     mx,my,mz=mouth
-    r=Region(mx-32,mz-32,64,64)
+    step=pack.cell_step if pack.layout is None else pack.layout.outer_step
+    r=Region((mx-32)//step*step,(mz-32)//step*step,64,64)
     h,wet,kind,ids,levels=surface(pack,p,seed,r,res)
     plane=int(math.floor(source.level))
     hi=min(p['world.y_max'],plane+5)
@@ -62,6 +62,7 @@ def candidate(pack,p,seed,res,mouth,source,ident):
     underground=(yy<np.ceil(h)[:,None,:])&(~wet[:,None,:])
     distance=(xx-mx)**2+(yy-my)**2+(zz-mz)**2
     possible=air&underground&(distance<=16**2)&(yy<=plane)&(yy>=p['world.y_min']+4)
+    if pack.layout is not None: possible &= pack.layout.terrain(xx,zz)
     where=np.flatnonzero(possible)
     if not len(where):return None,'no_cave'
     target=np.unravel_index(where[np.argmin(np.broadcast_to(distance,air.shape).ravel()[where])],air.shape)
@@ -71,16 +72,25 @@ def candidate(pack,p,seed,res,mouth,source,ident):
     bounds=tuple(max(a,b-4) for a,b in zip((r.x0,lo,r.z0),map(min,zip(mouth,end))))+tuple(
         min(a,b+5) for a,b in zip((r.x0+64,hi,r.z0+64),map(max,zip(mouth,end))))
     bx,by,bz,ex,ey,ez=bounds
-    cx=np.arange(bx,ex)[None,None,:];cy=np.arange(by,ey)[None,:,None];cz=np.arange(bz,ez)[:,None,None]
+    bx,bz=bx//step*step,bz//step*step
+    ex,ez=-(-ex//step)*step,-(-ez//step)*step
+    stride=step if pack.layout is None else 1
+    wx=np.arange(bx,ex,stride)[None,None,:];cy=np.arange(by,ey)[None,:,None];wz=np.arange(bz,ez,stride)[:,None,None]
+    cx,cz=(wx,wz) if pack.layout is None else pack.layout.origins(wx,wz)
     dx,dy,dz=np.subtract(end,mouth)
     t=np.clip(((cx-mx)*dx+(cy-my)*dy+(cz-mz)*dz)/max(dx*dx+dy*dy+dz*dz,1),0,1)
     d=np.sqrt((cx-mx-t*dx)**2+(cy-my-t*dy)**2+(cz-mz-t*dz)**2)
-    ctx=DensityContext(pack,p,seed,cx,cy,cz,resources=res)
-    detail=np.clip(ctx.get('cave_main'),-1,1)*p['caves.irregularity']*.7
+    started=perf_counter()
+    detail,detail_work=geometry.density_values(pack,p,seed,wx,cy,wz,None,resources=res,field='cave_main')
+    connections.count(res,'samples',detail.size)
+    connections.count(res,'sampling_seconds',perf_counter()-started)
+    detail=np.clip(detail,-1,1)*p['caves.irregularity']*.7
     radius=np.maximum(2.5,3+detail)
     carve=np.zeros_like(air)
     window=np.s_[bz-r.z0:ez-r.z0,by-lo:ey-lo,bx-r.x0:ex-r.x0]
-    carve[window]=(d<=radius)&(cy>=p['world.y_min']+4)&~air[window]
+    proposal=(d<=radius)&(cy>=p['world.y_min']+4)
+    if stride != 1: proposal=np.repeat(np.repeat(proposal,stride,axis=0),stride,axis=2)
+    carve[window]=proposal&~air[window]
     if not carve.any():return None,'no_carve'
     proposed=air|carve
     surface_air=yy>=np.ceil(h)[:,None,:]
@@ -88,12 +98,16 @@ def candidate(pack,p,seed,res,mouth,source,ident):
     trusted=surface_air&own[:,None,:]
     other=surface_air&(wet&~own)[:,None,:]
     dry=surface_air&(~wet[:,None,:])
+    if pack.layout is not None and pack.layout.empty:
+        excluded=pack.layout.inside(xx,zz)
+        trusted &= ~excluded
+        dry |= excluded
     started=perf_counter()
     component,reason=connections.verify(proposed,plane-lo+1,target,trusted,other,dry,
                                         getattr(res,'cancel_event',None))
     connections.count(res,'connectivity_seconds',perf_counter()-started)
     # Upper bound on live validation masks/frontier plus retained base sampling.
-    res.water_connection_work_bytes=max(getattr(res,'water_connection_work_bytes',0),air.nbytes*20+ctx.work_bytes)
+    res.water_connection_work_bytes=max(getattr(res,'water_connection_work_bytes',0),air.nbytes*20+detail_work)
     if reason:return None,reason
     z,x=np.nonzero(component[:,plane-lo,:]&~wet)
     xyz=np.column_stack((x+r.x0,np.full(len(x),plane),z+r.z0)).astype(np.int32)

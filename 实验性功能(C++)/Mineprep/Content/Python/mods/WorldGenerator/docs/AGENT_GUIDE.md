@@ -6,6 +6,10 @@ from mods.WorldGenerator import api
 
 先读 `api.catalog()` 和所选包的 `api.describe('vanilla')`。生成地形用 WorldGenerator；已有 NBT／schematic 用公共 `mineprep.spawn_structure`。单次建筑无需创建内容包；反复随机散布的新景观再读[内容包指南](CONTENT_PACK_GUIDE.md)。
 
+内容包采用格式3。名称等展示文本独立于几何定义与缓存；写包、编辑词条和继承规则见[本地化](LOCALIZATION.md)。catalog／describe在离线返回普通原文字符串，Spec不携带界面语言。
+
+在UE中给已注册的自定义包补词可用`api.pack_i18n('my_world', langs=('en','zh','zh-Hant'))`，它固定写该包词典和完整namespace；已有名称编辑仍走草稿，具体用法见[资源包补词](LOCALIZATION.md#在ue中为资源包补词)。
+
 通过MCP查询时，在编辑器端筛选结果再返回，避免完整`describe()`被截断。例如只查询预设、群系ID和树木参数：
 
 ```python
@@ -27,6 +31,14 @@ api.snapshot(world, 'delivery/badlands.png')
 ```
 
 `overview` 是参考地图；`generate` 才产生地形、植被与模型。`locate` 定位参考列，不搜索树或建筑。参数范围、预设与群系 ID 从 `describe` 获取，不把候选概率当面积百分比。
+
+标准高度／体积地形包可用 `api.spec(..., cell_step=2)` 或 `4` 减少最终实例，包括主世界洞穴、地下水、湖海连接、下界及末地。粗模式省略标有 `detail_only` 的小景观，地面用雪块覆雪，树木保留原模型细节。只降低水平精度，范围和高度仍以真实格数表示，旧 JSON 默认 1 格。详见[粗精度生成](COARSE.md)。
+
+固定分区使用 `api.spec(..., cell_step=4, core=((-62,-92),(88,21)))`：核心逐格、外围4格，两角均为包含端点的绝对MC X／Z格坐标；`spec.replace(core_empty=True)` 为导入小场景生成外围背景。核心全高无地形／水面且不产生新锚点，外围完整树冠允许伸入。支持主世界洞穴、地下水与湖海连接、下界、末地及标准height／volume配方；地下水和通道按实际混合几何验证，向留空区泄漏的候选被拒绝，不假设外部导入模型挡水。布局固定，不跟随摄影机。`api.snapshot(world,path)` 的总览包含分区图。
+
+编辑器支持右键框选LOD、普通页面左键框选留空LOD、中键平移和滚轮缩放；松开后更新上述同一组参数。自定义页面左键改为[绘制当前输入图](PAINTING.md)。右键框选时1格分辨率自动改为2格。清除选框保留边界点；恢复默认禁用LOD、恢复1格与默认边界点 `(0,0)`、`(512,512)`，保留生成范围。界面用语调整不改变公共API或Spec字段名。
+
+编辑器切换到下界／末地时继续使用相同LOD参数与框选交互。能力判断来自几何配方，公共API、参数校验和面板共用；不按资源包名称白名单判断。景观及支撑查询按点所属分区读取实际几何，`detail_only` 只在精细区产生锚点。
 
 `volume_decoration` 表示显式三维选址／volume_floor路径可用，不表示旧地表景观自动兼容volume；用 `check` 查看实际启用结果及不支持项。
 

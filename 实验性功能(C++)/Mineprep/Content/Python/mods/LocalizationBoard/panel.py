@@ -1,6 +1,6 @@
 import unreal
 import mineprep
-from mineprep import bilingual
+from mineprep import i18n
 
 from . import ops
 from .props import Props, PromptProps
@@ -13,7 +13,7 @@ _FAIL = unreal.LinearColor(1.0, 0.35, 0.3, 1.0)
 
 class LocalizationBoard(mineprep.Mod):
     _unique_ = True
-    _label_ = bilingual('本地化翻译控制板', 'Localization Board')
+    _label_ = i18n('本地化控制板', 'Localization Board')
 
     def __init__(self, context=None):
         self.closed = False
@@ -31,7 +31,7 @@ class LocalizationBoard(mineprep.Mod):
         layout = self.layout
         if not self._has_cpp:
             layout.text(
-                bilingual(
+                i18n(
                     '未找到 C++ 函数 unreal.mineprep.gather_property_names，请先编译 Mineprep 插件。',
                     'C++ function unreal.mineprep.gather_property_names not found. Compile the Mineprep plugin first.',
                 ),
@@ -44,31 +44,31 @@ class LocalizationBoard(mineprep.Mod):
 
         row = layout.row(padding=(0, 4))
         self._btn_gather = row.button(
-            bilingual('开始收集', 'Gather'),
+            i18n('开始收集', 'Gather'),
             on_clicked=self.start_gather,
             padding=3,
             fill=1,
         )
         self._btn_cancel = row.button(
-            bilingual('取消', 'Cancel'),
+            i18n('取消', 'Cancel'),
             on_clicked=self.cancel,
             padding=3,
             fill=1,
         )
         self._btn_refresh = row.button(
-            bilingual('刷新待翻译表', 'Refresh Untranslated'),
+            i18n('刷新待翻译表', 'Refresh Untranslated'),
             on_clicked=self.refresh_todo,
             padding=3,
             fill=1,
         )
         self._btn_open = row.button(
-            bilingual('打开CSV文件夹', 'Open CSV Folder'),
+            i18n('打开 CSV 文件夹', 'Open CSV Folder'),
             on_clicked=lambda: ops.open_csv_folder(),
             padding=3,
             fill=1,
         )
         self._status = layout.text(
-            bilingual('空闲。设置扫描路径后点击「开始收集」。',
+            i18n('空闲。设置扫描路径后点击「开始收集」。',
                       'Idle. Set the scan path, then click Gather.'),
             wrap=True,
             align=(1, 3),
@@ -103,7 +103,7 @@ class LocalizationBoard(mineprep.Mod):
         if hasattr(self, '_prompt_view'):
             self._prompt_view.hide(True)
         self._set_status(
-            bilingual('正在列出资产…', 'Listing assets…'),
+            i18n('正在列出资产…', 'Listing assets…'),
             _RUNNING,
         )
 
@@ -127,20 +127,19 @@ class LocalizationBoard(mineprep.Mod):
     def _report(self, stats):
         if not stats:
             return
-        extra = bilingual(
-            f"新增 {stats.get('added', 0)}，复用 {stats.get('reused', 0)}，失败 {stats.get('failed', 0)}，"
-            f"共 {stats.get('total', 0)} 行，待翻译 {stats.get('untranslated', 0)} 行",
-            f"added {stats.get('added', 0)}, reused {stats.get('reused', 0)}, failed {stats.get('failed', 0)}, "
-            f"{stats.get('total', 0)} rows, {stats.get('untranslated', 0)} untranslated",
-        )
+        extra = i18n(
+            "新增 {added}，复用 {reused}，失败 {failed}，共 {total} 行，待翻译 {untranslated} 行",
+            'Added {added}, reused {reused}, failed {failed} ({total} total, {untranslated} untranslated)',
+        ).format(added=stats.get('added', 0), reused=stats.get('reused', 0), failed=stats.get('failed', 0),
+                 total=stats.get('total', 0), untranslated=stats.get('untranslated', 0))
         if stats.get('cancelled'):
             self._set_status(
-                str(bilingual('已取消。', 'Cancelled. ')) + str(extra),
+                str(i18n('已取消。', 'Cancelled. ')) + str(extra),
                 _FAIL,
             )
         else:
             self._set_status(
-                str(bilingual('完成。', 'Done. ')) + str(extra),
+                str(i18n('完成。', 'Done. ')) + str(extra),
                 _FAIL if stats.get('failed') else _DONE,
             )
         self._show_prompt()
@@ -162,10 +161,10 @@ class LocalizationBoard(mineprep.Mod):
             self._set_status(str(exc).strip() or type(exc).__name__, _FAIL)
             return
         self._set_status(
-            str(bilingual(
-                f"已刷新待翻译表：{stats['untranslated']} / {stats['total']} 行",
-                f"Refreshed untranslated: {stats['untranslated']} / {stats['total']} rows",
-            )),
+            str(i18n(
+                '已刷新待翻译表：{untranslated} / {total} 行',
+                'Refreshed untranslated table: {untranslated} / {total} rows',
+            ).format(untranslated=stats['untranslated'], total=stats['total'])),
             _DONE,
         )
 

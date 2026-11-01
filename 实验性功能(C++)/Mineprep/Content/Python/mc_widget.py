@@ -1,5 +1,6 @@
 import json
 import inspect
+import sys
 try:
     import unreal
 except ModuleNotFoundError:
@@ -12,7 +13,7 @@ from pathlib import Path
 from mc_utils import (construct, uasset, enum, uclass, copy, debug, SafeList,
                       resolve_soft, get_tex_size, get_hotkey_object)
 from mc_config import paths, wclass
-from mc_localization import localize
+from mc_localization import Internationalization, I18N
 from typing import TypeVar, Callable, Any
 
 T = TypeVar('T')
@@ -298,6 +299,8 @@ class PropertyGroup:
         cls._ue_class_ = None
         cls._schema_ = None
         cls._instance_ = None
+        cls._definition_file_ = sys._getframe(1).f_code.co_filename
+        cls._localization_cache_ = {}
 
         # _unique_ 热重载：复用同名类已有的 uclass / 实例
         if cls._unique_:
@@ -408,7 +411,8 @@ class PropertyGroup:
         ]
         for prop_name in ordered:
             meta = metas.get(prop_name, {'Category': cls.__name__})
-            meta.setdefault('DisplayName', prop_name)
+            if not any(key.lower() == 'displayname' for key in meta):
+                meta['DisplayName'] = prop_name
             code_lines.append(
                 f'    {prop_name} = unreal.uproperty({properties[prop_name]}, meta={meta!r})'
             )
@@ -535,15 +539,94 @@ class PropertyGroup:
         self.sync_property_changes()
 
     @classmethod
-    def localize(cls, source: str, *args, **kwargs):
-        """为变量或类别注入本地化翻译（可在实例化前调用）。
-        args 对应 mcvars.Languages 的各语言翻译。
-        kwargs 可传入自定义语言代码的翻译。
+    def localize(cls, source=None, *args, tooltip=False, **kwargs):
+        """收集并绑定属性文本，可在实例化前后调用。
+
+        localize() / localize(I18N) 自动收集显示名和分类。
+        localize(i18n) 使用中文源文；实例的 namespace / key 前缀也生效。
+        实例的 file 可指定 JSON 路径，优先于类定义文件的自动定位。
+        localize('Speed', zh, en, ...) 保留 mcvars.Languages 的旧参数顺序。
+        tooltip=False 跳过提示；True 按英文收集，语言代码字符串指定提示源语言。
+        同时控制 ToolTip / ShortTooltip；已有 JSON 的源语言及译文仍优先。
+        JSON key 默认以类名开头，不含 GUID；分类仍按 UE 全局名称翻译。
+        自动模式平时跳过源文差异检查，DebugMode 下仅写普通日志。
+        from_data() 实例仅查询内存词典；缺词回退到元数据，不采集。
+        内存词典刷新后再次 localize()，更新或恢复属性绑定。
         """
-        if source in cls._prop_names_ or source in getattr(cls, '__annotations__', {}):
-            localize(source, *args, key=f'{cls._ue_class_name_}:{source}', **kwargs)
-        else:
-            localize(source, *args, namespace='UObjectCategory', **kwargs)
+        automatic = source is None or isinstance(source, Internationalization)
+        translator = source if isinstance(source, Internationalization) else I18N
+        if automatic and (args or kwargs):
+            raise TypeError('自动 localize 只接受一个 Internationalization 实例')
+        if any(lang.startswith('_') for lang in kwargs):
+            raise TypeError('下划线开头的字段是词典元数据，不能作为语言参数')
+        tooltip_language = 'en' if tooltip is True else tooltip
+        if tooltip is not False and (not isinstance(tooltip_language, str)
+                                     or not tooltip_language or tooltip_language.startswith('_')):
+            raise TypeError('tooltip 须为 False、True 或非空语言代码字符串')
+        prefix = translator._key or cls.__name__
+        native = translator._langs[0]
+        entries, bindings, native_cultures = {}, {}, {}
+
+        def add(suffix, namespace, key, original, translations=None, physical=None, language=None):
+            if not original:
+                return
+            entry = f'{prefix}.{suffix}'
+            supplied = {language or native: original}
+            supplied.update({lang: text for lang, text in (translations or {}).items() if text})
+            entries[entry] = {lang: text for lang, text in supplied.items() if text}
+            bindings[namespace, key] = (entry, original if physical is None else physical)
+            if language is not None:
+                native_cultures[entry] = language
+
+        metas, ordered = cls._schema_[2:]
+        fields = ordered if automatic else [source] if source in cls._prop_names_ else []
+        translations = {**dict(zip(mcvars.Languages, args)), **kwargs}
+        for name in fields:
+            meta = {key.lower(): value for key, value in metas[name].items()}
+            key = f'{cls._ue_class_name_}:{name}'
+            add(name, 'UObjectDisplayNames', key, meta.get('displayname', name),
+                None if automatic else translations)
+            if tooltip is not False:
+                for metadata, suffix, namespace in (
+                    ('tooltip', 'tooltip', 'UObjectToolTips'),
+                    ('shorttooltip', 'short_tooltip', 'UObjectShortTooltips'),
+                ):
+                    add(f'{name}.{suffix}', namespace, key, meta.get(metadata, ''), language=tooltip_language)
+            if automatic:
+                categories = meta.get('category', cls.__name__).split('|')
+                for index, category in enumerate(categories):
+                    path = '|'.join(categories[:index + 1])
+                    add(f'category.{category}', 'UObjectCategory', path, category, physical=path)
+        if not automatic and not fields:
+            add(f'category.{source}', 'UObjectCategory', source, source, translations)
+        if not entries:
+            return
+
+        _, _, records = translator._collect(cls._definition_file_, entries,
+                                            native_cultures=native_cultures, check=not automatic)
+        current = unreal.InternationalizationLibrary.get_current_language()
+        data, changed = [], {}
+        for cache_key, (entry, original) in bindings.items():
+            namespace, key = cache_key
+            record = records[entry]
+            snapshot = (original, record.copy())
+            if cls._localization_cache_.get(cache_key) == snapshot:
+                continue
+            native = record.get('_native', 'zh')
+            strings = {lang: text for lang, text in record.items()
+                       if not lang.startswith('_') and text}
+            # 源文哈希必须匹配 UE 元数据；JSON 的原文作为源语言译文保存。
+            # minimal patch 在后续切换时使用源语言资源回退；首次注册也补齐当前值。
+            culture = unreal.InternationalizationLibrary.get_suitable_culture(list(strings), current, native)
+            strings[current] = strings[culture]
+            data.append(unreal.PolyglotTextData(
+                category=unreal.LocalizedTextSourceCategory.EDITOR,
+                native_culture=native, namespace=namespace, key=key,
+                native_string=original, localized_strings=strings, is_minimal_patch=True))
+            changed[cache_key] = snapshot
+        if data:
+            translator._register_polyglots(data)
+            cls._localization_cache_.update(changed)
 
 
 def alignment(HVtuple: int | tuple[int, int] =(1,1)):

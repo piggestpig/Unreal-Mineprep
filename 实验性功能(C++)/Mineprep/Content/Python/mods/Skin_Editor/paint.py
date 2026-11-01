@@ -3,7 +3,7 @@ import math
 import os
 import unreal
 import mineprep
-from mineprep import bilingual
+from mineprep import i18n
 
 RT = 64
 DISPLAY = 512
@@ -428,30 +428,30 @@ def export_png(mod):
     pad = mod._pad
     path = (mod.paint_tools.ExportPath or '').strip()
     if not path:
-        mineprep.warn(bilingual('请先指定导出PNG路径', 'Set an export PNG path first'))
+        mineprep.warn(i18n('请先指定导出PNG路径', 'Set an export PNG path first'))
         return
     try:
         directory, name = split_png_path(path)
     except ValueError:
-        mineprep.warn(bilingual(f'无效导出路径: {path}', f'Invalid export path: {path}'))
+        mineprep.warn(i18n('无效导出路径: {path}', 'Invalid export path: {path}').format(path=str(path)))
         return
     os.makedirs(directory, exist_ok=True)
     unreal.RenderingLibrary.export_render_target(
         pad.world, pad.rt, directory, name)
     full = os.path.join(directory, name)
-    mineprep.prints(bilingual(f'已导出 {full}', f'Exported {full}'))
+    mineprep.prints(i18n('已导出 {path}', 'Exported {path}').format(path=str(full)))
 
 
 def save(mod):
     pad = mod._pad
     path = (mod.paint_tools.SavePath or '').strip()
     if not path:
-        mineprep.warn(bilingual('请先指定保存路径', 'Set a save path first'))
+        mineprep.warn(i18n('请先指定保存路径', 'Set a save path first'))
         return
     try:
         directory, name = split_content_path(path)
     except ValueError:
-        mineprep.warn(bilingual(f'无效保存路径: {path}', f'Invalid save path: {path}'))
+        mineprep.warn(i18n('无效保存路径: {path}', 'Invalid save path: {path}').format(path=str(path)))
         return
     if not unreal.EditorAssetLibrary.does_directory_exist(directory):
         unreal.EditorAssetLibrary.make_directory(directory)
@@ -467,19 +467,19 @@ def save(mod):
         out = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
             name, directory, unreal.Texture2D, unreal.Texture2DFactoryNew())
     if not isinstance(out, unreal.Texture2D):
-        mineprep.warn(bilingual(f'无法写入纹理: {full}', f'Cannot write texture: {full}'))
+        mineprep.warn(i18n('无法写入纹理: {path}', 'Cannot write texture: {path}').format(path=str(full)))
         return
     unreal.RenderingLibrary.convert_render_target_to_texture2d_editor_only(
         pad.world, pad.rt, out)
     mineprep.prep_texture(out)
     unreal.EditorAssetLibrary.save_loaded_asset(out)
-    mineprep.prints(bilingual(f'已保存 {full}', f'Saved {full}'))
+    mineprep.prints(i18n('已保存 {path}', 'Saved {path}').format(path=str(full)))
 
 
 def _compile_main(mod):
     code = (mod.code_tools.Code or '').strip()
     if not code:
-        mineprep.warn(bilingual('请先填写代码', 'Write a script first'))
+        mineprep.warn(i18n('请先填写代码', 'Write a script first'))
         return None
     ns = {
         'unreal': unreal, 'mineprep': mineprep, 'ColorList': mineprep.ColorList,
@@ -488,11 +488,11 @@ def _compile_main(mod):
     try:
         exec(code, ns)
     except Exception as e:
-        mineprep.warn(bilingual(f'编译失败: ', f'Compile failed: '), e)
+        mineprep.warn(i18n('编译失败: ', 'Compile failed: '), e)
         return None
     main = ns.get('main')
     if not callable(main):
-        mineprep.warn(bilingual(
+        mineprep.warn(i18n(
             '代码需要 def main(tex, overlay)',
             'Script needs def main(tex, overlay)'))
         return None
@@ -509,7 +509,7 @@ def _eval_main(main, tex, overlay):
 def run_code(mod):
     pad = getattr(mod, '_pad', None)
     if not pad or not pad.rt:
-        mineprep.warn(bilingual('画布未就绪', 'Canvas is not ready'))
+        mineprep.warn(i18n('画布未就绪', 'Canvas is not ready'))
         return
     tex = mineprep.tex_to_color(pad.rt)
     if not tex:
@@ -521,7 +521,7 @@ def run_code(mod):
     try:
         result = _eval_main(main, tex, overlay)
     except Exception as e:
-        mineprep.warn(bilingual(f'运行失败: ', f'Script failed: '), e)
+        mineprep.warn(i18n('运行失败: ', 'Script failed: '), e)
         return
     out = mineprep.color_to_tex(result)
     if not out:
@@ -532,7 +532,7 @@ def run_code(mod):
 def run_batch(mod):
     sources = list(mod.batch_tools.Textures or [])
     if not any(isinstance(t, unreal.Texture2D) for t in sources):
-        mineprep.warn(bilingual(
+        mineprep.warn(i18n(
             '请先在批量处理中指定纹理',
             'Set textures in Batch Process first'))
         return
@@ -549,17 +549,17 @@ def run_batch(mod):
             continue
         tex = mineprep.tex_to_color(src)
         if not tex:
-            mineprep.warn(bilingual(
-                f'第 {i + 1} 张读取失败',
-                f'Texture {i + 1} failed to read'))
+            mineprep.warn(i18n(
+                '第 {index} 张纹理读取失败',
+                'Failed to read texture #{index}').format(index=i + 1))
             outs.append(None)
             continue
         try:
             result = _eval_main(main, tex, overlay)
         except Exception as e:
-            mineprep.warn(bilingual(
-                f'第 {i + 1} 张运行失败: ',
-                f'Texture {i + 1} failed: '), e)
+            mineprep.warn(i18n(
+                '第 {index} 张纹理处理失败：',
+                'Failed to process texture #{index}: ').format(index=i + 1), e)
             outs.append(None)
             continue
         out = mineprep.color_to_tex(result)
@@ -569,9 +569,9 @@ def run_batch(mod):
         outs.append(out)
         ok += 1
     mod.batch_tools.NewTextures = outs
-    mineprep.prints(bilingual(
-        f'已处理 {ok}/{len(sources)} 张',
-        f'Processed {ok}/{len(sources)}'))
+    mineprep.prints(i18n(
+        '已处理 {count}/{total} 张',
+        'Processed {count}/{total}').format(count=ok, total=len(sources)))
 
 
 def _copy_tex_to_asset(src, directory, name, template=None):
@@ -610,7 +610,7 @@ def save_batch(mod):
     originals = list(mod.batch_tools.Textures or [])
     news = list(mod.batch_tools.NewTextures or [])
     if not news:
-        mineprep.warn(bilingual('没有可保存的新纹理', 'No new textures to save'))
+        mineprep.warn(i18n('没有可保存的新纹理', 'No new textures to save'))
         return
     beside = bool(mod.batch_tools.BesideOriginal)
     saved = []
@@ -631,17 +631,17 @@ def save_batch(mod):
             out, directory, name,
             src if isinstance(src, unreal.Texture2D) else out)
         if not dest:
-            mineprep.warn(bilingual(
-                f'第 {i + 1} 张保存失败',
-                f'Texture {i + 1} failed to save'))
+            mineprep.warn(i18n(
+                '第 {index} 张纹理保存失败',
+                'Failed to save texture #{index}').format(index=i + 1))
             saved.append(None)
             continue
         saved.append(dest)
         ok += 1
-        mineprep.prints(bilingual(
-            f'已保存 {directory}/{name}',
-            f'Saved {directory}/{name}'))
+        mineprep.prints(i18n(
+            '已保存 {directory}/{name}',
+            'Saved {directory}/{name}').format(directory=str(directory), name=name))
     mod.batch_tools.NewTextures = saved
-    mineprep.prints(bilingual(
-        f'已保存 {ok}/{len(news)} 张',
-        f'Saved {ok}/{len(news)}'))
+    mineprep.prints(i18n(
+        '已保存 {count}/{total} 张',
+        'Saved {count}/{total}').format(count=ok, total=len(news)))

@@ -1,0 +1,236 @@
+{
+  "EditorShortcuts": {
+    "自定义快捷键": {
+      "zh": "自定义快捷键",
+      "en": "Editor Shortcuts",
+      "zh-Hant": "自訂快速鍵",
+      "zh-Hant-HK": "自訂快捷鍵"
+    },
+    "Settings.category.Settings": {
+      "en": "Shortcut Settings",
+      "zh": "快捷键设置",
+      "_native": "en",
+      "zh-Hant": "快速鍵設定",
+      "zh-Hant-HK": "快捷鍵設定"
+    },
+    "Settings.scale": {
+      "en": "Scale",
+      "zh": "缩放",
+      "_native": "en",
+      "zh-Hant": "縮放"
+    },
+    "管理与自定义 Mineprep 编辑器快捷键": {
+      "zh": "管理与自定义 Mineprep 编辑器快捷键",
+      "en": "Manage and customize Mineprep editor shortcuts",
+      "zh-Hant": "管理與自訂 Mineprep 編輯器快速鍵",
+      "zh-Hant-HK": "管理與自訂 Mineprep 編輯器快捷鍵"
+    },
+    "此操作需要启用 Mineprep C++ 插件。": {
+      "zh": "此操作需要启用 Mineprep C++ 插件。",
+      "en": "This operation requires the Mineprep C++ plugin.",
+      "zh-Hant": "此操作需要啟用 Mineprep C++ 外掛。",
+      "zh-Hant-HK": "此操作需要啟用 Mineprep C++ 插件。"
+    },
+    "无法获取自定义快捷键蓝图对象": {
+      "zh": "无法获取自定义快捷键蓝图对象",
+      "en": "Failed to get hotkey blueprint object",
+      "zh-Hant": "無法取得自訂快速鍵藍圖物件",
+      "zh-Hant-HK": "無法取得自訂快捷鍵藍圖物件"
+    },
+    "未启用 Mineprep C++ 插件，无法绑定全局快捷键；仍可编辑并手动执行 Python 代码。": {
+      "zh": "未启用 Mineprep C++ 插件，无法绑定全局快捷键；仍可编辑并手动执行 Python 代码。",
+      "en": "Global hotkeys require the Mineprep C++ plugin; editing and manually running Python code remain available.",
+      "zh-Hant": "未啟用 Mineprep C++ 外掛，無法綁定全域快速鍵；仍可編輯並手動執行 Python 程式碼。",
+      "zh-Hant-HK": "未啟用 Mineprep C++ 插件，無法綁定全域快捷鍵；仍可編輯並手動執行 Python 代碼。"
+    },
+    "快捷键 [{name}] 报错": {
+      "zh": "快捷键 [{name}] 报错",
+      "en": "Shortcut [{name}] error",
+      "zh-Hant": "快速鍵 [{name}] 發生錯誤",
+      "zh-Hant-HK": "快捷鍵 [{name}] 發生錯誤"
+    },
+    "蓝图快捷键 [{name}] 执行报错": {
+      "zh": "蓝图快捷键 [{name}] 执行报错",
+      "en": "BP Shortcut [{name}] error",
+      "zh-Hant": "藍圖快速鍵 [{name}] 執行錯誤",
+      "zh-Hant-HK": "藍圖快捷鍵 [{name}] 執行錯誤"
+    },
+    "触发 / 名称": {
+      "zh": "触发 / 名称",
+      "en": "Trigger / Name",
+      "zh-Hant": "觸發 / 名稱"
+    },
+    "快捷键（点击设置）": {
+      "zh": "快捷键（点击设置）",
+      "en": "Shortcut (Click to Set)",
+      "zh-Hant": "快速鍵（點擊設定）",
+      "zh-Hant-HK": "快捷鍵（點擊設定）"
+    },
+    "功能说明": {
+      "zh": "功能说明",
+      "en": "Description",
+      "zh-Hant": "功能說明"
+    },
+    "缩放": {
+      "zh": "缩放",
+      "en": "Scale",
+      "zh-Hant": "縮放"
+    },
+    "还原默认": {
+      "zh": "还原默认",
+      "en": "Reset Defaults",
+      "zh-Hant": "還原預設"
+    },
+    "打开蓝图": {
+      "zh": "打开蓝图",
+      "en": "Open Blueprint",
+      "zh-Hant": "開啟藍圖",
+      "zh-Hant-HK": "打開藍圖"
+    },
+    "展开 / 收起全部代码": {
+      "zh": "展开 / 收起全部代码",
+      "en": "Expand / Collapse All Code",
+      "zh-Hant": "展開 / 收合全部程式碼",
+      "zh-Hant-HK": "展開 / 收合全部代碼"
+    },
+    "添加新快捷键": {
+      "zh": "添加新快捷键",
+      "en": "Add New Shortcut",
+      "zh-Hant": "新增快速鍵",
+      "zh-Hant-HK": "新增快捷鍵"
+    },
+    "将所有快捷键还原为默认预设": {
+      "zh": "将所有快捷键还原为默认预设",
+      "en": "Reset all shortcuts to defaults",
+      "zh-Hant": "將所有快速鍵還原為預設值",
+      "zh-Hant-HK": "將所有快捷鍵還原為預設值"
+    },
+    "在资产编辑器中打开快捷键蓝图 (/Mineprep/Mineprep自定义快捷键)": {
+      "zh": "在资产编辑器中打开快捷键蓝图 (/Mineprep/Mineprep自定义快捷键)",
+      "en": "Open shortcuts blueprint in editor",
+      "zh-Hant": "在資產編輯器中開啟快速鍵藍圖 (/Mineprep/Mineprep自定义快捷键)",
+      "zh-Hant-HK": "在資產編輯器中打開快捷鍵藍圖 (/Mineprep/Mineprep自定义快捷键)"
+    },
+    "打开自定义快捷键蓝图失败，请检查资产是否存在": {
+      "zh": "打开自定义快捷键蓝图失败，请检查资产是否存在",
+      "en": "Failed to open hotkey blueprint",
+      "zh-Hant": "開啟自訂快速鍵藍圖失敗，請檢查資產是否存在",
+      "zh-Hant-HK": "打開自訂快捷鍵藍圖失敗，請檢查資產是否存在"
+    },
+    "名称不能为空，已还原": {
+      "zh": "名称不能为空，已还原",
+      "en": "Name cannot be empty, reverted",
+      "zh-Hant": "名稱不可為空，已還原"
+    },
+    "输入快捷键名称": {
+      "zh": "输入快捷键名称",
+      "en": "Enter shortcut name",
+      "zh-Hant": "輸入快速鍵名稱",
+      "zh-Hant-HK": "輸入快捷鍵名稱"
+    },
+    "输入功能说明": {
+      "zh": "输入功能说明",
+      "en": "Enter description",
+      "zh-Hant": "輸入功能說明"
+    },
+    "# 输入 Python 代码（已自动导入 unreal、mineprep）；留空则触发同名蓝图函数": {
+      "zh": "# 输入 Python 代码（已自动导入 unreal、mineprep）；留空则触发同名蓝图函数",
+      "en": "# Enter Python code (unreal, mineprep pre-imported); leave blank to call the matching Blueprint function",
+      "zh-Hant": "# 輸入 Python 程式碼（已自動匯入 unreal、mineprep）；留空則呼叫同名藍圖函式",
+      "zh-Hant-HK": "# 輸入 Python 代碼（已自動匯入 unreal、mineprep）；留空則呼叫同名藍圖函數"
+    },
+    "已设置 [{name}] 快捷键 -> {new_chord_text}": {
+      "zh": "已设置 [{name}] 快捷键 -> {new_chord_text}",
+      "en": "Set [{name}] hotkey -> {new_chord_text}",
+      "zh-Hant": "已設定 [{name}] 快速鍵 -> {new_chord_text}",
+      "zh-Hant-HK": "已設定 [{name}] 快捷鍵 -> {new_chord_text}"
+    },
+    "已删除快捷键: [{name}]": {
+      "zh": "已删除快捷键: [{name}]",
+      "en": "Deleted shortcut: [{name}]",
+      "zh-Hant": "已刪除快速鍵: [{name}]",
+      "zh-Hant-HK": "已刪除快捷鍵: [{name}]"
+    },
+    "已添加新快捷键: [{new_name}]": {
+      "zh": "已添加新快捷键: [{new_name}]",
+      "en": "Added shortcut: [{new_name}]",
+      "zh-Hant": "已新增快速鍵: [{new_name}]",
+      "zh-Hant-HK": "已新增快捷鍵: [{new_name}]"
+    },
+    "[{name}] 语法错误: {err_msg}，已还原": {
+      "zh": "[{name}] 语法错误: {err_msg}，已还原",
+      "en": "Syntax error in [{name}]: {err_msg}, reverted",
+      "zh-Hant": "[{name}] 語法錯誤: {err_msg}，已還原"
+    },
+    "名称冲突：'{new_name}' 已存在，已还原": {
+      "zh": "名称冲突：'{new_name}' 已存在，已还原",
+      "en": "Name conflict: '{new_name}' already exists, reverted",
+      "zh-Hant": "名稱衝突：'{new_name}' 已存在，已還原"
+    },
+    "已清除 [{name}] 的按键绑定": {
+      "zh": "已清除 [{name}] 的按键绑定",
+      "en": "Cleared hotkey for [{name}]",
+      "zh-Hant": "已清除 [{name}] 的按鍵繫結"
+    },
+    "快捷键冲突：已被 [{conflict_name}] 占用，已还原": {
+      "zh": "快捷键冲突：已被 [{conflict_name}] 占用，已还原",
+      "en": "Shortcut conflict: already bound to [{conflict_name}], reverted",
+      "zh-Hant": "快速鍵衝突：已由 [{conflict_name}] 使用，已還原",
+      "zh-Hant-HK": "快捷鍵衝突：已由 [{conflict_name}] 使用，已還原"
+    },
+    "点击执行: {name}": {
+      "zh": "点击执行: {name}",
+      "en": "Run: {name}",
+      "zh-Hant": "點擊執行: {name}"
+    },
+    "展开/收起 [{name}] 的 Python 代码": {
+      "zh": "展开/收起 [{name}] 的 Python 代码",
+      "en": "Toggle Python code for [{name}]",
+      "zh-Hant": "展開/收合 [{name}] 的 Python 程式碼",
+      "zh-Hant-HK": "展開/收合 [{name}] 的 Python 代碼"
+    },
+    "删除快捷键: {name}": {
+      "zh": "删除快捷键: {name}",
+      "en": "Delete shortcut: {name}",
+      "zh-Hant": "刪除快速鍵: {name}",
+      "zh-Hant-HK": "刪除快捷鍵: {name}"
+    },
+    "移动到面前": {
+      "zh": "移动到面前",
+      "en": "Move To Front",
+      "zh-Hant": "移動到面前"
+    },
+    "添加可视性关键帧": {
+      "zh": "添加可视性关键帧",
+      "en": "Add Visibility Keyframe",
+      "zh-Hant": "新增可見性關鍵影格",
+      "zh-Hant-HK": "新增可見性關鍵幀"
+    },
+    "设置隐藏关键帧": {
+      "zh": "设置隐藏关键帧",
+      "en": "Add Hidden Keyframe",
+      "zh-Hant": "新增隱藏關鍵影格",
+      "zh-Hant-HK": "新增隱藏關鍵幀"
+    },
+    "交换对象位置": {
+      "zh": "交换对象位置",
+      "en": "Swap Actor Positions",
+      "zh-Hant": "交換物件位置"
+    },
+    "对齐摄像机至视图": {
+      "zh": "对齐摄像机至视图",
+      "en": "Align Camera to View",
+      "zh-Hant": "將攝影機對齊視圖"
+    },
+    "绑定父级": {
+      "zh": "绑定父级",
+      "en": "Set Parent",
+      "zh-Hant": "設定父物件"
+    },
+    "绑定至空物体": {
+      "zh": "绑定至空物体",
+      "en": "Attach to Null Actor",
+      "zh-Hant": "附加至空物件"
+    }
+  }
+}

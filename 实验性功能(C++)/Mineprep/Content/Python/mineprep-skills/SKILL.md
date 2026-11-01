@@ -24,6 +24,10 @@ this skill does not require an editor connection or imply an edit request.
 Verify plugin contracts against current source and `unreal.*` against the
 installed engine's bindings.
 
+Simple personal panels and mods can use ordinary strings; localization is optional.
+For multilingual tools, translation work or changes to existing localized text,
+read [localization.md](localization.md). Preserve localization already in use.
+
 ## Route
 
 Read focused sections relevant to the task, then matching source as needed.
@@ -32,6 +36,7 @@ Read focused sections relevant to the task, then matching source as needed.
 |------|-----------|----------------------|
 | Overview / installation | [intro.md](intro.md) | Verify current product facts when needed |
 | API / console / reload | [api.md](api.md) | Public helpers, defaults and recovery |
+| Multilingual UI / translation | [localization.md](localization.md) | Optional `i18n`, PropertyGroup translations and offline inspection |
 | UI / persistence / paint | [ui.md](ui.md), [pitfalls/ui.md](pitfalls/ui.md) | `ui()`, PropertyGroup, per-execution state |
 | PropertyGroup metadata / native conditions | [property-metadata.md](property-metadata.md) | Metadata keys and Python declaration limits; callbacks/persistence stay in ui.md |
 | NBT / schematic / procedural blocks | [structure.md](structure.md), [pitfalls/structure.md](pitfalls/structure.md) | `Blocks`, `spawn_structure`, coordinates and units |
@@ -65,6 +70,7 @@ Read focused sections relevant to the task, then matching source as needed.
   Always construct `Rotator` with keyword arguments (`pitch=`, `yaw=`, `roll=`); see [structure.md](structure.md).
 - Source `Texture2D` build completion and painted RenderTargets have different lifecycles:
   never call `force_update_texture` on a painted RT. See [pitfalls/common.md](pitfalls/common.md#textures--rt).
+- Pixel-exact data textures such as BPT/BRT require linear colour, nearest filtering, no mipmaps and `never_stream=True` (FP32 for BPT/BRT); `prep_texture()` alone does not set this data policy.
 - A successful transport or log line does not prove a mutation succeeded. Query
   scene/asset postconditions before retrying operations that could duplicate objects.
   If no editor connection is available, provide the script for Output Log's **Python**

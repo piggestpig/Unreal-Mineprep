@@ -206,9 +206,11 @@ class Context:
             self.stats = {"evaluated": {}}
 
     @classmethod
-    def for_region(cls, fields, params, seed, region, *, resources=None):
-        x, z = region.coordinates()
-        return cls(fields, params, seed, x.astype(np.float64), z.astype(np.float64), resources=resources)
+    def for_region(cls, fields, params, seed, region, *, resources=None, step=1):
+        x = np.arange(region.x0,region.x0+region.width,step,dtype=np.float64)[None,:]
+        z = np.arange(region.z0,region.z0+region.depth,step,dtype=np.float64)[:,None]
+        return cls(fields, params, seed, x, z, step,
+                   lattice=(region.x0//step,region.z0//step) if step != 1 else None, resources=resources)
 
     def resource(self, name):
         """Request a declared, crop-independent planning resource lazily."""

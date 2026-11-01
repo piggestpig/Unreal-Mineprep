@@ -6,15 +6,12 @@ import re
 
 import unreal
 import mineprep
+from mineprep import i18n
 
 BASE = '/Game/mc/mob'
 MATERIAL = '/Game/Mineprep/材质/皮肤/Core/皮肤_Steve'
 KEY = 'VanillaMobLoader.Selection'
 COMPLETE = 'VanillaMobLoader.Complete'
-
-
-def message(zh, en):
-    return str(mineprep.bilingual(zh, en))
 
 
 def slug(ident):
@@ -40,21 +37,21 @@ def asset_target(entry, catalog, skeletal=False):
 
     if existing:
         if not isinstance(existing, asset_class) or unreal.EditorAssetLibrary.get_metadata_tag(existing, KEY) != entry.key:
-            raise ValueError(message('目标资产名称被占用：', 'Asset name is occupied: ') + path)
+            raise ValueError(str(i18n('目标资产名称被占用：', 'Asset name is occupied: ')) + path)
         if unreal.EditorAssetLibrary.get_metadata_tag(existing, COMPLETE) != '1':
-            raise ValueError(message('存在未完成的资产，请先在内容浏览器检查：', 'Inspect the incomplete asset in the Content Browser: ') + path)
+            raise ValueError(str(i18n('存在未完成的资产，请先在内容浏览器检查：', 'Inspect the incomplete asset in the Content Browser: ')) + path)
     return folder, name, existing
 
 
 def prerequisites():
     required = ('GeometryScript_MeshEdits', 'GeometryScript_NewAssetUtils', 'GeometryScriptSimpleMeshBuffers')
     if not all(hasattr(unreal, name) for name in required):
-        raise RuntimeError(message('请启用 Geometry Script 插件', 'Enable the Geometry Script plugin'))
+        raise RuntimeError(str(i18n('请启用 Geometry Script 插件', 'Enable the Geometry Script plugin')))
     material = unreal.load_asset(MATERIAL)
     if not isinstance(material, unreal.MaterialInstanceConstant):
-        raise RuntimeError(message('找不到模板材质：', 'Missing template material: ') + MATERIAL)
+        raise RuntimeError(str(i18n('找不到模板材质：', 'Missing template material: ')) + MATERIAL)
     if '纹理贴图' not in [str(n) for n in unreal.MaterialEditingLibrary.get_texture_parameter_names(material)]:
-        raise RuntimeError(message('模板材质缺少“纹理贴图”参数', 'Template material has no skin texture parameter'))
+        raise RuntimeError(str(i18n('模板材质缺少“纹理贴图”参数', 'Template material has no skin texture parameter')))
 
 
 def composition_target(entry, folder, name, reload=False):
@@ -63,12 +60,12 @@ def composition_target(entry, folder, name, reload=False):
     existing = unreal.load_asset(path) if lib.does_asset_exist(path) else None
     if existing:
         if not isinstance(existing, unreal.SkeletalMesh) or not lib.get_metadata_tag(existing, KEY):
-            raise ValueError(message('目标路径被外部资产占用：', 'Foreign asset at destination: ')+path)
+            raise ValueError(str(i18n('目标路径被外部资产占用：', 'Foreign asset at destination: '))+path)
         if lib.get_metadata_tag(existing, COMPLETE) != '1':
             raise ValueError('Incomplete asset: '+path)
         if lib.get_metadata_tag(existing, KEY) != entry.key and not reload:
-            raise ValueError(message('已有资产配方不同，请重新加载生物或更换保存名称',
-                                     'Recipe differs; reload the entity or change the save name'))
+            raise ValueError(str(i18n('目标资产的生物组合不同，请点击“重新导入生物”或更换保存名称',
+                                     'Existing asset uses a different mob combination; reimport or change the save name')))
     return folder,name,existing
 
 
@@ -106,7 +103,7 @@ def skin_material(entry, folder, name, skin_path, created, warnings):
     if skin_path is not None and paths[2] in existing:
         return existing[paths[2]]
     if not skin_path or not skin_path.is_file():
-        warnings.append(message("未使用皮肤：已分配默认中性材质", "No skin: using the default neutral material"))
+        warnings.append(str(i18n('未包含皮肤贴图，已使用默认材质', 'No skin texture; assigned default material')))
         return unreal.load_asset("/Engine/EngineMaterials/DefaultMaterial")
 
     texture = existing.get(paths[1])
@@ -121,7 +118,7 @@ def skin_material(entry, folder, name, skin_path, created, warnings):
         unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
         texture = unreal.load_asset(paths[1])
         if not isinstance(texture, unreal.Texture2D):
-            raise RuntimeError(message('皮肤 PNG 导入失败', 'Skin PNG import failed'))
+            raise RuntimeError(str(i18n('皮肤 PNG 导入失败', 'Skin PNG import failed')))
         created.append(texture)
         mineprep.prep_texture(texture)
 
@@ -144,7 +141,7 @@ def create_assets(entry, version, target, geometry, skin_path=None):
 
     paths = [folder + '/SM_' + name, folder + '/T_' + name, folder + '/MI_' + name]
     if unreal.EditorAssetLibrary.does_asset_exist(paths[0]):
-        raise ValueError(message('目标目录存在冲突资产，未覆盖：', 'Conflicting assets; nothing overwritten: ') + folder)
+        raise ValueError(str(i18n('目标目录存在冲突资产，未覆盖：', 'Conflicting assets; nothing overwritten: ')) + folder)
     owned = [p for p in paths if not unreal.EditorAssetLibrary.does_asset_exist(p)]
     created = []
     warnings = list(geometry.warnings)
@@ -194,7 +191,7 @@ def placement_target():
     editor = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
     camera = editor.get_level_viewport_camera_info()
     if not camera or camera[0] is None:
-        raise RuntimeError(message('没有有效的关卡视口，无法放置', 'No valid level viewport for placement'))
+        raise RuntimeError(str(i18n('没有有效的关卡视口，无法放置', 'No valid level viewport for placement')))
 
     location, rotation = camera
     direction = unreal.MathLibrary.get_forward_vector(rotation)
@@ -224,7 +221,7 @@ def place(mesh, scale=1., target=None):
         position = unreal.Vector(position.x, position.y, position.z - bottom * scale)
 
     subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
-    with unreal.ScopedEditorTransaction(message('放置原版生物', 'Place vanilla entity')):
+    with unreal.ScopedEditorTransaction(str(i18n('放置原版生物', 'Place Vanilla Mob'))):
         actor = subsystem.spawn_actor_from_class(unreal.SkeletalMeshActor if skeletal else unreal.StaticMeshActor, position, unreal.Rotator())
         if not actor:
             raise RuntimeError('Failed to spawn StaticMeshActor')

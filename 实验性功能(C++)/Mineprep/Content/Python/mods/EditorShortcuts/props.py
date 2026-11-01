@@ -9,5 +9,4 @@ class Settings(mineprep.PropertyGroup):
     scale: float = (1.0, {'UIMin': 0.5, 'UIMax': 2.0, 'ClampMin': 0.2, 'ClampMax': 3.0})
 
 
-Settings.localize('Settings', '快捷键设置', 'Shortcut Settings')
-Settings.localize('scale', '缩放', 'Scale')
+Settings.localize()

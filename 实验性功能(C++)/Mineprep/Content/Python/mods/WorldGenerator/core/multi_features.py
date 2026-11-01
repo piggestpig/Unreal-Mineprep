@@ -10,11 +10,9 @@ import numpy as np
 
 from .data import Region, MAX_COORD, check_cancel, require_int
 from .features import FeatureBatch, enabled
-from .fields import Context
 from .noise import seed_key, fbm2
-from .surface import bound, apply_surface
-from .biomes import select_biomes
-from .water import sample_water, generated as water_generated, displayed as water_displayed
+from .surface import bound
+from .water import generated as water_generated, displayed as water_displayed
 from . import geometry
 
 BATCH = 128
@@ -253,6 +251,8 @@ def _build(pack, params, seed, region, features, resources):
         probability = np.minimum(probability, 1.) * weight(pack, f.category, px, pz)
         uniform = (_hash(cx, cz, seed, f'features/{f.id}/candidate') >> np.uint64(11)).astype(np.float64) / 2**53
         proposed = uniform < probability
+        if pack.layout is not None:
+            proposed &= pack.layout.anchors(f.detail_only,px,pz)
         owned = ((px >= region.x0) & (px < region.x0+region.width) & (pz >= region.z0) & (pz < region.z0+region.depth))
         candidates.append(np.column_stack((px[proposed & owned], pz[proposed & owned])))
         underwater = f.habitat == 'underwater'
@@ -317,6 +317,9 @@ def _build(pack, params, seed, region, features, resources):
                       (~wet[zz,xx] | (test_points[:,1] > np.floor(water_levels[zz,xx])))))
             clear = ((test_points[:,1] > tops[zz,xx]) & (test_points[:,1] >= params['world.y_min'])
                      & (highest < params['world.y_max']) & space)
+            if pack.layout is not None and pack.layout.empty:
+                clear |= (pack.layout.inside(test_points[:,0],test_points[:,2]) &
+                          (test_points[:,1]>=params['world.y_min']) & (highest<params['world.y_max']))
             if floating:
                 # All projected columns, including overhangs, need the same water plane.
                 clear &= displayed[zz,xx] & (water_levels[zz,xx] == water_levels[iz[ids],ix[ids]][test_owners])
@@ -350,6 +353,8 @@ def _build(pack, params, seed, region, features, resources):
                 supported = ((ground[:, 1] == tops[gz, gx]) & (ground[:, 1] >= params['world.y_min'])
                              & (wet[gz, gx] if underwater else ~wet[gz, gx])
                              & np.isin(columns[gz, gx, 0], [block_ids[n] for n in f.surface]))
+                if pack.layout is not None:
+                    supported &= pack.layout.terrain(ground[:,0],ground[:,2])
                 affected = _affected(ground, boxes) & supported
                 if affected.any():
                     supported[affected] &= _occupied(pack, params, seed, ground[affected], tops[gz[affected], gx[affected]], resources)

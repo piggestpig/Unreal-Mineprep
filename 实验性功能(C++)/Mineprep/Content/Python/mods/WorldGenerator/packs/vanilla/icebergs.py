@@ -86,6 +86,7 @@ def columns(ctx):
         raw_height=signal**2*1.2*base/16
         h=np.minimum(np.minimum(raw_height,roof),limit)
         use=ctx.allowed & (signal>max(.25,1.8+4*(.65-ctx.density))) & (h>=2)
+        if ctx.layout is not None: use &= ctx.layout.terrain(x,z)
         top[use]=level[use]+h[use]
         base_roof=(np.ceil(np.abs(c.get('iceberg_base_roof'))*40)+14)*base/16
         base_height=np.minimum(np.minimum(raw_height,base_roof),base*(1.25+1.25*np.clip(large,0,1)))
@@ -125,6 +126,7 @@ def _isolated(ctx,c,level,top,bottom,caps):
     keys=_hash(cx,cz,ctx.seed,'features/iceberg/shape')
     fraction=(_hash(cx,cz,ctx.seed,'iceberg/isolated')>>np.uint64(11)).astype(float)/2**53
     proposed=ctx.allowed[zz,xx]&(candidate<ctx.density*np.clip(1+2*patch,0,2))&(fraction<ctx.param('frozen_ocean.isolated_fraction'))
+    if ctx.layout is not None: proposed &= ctx.layout.anchors(ctx.feature.detail_only,px,pz)
     independent=int((proposed&(px>=r.x0)&(px<r.x0+r.width)&(pz>=r.z0)&(pz<r.z0+r.depth)).sum())
     for i in np.flatnonzero(proposed):
         key=int(keys[i]);sx,sz,st,sd=shape(ctx,key)

@@ -1,28 +1,11 @@
 {
-  "name": {
-    "zh": "山地",
-    "en": "Mountains"
-  },
   "params": {
     "climate.single_biome": "mountains",
     "caves.enabled": false,
     "terrain.flat": false,
     "terrain.mountain_height": 120,
     "terrain.detail_strength": 2,
-    "terrain.continental_curve": [
-      [
-        -1,
-        6
-      ],
-      [
-        0,
-        10
-      ],
-      [
-        1,
-        16
-      ]
-    ],
+    "terrain.continental_curve": [[-1, 6], [0, 10], [1, 16]],
     "terrain.lowland_strength": 0.8,
     "terrain.lowland_height": 6,
     "islands.enabled": false,
