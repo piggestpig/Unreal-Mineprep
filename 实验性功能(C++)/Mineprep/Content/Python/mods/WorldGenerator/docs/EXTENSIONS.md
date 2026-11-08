@@ -37,13 +37,13 @@ generate／overview／fields／check／locate／prepare及水系／洞穴规划�
 
 0.46.0只调整vanilla配方与默认内容，公共接口保持。普通草原与水域倍率为[1,1,1]；BCT白色表示中性倍率，不表示没有植被，实际统计使用generate及check(World)。`savanna_weight`是16格两层宏观气候权重，`savanna_mask`是限制为0～1的边界扰动结果；可通过fields查询。宏观温湿度包含用户偏移，不含高度降温及细边缘噪声，群系使用mask≥0.5、干域且无雪，优先级保持。coverage默认0.75、0跳过专用采样，region_scale默认768。普通草原仅绑定oak与trees.plains_density（0.01）；旧trees.density及自定义包绑定保持。金合欢候选格12、默认密度0.36。用户显式配置与旧快照不自动重写，格式仍为2。
 
-群系JSON可选vegetation_tint: [r,g,b]和vegetation_hsv: [h,s,v]，各缺省[1,1,1]。RGB为线性乘法倍率，非负有限且≤65504；HSV的H为0.5～1.5，偏移(H−1)×360°，S／V为非负有限倍率且≤65504。与地图color独立，不拆草／叶通道；describe.biomes公开两套解析值。继承仍整份覆盖。面板RGB使用LinearColor，Alpha固定1不保存；HSV为三个数值控件。
+群系JSON可选vegetation_tint: [r,g,b,a]和vegetation_hsv: [h,s,v]，分别缺省[1,1,1,0.5]与[1,1,1]。RGB为线性乘法倍率，非负有限且≤65504；A为调色前原色保留程度，0灰度、1原色，范围0～1。旧三分量RGB读取时补A=0.5；describe.biomes与冻结RGB色板统一返回四分量。HSV的H为0.5～1.5，偏移(H−1)×360°，S／V为非负有限倍率且≤65504。与地图color独立，不拆草／叶通道；继承仍整份覆盖。面板RGB使用LinearColor和独立原色保留滑块；HSV为三个数值控件。
 
-`api.write_biome_texture(World或Overview, path, cell_size=4, vegetation_tints=None, biome_color_mode='rgb', vegetation_hsv=None)`只读快照，返回path、width、height、cell_size、biome_color_mode、key、map_seconds、encode_seconds、seconds；只接受.exr。两项覆盖均为群系ID→三分量映射，使用当前模式的表，遗漏采用快照声明，未知ID报错。HSV三分量在平滑前取负；整张纹理不混用模式。9×9局部平均（边缘复制）后面积降采样；尺寸各轴ceil(格数/cell_size)，整数精度1..16，单边上限16384。FP16 RGB EXR，数组[Z,X]；OpenCV写入只交换RGB/BGR，不翻转空间轴。
+`api.write_biome_texture(World或Overview, path, cell_size=4, vegetation_tints=None, biome_color_mode='rgb', vegetation_hsv=None, biome_color_power=1.)`只读快照，返回path、width、height、cell_size、biome_color_mode、biome_color_power、key、map_seconds、encode_seconds、seconds；只接受.exr。RGB覆盖为群系ID→RGB或RGBA，HSV覆盖保持ID→三分量；使用当前模式的表，遗漏采用快照声明，未知ID报错。HSV三分量在平滑前取负，A固定1；RGB的A不参与乘方或取负。整张纹理不混用模式。RGBA四通道一起做9×9局部平均（边缘复制）后面积降采样；尺寸各轴ceil(格数/cell_size)，整数精度1..16，单边上限16384。FP16 RGBA EXR，数组[Z,X]；OpenCV写入只交换RGBA/BGRA，不翻转空间轴。
 
 map_seconds包含映射、平均与降采样；encode_seconds包含EXR编码、写文件和身份计算；seconds为本次完整导出壁钟，不含UE导入或纹理构建。离线启动需在首次导入cv2前设置OPENCV_IO_ENABLE_OPENEXR=1，已导入但未启用时需重启解释器。
 
-`prepare(..., biome_texture=True, biome_cell_size=4, vegetation_tints=None, biome_color_mode='rgb', vegetation_hsv=None, chunk_count=1)`是输出选项。PreparedWorld保存biome_texture／biome_key／biome_enabled／biome_cell_size、biome_color_mode、冻结的vegetation_tints／vegetation_hsv正数ID/三元组、chunk_count及base_reused；入口校验并冻结两套表，reused仍表示完整准备命中。textures仍为BPT／BRT。模式／色板／精度／启停变化复用同世界、后端、合并及资源依赖的准备基底，颜色身份只算一次，biome_seconds在实际生成时包括该次身份及EXR导出，biome_import_seconds单列。源、资源、预算及纹理就绪检查不跳过。
+`prepare(..., biome_texture=True, biome_cell_size=4, vegetation_tints=None, biome_color_mode='rgb', vegetation_hsv=None, chunk_count=1)`是输出选项。PreparedWorld保存biome_texture／biome_key／biome_enabled／biome_cell_size、biome_color_mode、冻结的vegetation_tints（ID/RGBA）与vegetation_hsv（ID/正数HSV）、chunk_count及base_reused；入口校验并冻结两套表，reused仍表示完整准备命中。textures仍为BPT／BRT。模式／色板／精度／启停变化复用同世界、后端、合并及资源依赖的准备基底，颜色身份只算一次，biome_seconds在实际生成时包括该次身份及EXR导出，biome_import_seconds单列。源、资源、预算及纹理就绪检查不跳过。
 
 ISM只须提供生物群系纹理，不读写两个边界点；PCG／Niagara仍要求三属性并赋组件局部A=(0,0,0)，B=(width,depth,y_max-y_min)×100。纹理TC_HDR、srgb=False、Clamp、无Mip、不流送，独立于结构F32数据纹理。ISM整区各模型Actor共享BCT，自动边界的近似偏移按用户选择保留。
 

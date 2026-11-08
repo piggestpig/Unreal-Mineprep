@@ -120,6 +120,8 @@ class Internationalization:
     PropertyGroup.localize 共用批量收集入口，一次合并写回其属性文本。  
     检测到 unreal.mineprep.register_polyglot_texts 时使用 C++ 批量注册，否则逐条注册。  
     file 指定 JSON 路径（相对当前工作目录），构造时规范化，首次补词时创建文件及父目录。  
+    i18n @ 'path/i18n.json' 返回指定文件的副本，继承语言、namespace 和 key，不修改原节点。  
+    @ 用于 from_data 节点时切换到文件收集模式，不导出内存词典。  
     显式文件默认以所在文件夹名为 namespace；公共 Python 目录仍用 Core。  
     属性链、下标及 PropertyGroup.localize 继承文件配置；建议同时指定稳定的 namespace。  
     不传 file 时仍根据调用来源自动定位；临时脚本默认仅在内存中使用 UObjectDisplayNames。  
@@ -175,6 +177,16 @@ class Internationalization:
         node = copy(self)
         node._source = self._source or sys._getframe(1).f_code.co_filename
         node._namespace = namespace
+        return node
+
+    def __matmul__(self, file):
+        """返回使用指定 JSON 文件的收集节点，保留原节点的其他配置。"""
+        path = Path(file).resolve()
+        if path.suffix.lower() != '.json':
+            raise ValueError('file 须为 JSON 文件路径')
+        node = copy(self)
+        node._file = path
+        node._memory_mode = False
         return node
 
     @staticmethod

@@ -1,5 +1,6 @@
 {
   "id": "frozen_ocean",
+  "vegetation_tint": [0.9, 1.1, 1.35, 0.5],
   "color": "#9FC8F2",
   "climate": [{"water_kind": [1, 1], "shore_depth": [0, null], "frozen_ocean_mask": [0.5, null]}],
   "surface": [

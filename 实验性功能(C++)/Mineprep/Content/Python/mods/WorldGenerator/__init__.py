@@ -3,7 +3,7 @@
 # The Mod scanner imports this package. Load editor modules only on register.
 # Localized display metadata lives in mod_manifest.toml.
 mod_info = {
-    "Version": "0.76.0",
+    "Version": "0.77.0",
     "EnabledByDefault": True,
     "ReloadWithMineprep": True,
     "Advanced": False,

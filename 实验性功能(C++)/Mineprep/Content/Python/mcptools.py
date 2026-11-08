@@ -448,6 +448,9 @@ def run_code(code: str, loglevel: int = 1) -> str:
     result = None
     error = None
     ok = True
+    import mcvars
+    previous_dialog_defaults = getattr(mcvars, 'PyUseDialogDefaults', False)
+    mcvars.PyUseDialogDefaults = True
     try:
         import mc_parallel
         before = set(mc_parallel._active_async)
@@ -461,6 +464,7 @@ def run_code(code: str, loglevel: int = 1) -> str:
         except Exception:
             pass
     finally:
+        mcvars.PyUseDialogDefaults = previous_dialog_defaults
         unreal.log(end)
 
     truncations = _Truncations()
@@ -478,6 +482,7 @@ class PythonTools(unreal.ToolsetDefinition):
         """在编辑器中执行 Python，返回结果和日志。
         
         自动提供 unreal 和 mineprep，每次调用更新模块引用。变量保留到 reset()。
+        同步执行时启用 panic/dialog 的默认答案，并在结束时恢复设置；后续异步回调不继承。
         
         Args:
             code: Python 代码。最后一条表达式的值作为 result 返回。

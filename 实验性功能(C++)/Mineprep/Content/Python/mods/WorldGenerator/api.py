@@ -174,7 +174,7 @@ def with_heightmap(spec, path, *, mode='faithful', region=None,
 
 def write_biome_texture(source, path, *, cell_size=4, vegetation_tints=None,
                        biome_color_mode='rgb', vegetation_hsv=None, biome_color_power=1.):
-    """Export RGB multipliers or negative HSV adjustments as FP16 EXR."""
+    """Export RGBA FP16 EXR: RGB tint + retention, or negative HSV + A=1."""
     from .adapters.biome_texture import write
     return write(source, path, cell_size=cell_size, vegetation_tints=vegetation_tints,
                  biome_color_mode=biome_color_mode, vegetation_hsv=vegetation_hsv,

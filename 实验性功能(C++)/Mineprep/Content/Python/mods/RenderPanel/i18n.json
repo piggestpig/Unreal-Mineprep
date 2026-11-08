@@ -1,0 +1,1386 @@
+{
+  "RenderPanel": {
+    "RenderPanelHDRSettings.Gamma": {
+      "en": "Render HDR Gamma",
+      "zh": "渲染 HDR 伽马",
+      "zh-Hant": "渲染 HDR 伽馬",
+      "_native": "en"
+    },
+    "渲染输出面板": {
+      "zh": "渲染输出面板",
+      "en": "Render Output Panel",
+      "zh-Hant": "渲染輸出面板"
+    },
+    "MRQ／MRG 配置库与批量渲染、HDR 增益图 JPG": {
+      "zh": "MRQ／MRG 配置库与批量渲染、HDR 增益图 JPG",
+      "en": "MRQ/MRG presets, sequential rendering and Ultra HDR JPEG",
+      "zh-Hant": "MRQ／MRG 設定庫與批次渲染、HDR 增益圖 JPG"
+    },
+    "队列正在运行，请在当前项结束后停止，再编辑队列": {
+      "zh": "队列正在运行，请在当前项结束后停止，再编辑队列",
+      "en": "The queue is running. Stop after the current job before editing it.",
+      "zh-Hant": "佇列正在執行，請在目前項目結束後停止，再編輯佇列",
+      "zh-Hant-HK": "隊列正在執行，請在目前項目結束後停止，再編輯隊列"
+    },
+    "队列正在运行，请在当前项结束后停止，再添加任务": {
+      "zh": "队列正在运行，请在当前项结束后停止，再添加任务",
+      "en": "The queue is running. Stop after the current job before adding jobs.",
+      "zh-Hant": "佇列正在執行，請在目前項目結束後停止，再新增工作",
+      "zh-Hant-HK": "隊列正在執行，請在目前項目結束後停止，再新增工作"
+    },
+    "没有已启用的待渲染任务": {
+      "zh": "没有已启用的待渲染任务",
+      "en": "There are no enabled pending jobs.",
+      "zh-Hant": "沒有已啟用的待渲染工作"
+    },
+    "未知队列操作：{action}": {
+      "zh": "未知队列操作：{action}",
+      "en": "Unknown queue action: {action}",
+      "zh-Hant": "未知佇列操作：{action}",
+      "zh-Hant-HK": "未知隊列操作：{action}"
+    },
+    "渲染队列已停止，未执行项已保留": {
+      "zh": "渲染队列已停止，未执行项已保留",
+      "en": "The render queue has stopped. Unstarted jobs have been kept.",
+      "zh-Hant": "渲染佇列已停止，尚未執行的項目已保留",
+      "zh-Hant-HK": "渲染隊列已停止，尚未執行的項目已保留"
+    },
+    "批量渲染完成": {
+      "zh": "批量渲染完成",
+      "en": "Batch rendering complete",
+      "zh-Hant": "批次渲染完成"
+    },
+    "渲染队列已停止：{exc}": {
+      "zh": "渲染队列已停止：{exc}",
+      "en": "Render queue stopped: {exc}",
+      "zh-Hant": "渲染佇列已停止：{exc}",
+      "zh-Hant-HK": "渲染隊列已停止：{exc}"
+    },
+    "刷新渲染队列界面失败：{exc}": {
+      "zh": "刷新渲染队列界面失败：{exc}",
+      "en": "Could not refresh the queue UI: {exc}",
+      "zh-Hant": "重新整理渲染佇列介面失敗：{exc}",
+      "zh-Hant-HK": "刷新渲染隊列介面失敗：{exc}"
+    },
+    "HDR JPG · 第 {frame} 帧": {
+      "zh": "HDR JPG · 第 {frame} 帧",
+      "en": "HDR JPG · Frame {frame}",
+      "zh-Hant": "HDR JPG · 第 {frame} 影格",
+      "zh-Hant-HK": "HDR JPG · 第 {frame} 幀"
+    },
+    "渲染协程已被停止，UE 渲染可能仍在收尾": {
+      "zh": "渲染协程已被停止，UE 渲染可能仍在收尾",
+      "en": "The render coroutine was stopped. UE may still be finishing the render.",
+      "zh-Hant": "渲染協程已停止，UE 渲染可能仍在收尾"
+    },
+    "渲染失败或已取消，未完整完成": {
+      "zh": "渲染失败或已取消，未完整完成",
+      "en": "The render failed or was cancelled before completion.",
+      "zh-Hant": "渲染失敗或已取消，未完整完成"
+    },
+    "队列已结束，但完成通知失败：{exc}": {
+      "zh": "队列已结束，但完成通知失败：{exc}",
+      "en": "The queue has ended, but its completion notification failed: {exc}",
+      "zh-Hant": "佇列已結束，但完成通知失敗：{exc}",
+      "zh-Hant-HK": "隊列已結束，但完成通知失敗：{exc}"
+    },
+    "渲染项完成回调失败：{exc}": {
+      "zh": "渲染项完成回调失败：{exc}",
+      "en": "The job completion callback failed: {exc}",
+      "zh-Hant": "渲染項目完成回呼失敗：{exc}",
+      "zh-Hant-HK": "渲染項目完成回調失敗：{exc}"
+    },
+    "输出名称／路径不能包含双引号或控制字符": {
+      "zh": "输出名称／路径不能包含双引号或控制字符",
+      "en": "Output names and paths cannot contain double quotes or control characters.",
+      "zh-Hant": "輸出名稱／路徑不能包含雙引號或控制字元"
+    },
+    "输出名称须为非空的相对文件名，可包含子目录": {
+      "zh": "输出名称须为非空的相对文件名，可包含子目录",
+      "en": "Enter a non-empty relative output filename. Subfolders are allowed.",
+      "zh-Hant": "輸出名稱須為非空白的相對檔名，可包含子目錄",
+      "zh-Hant-HK": "輸出名稱須為非空白的相對文件名，可包含子目錄"
+    },
+    "立体编码命令缺少输入或输出路径": {
+      "zh": "立体编码命令缺少输入或输出路径",
+      "en": "The stereo encoding command is missing an input or output path.",
+      "zh-Hant": "立體編碼命令缺少輸入或輸出路徑"
+    },
+    "无法自动组合已有 filter_complex 与立体输出": {
+      "zh": "无法自动组合已有 filter_complex 与立体输出",
+      "en": "Cannot automatically combine an existing filter_complex with stereo output.",
+      "zh-Hant": "無法自動合併現有 filter_complex 與立體輸出"
+    },
+    "ffmpeg 编码需要至少一种图片序列格式": {
+      "zh": "ffmpeg 编码需要至少一种图片序列格式",
+      "en": "FFmpeg encoding requires at least one image sequence format.",
+      "zh-Hant": "FFmpeg 編碼至少需要一種影像序列格式"
+    },
+    "旧编码映射不支持 {hardware} / {depth}，请调整硬件或色度抽样": {
+      "zh": "旧编码映射不支持 {hardware} / {depth}，请调整硬件或色度抽样",
+      "en": "The legacy encoder mapping does not support {hardware} / {depth}. Change the hardware or chroma subsampling.",
+      "zh-Hant": "舊編碼對應不支援 {hardware} / {depth}，請調整硬體或色度取樣",
+      "zh-Hant-HK": "舊編碼對應不支援 {hardware} / {depth}，請調整硬體或色度採樣"
+    },
+    "未知图片转码格式：{image_transcode}": {
+      "zh": "未知图片转码格式：{image_transcode}",
+      "en": "Unknown image conversion format: {image_transcode}",
+      "zh-Hant": "未知影像轉碼格式：{image_transcode}"
+    },
+    "SDR 和 HDR 质量必须在 1～100 之间": {
+      "zh": "SDR 和 HDR 质量必须在 1～100 之间",
+      "en": "SDR and HDR quality must be between 1 and 100.",
+      "zh-Hant": "SDR 與 HDR 品質必須介於 1～100"
+    },
+    "渲染 HDR 伽马必须是大于 0 的有限数值": {
+      "zh": "渲染 HDR 伽马必须是大于 0 的有限数值",
+      "en": "Render HDR gamma must be a finite number greater than 0.",
+      "zh-Hant": "渲染 HDR 伽馬必須是大於 0 的有限數值"
+    },
+    "HDR 图片宽高至少为 2，暖场帧数不能为负数": {
+      "zh": "HDR 图片宽高至少为 2，暖场帧数不能为负数",
+      "en": "HDR image width and height must be at least 2. Warm-up frames cannot be negative.",
+      "zh-Hant": "HDR 影像寬高至少為 2，暖場影格數不能為負數",
+      "zh-Hant-HK": "HDR 影像寬高至少為 2，暖場幀數不能為負數"
+    },
+    "请选择 SDR 或 HDR 阶段": {
+      "zh": "请选择 SDR 或 HDR 阶段",
+      "en": "Choose the SDR or HDR stage.",
+      "zh-Hant": "請選擇 SDR 或 HDR 階段"
+    },
+    "保存地图／资源失败，未提交任务": {
+      "zh": "保存地图／资源失败，未提交任务",
+      "en": "Could not save the map/assets. The job was not submitted.",
+      "zh-Hant": "儲存地圖／資源失敗，未提交工作"
+    },
+    "HDR JPG 合成": {
+      "zh": "HDR JPG 合成",
+      "en": "Composing HDR JPG",
+      "zh-Hant": "HDR JPG 合成"
+    },
+    "SDR 图片宽高至少为 2": {
+      "zh": "SDR 图片宽高至少为 2",
+      "en": "SDR image width and height must be at least 2.",
+      "zh-Hant": "SDR 影像寬高至少為 2"
+    },
+    "另一个 MRQ 任务已启动，本次提交已停止": {
+      "zh": "另一个 MRQ 任务已启动，本次提交已停止",
+      "en": "Another MRQ job has started. This submission was stopped.",
+      "zh-Hant": "另一個 MRQ 工作已啟動，本次提交已停止"
+    },
+    "当前时间线没有相机切换轨道，将使用临时摄像机渲染第 0 帧": {
+      "zh": "当前时间线没有相机切换轨道，将使用临时摄像机渲染第 0 帧",
+      "en": "The current sequence has no Camera Cuts track. A temporary camera will render frame 0.",
+      "zh-Hant": "目前時間軸沒有攝影機切換軌道，將使用臨時攝影機渲染第 0 影格",
+      "zh-Hant-HK": "目前時間軸沒有攝影機切換軌道，將使用臨時攝影機渲染第 0 幀"
+    },
+    "无法提交 HDR 渲染队列": {
+      "zh": "无法提交 HDR 渲染队列",
+      "en": "Could not submit the HDR render queue.",
+      "zh-Hant": "無法提交 HDR 渲染佇列",
+      "zh-Hant-HK": "無法提交 HDR 渲染隊列"
+    },
+    "HDR 增益图合成": {
+      "zh": "HDR 增益图合成",
+      "en": "HDR gain map composition",
+      "zh-Hant": "HDR 增益圖合成"
+    },
+    "无法加载 HDR 渲染配置：{GRAPH}": {
+      "zh": "无法加载 HDR 渲染配置：{GRAPH}",
+      "en": "Could not load the HDR render configuration: {GRAPH}",
+      "zh-Hant": "無法載入 HDR 渲染設定：{GRAPH}"
+    },
+    "{label}失败（退出码 {returncode}）：{detail}\n日志：{log_path}": {
+      "zh": "{label}失败（退出码 {returncode}）：{detail}\n日志：{log_path}",
+      "en": "{label} failed (exit code {returncode}): {detail}\nLog: {log_path}",
+      "zh-Hant": "{label}失敗（結束代碼 {returncode}）：{detail}\n記錄：{log_path}"
+    },
+    "HDR 渲染配置缺少变量：{name}": {
+      "zh": "HDR 渲染配置缺少变量：{name}",
+      "en": "The HDR render configuration is missing a variable: {name}",
+      "zh-Hant": "HDR 渲染設定缺少變數：{name}"
+    },
+    "无法覆盖 HDR 任务变量：{name}": {
+      "zh": "无法覆盖 HDR 任务变量：{name}",
+      "en": "Could not override HDR job variable: {name}",
+      "zh-Hant": "無法覆寫 HDR 工作變數：{name}"
+    },
+    "找不到 {key}：{value}": {
+      "zh": "找不到 {key}：{value}",
+      "en": "Cannot find {key}: {value}",
+      "zh-Hant": "找不到 {key}：{value}"
+    },
+    "缺少控件：{path}；双次渲染期间请保持旧面板打开": {
+      "zh": "缺少控件：{path}；双次渲染期间请保持旧面板打开",
+      "en": "Missing widget: {path}. Keep the legacy panel open during the two-pass render.",
+      "zh-Hant": "缺少控制項：{path}；雙次渲染期間請保持舊面板開啟",
+      "zh-Hant-HK": "缺少控制項：{path}；雙次渲染期間請保持舊面板打開"
+    },
+    "{stage} 图片渲染": {
+      "zh": "{stage} 图片渲染",
+      "en": "Rendering {stage} image",
+      "zh-Hant": "{stage} 影像渲染"
+    },
+    "找不到输入图片：{value}": {
+      "zh": "找不到输入图片：{value}",
+      "en": "Input image not found: {value}",
+      "zh-Hant": "找不到輸入影像：{value}"
+    },
+    "HDR 渲染未完整完成，未生成 JPG；本次缓存：{cache}": {
+      "zh": "HDR 渲染未完整完成，未生成 JPG；本次缓存：{cache}",
+      "en": "HDR rendering did not finish and no JPG was produced. Cache: {cache}",
+      "zh-Hant": "HDR 渲染未完整完成，未產生 JPG；本次快取：{cache}"
+    },
+    "HDR JPG 输出尺寸不符：{result}": {
+      "zh": "HDR JPG 输出尺寸不符：{result}",
+      "en": "The HDR JPG output dimensions do not match: {result}",
+      "zh-Hant": "HDR JPG 輸出尺寸不符：{result}"
+    },
+    "已生成 HDR JPG，但渲染未完整完成：{output}": {
+      "zh": "已生成 HDR JPG，但渲染未完整完成：{output}",
+      "en": "An HDR JPG was produced, but rendering did not finish: {output}",
+      "zh-Hant": "已產生 HDR JPG，但渲染未完整完成：{output}"
+    },
+    "HDR JPG 合成完成": {
+      "zh": "HDR JPG 合成完成",
+      "en": "HDR JPG complete",
+      "zh-Hant": "HDR JPG 合成完成"
+    },
+    "无法读取控件 {public_name}：{exc}": {
+      "zh": "无法读取控件 {public_name}：{exc}",
+      "en": "Could not read widget {public_name}: {exc}",
+      "zh-Hant": "無法讀取控制項 {public_name}：{exc}"
+    },
+    "HDR 双次渲染未完成；本次缓存：{cache}": {
+      "zh": "HDR 双次渲染未完成；本次缓存：{cache}",
+      "en": "The two-pass HDR render did not finish. Cache: {cache}",
+      "zh-Hant": "HDR 雙次渲染未完成；本次快取：{cache}"
+    },
+    "{name} 图片转换（裁剪尺寸 {width}×{height}，输入尺寸不可更小）": {
+      "zh": "{name} 图片转换（裁剪尺寸 {width}×{height}，输入尺寸不可更小）",
+      "en": "{name} image conversion (crop: {width}×{height}; the input cannot be smaller)",
+      "zh-Hant": "{name} 影像轉換（裁切尺寸 {width}×{height}，輸入尺寸不可更小）"
+    },
+    "未生成完整的 SDR/HDR 输入，请检查 MRQ 编码日志及缓存：{cache}": {
+      "zh": "未生成完整的 SDR/HDR 输入，请检查 MRQ 编码日志及缓存：{cache}",
+      "en": "Complete SDR/HDR inputs were not produced. Check the MRQ encoder logs and cache: {cache}",
+      "zh-Hant": "未產生完整的 SDR/HDR 輸入，請檢查 MRQ 編碼記錄與快取：{cache}"
+    },
+    "HDR JPG 已生成，但结束处理失败：{exc}": {
+      "zh": "HDR JPG 已生成，但结束处理失败：{exc}",
+      "en": "The HDR JPG was produced, but finalization failed: {exc}",
+      "zh-Hant": "HDR JPG 已產生，但結束處理失敗：{exc}"
+    },
+    "HDR 渲染结束后刷新导播台失败：{exc}": {
+      "zh": "HDR 渲染结束后刷新导播台失败：{exc}",
+      "en": "Could not refresh the director after HDR rendering: {exc}",
+      "zh-Hant": "HDR 渲染結束後重新整理導播台失敗：{exc}",
+      "zh-Hant-HK": "HDR 渲染結束後刷新導播台失敗：{exc}"
+    },
+    "{stage} 未生成唯一有效图片：{folder}": {
+      "zh": "{stage} 未生成唯一有效图片：{folder}",
+      "en": "{stage} did not produce exactly one valid image: {folder}",
+      "zh-Hant": "{stage} 未產生唯一有效影像：{folder}"
+    },
+    "恢复旧面板状态失败：{error}": {
+      "zh": "恢复旧面板状态失败：{error}",
+      "en": "Could not restore the legacy panel state: {error}",
+      "zh-Hant": "恢復舊面板狀態失敗：{error}"
+    },
+    "HDR JPG 已生成，但缓存清理失败：{exc}": {
+      "zh": "HDR JPG 已生成，但缓存清理失败：{exc}",
+      "en": "The HDR JPG was produced, but cache cleanup failed: {exc}",
+      "zh-Hant": "HDR JPG 已產生，但快取清理失敗：{exc}"
+    },
+    "MRG 暂不支持旧面板的 3D 立体／分层渲染，请使用原“一键渲染动画”按钮（MRQ）": {
+      "zh": "MRG 暂不支持旧面板的 3D 立体／分层渲染，请使用原“一键渲染动画”按钮（MRQ）",
+      "en": "MRG does not yet support legacy 3D stereo or layer rendering. Use Render Animation · MRQ.",
+      "zh-Hant": "MRG 暫不支援舊面板的 3D 立體／分層渲染，請使用原「一鍵渲染動畫」按鈕（MRQ）"
+    },
+    "MRG 全景与 DLSS 不能共用同一个渲染器，请关闭 DLSS 或使用 MRQ": {
+      "zh": "MRG 全景与 DLSS 不能共用同一个渲染器，请关闭 DLSS 或使用 MRQ",
+      "en": "MRG panorama and DLSS cannot share a renderer. Disable DLSS or use MRQ.",
+      "zh-Hant": "MRG 全景與 DLSS 不能共用同一個渲染器，請關閉 DLSS 或使用 MRQ"
+    },
+    "当前引擎没有 MRG DLSS 渲染器，请关闭 DLSS 或使用 MRQ；MRG 入口不回退到 FSR": {
+      "zh": "当前引擎没有 MRG DLSS 渲染器，请关闭 DLSS 或使用 MRQ；MRG 入口不回退到 FSR",
+      "en": "This engine has no MRG DLSS renderer. Disable DLSS or use MRQ; MRG does not fall back to FSR.",
+      "zh-Hant": "目前引擎沒有 MRG DLSS 渲染器，請關閉 DLSS 或使用 MRQ；MRG 入口不會退回 FSR"
+    },
+    "当前 DLSS 插件的 MRG 节点只生效“平衡”档，请选择平衡、关闭 DLSS 或使用 MRQ": {
+      "zh": "当前 DLSS 插件的 MRG 节点只生效“平衡”档，请选择平衡、关闭 DLSS 或使用 MRQ",
+      "en": "The current DLSS MRG node only supports Balanced. Select Balanced, disable DLSS, or use MRQ.",
+      "zh-Hant": "目前 DLSS 外掛的 MRG 節點僅支援「平衡」模式，請選擇平衡、關閉 DLSS 或使用 MRQ",
+      "zh-Hant-HK": "目前 DLSS 插件的 MRG 節點僅支援「平衡」模式，請選擇平衡、關閉 DLSS 或使用 MRQ"
+    },
+    "请至少选择一种图片序列格式": {
+      "zh": "请至少选择一种图片序列格式",
+      "en": "Select at least one image sequence format.",
+      "zh-Hant": "請至少選擇一種影像序列格式"
+    },
+    "动画渲染完成": {
+      "zh": "动画渲染完成",
+      "en": "Animation render complete",
+      "zh-Hant": "動畫渲染完成"
+    },
+    "请先将当前地图保存为资产，再保存渲染配置": {
+      "zh": "请先将当前地图保存为资产，再保存渲染配置",
+      "en": "Save the current map as an asset before saving a render preset.",
+      "zh-Hant": "請先將目前地圖儲存為資產，再儲存渲染設定"
+    },
+    "暖场帧数不能为负数": {
+      "zh": "暖场帧数不能为负数",
+      "en": "Warm-up frames cannot be negative.",
+      "zh-Hant": "暖場影格數不能為負數",
+      "zh-Hant-HK": "暖場幀數不能為負數"
+    },
+    "已有渲染或合成任务正在运行，请等待完成或在 UE 渲染窗口取消": {
+      "zh": "已有渲染或合成任务正在运行，请等待完成或在 UE 渲染窗口取消",
+      "en": "A render or composition job is already running. Wait for it to finish or cancel it in the UE render window.",
+      "zh-Hant": "已有渲染或合成工作正在執行，請等待完成或在 UE 渲染視窗取消"
+    },
+    "当前时间线没有相机切换轨道，将使用默认设置和临时摄像机渲染": {
+      "zh": "当前时间线没有相机切换轨道，将使用默认设置和临时摄像机渲染",
+      "en": "The current sequence has no Camera Cuts track. Default settings and a temporary camera will be used.",
+      "zh-Hant": "目前時間軸沒有攝影機切換軌道，將使用預設設定與臨時攝影機渲染"
+    },
+    "配置地图为 {map}，当前地图为 {map_path}；请先打开对应地图": {
+      "zh": "配置地图为 {map}，当前地图为 {map_path}；请先打开对应地图",
+      "en": "The preset uses map {map}, but the current map is {map_path}. Open the matching map first.",
+      "zh-Hant": "設定的地圖為 {map}，目前地圖為 {map_path}；請先開啟對應地圖",
+      "zh-Hant-HK": "設定的地圖為 {map}，目前地圖為 {map_path}；請先打開對應地圖"
+    },
+    "无法加载渲染序列：{path}": {
+      "zh": "无法加载渲染序列：{path}",
+      "en": "Could not load the render sequence: {path}",
+      "zh-Hant": "無法載入渲染序列：{path}"
+    },
+    "请先打开旧面板：{PANEL}": {
+      "zh": "请先打开旧面板：{PANEL}",
+      "en": "Open the legacy panel first: {PANEL}",
+      "zh-Hant": "請先開啟舊面板：{PANEL}",
+      "zh-Hant-HK": "請先打開舊面板：{PANEL}"
+    },
+    "所选渲染功能需要未安装的 UE 类：{path}": {
+      "zh": "所选渲染功能需要未安装的 UE 类：{path}",
+      "en": "The selected render feature requires an unavailable UE class: {path}",
+      "zh-Hant": "所選渲染功能需要尚未安裝的 UE 類別：{path}"
+    },
+    "找不到 ffmpeg：{executable}": {
+      "zh": "找不到 ffmpeg：{executable}",
+      "en": "FFmpeg was not found: {executable}",
+      "zh-Hant": "找不到 FFmpeg：{executable}"
+    },
+    "{label}：{path}": {
+      "zh": "{label}：{path}",
+      "en": "{label}: {path}",
+      "zh-Hant": "{label}：{path}"
+    },
+    "保存渲染预设失败，未提交任务": {
+      "zh": "保存渲染预设失败，未提交任务",
+      "en": "Could not save the render preset. The job was not submitted.",
+      "zh-Hant": "儲存渲染預設失敗，未提交工作"
+    },
+    "渲染参数 {key} 必须大于等于 1：{value}": {
+      "zh": "渲染参数 {key} 必须大于等于 1：{value}",
+      "en": "Render parameter {key} must be at least 1: {value}",
+      "zh-Hant": "渲染參數 {key} 必須大於等於 1：{value}"
+    },
+    "请先选择：{value}": {
+      "zh": "请先选择：{value}",
+      "en": "Select a value first: {value}",
+      "zh-Hant": "請先選擇：{value}"
+    },
+    "无法读取控件 {PANEL}.{name}：{exc}": {
+      "zh": "无法读取控件 {PANEL}.{name}：{exc}",
+      "en": "Could not read widget {PANEL}.{name}: {exc}",
+      "zh-Hant": "無法讀取控制項 {PANEL}.{name}：{exc}"
+    },
+    "无法加载旧流程需要的预设：{PRESET}": {
+      "zh": "无法加载旧流程需要的预设：{PRESET}",
+      "en": "Could not load the preset required by the legacy workflow: {PRESET}",
+      "zh-Hant": "無法載入舊流程所需的預設：{PRESET}"
+    },
+    "MRG 动画渲染完成": {
+      "zh": "MRG 动画渲染完成",
+      "en": "MRG animation render complete",
+      "zh-Hant": "MRG 動畫渲染完成"
+    },
+    "渲染已结束，但结束处理失败：{exc}": {
+      "zh": "渲染已结束，但结束处理失败：{exc}",
+      "en": "Rendering has ended, but finalization failed: {exc}",
+      "zh-Hant": "渲染已結束，但結束處理失敗：{exc}"
+    },
+    "RenderPanelHDRSettings.SDRQuality": {
+      "en": "SDR Image Quality",
+      "_native": "en",
+      "zh": "SDR 图像质量",
+      "zh-Hant": "SDR 影像品質"
+    },
+    "RenderPanelHDRSettings.category.RenderPanelHDRSettings": {
+      "en": "HDR Gain Map Settings",
+      "_native": "en",
+      "zh": "HDR 增益图设置",
+      "zh-Hant": "HDR 增益圖設定"
+    },
+    "RenderPanelHDRSettings.Quality": {
+      "en": "HDR Gain Map Quality",
+      "_native": "en",
+      "zh": "HDR 增益图质量",
+      "zh-Hant": "HDR 增益圖品質"
+    },
+    "RenderPanelHDRSettings.Gamma.tooltip": {
+      "zh": "仅用于原双通道流程的风格化调色；新的双次渲染与已有图片合成均不应用。",
+      "en": "Only used for stylized grading in the legacy dual-channel workflow. Not applied to two-pass rendering or composition of existing images.",
+      "zh-Hant": "僅用於原雙通道流程的風格化調色；新的雙次渲染與現有影像合成均不套用。"
+    },
+    "渲染当前动画": {
+      "zh": "渲染当前动画",
+      "en": "Render Current Animation",
+      "zh-Hant": "渲染目前動畫"
+    },
+    "先在旧“渲染输出子面板”调整参数，再选择渲染方式。": {
+      "zh": "先在旧“渲染输出子面板”调整参数，再选择渲染方式。",
+      "en": "Adjust settings in the legacy Render Output subpanel, then choose a render backend.",
+      "zh-Hant": "先在舊「渲染輸出子面板」調整參數，再選擇渲染方式。"
+    },
+    "默认方式 · 普通动画、立体与分层": {
+      "zh": "默认方式 · 普通动画、立体与分层",
+      "en": "Default · Standard animation, stereo and layers",
+      "zh-Hant": "預設方式 · 一般動畫、立體與分層"
+    },
+    "可选方式 · 普通动画、单目全景": {
+      "zh": "可选方式 · 普通动画、单目全景",
+      "en": "Optional · Standard animation and mono panorama",
+      "zh-Hant": "可選方式 · 一般動畫、單眼全景"
+    },
+    "渲染动画 · MRG": {
+      "zh": "渲染动画 · MRG",
+      "en": "Render Animation · MRG",
+      "zh-Hant": "渲染動畫 · MRG"
+    },
+    "需要连续渲染多份配置？": {
+      "zh": "需要连续渲染多份配置？",
+      "en": "Need to render several presets in sequence?",
+      "zh-Hant": "需要連續渲染多份設定？"
+    },
+    "前往批量队列 →": {
+      "zh": "前往批量队列 →",
+      "en": "Go to Batch Queue →",
+      "zh-Hant": "前往批次佇列 →",
+      "zh-Hant-HK": "前往批次隊列 →"
+    },
+    "1  保存配置": {
+      "zh": "1  保存配置",
+      "en": "1  Save Presets",
+      "zh-Hant": "1  儲存設定"
+    },
+    "从旧面板采集参数与当前序列。": {
+      "zh": "从旧面板采集参数与当前序列。",
+      "en": "Capture settings and the current sequence from the legacy panel.",
+      "zh-Hant": "從舊面板擷取參數與目前序列。"
+    },
+    "输入新配置名称": {
+      "zh": "输入新配置名称",
+      "en": "Enter a new preset name",
+      "zh-Hant": "輸入新設定名稱"
+    },
+    "渲染方式": {
+      "zh": "渲染方式",
+      "en": "Backend",
+      "zh-Hant": "渲染方式"
+    },
+    "已保存配置": {
+      "zh": "已保存配置",
+      "en": "Saved Presets",
+      "zh-Hant": "已儲存設定"
+    },
+    "加入队列 →": {
+      "zh": "加入队列 →",
+      "en": "Add to Queue →",
+      "zh-Hant": "加入佇列 →",
+      "zh-Hant-HK": "加入隊列 →"
+    },
+    "管理所选配置": {
+      "zh": "管理所选配置",
+      "en": "Manage Selected Preset",
+      "zh-Hant": "管理所選設定"
+    },
+    "重命名": {
+      "zh": "重命名",
+      "en": "Rename",
+      "zh-Hant": "重新命名"
+    },
+    "更新参数": {
+      "zh": "更新参数",
+      "en": "Update Settings",
+      "zh-Hant": "更新參數"
+    },
+    "删除": {
+      "zh": "删除",
+      "en": "Delete",
+      "zh-Hant": "刪除"
+    },
+    "2  渲染队列": {
+      "zh": "2  渲染队列",
+      "en": "2  Render Queue",
+      "zh-Hant": "2  渲染佇列",
+      "zh-Hant-HK": "2  渲染隊列"
+    },
+    "上移": {
+      "zh": "上移",
+      "en": "Move up",
+      "zh-Hant": "上移"
+    },
+    "下移": {
+      "zh": "下移",
+      "en": "Move down",
+      "zh-Hant": "下移"
+    },
+    "移除": {
+      "zh": "移除",
+      "en": "Remove",
+      "zh-Hant": "移除"
+    },
+    "重新排队": {
+      "zh": "重新排队",
+      "en": "Requeue",
+      "zh-Hant": "重新排隊"
+    },
+    "清除已结束": {
+      "zh": "清除已结束",
+      "en": "Clear ended",
+      "zh-Hant": "清除已結束"
+    },
+    "打开输出目录": {
+      "zh": "打开输出目录",
+      "en": "Open Output Folder",
+      "zh-Hant": "開啟輸出資料夾",
+      "zh-Hant-HK": "打開輸出資料夾"
+    },
+    "开始渲染": {
+      "zh": "开始渲染",
+      "en": "Start Rendering",
+      "zh-Hant": "開始渲染"
+    },
+    "本项结束后停止": {
+      "zh": "本项结束后停止",
+      "en": "Stop After This Job",
+      "zh-Hant": "本項結束後停止"
+    },
+    "HDR 增益图 JPG": {
+      "zh": "HDR 增益图 JPG",
+      "en": "HDR Gain Map JPG",
+      "zh-Hant": "HDR 增益圖 JPG"
+    },
+    "渲染当前帧": {
+      "zh": "渲染当前帧",
+      "en": "Render Current Frame",
+      "zh-Hant": "渲染目前影格",
+      "zh-Hant-HK": "渲染目前幀"
+    },
+    "自动切换 SDR / HDR，分别渲染再合成，无需伽马调色。": {
+      "zh": "自动切换 SDR / HDR，分别渲染再合成，无需伽马调色。",
+      "en": "Automatically switch SDR/HDR, render each image, then compose them without gamma grading.",
+      "zh-Hant": "自動切換 SDR / HDR，分別渲染再合成，無需伽馬調色。"
+    },
+    "分辨率、采样、暖场和输出名沿用旧面板；帧位置取时间线光标。渲染期间保持旧面板打开。": {
+      "zh": "分辨率、采样、暖场和输出名沿用旧面板；帧位置取时间线光标。渲染期间保持旧面板打开。",
+      "en": "Uses the legacy panel's resolution, samples, warm-up and output name at the timeline cursor frame. Keep the legacy panel open during rendering.",
+      "zh-Hant": "解析度、取樣、暖場與輸出名稱沿用舊面板；影格位置取時間軸游標。渲染期間保持舊面板開啟。",
+      "zh-Hant-HK": "解像度、採樣、暖場與輸出名稱沿用舊面板；幀位置取時間軸游標。渲染期間保持舊面板打開。"
+    },
+    "加入批量队列 →": {
+      "zh": "加入批量队列 →",
+      "en": "Add to Batch Queue →",
+      "zh-Hant": "加入批次佇列 →",
+      "zh-Hant-HK": "加入批次隊列 →"
+    },
+    "原双通道流程（展开/收起）": {
+      "zh": "原双通道流程（展开/收起）",
+      "en": "Legacy Dual-channel Workflow (Expand/Collapse)",
+      "zh-Hant": "原雙通道流程（展開/收合）"
+    },
+    "渲染当前帧为 HDR JPG（原流程）": {
+      "zh": "渲染 HDR JPG（原流程）",
+      "en": "Render HDR JPG (Legacy)",
+      "zh-Hant": "渲染 HDR JPG（原流程）"
+    },
+    "合成已有图片": {
+      "zh": "合成已有图片",
+      "en": "Compose Existing Images",
+      "zh-Hant": "合成現有影像"
+    },
+    "选择 SDR 与 HDR 图片，再选择 JPG 保存位置。": {
+      "zh": "选择 SDR 与 HDR 图片，再选择 JPG 保存位置。",
+      "en": "Select SDR and HDR images, then choose where to save the JPG.",
+      "zh-Hant": "選擇 SDR 與 HDR 影像，再選擇 JPG 儲存位置。"
+    },
+    "HDR 输入：PQ / Rec.2020，1000 nit。": {
+      "zh": "HDR 输入：PQ / Rec.2020，1000 nit。",
+      "en": "HDR input: PQ / Rec.2020, 1000 nit.",
+      "zh-Hant": "HDR 輸入：PQ / Rec.2020，1000 nit。"
+    },
+    "选择图片并合成": {
+      "zh": "选择图片并合成",
+      "en": "Select Images and Compose",
+      "zh-Hant": "選擇影像並合成"
+    },
+    "RenderPanel 任务正在运行，请先结束批次再重载；当前任务仍会继续": {
+      "zh": "RenderPanel 任务正在运行，请先结束批次再重载；当前任务仍会继续",
+      "en": "A RenderPanel job is running. Finish the batch before reloading; the current job will keep running.",
+      "zh-Hant": "RenderPanel 工作正在執行，請先結束批次再重新載入；目前工作仍會繼續"
+    },
+    "用旧面板的当前参数更新所选配置；已排队任务不受影响。": {
+      "zh": "用旧面板的当前参数更新所选配置；已排队任务不受影响。",
+      "en": "Update the selected preset from the legacy panel. Queued jobs are unaffected.",
+      "zh-Hant": "以舊面板的目前參數更新所選設定；已排入佇列的工作不受影響。",
+      "zh-Hant-HK": "以舊面板的目前參數更新所選設定；已排入隊列的工作不受影響。"
+    },
+    "立即取消请使用 UE 渲染窗口；取消后仍会等待部分视频编码结束。": {
+      "zh": "立即取消请使用 UE 渲染窗口；取消后仍会等待部分视频编码结束。",
+      "en": "For immediate cancellation, use the UE render window. Encoding of partially rendered video will still finish.",
+      "zh-Hant": "立即取消請使用 UE 渲染視窗；取消後仍會等待部分影片編碼結束。"
+    },
+    "SDR 图像质量": {
+      "zh": "SDR 图像质量",
+      "en": "SDR Image Quality",
+      "zh-Hant": "SDR 影像品質"
+    },
+    "HDR 增益图质量": {
+      "zh": "HDR 增益图质量",
+      "en": "HDR Gain Map Quality",
+      "zh-Hant": "HDR 增益圖品質"
+    },
+    "不转换普通线性 EXR；合成已有图片不应用渲染 HDR 伽马。": {
+      "zh": "不转换普通线性 EXR；合成已有图片不应用渲染 HDR 伽马。",
+      "en": "Regular linear EXR is not converted. Render HDR gamma is not applied when composing existing images.",
+      "zh-Hant": "不轉換一般線性 EXR；合成現有影像不套用渲染 HDR 伽馬。"
+    },
+    "请先选择一个已保存配置": {
+      "zh": "请先选择一个已保存配置",
+      "en": "Select a saved preset first.",
+      "zh-Hant": "請先選擇一個已儲存設定"
+    },
+    "请先选择一个任务": {
+      "zh": "请先选择一个任务",
+      "en": "Select a job first.",
+      "zh-Hant": "請先選擇一個工作"
+    },
+    "队列为空\n\n选择左侧配置，点击“加入队列 →”。": {
+      "zh": "队列为空\n\n选择左侧配置，点击“加入队列 →”。",
+      "en": "The queue is empty.\n\nSelect a preset on the left, then click “Add to Queue →”.",
+      "zh-Hant": "佇列為空\n\n選擇左側設定，點擊「加入佇列 →」。",
+      "zh-Hant-HK": "隊列為空\n\n選擇左側設定，點擊「加入隊列 →」。"
+    },
+    "正在渲染…": {
+      "zh": "正在渲染…",
+      "en": "Rendering…",
+      "zh-Hant": "正在渲染…"
+    },
+    "渲染动画 · MRQ": {
+      "zh": "渲染动画 · MRQ",
+      "en": "Render Animation · MRQ",
+      "zh-Hant": "渲染動畫 · MRQ"
+    },
+    "保存当前设置": {
+      "zh": "保存当前设置",
+      "en": "Save Current Settings",
+      "zh-Hant": "儲存目前設定"
+    },
+    "双次渲染 HDR JPG": {
+      "zh": "双次渲染 HDR JPG",
+      "en": "Render HDR JPG in Two Passes",
+      "zh-Hant": "雙次渲染 HDR JPG"
+    },
+    "还没有配置。\n先填写名称，点击“保存当前设置”。": {
+      "zh": "还没有配置。\n先填写名称，点击“保存当前设置”。",
+      "en": "No presets yet.\nEnter a name, then click “Save Current Settings”.",
+      "zh-Hant": "尚無設定。\n先填寫名稱，點擊「儲存目前設定」。"
+    },
+    "2  渲染队列 · {count} 项": {
+      "zh": "2  渲染队列 · {count} 项",
+      "en": "2  Render Queue · {count} jobs",
+      "zh-Hant": "2  渲染佇列 · {count} 項",
+      "zh-Hant-HK": "2  渲染隊列 · {count} 項"
+    },
+    "全部完成": {
+      "zh": "全部完成",
+      "en": "All done",
+      "zh-Hant": "全部完成"
+    },
+    "保存配置并加入队列后，即可开始渲染。": {
+      "zh": "保存配置并加入队列后，即可开始渲染。",
+      "en": "Save a preset and add it to the queue to start rendering.",
+      "zh-Hant": "儲存設定並加入佇列後，即可開始渲染。",
+      "zh-Hant-HK": "儲存設定並加入隊列後，即可開始渲染。"
+    },
+    "选择 SDR 图片": {
+      "zh": "选择 SDR 图片",
+      "en": "Select SDR Image",
+      "zh-Hant": "選擇 SDR 影像"
+    },
+    "选择已校色的 HDR 图片（PQ / Rec.2020，1000 nit）": {
+      "zh": "选择已校色的 HDR 图片（PQ / Rec.2020，1000 nit）",
+      "en": "Select Color-managed HDR Image (PQ / Rec.2020, 1000 nit)",
+      "zh-Hant": "選擇已校色的 HDR 影像（PQ / Rec.2020，1000 nit）"
+    },
+    "保存 HDR 增益图 JPG": {
+      "zh": "保存 HDR 增益图 JPG",
+      "en": "Save HDR Gain Map JPG",
+      "zh-Hant": "儲存 HDR 增益圖 JPG"
+    },
+    "动画渲染": {
+      "zh": "动画渲染",
+      "en": "Animation",
+      "zh-Hant": "動畫渲染"
+    },
+    "批量队列": {
+      "zh": "批量队列",
+      "en": "Batch Queue",
+      "zh-Hant": "批次佇列",
+      "zh-Hant-HK": "批次隊列"
+    },
+    "{backend} · {width}×{height} · {sequence}\n输出：{name}": {
+      "zh": "{backend} · {width}×{height} · {sequence}\n输出：{name}",
+      "en": "{backend} · {width}×{height} · {sequence}\nOutput: {name}",
+      "zh-Hant": "{backend} · {width}×{height} · {sequence}\n輸出：{name}"
+    },
+    "地图：{map}\n序列：{sequence}\n采样：{spatial}×{temporal}": {
+      "zh": "地图：{map}\n序列：{sequence}\n采样：{spatial}×{temporal}",
+      "en": "Map: {map}\nSequence: {sequence}\nSamples: {spatial}×{temporal}",
+      "zh-Hant": "地圖：{map}\n序列：{sequence}\n取樣：{spatial}×{temporal}",
+      "zh-Hant-HK": "地圖：{map}\n序列：{sequence}\n採樣：{spatial}×{temporal}"
+    },
+    "开始渲染（{count} 项）": {
+      "zh": "开始渲染（{count} 项）",
+      "en": "Start Rendering ({count} jobs)",
+      "zh-Hant": "開始渲染（{count} 項）"
+    },
+    "第 {index} / {total} 项 · {current}": {
+      "zh": "第 {index} / {total} 项 · {current}",
+      "en": "Job {index} / {total} · {current}",
+      "zh-Hant": "第 {index} / {total} 項 · {current}"
+    },
+    "就绪 · {count} 项待渲染": {
+      "zh": "就绪 · {count} 项待渲染",
+      "en": "Ready · {count} pending jobs",
+      "zh-Hant": "就緒 · {count} 項待渲染"
+    },
+    "输出目录尚不存在：{folder}": {
+      "zh": "输出目录尚不存在：{folder}",
+      "en": "The output folder does not exist yet: {folder}",
+      "zh-Hant": "輸出目錄尚不存在：{folder}"
+    },
+    "SDR 图片": {
+      "zh": "SDR 图片",
+      "en": "SDR Images",
+      "zh-Hant": "SDR 影像"
+    },
+    "HDR 图片": {
+      "zh": "HDR 图片",
+      "en": "HDR Images",
+      "zh-Hant": "HDR 影像"
+    },
+    "JPEG 图片": {
+      "zh": "JPEG 图片",
+      "en": "JPEG Images",
+      "zh-Hant": "JPEG 影像"
+    },
+    "待渲染": {
+      "zh": "待渲染",
+      "en": "Pending",
+      "zh-Hant": "待渲染"
+    },
+    "渲染中": {
+      "zh": "渲染中",
+      "en": "Rendering",
+      "zh-Hant": "渲染中"
+    },
+    "完成": {
+      "zh": "完成",
+      "en": "Done",
+      "zh-Hant": "完成"
+    },
+    "失败": {
+      "zh": "失败",
+      "en": "Failed",
+      "zh-Hant": "失敗"
+    },
+    "未完整完成": {
+      "zh": "未完整完成",
+      "en": "Incomplete",
+      "zh-Hant": "未完整完成"
+    },
+    "上次中断": {
+      "zh": "上次中断",
+      "en": "Interrupted",
+      "zh-Hant": "上次中斷"
+    },
+    "不支持的文件格式": {
+      "zh": "不支持的文件格式",
+      "en": "Unsupported file format.",
+      "zh-Hant": "不支援的檔案格式",
+      "zh-Hant-HK": "不支援的文件格式"
+    },
+    "请填写配置名称": {
+      "zh": "请填写配置名称",
+      "en": "Enter a preset name.",
+      "zh-Hant": "請填寫設定名稱"
+    },
+    "配置名称已存在，请换一个名称或使用覆盖": {
+      "zh": "配置名称已存在，请换一个名称或使用覆盖",
+      "en": "A preset with this name already exists. Choose another name or update it.",
+      "zh-Hant": "設定名稱已存在，請更換名稱或使用覆寫"
+    },
+    "请选择 MRQ 或 MRG": {
+      "zh": "请选择 MRQ 或 MRG",
+      "en": "Choose MRQ or MRG.",
+      "zh-Hant": "請選擇 MRQ 或 MRG"
+    },
+    "队列后端或任务类型有误": {
+      "zh": "队列后端或任务类型有误",
+      "en": "Invalid queue backend or job type.",
+      "zh-Hant": "佇列後端或工作類型有誤",
+      "zh-Hant-HK": "隊列後端或工作類型有誤"
+    },
+    "当前任务仍在运行": {
+      "zh": "当前任务仍在运行",
+      "en": "The current job is still running.",
+      "zh-Hant": "目前工作仍在執行"
+    },
+    "配置 ID、后端或参数格式有误": {
+      "zh": "配置 ID、后端或参数格式有误",
+      "en": "Invalid preset ID, backend or settings format.",
+      "zh-Hant": "設定 ID、後端或參數格式有誤"
+    },
+    "配置名称格式有误": {
+      "zh": "配置名称格式有误",
+      "en": "Invalid preset name format.",
+      "zh-Hant": "設定名稱格式有誤"
+    },
+    "输出名、序列或地图路径格式有误": {
+      "zh": "输出名、序列或地图路径格式有误",
+      "en": "Invalid output name, sequence or map path format.",
+      "zh-Hant": "輸出名稱、序列或地圖路徑格式有誤"
+    },
+    "队列状态有误": {
+      "zh": "队列状态有误",
+      "en": "Invalid queue state.",
+      "zh-Hant": "佇列狀態有誤",
+      "zh-Hant-HK": "隊列狀態有誤"
+    },
+    "队列任务类型有误": {
+      "zh": "队列任务类型有误",
+      "en": "Invalid queue job type.",
+      "zh-Hant": "佇列工作類型有誤",
+      "zh-Hant-HK": "隊列工作類型有誤"
+    },
+    "无法读取 {path}：{exc}；原文件已保留": {
+      "zh": "无法读取 {path}：{exc}；原文件已保留",
+      "en": "Could not read {path}: {exc}. The original file has been kept.",
+      "zh-Hant": "無法讀取 {path}：{exc}；原檔案已保留",
+      "zh-Hant-HK": "無法讀取 {path}：{exc}；原文件已保留"
+    },
+    "上次运行中断，请手动重新排队": {
+      "zh": "上次运行中断，请手动重新排队",
+      "en": "The previous run was interrupted. Requeue this job manually.",
+      "zh-Hant": "上次執行中斷，請手動重新排入佇列",
+      "zh-Hant-HK": "上次執行中斷，請手動重新排入隊列"
+    },
+    "动画": {
+      "zh": "动画",
+      "en": "Animation",
+      "zh-Hant": "動畫"
+    },
+    "静帧": {
+      "zh": "静帧",
+      "en": "Still",
+      "zh-Hant": "靜幀"
+    },
+    "HDR JPG": {
+      "zh": "HDR JPG",
+      "en": "HDR JPG",
+      "zh-Hant": "HDR JPG"
+    },
+    "图片工具": {
+      "zh": "图片工具",
+      "en": "Image tools",
+      "zh-Hant": "圖片工具"
+    },
+    "任务": {
+      "zh": "任务",
+      "en": "Task",
+      "zh-Hant": "工作"
+    },
+    "MRQ：立体与分层；MRG：普通动画与单目全景。HDR JPG 固定使用 MRQ。": {
+      "zh": "MRQ：立体与分层；MRG：普通动画与单目全景。HDR JPG 固定使用 MRQ。",
+      "en": "MRQ: stereo and layers. MRG: animation and mono panorama. HDR JPG uses MRQ.",
+      "zh-Hant": "MRQ：立體與分層；MRG：一般動畫與單眼全景。HDR JPG 固定使用 MRQ。"
+    },
+    "刷新参数和光标帧": {
+      "zh": "刷新参数和光标帧",
+      "en": "Refresh settings and cursor frame",
+      "zh-Hant": "重新整理參數和游標影格"
+    },
+    "序列": {
+      "zh": "序列",
+      "en": "Sequence",
+      "zh-Hant": "序列"
+    },
+    "输出名": {
+      "zh": "输出名",
+      "en": "Output",
+      "zh-Hant": "輸出名稱"
+    },
+    "帧": {
+      "zh": "帧",
+      "en": "Frame",
+      "zh-Hant": "影格",
+      "zh-Hant-HK": "幀"
+    },
+    "光标": {
+      "zh": "光标",
+      "en": "Cursor",
+      "zh-Hant": "游標"
+    },
+    "使用时间线光标帧": {
+      "zh": "使用时间线光标帧",
+      "en": "Use the timeline cursor frame",
+      "zh-Hant": "使用時間軸游標影格"
+    },
+    "双次渲染并合成": {
+      "zh": "双次渲染并合成",
+      "en": "Two passes + compose",
+      "zh-Hant": "兩次渲染並合成"
+    },
+    "自动切换 SDR / HDR；渲染期间保持旧面板打开。": {
+      "zh": "自动切换 SDR / HDR；渲染期间保持旧面板打开。",
+      "en": "Switches SDR/HDR automatically. Keep the legacy panel open.",
+      "zh-Hant": "自動切換 SDR / HDR；渲染期間保持舊面板開啟。"
+    },
+    "保存预设": {
+      "zh": "保存预设",
+      "en": "Save preset",
+      "zh-Hant": "儲存預設"
+    },
+    "管理": {
+      "zh": "管理",
+      "en": "Manage",
+      "zh-Hant": "管理"
+    },
+    "+ 加入队列": {
+      "zh": "+ 加入队列",
+      "en": "+ Queue",
+      "zh-Hant": "+ 加入佇列",
+      "zh-Hant-HK": "+ 加入隊列"
+    },
+    "立即渲染": {
+      "zh": "立即渲染",
+      "en": "Render now",
+      "zh-Hant": "立即渲染"
+    },
+    "仅执行本次新任务，其他待渲染项保持排队。": {
+      "zh": "仅执行本次新任务，其他待渲染项保持排队。",
+      "en": "Run only this new job; leave other queued jobs pending.",
+      "zh-Hant": "僅執行本次新工作，其他待渲染項目繼續排隊。"
+    },
+    "预设名称": {
+      "zh": "预设名称",
+      "en": "Preset name",
+      "zh-Hant": "預設名稱"
+    },
+    "新建": {
+      "zh": "新建",
+      "en": "New",
+      "zh-Hant": "新增"
+    },
+    "更新": {
+      "zh": "更新",
+      "en": "Update",
+      "zh-Hant": "更新"
+    },
+    "保存编辑区参数，队列副本不变。": {
+      "zh": "保存编辑区参数，队列副本不变。",
+      "en": "Save editor settings; queued copies stay unchanged.",
+      "zh-Hant": "儲存編輯區參數，佇列副本不變。"
+    },
+    "改名": {
+      "zh": "改名",
+      "en": "Rename",
+      "zh-Hant": "重新命名"
+    },
+    "渲染队列": {
+      "zh": "渲染队列",
+      "en": "Render queue",
+      "zh-Hant": "渲染佇列",
+      "zh-Hant-HK": "渲染隊列"
+    },
+    "本项后停止": {
+      "zh": "本项后停止",
+      "en": "Stop after job",
+      "zh-Hant": "本項後停止"
+    },
+    "开始队列": {
+      "zh": "开始队列",
+      "en": "Run queue",
+      "zh-Hant": "開始佇列",
+      "zh-Hant-HK": "開始隊列"
+    },
+    "当前设置": {
+      "zh": "当前设置",
+      "en": "Current settings",
+      "zh-Hant": "目前設定"
+    },
+    "队列 · {count}": {
+      "zh": "队列 · {count}",
+      "en": "Queue · {count}",
+      "zh-Hant": "佇列 · {count}",
+      "zh-Hant-HK": "隊列 · {count}"
+    },
+    "队列为空，调整上方任务后直接入队。": {
+      "zh": "队列为空，调整上方任务后直接入队。",
+      "en": "Queue empty. Add a job above.",
+      "zh-Hant": "佇列為空，調整上方工作後直接加入。",
+      "zh-Hant-HK": "隊列為空，調整上方工作後直接加入。"
+    },
+    "待渲染 {count} 项": {
+      "zh": "待渲染 {count} 项",
+      "en": "{count} pending",
+      "zh-Hant": "待渲染 {count} 項"
+    },
+    "HDR 切换中，请使用预设或等待当前项结束": {
+      "zh": "HDR 切换中，请使用预设或等待当前项结束",
+      "en": "HDR switching: use a preset or wait for this job.",
+      "zh-Hant": "HDR 切換中，請使用預設或等待目前工作結束"
+    },
+    "静帧渲染完成": {
+      "zh": "静帧渲染完成",
+      "en": "Still render complete",
+      "zh-Hant": "靜幀渲染完成"
+    },
+    "原双通道流程": {
+      "zh": "原双通道流程",
+      "en": "Legacy HDR",
+      "zh-Hant": "原雙通道流程"
+    },
+    "请先刷新参数或选择预设": {
+      "zh": "请先刷新参数或选择预设",
+      "en": "Refresh settings or select a preset.",
+      "zh-Hant": "請先重新整理參數或選擇預設"
+    },
+    "复制任务": {
+      "zh": "复制任务",
+      "en": "Duplicate",
+      "zh-Hant": "複製工作"
+    },
+    "重试": {
+      "zh": "重试",
+      "en": "Retry",
+      "zh-Hant": "重試"
+    },
+    "来源": {
+      "zh": "来源",
+      "en": "Source",
+      "zh-Hant": "來源"
+    },
+    "预设管理": {
+      "zh": "预设管理",
+      "en": "Presets",
+      "zh-Hant": "預設管理"
+    },
+    "高级选项": {
+      "zh": "高级选项",
+      "en": "Options",
+      "zh-Hant": "進階選項"
+    },
+    "成功后移除": {
+      "zh": "成功后移除",
+      "en": "Remove on success",
+      "zh-Hant": "成功後移除"
+    },
+    "直接执行，不入队、不改名；已有文件沿用覆盖规则。": {
+      "zh": "直接执行，不入队、不改名；已有文件沿用覆盖规则。",
+      "en": "Run directly without queuing or renaming; existing overwrite rules apply.",
+      "zh-Hant": "直接執行，不加入佇列、不改名；既有檔案沿用覆寫規則。",
+      "zh-Hant-HK": "直接執行，不加入隊列、不改名；現有檔案沿用覆寫規則。"
+    },
+    "完整成功后移除队列项，失败或取消保留；在开始批次时固定此选项。": {
+      "zh": "完整成功后移除队列项，失败或取消保留；在开始批次时固定此选项。",
+      "en": "Remove successful queue jobs; keep failed or canceled jobs. Applied when a batch starts.",
+      "zh-Hant": "完整成功後移除佇列項目，失敗或取消則保留；開始批次時固定此選項。",
+      "zh-Hant-HK": "完整成功後移除隊列項目，失敗或取消則保留；開始批次時固定此選項。"
+    },
+    "请选择序列": {
+      "zh": "请选择序列",
+      "en": "Select a sequence.",
+      "zh-Hant": "請選擇序列"
+    },
+    "请编译 Mineprep C++ 插件并重启编辑器，以加载显示 HDR 设置": {
+      "zh": "请编译 Mineprep C++ 插件并重启编辑器，以加载显示 HDR 设置",
+      "en": "Build the Mineprep C++ plugin and restart the editor to load Display HDR.",
+      "zh-Hant": "請編譯 Mineprep C++ 外掛並重新啟動編輯器，以載入顯示 HDR 設定"
+    },
+    "分辨率须为两个正整数": {
+      "zh": "分辨率须为两个正整数",
+      "en": "Resolution must contain two positive integers.",
+      "zh-Hant": "解析度須為兩個正整數"
+    },
+    "请打开或指定一个关卡序列": {
+      "zh": "请打开或指定一个关卡序列",
+      "en": "Open or specify a Level Sequence.",
+      "zh-Hant": "請開啟或指定一個關卡序列"
+    },
+    "显示 HDR 测试需要相机切换轨道": {
+      "zh": "显示 HDR 测试需要相机切换轨道",
+      "en": "Display HDR testing requires a Camera Cuts track.",
+      "zh-Hant": "顯示 HDR 測試需要攝影機切換軌道"
+    },
+    "帧号须为整数": {
+      "zh": "帧号须为整数",
+      "en": "Frame must be an integer.",
+      "zh-Hant": "影格編號須為整數"
+    },
+    "无法复制 HDR 显示参数：{error}": {
+      "zh": "无法复制 HDR 显示参数：{error}",
+      "en": "Cannot copy HDR display settings: {error}",
+      "zh-Hant": "無法複製 HDR 顯示參數：{error}"
+    },
+    "请先切换到空 MRQ 测试队列；现有任务已保留": {
+      "zh": "请先切换到空 MRQ 测试队列；现有任务已保留",
+      "en": "Switch to an empty MRQ test queue first; existing jobs were preserved.",
+      "zh-Hant": "請先切換至空的 MRQ 測試佇列；既有工作已保留"
+    },
+    "请先保存当前地图，再准备 HDR 测试任务": {
+      "zh": "请先保存当前地图，再准备 HDR 测试任务",
+      "en": "Save the current map before preparing an HDR test job.",
+      "zh-Hant": "請先儲存目前地圖，再準備 HDR 測試工作"
+    },
+    "HDR 峰值须为大于 100 且不超过 10000 nit 的有限数值": {
+      "zh": "HDR 峰值须为大于 100 且不超过 10000 nit 的有限数值",
+      "en": "HDR peak must be finite, above 100 and at most 10000 nits.",
+      "zh-Hant": "HDR 峰值須為大於 100 且不超過 10000 nit 的有限數值"
+    },
+    "HDR 参考白须为正的有限数值，且不超过峰值": {
+      "zh": "HDR 参考白须为正的有限数值，且不超过峰值",
+      "en": "HDR paper white must be finite, positive and no greater than the peak.",
+      "zh-Hant": "HDR 參考白須為正的有限數值，且不超過峰值"
+    },
+    "Filmic HDR（临时）": {
+      "zh": "Filmic HDR（临时）",
+      "en": "Filmic HDR (test)",
+      "zh-Hant": "Filmic HDR（暫用）"
+    },
+    "单次动画：沿用当前序列、输出名、分辨率、帧率、采样和暖场；固定 MRQ、1000/203 nit、H.265 10-bit PQ，无音频。独立目录保留 EXR，不改旧 HDR 控件。": {
+      "zh": "单次动画：沿用当前序列、输出名、分辨率、帧率、采样和暖场；固定 MRQ、1000/203 nit、H.265 10-bit PQ，无音频。独立目录保留 EXR，不改旧 HDR 控件。",
+      "en": "One animation: current sequence, name, resolution, FPS, samples and warm-up. Fixed MRQ, 1000/203 nits, HEVC 10-bit PQ, no audio. Separate output keeps EXRs; legacy HDR controls stay unchanged.",
+      "zh-Hant": "單次動畫：沿用目前序列、輸出名稱、解析度、影格率、取樣與暖場；固定 MRQ、1000/203 nit、H.265 10-bit PQ，無音訊。獨立目錄保留 EXR，不改舊 HDR 控制項。"
+    },
+    "Filmic HDR 临时入口仅用于动画": {
+      "zh": "Filmic HDR 临时入口仅用于动画",
+      "en": "Temporary Filmic HDR is for animation only.",
+      "zh-Hant": "Filmic HDR 暫用入口僅供動畫使用"
+    },
+    "Filmic HDR 临时入口仅支持普通动画，请关闭全景、立体和分层": {
+      "zh": "Filmic HDR 临时入口仅支持普通动画，请关闭全景、立体和分层",
+      "en": "Temporary Filmic HDR supports ordinary animation only. Disable panorama, stereo and layers.",
+      "zh-Hant": "Filmic HDR 暫用入口僅支援一般動畫，請關閉全景、立體與分層"
+    },
+    "Filmic HDR 视频的宽高须为正偶数": {
+      "zh": "Filmic HDR 视频的宽高须为正偶数",
+      "en": "Filmic HDR video dimensions must be positive even numbers.",
+      "zh-Hant": "Filmic HDR 影片的寬高須為正偶數"
+    },
+    "Filmic HDR 渲染中": {
+      "zh": "Filmic HDR 渲染中",
+      "en": "Rendering Filmic HDR",
+      "zh-Hant": "Filmic HDR 算圖中"
+    },
+    "EXR 帧不连续，已保留输出以便检查": {
+      "zh": "EXR 帧不连续，已保留输出以便检查",
+      "en": "EXR frames are not consecutive; output was kept for inspection.",
+      "zh-Hant": "EXR 影格不連續，已保留輸出供檢查"
+    },
+    "Filmic HDR 编码中": {
+      "zh": "Filmic HDR 编码中",
+      "en": "Encoding Filmic HDR",
+      "zh-Hant": "Filmic HDR 編碼中"
+    },
+    "Filmic HDR 编码": {
+      "zh": "Filmic HDR 编码",
+      "en": "Filmic HDR encoding",
+      "zh-Hant": "Filmic HDR 編碼"
+    },
+    "编码未生成视频，请检查 encode.log": {
+      "zh": "编码未生成视频，请检查 encode.log",
+      "en": "Encoding produced no video. Check encode.log.",
+      "zh-Hant": "編碼未產生影片，請檢查 encode.log"
+    },
+    "渲染未完成，未生成可编码的 EXR": {
+      "zh": "渲染未完成，未生成可编码的 EXR",
+      "en": "Rendering was incomplete; no EXR frames are available to encode.",
+      "zh-Hant": "算圖未完成，未產生可編碼的 EXR"
+    },
+    "Filmic HDR 视频完成": {
+      "zh": "Filmic HDR 视频完成",
+      "en": "Filmic HDR video complete",
+      "zh-Hant": "Filmic HDR 影片完成"
+    },
+    "第 {frame} 帧": {
+      "zh": "第 {frame} 帧",
+      "en": "Frame {frame}",
+      "zh-Hant": "第 {frame} 影格",
+      "zh-Hant-HK": "第 {frame} 幀"
+    },
+    "当前任务": {
+      "zh": "当前任务",
+      "en": "Current task",
+      "zh-Hant": "目前工作"
+    },
+    "采集": {
+      "zh": "采集",
+      "en": "Capture",
+      "zh-Hant": "擷取"
+    },
+    "预设": {
+      "zh": "预设",
+      "en": "Presets",
+      "zh-Hant": "預設"
+    },
+    "最近采集：{summary}": {
+      "zh": "最近采集：{summary}",
+      "en": "Last capture: {summary}",
+      "zh-Hant": "最近擷取：{summary}"
+    },
+    "启用": {
+      "zh": "启用",
+      "en": "On",
+      "zh-Hant": "啟用"
+    },
+    "类型 / 后端": {
+      "zh": "类型 / 后端",
+      "en": "Type / backend",
+      "zh-Hant": "類型 / 後端"
+    },
+    "规格": {
+      "zh": "规格",
+      "en": "Format",
+      "zh-Hant": "規格"
+    },
+    "状态": {
+      "zh": "状态",
+      "en": "Status",
+      "zh-Hant": "狀態"
+    },
+    "操作": {
+      "zh": "操作",
+      "en": "Actions",
+      "zh-Hant": "操作"
+    },
+    "复制": {
+      "zh": "复制",
+      "en": "Copy",
+      "zh-Hant": "複製"
+    },
+    "+ 特殊工具": {
+      "zh": "+ 特殊工具",
+      "en": "+ Special tools",
+      "zh-Hant": "+ 特殊工具"
+    },
+    "- 特殊工具": {
+      "zh": "- 特殊工具",
+      "en": "- Special tools",
+      "zh-Hant": "- 特殊工具"
+    },
+    "Filmic HDR 视频": {
+      "zh": "Filmic HDR 视频",
+      "en": "Filmic HDR video",
+      "zh-Hant": "Filmic HDR 影片"
+    },
+    "渲染 Filmic HDR 视频": {
+      "zh": "渲染 Filmic HDR 视频",
+      "en": "Render Filmic HDR video",
+      "zh-Hant": "渲染 Filmic HDR 影片"
+    },
+    "原 HDR 流程": {
+      "zh": "原 HDR 流程",
+      "en": "Legacy HDR",
+      "zh-Hant": "原 HDR 流程"
+    },
+    "后台编码 {count}": {
+      "zh": "后台编码 {count}",
+      "en": "{count} background encodes",
+      "zh-Hant": "背景編碼 {count}"
+    },
+    "预设迁移校验失败，旧文件已保留": {
+      "zh": "预设迁移校验失败，旧文件已保留",
+      "en": "Preset migration verification failed; the old file was preserved.",
+      "zh-Hant": "預設遷移驗證失敗，舊檔案已保留"
+    },
+    "预设文件已存在：{path}": {
+      "zh": "预设文件已存在：{path}",
+      "en": "Preset file already exists: {path}",
+      "zh-Hant": "預設檔案已存在：{path}"
+    },
+    "frame 仅用于静帧，视频使用序列播放范围": {
+      "zh": "frame 仅用于静帧，视频使用序列播放范围",
+      "en": "frame is for still images; videos use the sequence playback range.",
+      "zh-Hant": "frame 僅用於靜態影格，影片使用序列播放範圍"
+    },
+    "fps 不能与 custom_fps／fps_value 同时指定": {
+      "zh": "fps 不能与 custom_fps／fps_value 同时指定",
+      "en": "Do not combine fps with custom_fps or fps_value.",
+      "zh-Hant": "fps 不能與 custom_fps／fps_value 同時指定"
+    },
+    "未知的渲染参数：{fields}": {
+      "zh": "未知的渲染参数：{fields}",
+      "en": "Unknown render settings: {fields}",
+      "zh-Hant": "未知的渲染參數：{fields}"
+    },
+    "帧率须为正整数": {
+      "zh": "帧率须为正整数",
+      "en": "Frame rate must be a positive integer.",
+      "zh-Hant": "影格率須為正整數"
+    },
+    "指定序列没有相机切换轨道": {
+      "zh": "指定序列没有相机切换轨道",
+      "en": "The specified sequence has no Camera Cuts track.",
+      "zh-Hant": "指定序列沒有攝影機切換軌道"
+    },
+    "视频需要有效相机序列，或指定 viewport=True": {
+      "zh": "视频需要有效相机序列，或指定 viewport=True",
+      "en": "Video needs a sequence with Camera Cuts, or viewport=True.",
+      "zh-Hant": "影片需要有效攝影機序列，或指定 viewport=True"
+    },
+    "帧号须为整数；临时视角只支持第 0 帧": {
+      "zh": "帧号须为整数；临时视角只支持第 0 帧",
+      "en": "Frame must be an integer; the temporary view only supports frame 0.",
+      "zh-Hant": "影格編號須為整數；臨時視角只支援第 0 影格"
+    },
+    "找不到唯一的渲染预设：{preset}": {
+      "zh": "找不到唯一的渲染预设：{preset}",
+      "en": "Could not find a unique render preset: {preset}",
+      "zh-Hant": "找不到唯一的渲染預設：{preset}"
+    },
+    "请选择带相机切换轨道的序列": {
+      "zh": "请选择带相机切换轨道的序列",
+      "en": "Select a sequence with a Camera Cuts track.",
+      "zh-Hant": "請選擇含攝影機切換軌道的序列"
+    },
+    "编码中": {
+      "zh": "编码中",
+      "en": "Encoding",
+      "zh-Hant": "編碼中"
+    },
+    "presets.d04b7d80ad79402a9b35366421930898.name": {
+      "zh": "快速图片",
+      "en": "Quick Image",
+      "zh-Hant": "快速圖片"
+    },
+    "presets.8dde0f005ad24f82ba464c9b15a7c579.name": {
+      "zh": "快速视频",
+      "en": "Quick Video",
+      "zh-Hant": "快速影片"
+    }
+  }
+}

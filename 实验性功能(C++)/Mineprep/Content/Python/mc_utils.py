@@ -8,12 +8,14 @@ import traceback
 import builtins
 import ctypes
 import mcvars
+from mc_math import _rotation_axes, unwrap_angles
 from dataclasses import dataclass, asdict
 from pprint import pformat
 from functools import lru_cache, wraps
 from weakref import finalize
-from typing import Iterable
+from typing import Iterable, Callable, TYPE_CHECKING
 import operator
+import uuid
 
 HotkeyObjCache = None
 
@@ -125,10 +127,14 @@ class LazyMeta(type):
 class Lazy(metaclass=LazyMeta):
     """通用占位符，允许各种调用不报错，例如在离线测试时顶替unreal模块。调用属于未定义行为"""
 
-try:
+
+if TYPE_CHECKING:
     import unreal
-except ModuleNotFoundError:
-    unreal = Lazy
+else:
+    try:
+        import unreal
+    except ModuleNotFoundError:
+        unreal = Lazy
 
 
 def iscollection(obj):
@@ -551,28 +557,101 @@ def _i18n(*args, **kwargs):
     return i18n(*args, **kwargs)
 
 
-def panic(title, message=''):
-    """弹出提示框，由用户决定是否继续运行"""
+def _dialog_default(name, title, message, default):
+    if type(default) is not bool:
+        raise TypeError('default 必须为 bool')
+    if getattr(mcvars, 'PyUseDialogDefaults', False):
+        text = ' '.join(f'{title}: {message}'.split())
+        unreal.log_warning(f'{name} automatic default: {"Yes" if default else "No"} | {text}')
+        return default
+    return None
+
+
+def panic(title, message='', *, default=False):
+    """询问是否继续；PyUseDialogDefaults 开启时采用 default，False 抛错。"""
     if not message:
         message = title
         title = _i18n('警告', 'Warning', key='dialog.warning')
     message = str(message) + ' \n\n' + str(_i18n('是否继续运行？', 'Continue running?', key='dialog.continue'))
     title = str(title)
-    status = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO)
-    if status == unreal.AppReturnType.NO:
+    choice = _dialog_default('panic', title, message, default)
+    if choice is None:
+        choice = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO) != unreal.AppReturnType.NO
+    if not choice:
         throw(f'{title}: {message} NO.\n')
 
 
-def dialog(title, message=''):
-    """弹出对话框"""
+def dialog(title, message='', *, default=True):
+    """询问 Yes/No；PyUseDialogDefaults 开启时直接返回 default。"""
     if not message:
         message = title
         title = _i18n('提示', 'Information', key='dialog.info')
     message = str(message)
     title = str(title)
+    choice = _dialog_default('dialog', title, message, default)
+    if choice is not None:
+        return choice
     result = unreal.EditorDialog.show_message(title, message, unreal.AppMsgType.YES_NO,
                                      message_category=unreal.AppMsgCategory.INFO)
     return result == unreal.AppReturnType.YES
+
+
+def _lookat_location(obj):
+    """解析单个 Actor/SceneComponent 的世界位置。"""
+    if not isinstance(obj, (unreal.Actor, unreal.SceneComponent)):
+        raise TypeError('lookat 需要 Actor 或 SceneComponent')
+    if not unreal.SystemLibrary.is_valid(obj):
+        raise ValueError('lookat 对象已失效')
+    return obj.get_actor_location() if isinstance(obj, unreal.Actor) else obj.get_world_location()
+
+
+def _lookat_rotation(source, target, *, origin=None, pitch=True, roll=0):
+    """返回现有 Rotation 写键路径使用的坐标空间，不修改对象。"""
+    if type(pitch) is not bool:
+        raise TypeError('pitch 必须为 bool')
+    if not isinstance(roll, (int, float)) or not math.isfinite(roll):
+        raise ValueError('roll 必须为有限角度')
+    def coordinates(value):
+        return unreal.Vector(*value) if isinstance(value, tuple) else value
+
+    source_location = _lookat_location(source)
+    start = source_location if origin is None else coordinates(origin)
+    if not isinstance(start, unreal.Vector):
+        raise TypeError('origin 必须为世界坐标 Vector 或三元组')
+    target = getattr(target, 'target', target)
+    target = coordinates(target)
+    end = target if isinstance(target, unreal.Vector) else _lookat_location(target)
+    direction = end - start
+    if not pitch:
+        direction = unreal.Vector(direction.x, direction.y, 0)
+    if direction.is_nearly_zero():
+        raise ValueError('lookat 方向接近零，无法确定朝向')
+    if not all(math.isfinite(v) for v in (direction.x, direction.y, direction.z)):
+        raise ValueError('lookat 坐标必须为有限数值')
+    rotation = unreal.MathLibrary.find_look_at_rotation(start, start + direction)
+    rotation.roll = roll
+    if isinstance(source, unreal.SceneComponent) and not source.absolute_rotation:
+        parent = source.get_attach_parent()
+        if parent is not None:
+            basis = parent.get_socket_transform(source.get_attach_socket_name())
+            rotation = basis.inverse_transform_rotation(rotation)
+    return rotation
+
+
+def unwrap_rotations(rotations, *, axes='y'):
+    """返回新的 Rotator 列表；r/p/y 指定连续化的 roll/pitch/yaw，其他轴保留。"""
+    axes = _rotation_axes(axes)
+    rotations = list(rotations)
+    if any(not isinstance(rotation, unreal.Rotator) for rotation in rotations):
+        raise TypeError('旋转采样必须为 Rotator')
+    components = {}
+    for letter, name in (('r', 'roll'), ('p', 'pitch'), ('y', 'yaw')):
+        values = [getattr(rotation, name) for rotation in rotations]
+        if not all(math.isfinite(value) for value in values):
+            raise ValueError('旋转角度必须为有限数值')
+        components[name] = unwrap_angles(values) if letter in axes else values
+    return [unreal.Rotator(**{name: values[index] for name, values in components.items()})
+            for index in range(len(rotations))]
 
 
 
@@ -867,6 +946,82 @@ def askopenfilename(title=None, filetypes=None) -> str:
     return ''
 
 
+def _filename_tuple(result) -> tuple[str, ...]:
+    """把对话框结果规范成路径元组；取消或空结果为 ()。"""
+    if not result:
+        return ()
+    if isinstance(result, str):
+        return (result,)
+    return tuple(path for path in result if path)
+
+
+def askopenfilenames(title=None, filetypes=None) -> tuple[str, ...]:
+    """跨平台多文件选择对话框，返回选中的文件路径元组"""
+    if title is None:
+        title = _i18n('选择多个文件', 'Select Files', key='dialog.select_files') if unreal else 'Select Files'
+    title = str(title)
+    # 1. tkinter (Windows)
+    try:
+        import tkinter as tk
+        from tkinter import filedialog as fd
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        result = fd.askopenfilenames(title=title, filetypes=filetypes or [])
+        root.destroy()
+        return _filename_tuple(result)
+    except Exception:
+        pass
+
+    # 2. zenity（常见于 Linux 桌面环境）
+    if sys.platform.startswith("linux"):
+        try:
+            cmd = ["zenity", "--file-selection", "--multiple", "--separator=\n", f"--title={title}"]
+            if filetypes:
+                for desc, pattern in filetypes:
+                    cmd += [f"--file-filter={desc} | {pattern}"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if result.returncode == 0:
+                return _filename_tuple(result.stdout.splitlines())
+        except Exception:
+            pass
+
+    # 3. osascript（macOS 原生）
+    if sys.platform == "darwin":
+        try:
+            exts = []
+            if filetypes:
+                for desc, pattern in filetypes:
+                    for pat in pattern.split():
+                        ext = pat.lstrip("*.")
+                        if ext and ext != "*":
+                            exts.append(ext)
+            if exts:
+                ext_list = ", ".join(f'"{e}"' for e in exts)
+                choose = (f'choose file with prompt "{title}" of type {{{ext_list}}} '
+                          'with multiple selections allowed')
+            else:
+                choose = f'choose file with prompt "{title}" with multiple selections allowed'
+            script = (
+                f'set chosen to {choose}\n'
+                'set output to ""\n'
+                'repeat with f in chosen\n'
+                'set output to output & POSIX path of (contents of f) & linefeed\n'
+                'end repeat\n'
+                'return output'
+            )
+            result = subprocess.run(
+                ["osascript", "-e", script],
+                capture_output=True, text=True, timeout=120
+            )
+            if result.returncode == 0:
+                return _filename_tuple(result.stdout.splitlines())
+        except Exception:
+            pass
+
+    return ()
+
+
 def askdirectory(title=None) -> str:
     """跨平台文件夹选择对话框，返回选中的文件夹路径"""
     if title is None:
@@ -1102,6 +1257,60 @@ def copy(source, target=None):
         dest_path = f"{base_path}_{counter}"
         counter += 1
     return unreal.EditorAssetLibrary.duplicate_asset(source_path, dest_path)
+
+
+##############################################################################
+
+
+def show_editor_task(title: unreal.Text | str = None,
+                     time: float = None,
+                     begin: Callable[[unreal.EditorUtilityTask], None] = None,
+                     cancel: Callable[[unreal.EditorUtilityTask], None] = None):
+    """在编辑器右下角显示弹窗，可使用set_task_notification_text(text)，finish_executing_task(success)"""
+    name = f'EditorTask_{uuid.uuid4().hex[:8]}'
+    finished = False
+
+    def finish_executing_task(self, success=True):
+        nonlocal finished
+        finished = True
+        unreal.EditorUtilityTask.finish_executing_task(self, success)
+
+    def receive_begin_execution(self):
+        try:
+            if begin:
+                begin(self)
+        except Exception as e:
+            warn(f"EditorUtilityTask 启动时出错: {e}")
+        if time:
+            import mc_parallel
+            def finish_later():
+                if not finished:
+                    self.finish_executing_task(True)
+            mc_parallel.delay(time)(finish_later)()
+
+    def receive_cancel_requested(self):
+        nonlocal finished
+        finished = True
+        try:
+            if cancel:
+                cancel(self)
+        except Exception as e:
+            warn(f"EditorUtilityTask 取消时出错: {e}")
+        # UE's RequestCancel finishes the task after this event returns.
+
+    def get_task_title_override(self):
+        return title or type(self).__name__
+
+    cls = type(name, (unreal.EditorUtilityTask,), {
+        'finish_executing_task': finish_executing_task,
+        'receive_begin_execution': unreal.ufunction(override=True)(receive_begin_execution),
+        'receive_cancel_requested':  unreal.ufunction(override=True)(receive_cancel_requested),
+        'get_task_title_override': unreal.ufunction(override=True)(get_task_title_override),
+    })
+
+    result = unreal.uclass()(cls)()
+    unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem).register_and_execute_task(result)
+    return result
 
 
 #############################################################################

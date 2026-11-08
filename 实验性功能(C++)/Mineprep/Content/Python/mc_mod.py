@@ -11,8 +11,8 @@ import mcvars
 from fnmatch import translate
 from pathlib import Path
 from mc_config import wclass
-from mc_widget import Layout, copy
-from mc_utils import uclass, startfile, warn
+from mc_widget import Layout
+from mc_utils import uclass, startfile, warn, copy
 from mc_localization import Internationalization, i18n
 
 MODS_DIR = Path(__file__).with_name('mods')

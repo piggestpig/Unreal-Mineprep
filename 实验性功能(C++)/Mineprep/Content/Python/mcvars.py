@@ -1,6 +1,7 @@
 SafeBroadcast = True
 DebugMode = False
 PythonTooltips = False
+PyUseDialogDefaults = False
 ModsInitialized = False
 EnabledMods = set()
 RegisteredMods = {}

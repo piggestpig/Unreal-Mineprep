@@ -7,6 +7,7 @@ public class Mineprep : ModuleRules
 	public Mineprep(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		AddEngineThirdPartyPrivateStaticDependencies(Target, "UEOpenExr");
 		
 		PublicIncludePaths.AddRange(
 			new string[] {
@@ -32,6 +33,7 @@ public class Mineprep : ModuleRules
 				"InputCore", // 添加 InputCore 模块依赖
 				"Niagara", // 添加 Niagara 模块依赖
 				"PhysicsCore", // 添加 PhysicsCore 模块依赖
+				"MovieRenderPipelineCore",
 			}
 			);
 			
@@ -62,7 +64,8 @@ public class Mineprep : ModuleRules
 				"RenderCore",
 				"RHI",
 				"Renderer",
-				"MovieRenderPipelineCore",
+				"MovieRenderPipelineSettings",
+				"MovieRenderPipelineRenderPasses",
 				"MovieRenderPipelineEditor",
 				"Mover",
 				"Projects",

@@ -1055,6 +1055,14 @@ def convert_to_packed_arrays(sparse_dict, center=False, merge=0, *, origin=(0, 0
 _INSTANCE_BATCH = 8192
 
 
+def _add_transform_instances(ism, transforms, *, update_navigation=True):
+    """Consume transforms once, keeping at most one submission batch alive."""
+    from itertools import islice
+    iterator = iter(transforms)
+    while batch := list(islice(iterator, _INSTANCE_BATCH)):
+        ism.add_instances(batch, False, False, update_navigation)
+
+
 def add_packed_instances(ism, payload):
     """按批把 packed 的 pos/rot/scale 写入 ISM，批结束后释放 Transform 列表。"""
     payload = validate_packed(payload)

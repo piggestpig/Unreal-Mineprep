@@ -52,7 +52,7 @@
   "进入摄像机视图": {
     "chord_text": "(Key=NumPadZero,bShift=False,bCtrl=False,bAlt=False,bCmd=False)",
     "tooltip": "进入摄像机视图",
-    "code": "level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)\nif level_subsystem and level_subsystem.get_pilot_level_actor():\n    level_subsystem.eject_pilot_level_actor()\nelse:\n    cams = mineprep.selected(lambda a: a.get_component_by_class(unreal.CameraComponent))\n    if not cams:\n        cams = mineprep.actors(lambda a: a.actor_has_tag('camera'))\n    if cams and level_subsystem:\n        level_subsystem.pilot_level_actor(cams[0])\n    else:\n        mineprep.warn('未找到选中的摄像机或带有 camera 标签的摄像机！')\n"
+    "code": "level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)\r\nif level_subsystem and level_subsystem.get_pilot_level_actor():\r\n    level_subsystem.eject_pilot_level_actor()\r\nelse:\r\n    cams = mineprep.selected(lambda a: a.get_component_by_class(unreal.CameraComponent))\r\n    if not cams:\r\n        cams = mineprep.actors(lambda a: a.actor_has_tag('camera'))\r\n    if cams and level_subsystem:\r\n        level_subsystem.pilot_level_actor(cams[0])\r\n    else:\r\n        mineprep.warn('未找到选中的摄像机或带有 camera 标签的摄像机！')"
   },
   "对齐摄像机至视图": {
     "chord_text": "(Key=NumPadZero,bShift=False,bCtrl=True,bAlt=True,bCmd=False)",

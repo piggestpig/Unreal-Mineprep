@@ -90,6 +90,4 @@ Full decorator rules: [../parallel.md](../parallel.md).
 ## Shipping a public API change
 
 Find affected callers in `mods/`, templates and facade re-exports; update only
-those consumers. Verify direct calls and relevant UI/reload paths using
-[Mod testing](../mods.md#testing) and the [live-test policy](../SKILL.md#testing-and-essential-boundaries).
-Report untested paths; connection availability alone does not authorize mutations.
+those consumers.

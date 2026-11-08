@@ -12,6 +12,18 @@
       "zh": "地图标识色",
       "zh-Hant": "地圖標識色"
     },
+    "BiomeColor.Retention": {
+      "_native": "en",
+      "en": "Original colour retention",
+      "zh": "原色保留",
+      "zh-Hant": "原色保留"
+    },
+    "BiomeColor.Retention.tooltip": {
+      "_native": "en",
+      "en": "0 uses grayscale before RGB tinting; 1 keeps the original colour",
+      "zh": "RGB调色前，0使用灰度底色，1保留原色",
+      "zh-Hant": "RGB調色前，0使用灰階底色，1保留原色"
+    },
     "BiomeColor.category.BiomeColor": {
       "_native": "en",
       "en": "Biome colours",

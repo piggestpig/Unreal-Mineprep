@@ -272,6 +272,7 @@ def import_biome_texture(files, *, folder, world_key):
     destination,_,asset_name = path.rpartition('/')
     texture = mc_importer._run_import_task(mc_importer._make_import_task(files['path'],destination,asset_name))[0]
     texture.set_editor_properties(dict(srgb=False, compression_settings=unreal.TextureCompressionSettings.TC_HDR,
+        compression_no_alpha=False,
         filter=unreal.TextureFilter.TF_BILINEAR, address_x=unreal.TextureAddress.TA_CLAMP,
         address_y=unreal.TextureAddress.TA_CLAMP, mip_gen_settings=unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS,
         never_stream=True))

@@ -281,6 +281,10 @@ class PresetPanel:
         self._library_manager(**state)
 
     def _library_manager(self, search='', scope='*', include_all=False, selected=''):
+        stamp = self._library.stamp()
+        if stamp != self._library_stamp:
+            self._library_stamp = stamp
+            self._refresh_preset_labels()
         scopes = {'*':i18n('全部范围','All scopes'),'whole':i18n('整套','Whole')}
         scopes.update({k:self._page_label(k) for k in self._section_marks})
         scope = scope if scope in scopes else '*'

@@ -7,7 +7,29 @@ import mineprep
 import unreal
 import mc_sequencer
 
-from . import util
+from . import biped, sampling, util
+
+
+def write_batches(rig, times, batches):
+    """All values/names must be compiled before replacing the track."""
+    prepared = [(rig._resolve_name(name), unreal.Array.cast(unreal.EulerTransform, values))
+                for name, values in batches.items()]
+    for name, values in prepared:
+        if len(values) != len(times):
+            raise ValueError(name + ': sample count does not match times')
+        if rig._type(name) != unreal.RigControlType.EULER_TRANSFORM:
+            raise ValueError(name + ': numeric bone import requires EulerTransform control')
+    with unreal.ScopedEditorTransaction('Import numeric Bedrock animation'):
+        rig.clear()
+        for name, values in prepared:
+            rig.keyframes(name, times, values)
+        for section in rig.track.get_sections():
+            for ch in section.get_all_channels():
+                if isinstance(ch, (unreal.MovieSceneScriptingFloatChannel, unreal.MovieSceneScriptingDoubleChannel)):
+                    for key in ch.get_keys():
+                        key.set_interpolation_mode(unreal.RichCurveInterpMode.RCIM_LINEAR)
+    mc_sequencer._refresh_sequencer()
+    return len(times) * len(prepared)
 
 
 def apply(mod):
@@ -45,78 +67,58 @@ def _open_sequence(sequence):
 
 @mineprep.asynctask
 def apply_animation(json_path, actor, *, sequence, bone_map=None, time_scale=1.0,
-                    start_time=0.0, resize_playback=False, save=False):
+                    start_time=0.0, resize_playback=False, save=False, profile=None):
     """读取 JSON 中的首个基岩版动画，并写入目标角色在关卡序列中的 Control Rig 轨道。"""
     time_scale, start_time = float(time_scale), float(start_time)
     if not math.isfinite(time_scale) or time_scale <= 0 or not math.isfinite(start_time):
         raise ValueError('time_scale 必须为正有限数，start_time 必须为有限数')
-    if not util.body_skm(actor):
+    component = util.body_skm(actor)
+    if not component:
         raise ValueError('角色没有骨骼网格体')
-    bone_map = util.parse_bone_map(bone_map)
+    if profile not in (None, 'biped_v1'):
+        raise ValueError(f'未知动画配置: {profile}')
+    if profile == 'biped_v1':
+        if bone_map is not None:
+            raise ValueError('biped_v1 与 bone_map 不能同时指定')
+        biped.validate_mesh(component)
+    else:
+        bone_map = util.parse_bone_map(bone_map)
     if not json_path or not os.path.isfile(json_path):
         raise FileNotFoundError('找不到 JSON: ' + str(json_path))
     with open(json_path, encoding='utf-8-sig') as f:
-        anim_name, anim = util.first_anim(json.load(f))
-    bones = anim.get('bones') or {}
+        data = json.load(f)
+    if 'animation_controllers' in data:
+        raise ValueError('animation_controllers are unsupported')
+    anim_name, anim = util.first_anim(data)
+    rate = sequence.get_display_rate()
+    fps = rate.numerator / rate.denominator
+    duration, source_times, samples = sampling.compile_animation(anim_name, anim, fps * time_scale)
+    if profile == 'biped_v1':
+        batches = biped.compile_controls(samples, len(source_times))
     _open_sequence(sequence)
     body = mineprep.actor(actor).rig()
-    # 新建 Control Rig 的绑定/通道要经过编辑器一帧才可可靠写键。
     yield
     if mc_sequencer.resolve_sequence() != sequence:
         raise RuntimeError('写键前活动关卡序列已改变，请重新调用')
-    duration = util.anim_length(anim, bones) * time_scale
-    nkey = 0
     skipped = []
-    refresh = mc_sequencer._refresh_sequencer
-    mc_sequencer._refresh_sequencer = lambda: None
-    try:
-        with unreal.ScopedEditorTransaction('Bedrock anim ' + anim_name):
-            util.clear_track(body)
-            for raw_bone, chans in bones.items():
-                spec = util.resolve_bone_spec(raw_bone, bone_map)
-                ctrl, pos_spec, rot_spec, scl_spec = spec
-                if not util.has_ctrl(body, ctrl):
-                    skipped.append(str(raw_bone) + '->' + ctrl)
-                    continue
-                rots = util.parse_channel(chans.get('rotation'))
-                has_pos = 'position' in chans
-                has_scl = 'scale' in chans
-                poss = util.parse_channel(chans.get('position')) if has_pos else []
-                scls = util.parse_channel(chans.get('scale')) if has_scl else []
-                if util.idle(rots) and util.idle(poss) and util.idle(scls, 1.0):
-                    continue
-                times = sorted({t for t, _ in rots} | {t for t, _ in poss} | {t for t, _ in scls})
-                ri = pi = si = 0
-                last_r = (0.0, 0.0, 0.0)
-                last_p = (0.0, 0.0, 0.0)
-                last_s = (1.0, 1.0, 1.0)
-                for t in times:
-                    while ri < len(rots) and rots[ri][0] <= t:
-                        last_r = rots[ri][1]
-                        ri += 1
-                    while pi < len(poss) and poss[pi][0] <= t:
-                        last_p = poss[pi][1]
-                        pi += 1
-                    while si < len(scls) and scls[si][0] <= t:
-                        last_s = scls[si][1]
-                        si += 1
-                    rx, ry, rz = util.remap(last_r, rot_spec)
-                    rot = unreal.Rotator(pitch=ry, yaw=rz, roll=rx)
-                    if has_pos or has_scl:
-                        loc = unreal.Vector(*util.remap(last_p, pos_spec)) * util.PX if has_pos else unreal.Vector(0, 0, 0)
-                        sx, sy, sz = util.remap(last_s, scl_spec) if has_scl else (1.0, 1.0, 1.0)
-                        val = unreal.EulerTransform(
-                            location=loc, rotation=rot, scale=unreal.Vector(sx, sy, sz),
-                        )
-                    else:
-                        val = rot
-                    body.key(ctrl, val, float(start_time + t * time_scale))
-                    nkey += 1
-            if resize_playback:
-                util.set_playback_seconds(sequence, max(0.0, start_time) + duration)
-    finally:
-        mc_sequencer._refresh_sequencer = refresh
-        refresh()
+    if profile == 'biped_v1':
+        lib = unreal.ControlRigSequencerLibrary
+        if lib.get_fk_control_rig_apply_mode(body.target) != unreal.ControlRigFKRigExecuteMode.REPLACE:
+            if not lib.set_control_rig_layered_mode(body.track, False):
+                raise RuntimeError('无法切换到 FK Replace 模式')
+            yield
+            if mc_sequencer.resolve_sequence() != sequence:
+                raise RuntimeError('写键前活动关卡序列已改变，请重新调用')
+        start_frame = mc_sequencer._resolve_frame(start_time, sequence)
+        times = range(start_frame, start_frame + len(source_times))
+        end_frame = times.stop
+    else:
+        times = [float(start_time + t * time_scale) for t in source_times]
+        end_frame = int(round((start_time + duration*time_scale)*fps)) + 1
+        batches, skipped = _mapped_controls(body, samples, bone_map)
+    nkey = write_batches(body, times, batches)
+    if resize_playback:
+        sequence.set_playback_end(end_frame)
     channel_keys = sum(ch.get_num_keys() for section in body.track.get_sections()
                        for ch in section.get_all_channels())
     if nkey and not channel_keys:
@@ -130,6 +132,27 @@ def apply_animation(json_path, actor, *, sequence, bone_map=None, time_scale=1.0
     print('OK APPLY', nkey, anim_name)
     return dict(sequence=sequence, actor=actor, keys=nkey,
                 channel_keys=channel_keys, skipped=skipped)
+
+
+def _mapped_controls(body, samples, bone_map):
+    batches, skipped = {}, []
+    for raw_bone, channels in samples.items():
+        ctrl, pos_spec, rot_spec, scl_spec = util.resolve_bone_spec(raw_bone, bone_map)
+        if not util.has_ctrl(body, ctrl):
+            skipped.append(str(raw_bone) + '->' + ctrl)
+            continue
+        full = body._resolve_name(ctrl)
+        if full in batches:
+            raise ValueError('Multiple source bones map to ' + full)
+        values = []
+        for p, r, s in zip(channels['position'], channels['rotation'], channels['scale']):
+            rx, ry, rz = util.remap(r, rot_spec)
+            values.append(unreal.EulerTransform(
+                location=unreal.Vector(*util.remap(p, pos_spec)) * util.PX,
+                rotation=unreal.Rotator(roll=rx, pitch=ry, yaw=rz),
+                scale=unreal.Vector(*util.remap(s, scl_spec))))
+        batches[full] = values
+    return batches, skipped
 
 
 def bake(mod):

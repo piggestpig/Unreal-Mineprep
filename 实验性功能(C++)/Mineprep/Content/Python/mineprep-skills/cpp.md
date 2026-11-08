@@ -60,12 +60,13 @@ Do not recommend `inject_display_name` / `set_property_tooltip` (`DeprecatedFunc
 | Python | Use when |
 |--------|----------|
 | `register_polyglot_texts(text_data) -> Array[Text]` | Batch-register `PolyglotTextData` on the game thread. Results preserve input order; invalid entries return empty Text. `Internationalization` detects this optional function and falls back to Python registration on older builds; cached reads do not call it |
+| `set_ism_custom_data(component, values, num_floats=8) -> bool` | Optional full-buffer ISM custom-data upload, game thread only. Requires exactly instance-count × stride finite floats; returns false on invalid input before editing. LowPolyModel prefers this binding and falls back to official Python setters when absent. See [eight-channel layout](lowpoly.md#appearance-fixed-eight-float-layout) |
 | `finish_build_texture(texture) -> bool` | Complete an imported source texture's async build, rebuilding invalid platform data synchronously if needed. Optional binding; game thread only. Prefer the preparation entrypoint; see [Texture2D completion](pitfalls/common.md#source-texture2d-completion). Not a painted-RT refresh or a visual correctness test |
 | `show_editor_notification(message, sub_text, state=NONE, duration=3.0, use_throbber=False)` | Editor toast. Prefer `mineprep.prints` / `warn` for ordinary script feedback |
 | `set_editor_ui_scale(scale) -> float` | Slate UI scale. `scale < 0` returns current without changing |
 | `get_widget_text_under_mouse() -> (str, str)` | Widget text + tooltip under the cursor |
 | `loc_widget_text_under_mouse(new_text="") -> int` | Empty `new_text` → look up loc table; else set text |
-| `draw_viewport_to_render_target(rt, auto_resize=True, block_until_ready=False) -> bool` | Blit viewport into an RT. Visual checks for the **agent**: `mineprep.screenshot` — [remote.md](remote.md) |
+| `draw_viewport_to_render_target(rt, auto_resize=True, block_until_ready=False) -> bool` | Blit viewport into an RT. Screenshot / render choices: [remote.md](remote.md#viewport-screenshot-agent-can-read-the-png) |
 | `draw_post_process_stage_to_render_target(rt, stage, auto_resize=True, block_until_ready=False) -> bool` | Same, at a post-process stage |
 | `widget_screenshot(widget=None, path="", delay=0) -> str` | PNG of a UMG widget. Empty widget → active top-level window. Empty path → `Saved/Screenshots/WidgetScreenshot.png`. `delay` timing: [remote.md](remote.md). Success = saved `.png` path; failure = `WidgetScreenshot: ...` error. Visible capture is attempted first, then offscreen rendering. A PNG does not establish live-tab visibility. Panel shots: [remote.md](remote.md) |
 | `get_project_setting(name) -> str` / `set_project_setting(name, value) -> bool` | Project setting by name |

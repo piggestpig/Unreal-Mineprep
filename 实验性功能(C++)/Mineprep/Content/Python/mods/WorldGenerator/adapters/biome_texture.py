@@ -1,4 +1,4 @@
-"""RGB multipliers or negative HSV adjustments -> half-float EXR, without UE."""
+"""RGB/retention or negative HSV adjustments -> RGBA half-float EXR, without UE."""
 import hashlib
 from collections.abc import Mapping
 import json
@@ -16,7 +16,7 @@ from ..core.world import World, Overview
 # OpenCV snapshots this option when cv2 is imported, not when EXR is written.
 # Match init_unreal, but preserve an explicit caller override.
 os.environ.setdefault('OPENCV_IO_ENABLE_OPENEXR', '1')
-VERSION = 'bct-linear-half-box9-hdr-1'
+VERSION = 'bct-linear-half-box9-rgba-retention-2'
 MAX_SIDE = 16384
 
 
@@ -43,7 +43,7 @@ def palette(pack, overrides=None, *, biome_color_mode='rgb'):
     option = 'vegetation_tints' if biome_color_mode == 'rgb' else 'vegetation_hsv'
     validate = vegetation_tint if biome_color_mode == 'rgb' else validate_hsv
     if overrides is not None and not isinstance(overrides, Mapping):
-        raise TypeError(f'{option} must be a biome ID -> three-component mapping')
+        raise TypeError(f'{option} must be a biome ID -> colour mapping')
     overrides = dict(overrides or {})
     unknown = overrides.keys() - {b.id for b in pack.biomes}
     if unknown:
@@ -62,16 +62,21 @@ def _inputs(source, cell_size, vegetation_tints, vegetation_hsv, biome_color_mod
         vegetation_tints if biome_color_mode == 'rgb' else vegetation_hsv,
         biome_color_mode=biome_color_mode)
     values = np.asarray([rgb for _, rgb in colours], np.float32)
+    rgb = values[:, :3]
     power = colour_power(biome_color_power)
     if power != 1:
         with np.errstate(over='ignore', invalid='ignore'):
-            values = np.power(values, power, dtype=np.float64)
-        if not np.all(np.isfinite(values)) or np.any(values > 65504):
+            rgb = np.power(rgb, power, dtype=np.float64)
+        if not np.all(np.isfinite(rgb)) or np.any(rgb > 65504):
             raise ValueError('powered biome colours exceed finite FP16 range [0, 65504]')
-        values = values.astype(np.float32)
-        if biome_color_mode == 'hsv' and np.any(values[:,0].astype(np.float16) == 0):
+        rgb = rgb.astype(np.float32)
+        if biome_color_mode == 'hsv' and np.any(rgb[:,0].astype(np.float16) == 0):
             raise ValueError('powered HSV hue underflows FP16; reduce biome_color_power')
-    return size, -values if biome_color_mode == 'hsv' else values
+    rgba = np.ones((len(values), 4), np.float32)
+    rgba[:, :3] = -rgb if biome_color_mode == 'hsv' else rgb
+    if biome_color_mode == 'rgb':
+        rgba[:, 3] = values[:, 3]
+    return size, rgba
 
 
 def texture_key(source, cell_size=4, *, vegetation_tints=None, biome_color_mode='rgb',
@@ -93,12 +98,12 @@ def pixels(source, cell_size=4, *, vegetation_tints=None, biome_color_mode='rgb'
     import cv2
     size, colours = _inputs(source, cell_size, vegetation_tints, vegetation_hsv, biome_color_mode, biome_color_power, _palette)
     check_cancel(cancel)
-    rgb = colours[source.biome_ids]
-    # One temporary RGB grid; border replication never resamples the world.
-    cv2.boxFilter(rgb, -1, (9, 9), dst=rgb, normalize=True,
+    rgba = colours[source.biome_ids]
+    # Smooth RGB and retention together; border replication never resamples the world.
+    cv2.boxFilter(rgba, -1, (9, 9), dst=rgba, normalize=True,
                   borderType=cv2.BORDER_REPLICATE)
     check_cancel(cancel)
-    return cv2.resize(rgb, size, interpolation=cv2.INTER_AREA)
+    return cv2.resize(rgba, size, interpolation=cv2.INTER_AREA)
 
 
 def write(source, path, *, cell_size=4, vegetation_tints=None, biome_color_mode='rgb',
@@ -113,12 +118,12 @@ def write(source, path, *, cell_size=4, vegetation_tints=None, biome_color_mode=
     frozen = _palette if _palette is not None else palette(source.pack,
         vegetation_tints if biome_color_mode == 'rgb' else vegetation_hsv,
         biome_color_mode=biome_color_mode)
-    rgb = pixels(source, cell_size, biome_color_mode=biome_color_mode, biome_color_power=biome_color_power,
+    rgba = pixels(source, cell_size, biome_color_mode=biome_color_mode, biome_color_power=biome_color_power,
                  cancel=cancel, _palette=frozen)
     mapped = perf_counter()
-    # OpenCV uses BGR; this changes channels, never the horizontal/vertical axes.
+    # OpenCV uses BGRA; preserve alpha and the horizontal/vertical axes.
     try:
-        ok, encoded = cv2.imencode('.exr', rgb[..., ::-1],
+        ok, encoded = cv2.imencode('.exr', rgba[..., [2, 1, 0, 3]],
                                   [cv2.IMWRITE_EXR_TYPE, cv2.IMWRITE_EXR_TYPE_HALF])
     except cv2.error as exc:
         raise RuntimeError('BCT EXR encoding failed; enable OPENCV_IO_ENABLE_OPENEXR=1 '
@@ -128,7 +133,7 @@ def write(source, path, *, cell_size=4, vegetation_tints=None, biome_color_mode=
     check_cancel(cancel)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(encoded.tobytes())
-    return dict(path=str(path.resolve()), width=rgb.shape[1], height=rgb.shape[0],
+    return dict(path=str(path.resolve()), width=rgba.shape[1], height=rgba.shape[0],
                 cell_size=cell_size, biome_color_mode=biome_color_mode,
                 biome_color_power=float(biome_color_power),
                 key=_key or texture_key(source, cell_size, biome_color_mode=biome_color_mode,

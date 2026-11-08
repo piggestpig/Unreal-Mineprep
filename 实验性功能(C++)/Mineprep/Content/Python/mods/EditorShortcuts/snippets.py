@@ -110,9 +110,9 @@ def pilot_camera():
     if level_subsystem and level_subsystem.get_pilot_level_actor():
         level_subsystem.eject_pilot_level_actor()
     else:
-        cams = mineprep.selected(lambda a: a.get_component_by_class(unreal.CameraComponent))
+        cams = mineprep.selected[lambda a: a.get_component_by_class(unreal.CameraComponent)]
         if not cams:
-            cams = mineprep.actors(lambda a: a.actor_has_tag('camera'))
+            cams = mineprep.actors[lambda a: a.actor_has_tag('camera')]
         if cams and level_subsystem:
             level_subsystem.pilot_level_actor(cams[0])
         else:
@@ -135,9 +135,9 @@ def align_camera():
     except Exception:
         pass
     if not cam:
-        cams = mineprep.selected(lambda a: a.get_component_by_class(unreal.CameraComponent))
+        cams = mineprep.selected[lambda a: a.get_component_by_class(unreal.CameraComponent)]
         if not cams:
-            cams = mineprep.actors(lambda a: a.actor_has_tag('camera'))
+            cams = mineprep.actors[lambda a: a.actor_has_tag('camera')]
         if cams:
             cam = cams[0]
     if cam:

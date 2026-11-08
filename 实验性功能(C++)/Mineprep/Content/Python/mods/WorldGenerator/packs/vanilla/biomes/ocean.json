@@ -1,5 +1,6 @@
 {
   "id": "ocean",
+  "vegetation_tint": [0.85, 1.15, 1.05, 0.5],
   "color": "#3F76A0",
   "climate": [{"shore_depth": [0, null]}],
   "notes": "All sea-level submerged terrain, including disconnected depressions; independent of water visibility.",

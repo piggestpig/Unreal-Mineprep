@@ -1,4 +1,4 @@
-"""方块结构的数学计算工具（不依赖 Unreal），负责旋转编码、实例坐标批量转换与 GPU 类型分组。
+"""不依赖 Unreal 的数学工具：波形采样、旋转编码、实例坐标转换与 GPU 类型分组。
 
 为了让 PCG 和 Niagara 用单个浮点数记录方块朝向，这里将旋转压缩为一个编码值：
 1. 直角朝向 (0~23)：对应正方体在三维网格里的 24 种 90 度朝向，满足 id = up * 4 + twist。
@@ -9,6 +9,7 @@
 """
 import math
 import operator
+from numbers import Integral, Real
 
 import numpy as np
 
@@ -16,6 +17,199 @@ BLOCK_SIZE = 100.0
 MODEL_FRAME = 'cell-center-1'
 _ANGLE_EPS = 0.001
 TYPE_GROUP_VERSION = 'type-groups-2'
+
+
+def _rotation_axes(axes):
+    if not isinstance(axes, str):
+        raise ValueError('旋转轴须为 r/p/y 字母组合')
+    axes = axes.strip().casefold()
+    if not axes or any(axis not in 'rpy' for axis in axes):
+        raise ValueError('旋转轴须为 r/p/y 字母组合')
+    return ''.join(dict.fromkeys(axes))
+
+
+def unwrap_angles(values):
+    """连续化角度列表；首值不变，恰好半圈保留相邻原始差的方向。"""
+    result = []
+    previous = None
+    for value in values:
+        if not isinstance(value, Real) or not math.isfinite(value):
+            raise ValueError('角度必须为有限数值')
+        value = float(value)
+        if previous is None:
+            result.append(value)
+        else:
+            delta = math.fmod(value - previous, 360.0)
+            if delta > 180.0:
+                delta -= 360.0
+            elif delta < -180.0:
+                delta += 360.0
+            result.append(result[-1] + delta)
+        previous = value
+    return result
+
+
+def wave(times, *, period, amplitude=1.0, offset=0.0, phase=0.0, shape='sine'):
+    """返回周期波采样列表；time/period 同单位，phase 为度，不进行帧率换算。"""
+    if not all(isinstance(v, Real) and math.isfinite(v) for v in (period, amplitude, offset, phase)):
+        raise ValueError('波形参数必须为有限数值')
+    if period <= 0:
+        raise ValueError('period 必须大于零')
+    shapes = {
+        'sine': lambda u: math.sin(math.tau * u),
+        'triangle': lambda u: 1.0 - 4.0 * abs((u + .25) % 1.0 - .5),
+        'square': lambda u: 1.0 if u < .5 else -1.0,
+        'saw': lambda u: 2.0 * u - 1.0,
+    }
+    name = shape.strip().casefold() if isinstance(shape, str) else None
+    if name not in shapes:
+        raise ValueError(f'未知波形: {shape!r}')
+    sample = shapes[name]
+    period, amplitude, offset, phase = map(float, (period, amplitude, offset, phase))
+    result = []
+    for time in times:
+        if not isinstance(time, Real) or not math.isfinite(time):
+            raise ValueError('波形时间必须为有限数值')
+        u = (float(time) / period + phase / 360.0) % 1.0
+        result.append(offset + amplitude * sample(u))
+    return result
+
+
+def _sample_progress(samples):
+    if isinstance(samples, Integral):
+        if isinstance(samples, bool) or samples < 0:
+            raise ValueError('采样数量必须为非负整数')
+        return np.linspace(0.0, 1.0, samples)
+    times = list(samples)
+    if not all(isinstance(time, Real) and math.isfinite(time) for time in times):
+        raise ValueError('采样时间必须为有限数值')
+    times = [int(time) if isinstance(time, Integral) else float(time) for time in times]
+    if any(end <= start for start, end in zip(times, times[1:])):
+        raise ValueError('采样时间必须严格递增')
+    if len(times) < 2:
+        return np.zeros(len(times))
+    first, last = times[0], times[-1]
+    span = last - first
+    if not math.isfinite(span):
+        times = [time / 2 for time in times]
+        first, last = times[0], times[-1]
+        span = last - first
+    return np.array([(time - first) / span for time in times])
+
+
+def _path_numbers(value, count, name):
+    try:
+        numbers = tuple(value)
+    except TypeError:
+        raise ValueError(f'{name} 必须包含 {count} 个有限数值') from None
+    if len(numbers) != count or not all(isinstance(n, Real) and math.isfinite(n) for n in numbers):
+        raise ValueError(f'{name} 必须包含 {count} 个有限数值')
+    return tuple(map(float, numbers))
+
+
+def orbit(center, samples, *, radius, height=0, turns=1, start_angle=0, roll=0, duration=None):
+    """返回坐标、以度计的旋转，以及可选的每秒速度。"""
+    center = _path_numbers(center, 3, 'center')
+    if isinstance(radius, Real):
+        radius = (radius, radius)
+    if isinstance(height, Real):
+        height = (height, height)
+    r0, r1 = _path_numbers(radius, 2, 'radius')
+    h0, h1 = _path_numbers(height, 2, 'height')
+    if min(r0, r1) <= 0:
+        raise ValueError('radius 必须大于零')
+    turns, start_angle, roll = _path_numbers((turns, start_angle, roll), 3, '环绕角度')
+    if duration is not None:
+        if not isinstance(duration, Real) or not math.isfinite(duration) or duration <= 0:
+            raise ValueError('duration 须为有限正数（秒）')
+        radial_speed = (r1 - r0) / duration
+        vertical_speed = (h1 - h0) / duration
+        angular_speed = math.tau * turns / duration
+    positions, rotations, velocities = [], [], []
+    for progress in _sample_progress(samples).tolist():
+        r = (1.0 - progress) * r0 + progress * r1
+        h = (1.0 - progress) * h0 + progress * h1
+        angle = start_angle + 360.0 * turns * progress
+        radians = math.radians(angle)
+        cosine, sine = math.cos(radians), math.sin(radians)
+        positions.append((center[0] + r * cosine, center[1] + r * sine, center[2] + h))
+        rotations.append((math.degrees(math.atan2(-h, r)), angle + 180.0, roll))
+        if duration is not None:
+            orbit_speed = r * angular_speed
+            velocities.append((radial_speed * cosine - orbit_speed * sine,
+                               radial_speed * sine + orbit_speed * cosine, vertical_speed))
+    if duration is not None:
+        return positions, rotations, velocities
+    return positions, rotations
+
+
+def spline(points, samples, *, closed=False, uniform_speed=False, tangents=False, duration=None):
+    """采样向心 Catmull–Rom 样条，可按弦长近似重参数化。"""
+    if duration is not None:
+        if tangents:
+            raise ValueError('tangents 与 duration 互斥')
+        if not isinstance(duration, Real) or not math.isfinite(duration) or duration <= 0:
+            raise ValueError('duration 须为有限正数（秒）')
+    points = [_path_numbers(point, 3, '航点') for point in points]
+    if closed and len(points) > 1 and points[0] == points[-1]:
+        points.pop()
+    if closed and len(set(points)) < 3:
+        raise ValueError('闭合样条至少需要三个不同航点')
+    if len(points) < 2:
+        raise ValueError('开放样条至少需要两个航点')
+
+    path = np.array(points + [points[0]] if closed else points)
+    chords = np.diff(path, axis=0)
+    steps = np.sqrt(np.hypot(np.hypot(chords[:, 0], chords[:, 1]), chords[:, 2]))
+    if np.any(steps == 0):
+        raise ValueError('相邻航点不能重合')
+    progress = _sample_progress(samples)
+    if not len(progress):
+        return ([], []) if tangents or duration is not None else []
+
+    knots = np.concatenate(([0.0], np.cumsum(steps)))
+    slopes = chords / steps[:, None]
+    # Mirrored ghost points on an open path have the same secants as the end segments.
+    first, last = (-1, 0) if closed else (0, -1)
+    padded_steps = np.concatenate(([steps[first]], steps, [steps[last]]))
+    padded_slopes = np.vstack((slopes[first], slopes, slopes[last]))
+    before, after = padded_steps[:-1, None], padded_steps[1:, None]
+    node_tangents = (after * padded_slopes[:-1] + before * padded_slopes[1:]) / (before + after)
+    c1 = node_tangents[:-1] * steps[:, None]
+    end_tangents = node_tangents[1:] * steps[:, None]
+    c2 = 3 * chords - 2 * c1 - end_tangents
+    c3 = -2 * chords + c1 + end_tangents
+
+    def evaluate(parameters):
+        indices = np.minimum(np.searchsorted(knots, parameters, side='right') - 1, len(steps) - 1)
+        u = ((parameters - knots[indices]) / steps[indices])[:, None]
+        u[parameters == knots[-1]] = 1.0
+        positions = path[indices] + u * (c1[indices] + u * (c2[indices] + u * c3[indices]))
+        positions[parameters == knots[-1]] = path[-1]
+        return positions, indices, u
+
+    parameters = progress * knots[-1]
+    if uniform_speed:
+        subdivisions = np.arange(32) / 32.0
+        table = (knots[:-1, None] + steps[:, None] * subdivisions).ravel()
+        table = np.concatenate((table, knots[-1:]))
+        table_positions, _, _ = evaluate(table)
+        distances = np.concatenate(([0.0], np.cumsum(np.linalg.norm(np.diff(table_positions, axis=0), axis=1))))
+        parameters = np.interp(progress * distances[-1], distances, table)
+        parameters[progress == 0] = 0.0
+    positions, indices, u = evaluate(parameters)
+    if not tangents and duration is None:
+        return positions.tolist()
+
+    derivative = c1[indices] + u * (2 * c2[indices] + 3 * u * c3[indices])
+    if duration is not None and not uniform_speed:
+        velocities = derivative * (knots[-1] / (steps[indices, None] * duration))
+        return positions.tolist(), velocities.tolist()
+    lengths = np.linalg.norm(derivative, axis=1, keepdims=True)
+    directions = np.divide(derivative, lengths, out=np.zeros_like(derivative), where=lengths != 0)
+    if duration is not None:
+        directions *= distances[-1] / duration
+    return positions.tolist(), directions.tolist()
 
 
 def partition_types(names, counts, groups=1, *, max_types=None):

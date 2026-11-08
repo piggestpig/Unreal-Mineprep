@@ -27,7 +27,7 @@ class Biome:
     surface: tuple       # Rule objects, see surface.py
     fallback: bool = False
     features: dict = field(default_factory=dict)
-    vegetation_tint: tuple = (1.0, 1.0, 1.0)  # linear RGB multiplier, not map colour
+    vegetation_tint: tuple = (1.0, 1.0, 1.0, .5)  # linear RGB multipliers + original-colour retention
     vegetation_hsv: tuple = (1.0, 1.0, 1.0)  # hue adjustment (1 = neutral), saturation/value multipliers
 
     @property
@@ -81,15 +81,18 @@ def parse_biome(data, parameters, source="biome"):
 
 
 def vegetation_tint(value, source='biome'):
-    if (not isinstance(value, (list, tuple)) or len(value) != 3
+    if (not isinstance(value, (list, tuple)) or len(value) not in (3, 4)
             or any(isinstance(v, bool) or not isinstance(v, (int, float))
-                   or not math.isfinite(v) or not 0 <= v <= 65504 for v in value)):
-        raise ValueError(f'{source}: vegetation_tint must be three finite RGB multipliers in [0, 65504]')
-    return tuple(float(v) for v in value)
+                   or not math.isfinite(v) or not 0 <= v <= 65504 for v in value)
+            or len(value) == 4 and value[3] > 1):
+        raise ValueError(f'{source}: vegetation_tint needs RGB in [0, 65504] and optional retention A in [0, 1]')
+    return tuple(float(v) for v in value) + ((.5,) if len(value) == 3 else ())
 
 
 def vegetation_hsv(value, source='biome'):
-    values = vegetation_tint(value, source)
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        raise ValueError(f'{source}: vegetation_hsv needs three components')
+    values = vegetation_tint(value, source)[:3]
     if not .5 <= values[0] <= 1.5:
         raise ValueError(f'{source}: vegetation_hsv hue must be in [0.5, 1.5]; 1 is neutral')
     return values

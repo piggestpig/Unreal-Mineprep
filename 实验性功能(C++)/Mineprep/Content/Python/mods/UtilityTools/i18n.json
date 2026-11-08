@@ -1,0 +1,243 @@
+{
+  "UtilityTools": {
+    "实用工具": {
+      "zh": "实用工具",
+      "en": "Utility Tools",
+      "zh-Hant": "實用工具"
+    },
+    "把常用操作分成独立页面，也可不打开界面直接调用": {
+      "zh": "把常用操作分成独立页面，也可不打开界面直接调用",
+      "en": "Split utilities into pages, and call them without opening the panel",
+      "zh-Hant": "把常用操作分成獨立頁面，也可不開啟介面直接呼叫",
+      "zh-Hant-HK": "把常用操作分成獨立頁面，也可不打開介面直接調用"
+    },
+    "打开模组": {
+      "zh": "打开模组",
+      "en": "Open Mod",
+      "zh-Hant": "開啟 Mod",
+      "zh-Hant-HK": "打開 Mod"
+    },
+    "在 pages/ 下新增模块即可。": {
+      "zh": "在 pages/ 下新增模块即可。",
+      "en": "Add a module under pages/.",
+      "zh-Hant": "在 pages/ 下新增模組即可。",
+      "zh-Hant-HK": "在 pages/ 下新增模塊即可。"
+    },
+    "导入图片": {
+      "zh": "导入图片",
+      "en": "Import Images",
+      "zh-Hant": "匯入圖片",
+      "zh-Hant-HK": "導入圖片"
+    },
+    "生成 Sprite": {
+      "zh": "生成 Sprite",
+      "en": "Generate Sprite",
+      "zh-Hant": "生成 Sprite"
+    },
+    "导出图片": {
+      "zh": "导出图片",
+      "en": "Export Image",
+      "zh-Hant": "匯出圖片",
+      "zh-Hant-HK": "導出圖片"
+    },
+    "导入失败: {path}": {
+      "zh": "导入失败: {path}",
+      "en": "Import failed: {path}",
+      "zh-Hant": "匯入失敗: {path}",
+      "zh-Hant-HK": "導入失敗: {path}"
+    },
+    "请选择 /Game 下的目录": {
+      "zh": "请选择 /Game 下的目录",
+      "en": "Choose a directory under /Game",
+      "zh-Hant": "請選擇 /Game 下的目錄"
+    },
+    "文件名不能为空或包含斜杠": {
+      "zh": "文件名不能为空或包含斜杠",
+      "en": "File name must not be empty or contain a slash",
+      "zh-Hant": "檔案名稱不能為空或包含斜線",
+      "zh-Hant-HK": "檔名不能為空或包含斜線"
+    },
+    "没有可保存的纹理": {
+      "zh": "没有可保存的纹理",
+      "en": "No textures to save",
+      "zh-Hant": "沒有可儲存的紋理",
+      "zh-Hant-HK": "沒有可保存的紋理"
+    },
+    "无法保存 Sprite: {path}": {
+      "zh": "无法保存 Sprite: {path}",
+      "en": "Cannot save Sprite: {path}",
+      "zh-Hant": "無法儲存 Sprite: {path}",
+      "zh-Hant-HK": "無法保存 Sprite: {path}"
+    },
+    "SpriteProps.Textures": {
+      "zh": "纹理",
+      "en": "Textures",
+      "zh-Hant": "紋理"
+    },
+    "SpriteProps.Reverse": {
+      "zh": "倒序",
+      "en": "Reverse",
+      "zh-Hant": "倒序"
+    },
+    "SpriteProps.Vertical": {
+      "zh": "竖向排列",
+      "en": "Vertical",
+      "zh-Hant": "豎向排列"
+    },
+    "SpriteProps.Directory": {
+      "zh": "保存路径",
+      "en": "Save Path",
+      "zh-Hant": "儲存路徑",
+      "zh-Hant-HK": "保存路徑"
+    },
+    "SpriteProps.FileName": {
+      "zh": "文件名",
+      "en": "File Name",
+      "zh-Hant": "檔案名稱",
+      "zh-Hant-HK": "檔名"
+    },
+    "SpriteProps.category.Sprite": {
+      "zh": "Sprite",
+      "en": "Sprite",
+      "zh-Hant": "Sprite"
+    },
+    "抠图": {
+      "zh": "抠图",
+      "en": "Cutout",
+      "zh-Hant": "摳圖"
+    },
+    "黑底": {
+      "zh": "黑底",
+      "en": "Black",
+      "zh-Hant": "黑底"
+    },
+    "白底": {
+      "zh": "白底",
+      "en": "White",
+      "zh-Hant": "白底"
+    },
+    "绿幕": {
+      "zh": "绿幕",
+      "en": "Green Screen",
+      "zh-Hant": "綠幕"
+    },
+    "保存抠图": {
+      "zh": "保存抠图",
+      "en": "Save Cutout",
+      "zh-Hant": "儲存摳圖",
+      "zh-Hant-HK": "保存摳圖"
+    },
+    "没有可抠的纹理": {
+      "zh": "没有可抠的纹理",
+      "en": "No texture to cut out",
+      "zh-Hant": "沒有可摳的紋理"
+    },
+    "无法保存抠图: {path}": {
+      "zh": "无法保存抠图: {path}",
+      "en": "Cannot save cutout: {path}",
+      "zh-Hant": "無法儲存摳圖: {path}",
+      "zh-Hant-HK": "無法保存摳圖: {path}"
+    },
+    "CutoutProps.Source": {
+      "zh": "源纹理",
+      "en": "Source",
+      "zh-Hant": "來源紋理",
+      "zh-Hant-HK": "源紋理"
+    },
+    "CutoutProps.KeyColor": {
+      "zh": "采样色",
+      "en": "Sample Color",
+      "zh-Hant": "取樣色"
+    },
+    "CutoutProps.Tolerance": {
+      "zh": "容差",
+      "en": "Tolerance",
+      "zh-Hant": "容差"
+    },
+    "CutoutProps.Contract": {
+      "zh": "收缩",
+      "en": "Contract",
+      "zh-Hant": "收縮"
+    },
+    "CutoutProps.Feather": {
+      "zh": "羽化",
+      "en": "Feather",
+      "zh-Hant": "羽化"
+    },
+    "CutoutProps.EdgeOnly": {
+      "zh": "只连边缘",
+      "en": "Edge Connected",
+      "zh-Hant": "只連邊緣"
+    },
+    "CutoutProps.Directory": {
+      "zh": "保存路径",
+      "en": "Save Path",
+      "zh-Hant": "儲存路徑",
+      "zh-Hant-HK": "保存路徑"
+    },
+    "CutoutProps.FileName": {
+      "zh": "文件名",
+      "en": "File Name",
+      "zh-Hant": "檔案名稱",
+      "zh-Hant-HK": "檔名"
+    },
+    "CutoutProps.category.抠图": {
+      "zh": "抠图",
+      "en": "Cutout",
+      "zh-Hant": "摳圖"
+    },
+    "纯色图片": {
+      "zh": "纯色图片",
+      "en": "Solid Color",
+      "zh-Hant": "純色圖片"
+    },
+    "生成图片": {
+      "zh": "生成图片",
+      "en": "Generate Image",
+      "zh-Hant": "生成圖片"
+    },
+    "尺寸至少为 1": {
+      "zh": "尺寸至少为 1",
+      "en": "Size must be at least 1",
+      "zh-Hant": "尺寸至少為 1"
+    },
+    "无法保存纯色图片: {path}": {
+      "zh": "无法保存纯色图片: {path}",
+      "en": "Cannot save solid color: {path}",
+      "zh-Hant": "無法儲存純色圖片: {path}",
+      "zh-Hant-HK": "無法保存純色圖片: {path}"
+    },
+    "SolidProps.Size": {
+      "zh": "尺寸",
+      "en": "Size",
+      "zh-Hant": "尺寸"
+    },
+    "SolidProps.Color": {
+      "zh": "颜色",
+      "en": "Color",
+      "zh-Hant": "顏色"
+    },
+    "SolidProps.SRGB": {
+      "zh": "sRGB",
+      "en": "sRGB",
+      "zh-Hant": "sRGB"
+    },
+    "SolidProps.Directory": {
+      "zh": "保存路径",
+      "en": "Save Path",
+      "zh-Hant": "儲存路徑",
+      "zh-Hant-HK": "保存路徑"
+    },
+    "SolidProps.FileName": {
+      "zh": "文件名",
+      "en": "File Name",
+      "zh-Hant": "檔案名稱",
+      "zh-Hant-HK": "檔名"
+    },
+    "SolidProps.category.纯色图片": {
+      "zh": "纯色图片",
+      "en": "Solid Color",
+      "zh-Hant": "純色圖片"
+    }
+  }
+}

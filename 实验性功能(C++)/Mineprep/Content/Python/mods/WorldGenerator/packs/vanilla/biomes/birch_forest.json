@@ -1,7 +1,7 @@
 {
   "id": "birch_forest",
   "color": "#6D9B47",
-  "vegetation_tint": [1.0, 1.03, 0.95],
+  "vegetation_tint": [1.1, 1.3, 0.65, 0.5],
   "vegetation_hsv": [0.99, 0.9, 1.03],
   "climate": [{"temperature": [-0.15, null], "humidity": [-0.2, null], "forest_region": [0.25, null]}],
   "surface": [

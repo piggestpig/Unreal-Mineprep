@@ -17,14 +17,16 @@ Outside Unreal, the public modules use `mc_utils.Lazy` as an `unreal` placeholde
 | Area | API |
 |------|-----|
 | Help | `mineprep.help()`, handle `.help()` |
-| World | `actor` / `actors`, `selected`, `component` / `components`, `materials` |
-| Sequencer | `sequencer`, `bindings`, `tracks`, `sections`, `channels`, `keys`, `keyframe`, `Rig` / `actor.rig` |
+| World | `actor` / `actors`, `selected`, `camera`, `spawn_camera`, `component` / `components`, `materials`, `.lookat` / `.lookat_rotation` |
+| Sequencer | `new_sequence`, `sequencer`, `bindings`, `tracks`, `sections`, `channels`, `keys`, `keyframe`, `keyframes`, `orbit`, `spline`, `wave`, `unwrap_angles` / `unwrap_rotations`, `Rig` / `actor.rig` |
+| Rendering | RenderPanel `ops.render_preset(...)` — [images and videos](#rendering-renderpanel) |
 | Plugin UI | `panel`, `toolbar`, `hotkey` |
 | Editor UI | `Layout`, `ui(...)`, `PropertyGroup`, `save` / `load`, `_autosave_` |
 | Mods | `Mod`, `mods.register` / `unregister` / `register_all` |
 | Optional localization | [localization.md](localization.md): `i18n`, `I18N`, `collect_i18n`, `check_i18n` |
 | Spawn | `spawn_block/item/mob/preset`, `attach`, `spawn_blocks`, `spawn_structure`, `Blocks`, `structure_parts`, `get_all_blocks` |
 | Mesh | `merge_skm`, `Blocks.bake` |
+| Low-poly | `LowPolyModel`: groups, centered boxes/cylinders/cones, assets and batch ISM; [contracts](lowpoly.md) |
 | Assets & Config | `uasset`, `uclass`, `bpclass`, `construct`, `copy`, `config`, `paths` |
 | Blueprint libs | `BPLib`, `EditorBPLib`, `BPLibCaller` — call a Blueprint function library by function, attribute, or subscript. Not `unreal.mineprep` |
 | Utils | `prints`, `warn`, `throw`, `panic`, `undo`, `world`, `cast`, `enum`, `startfile`, `dialog`, file dialogs, `send2trash`, `screenshot` |
@@ -35,7 +37,8 @@ Outside Unreal, the public modules use `mc_utils.Lazy` as an `unreal` placeholde
 
 ## Handles (actors / components / materials)
 
-Call form returns a **handle** (unknown attrs forward to `.target`). Class subscript returns the **raw UObject**.
+Call form returns a **handle** (unknown attrs forward to `.target`). Class
+subscripts return a **raw UObject or List**, and instance subscripts select handles.
 
 ```python
 a = mineprep.actor('MyActor')           # label / wildcard / type / callable → handle
@@ -56,31 +59,43 @@ mineprep.actors(0.5)                           # actor handle from the default a
 mineprep.selected(unreal.SkeletalMeshActor)    # type / label / callable, selection only
 ```
 
+`actor('Name')` and `a.comp('Name')` prefer exact names among wildcard
+candidates. `actor(None)` and `actors(None)` return empty handles. Omit the
+argument for the default actor query.
+
 `selected()` and `selected(unreal.Actor)` are the current editor selection. A class, label wildcard, or callable filters that selection and does not search the rest of the level. `selected(0)`, `selected(-1)`, and `selected(0.5)` return an `actor` handle at that index; `actors(n)` does the same for the default actor collection, and `components(n)` returns a `component`. Class subscript `[0]` stays the raw object. Call it on the game thread. An empty selection is an empty `actors` handle; a numeric call on an empty collection wraps `None`.
 
 - Subscript class filter: `mineprep.actor[unreal.StaticMeshActor]`
-### Collections
+### Collections & batch calls
 
-Use `len(mineprep.actors())` to count actors. Collection handles support integer
-indices, slices, index lists and boolean masks: `items[0]`, `items[:3]`,
-`items[[0, 2]]`, `items[[True, False]]`. Masks must match the intended collection.
-Class indexing such as `mineprep.actors[[0, 2]]` selects from the default collection.
-A float class index uses the same 0–1 ratio as `List`: `mineprep.selected[0.5]` is `floor(0.5 * n)`.
-Multi-axis indexing requires nested indexable elements; see ColorList below.
+```python
+raw = mineprep.actors[0]              # native UObject for a UE API
+first = mineprep.actors()[0]          # actor handle (numeric index -> element handle)
+subset = mineprep.actors()[:3]        # actors handle (slice / mask -> collection handle)
+marked = mineprep.actors[lambda a: a.actor_has_tag('camera')]  # raw List
+```
 
-Use `if items` / `if not items` to test whether a collection is nonempty / empty.
-For a single-object handle, `if handle` means `handle.target is not None`;
-`len()` is not supported. Wrapped values such as `0` or `False` still count as
-present. This does not check whether an Unreal object has been destroyed.
+- **Instance subscripts** (`items[i]`, `items[:3]`, `items[mask]`) return handles: numeric indices on `actors`/`components` return a single `actor`/`component` handle; slices and masks preserve collection type and provenance (e.g. `seq.tracks()[:2].sections()`).
+- **Class subscripts** (`mineprep.actors[0]`, `mineprep.actors[[0, 2]]`) return raw UObjects or a raw `List`. Float indices use a `0..1` UV ratio (`floor((u % 1) * n)`).
+- **Truthiness & iteration**: `if items` checks non-empty collection or `handle.target is not None` (`len()` is only supported on collection handles). Iterating a collection handle yields raw `.target` elements.
+- **Batch calls**: `items(fn, *args)` runs `fn(item, *args)` on each target; attribute access and method calls broadcast across targets. Scalar comparisons on `List` return boolean masks.
 
-### Batch calls
+### Look at (`lookat` / `lookat_rotation`)
 
-`items(fn, *args)` applies `fn(item, *args)` to each target. Attribute access and
-method calls also forward to the targets. In contrast, `mineprep.actors(predicate)`
-filters actors during lookup. Scalar comparisons on the underlying List produce
-masks; comparing two lists follows normal Python list comparison.
+```python
+steve = mineprep.actor('Steve')
+cam = mineprep.actor('Camera')
+steve.lookat(cam, pitch=False)                         # rotate in place (+X toward target), return handle
+rot = steve.lookat_rotation(cam, pitch=False, roll=0)  # read-only Rotator (no scene edit)
 
-- Prefer handles for `get` / `set` / `key` / `comp`. Under RE, if you need a UObject method that the handle does not wrap, use `.target` or the class subscript.
+# Sample along a path without moving the camera first:
+rotations = [cam.lookat_rotation(steve, origin=pos) for pos in positions]
+cam.keyframes('Rotation', times, rotations, interp='linear', unwrap=True)
+```
+
+- Supported on `actor`, `actors`, `camera`, `component`, `components`. `target` accepts an Actor, SceneComponent, single-object handle, world `unreal.Vector`, or `(x, y, z)` in UE cm.
+- `pitch=False` zeroes world pitch (horizontal-only yaw); `roll` sets world-view tilt in degrees.
+- Actor results use world `Rotation`; component results convert to parent/socket-relative rotation (using current parent transform). `origin=` overrides the source world position in `lookat_rotation()` only.
 
 ## `copy`
 
@@ -89,21 +104,135 @@ mineprep.copy(actor, (x, y, z))          # duplicate an actor; target is a locat
 mineprep.copy('/Game/Mineprep/Render/MC关卡序列', '/Game/demo')
 ```
 
-Assets: `target` is a package path. The first free path is `target`, then `target_2`, `target_3`, …. A string source is used as given. A missing source returns `None`. Omit `target` to duplicate beside the source; that lands on `…/Name_2` because the source path is already taken. Actor copy takes a coordinate, not a path.
+Assets: `target` is a package path (auto-suffixed `_2`, `_3` if taken; omit `target` to duplicate beside source). Actor copy takes a location tuple/Vector.
 
 ## Sequencer (Level Sequence)
 
+Chain: `sequencer` → `bindings` → `tracks` → `sections` → `channels` → `keys`.
+Animation examples use a 60 fps sequence.
+
+### Create sequences, cameras and cuts
+
 ```python
-mineprep.sequencer()                              # current Level Sequence handle
-mineprep.sequencer(seq).bindings('MC摄像机').actor()  # bound level Actor, or None
-mineprep.keyframe(target, prop, value, time=None) # Actor/Component Transform + properties
+seq = mineprep.new_sequence('Seagull_Orbit', fps=60, duration=5.0, open=True)
+cam = mineprep.spawn_camera('OrbitCam', location=(1500, 0, 600), fov=70, aperture=22.0)
+cam.lookat((0, 0, 330)).fov(70).focus(1200.0).aperture(2.8)
+seq.set_frame(0).camera_cut(cam, start=0, end=300, lock_viewport=True)
+
+horizontal_degrees = cam.fov()
+f_stop = cam.aperture()
 ```
 
-`bindings.actor()` needs the sequence open and focused. It returns the Actor only when the name matches exactly one binding and that binding has resolved. Right after `open_level_sequence`, wait with `until` — [parallel.md](parallel.md). `binding.binding_id` is a Guid; the handle builds `MovieSceneObjectBindingID` itself.
+- **`new_sequence(name='Sequence', *, fps=60, duration=5.0, open=False)`**: creates a Level Sequence and returns a `sequencer` handle. Short names go under `/Game/Cinematics` (or pass a `/Game/...` path); existing names auto-suffix `_2`, `_3`. `duration` (and all Sequencer time args) treats `int` as display-rate frames and `float` as seconds.
+- **`spawn_camera(name='CineCamera', *, location=None, rotation=None, fov=70.0, aperture=22.0, focus_distance=1000.0)`**: spawns a `CineCameraActor` (tagged `'camera'`, 36×20.25 mm filmback, aperture range `f/0.01–f/22`) at the given pose or current viewport, returning a `camera` handle.
+- **`mineprep.camera(target)`** wraps an existing `CineCameraActor`. Name and callback searches only consider movie cameras. Name lookup prefers an exact label, then falls back to wildcard matches.
+- **`camera` lens methods**:
+  - `cam.fov(degrees=None)` / `cam.aperture(f_stop=None)` read the current float with no argument or set it and return `cam`. The default `f/22` generally reduces blur. The amount also depends on focal length, focus distance and subject distance. With manual physical exposure, changing the aperture can affect brightness.
+  - `cam.focus(target)`: manual distance in `cm` (`int`/`float`), tracking (Actor, Actor handle or label), or `None` to disable DOF (`CameraFocusMethod.DISABLE`).
+- **`sequencer` controls**:
+  - `seq.set_range(start, end, *, fps=None)`: sets playback `[start, end)` (changing `fps` keeps key times in seconds).
+  - `seq.set_frame(frame)`, `seq.play()`, `seq.pause()`: require `seq` to be the focused sequence. Read playhead via `mineprep.sequencer.frame()` / `.time()`.
+  - `seq.camera_cut(camera, *, start=None, end=None, lock_viewport=False)`: accepts any Actor with a `CameraComponent` (including `CineCameraActor` and `MC摄像机` Blueprint Actors). Defaults `start` to current frame (requires focused sequence if omitted) and `end` to playback end. Exact `[start, end)` updates in place; disjoint ranges add a cut; partial overlaps raise `ValueError`.
+- **`bindings.actor()`**: `mineprep.sequencer(seq).bindings('MC摄像机').actor()` returns the bound level Actor when the sequence is open/focused and the filter matches a single resolved binding (right after `open_level_sequence`, wait with `until` — [parallel.md](parallel.md)).
 
-`key` / `keyframe` time: an `int` is a frame at the sequence **display rate**, a `float` is seconds. Read `get_display_rate()` before reusing frame numbers from another rate. Preset `/Game/Mineprep/Render/MC关卡序列` is 60 fps and already contains the `MC摄像机` binding. `LevelSequenceFactoryNew` does not. Rotation keys use `Rotation.X` roll, `Y` pitch, `Z` yaw — [pitfalls/common.md](pitfalls/common.md).
+### Interpolation and batch keys (Actor / SceneComponent)
 
-Chain: `bindings` → `tracks` → `sections` → `channels` → `keys`.
+```python
+mineprep.actor('Steve').key('Location', unreal.Vector(0, 0, 100), 8, interp='linear')
+written = mineprep.actor('Steve').keyframes(
+    'Location.Z', times=[0, 8, 16], values=[0., 100., 0.], interp='auto')
+```
+
+- **Entry points**: `handle.key(prop='', value=None, time=None, *, interp='auto', sequence=None, relative=False)` (or `mineprep.keyframe(...)`) keys the property at one time and returns `bool` for a single target. `handle.keyframes(prop, times, values, *, interp='auto', sequence=None, relative=False, unwrap=False)` (or `mineprep.keyframes(...)`) returns a `mineprep.keys` handle. Pass explicit times when writing to a non-focused sequence.
+- **Properties & axes**: `prop=''` or `'Transform'` writes all 9 channels; `'Location'`, `'Rotation'`, `'Scale'` write 3 channels; `'Location.X'`, `'Rotation.X'` (`roll`), `'Rotation.Y'` (`pitch`), `'Rotation.Z'` (`yaw`), `'Scale.X'` write 1 channel. Location and Scale groups accept a Vector or `(x, y, z)`. Actor Location is world cm; Component Location is parent-relative cm. Ordinary properties require their native UE property name (e.g. `'CurrentFocalLength'`, not Python snake_case `'current_focal_length'`).
+- **Snapshots & defaults**: a batch captures the starting pose/property once per object; `None` samples write that starting snapshot. Newly created Transform/property sections initialize all channel defaults from the starting pose so single-axis edits preserve other axes.
+- **`interp` modes**: `'constant'` (`0`), `'linear'` (`1`), `'auto'` (`2`, default), `'smart_auto'` (`3`), `'user'` (`4`), `'break'` (`5`), or `MovieSceneKeyInterpolation` / `RichCurveInterpMode`.
+
+### Relative keys
+
+```python
+wing.keyframes('Rotation.X', [0, 12, 24], [-15., 30., -15.], relative=True)
+wing.key('Scale.X', 0.2, 12, relative=True)  # channel default + 0.2 (additive)
+```
+
+With `relative=True`, explicit Float/Double values write **channel default + input delta** (including `Scale`, where `0.0` keeps the default; `None` still writes the starting snapshot). Since deltas add to the stored channel default rather than the current pose, re-running a script never accumulates offsets. Full `unreal.Transform` and discrete channels (`bool`/`int`/`str`) do not support `relative=True`.
+
+### Rotation continuity (explicit unwrap)
+
+```python
+angles = mineprep.unwrap_angles([178., -178., -170.])  # [178.0, 182.0, 190.0]
+continuous = mineprep.unwrap_rotations(rotations, axes='py')
+cam.keyframes('Rotation', times, rotations, unwrap=True, interp='linear')
+wing.keyframes('Rotation.X', times, rolls, unwrap='r')
+```
+
+- Batch `keyframes(..., unwrap=...)` accepts `False` (default: preserves authored multi-turn values like `0 -> 360 -> 720`), `True` (unwrap yaw `'y'`), or any `'r'`/`'p'`/`'y'` combination (single-axis `Rotation.X/Y/Z` accepts only its matching letter `'r'`/`'p'`/`'y'`). Requires strictly increasing display frames.
+- `unwrap_angles(values)` and `unwrap_rotations(rotations, *, axes='y')` are pure helpers that remove `±180°` wrap jumps by choosing shortest adjacent angle deltas.
+
+### Wave samples
+
+```python
+times = list(range(0, 121, 6))  # 2 seconds at 60 fps
+values = mineprep.wave(times, period=60, amplitude=15, offset=0.0, phase=0.0, shape='sine')
+wing.keyframes('Rotation.X', times, values, relative=True, interp='auto')
+wing.channels('Rotation.X').loop('cycle')
+```
+
+`wave(times, *, period, amplitude=1.0, offset=0.0, phase=0.0, shape='sine')` is a pure-math helper returning `list[float]`. `times` and `period` share the **same unit** (both frames or both seconds — no `int`/`float` conversion); `phase` is in degrees. Supported `shape` values: `'sine'`, `'triangle'` (starts at 0, rising), `'square'` (`+1` then `-1`, use `interp='constant'`), and `'saw'` (`-1` to `+1`).
+
+### Orbit and spline paths
+
+```python
+# Sparse keys + analytical velocity tangents (smooth circular/spiral arc with few keys):
+times = list(range(0, 241, 30))  # 0..4s at 60 fps
+positions, rotations, velocities = mineprep.orbit(
+    (0, 0, 150), times, radius=(1400, 950), height=(300, 500), turns=1, duration=4.0)
+cam.keyframes('Location', times, positions).tangents(velocities)
+cam.keyframes('Rotation', times, rotations, interp='linear')
+
+# Alternative shot with Catmull-Rom position and velocity samples:
+waypoints = [(1200, -600, 400), (600, -800, 360), (-500, -600, 280)]
+positions, velocities = mineprep.spline(waypoints, times, uniform_speed=True, duration=4.0)
+cam.keyframes('Location', times, positions).tangents(velocities)
+```
+
+- **`orbit(center, samples, *, radius, height=0, turns=1, start_angle=0, roll=0, duration=None)`**: returns `(positions, rotations)` looking at `center` (or `(positions, rotations, velocities)` in `cm/s` when `duration` in seconds is given). `radius` (`> 0`) and `height` (relative to `center.z`) accept a scalar or `(start, end)` pair. Starts on `+X` at `0°`; positive `turns` move toward `+Y`; yaw is already continuous.
+- **`spline(points, samples, *, closed=False, uniform_speed=False, tangents=False, duration=None)`**: centripetal Catmull–Rom curve through `points` (`>=2` for open, `>=3` distinct for closed; `uniform_speed=True` reparameterizes by arc length). Returns `positions`, `(positions, unit_directions)` when `tangents=True`, or `(positions, velocities_cm_per_s)` when `duration` (seconds) is passed.
+- `samples` can be an integer count (`>=0`) or a strictly increasing iterable of times (normalized from first to last). Match `duration` to the actual key span in seconds. Choose either `tangents=True` or `duration` for spline output.
+
+### Select and edit existing keys & tangents
+
+```python
+ks = mineprep.actor('Steve').channels('Location.Z').keys()
+ks[ks.value < 0] = 0.0                  # scalar assignment on masked keys
+ks[ks.time > 10] += 100                 # in-place +=, -=, *=, /= on key values
+ks[ks.frame < 24] >> 6                  # shift later by 6 display frames
+ks[ks.time > 12] << 0.5                 # shift earlier by 0.5 seconds
+ks[ks.frame == 0].remove()              # delete selected keys from their channels
+
+ks.tangents(120.0)                      # User mode: set both arrive & leave slopes (units/sec)
+ks[ks.frame == 24].tangents(leave=0.0)  # Break mode: set arrive and/or leave slopes (units/sec)
+slopes = ks.arrive_tangent              # read arrive_tangent / leave_tangent (List in units/sec)
+```
+
+- **Properties**: `ks.value` (native values), `ks.frame` (`int` display frames), `ks.time` (`float` seconds), `ks.arrive_tangent` and `ks.leave_tangent` (`float` units/sec) all return `List` objects supporting mask comparisons (`ks[ks.time > 3]`).
+- **Tangents (`ks.tangents(slopes=None, *, arrive=None, leave=None)`)**: accepts channel units per second (internally converted to per-tick slopes and set to cubic `USER` or `BREAK` mode). Pass a scalar, a 1D sequence matching `len(ks)`, or a sequence of `unreal.Vector` / `unreal.Rotator` matching a 3-axis `Location` / `Rotation` key batch.
+  For vector or rotator samples, use the complete XYZ groups returned by `keyframes()`, in sample order. A channel query can return keys grouped by axis.
+
+### Channel loops and retiming
+
+```python
+curve = wing.channels('Rotation.X', sequence=None)
+curve.loop('cycle').retime(offset=6, scale=0.5, pivot=0)
+curve.clear()                           # remove all keys, keep channel defaults & sections
+merged = mineprep.channels([curves_a, curves_b])  # deduplicated with section ownership
+```
+
+- **`actor/component.channels(prop='', *, sequence=None)`**: read-only query of existing channels (retains section ownership across sequences without creating tracks).
+- **`channels.loop(mode='cycle', *, before=False, after=True)`**: sets pre/post-infinity extrapolation on Float/Double channels. Modes: `'cycle'`, `'cycle_with_offset'` / `'offset'`, `'oscillate'` / `'pingpong'`, `'linear'`, `'constant'`, `'none'`, or `RichCurveExtrapolation`.
+  The section and sequence playback range must cover the frames where you want to see the loop.
+- **`channels.retime(offset=0, scale=1.0, pivot=0)`**: maps key times to `pivot + (old - pivot) * scale + offset` (`int` frames / `float` seconds; `scale > 0`).
+- **`channels.clear()`**: deletes all keys on the selected channels while preserving channel defaults and extrapolation settings.
 
 **Not AnimSequence bone tracks.** Listing / clearing skeletal animation curves is engine API — [pitfalls/anim.md](pitfalls/anim.md).
 
@@ -115,6 +244,7 @@ Needs an **open** Level Sequence (`throw` if none). The track hangs on the **Ske
 
 ```python
 r = mineprep.actor('Steve').rig()                 # first SKM → FK
+r = mineprep.actor('Steve').rig(layered=False)    # create a non-layered FK track
 r = mineprep.actor('Steve').rig('Head')           # named SKM
 r = mineprep.actor('Steve').rig(
     rig_class='/Game/Path/MC_IK绑定')             # custom IK — keyword, not positional
@@ -123,10 +253,60 @@ r.set('head', unreal.Rotator(pitch=0, yaw=0, roll=30))
 r.key('head', unreal.Rotator(pitch=28, yaw=0, roll=0), 8)  # int=frame, float=seconds
 ```
 
-- `actor.rig(target=SKM, rig_class=None)` → `component(target).rig(rig_class)` (SKM only)
+After creating a fresh rig, let the editor process a frame before the first
+batch. In a later console/MCP call, write a 60 fps movement:
+
+```python
+r.keyframes('head', [0, 30, 60], [
+    unreal.Rotator(yaw=-20),
+    unreal.Rotator(yaw=20),
+    unreal.Rotator(yaw=-20),
+])
+# Write multiple controls by pose in one undo transaction.
+r.poses({
+    0: {'head': unreal.Rotator(), 'rightArm': unreal.Rotator()},
+    24: {'head': unreal.Rotator(yaw=20)},
+    48: {'rightArm': unreal.Rotator(pitch=45)},
+}, interp='linear')
+head_keys = r.keys('head')
+# r.clear('head') removes only head keys. r.clear() removes all track keys.
+```
+
+`keyframes(name, times, values)` returns `r` and writes a batch with one
+transaction and refresh. Times are explicit integer frames or float seconds.
+The batch reads original values at each target frame before writing. For FK
+EulerTransform controls, Rotator values keep that frame's location and scale,
+and Vector values keep its rotation and scale. Each `None` keys the original
+value at its target frame. Full EulerTransform values write directly.
+Position and Scale controls also accept `(x, y, z)`.
+Explicit Euler angles preserve multi-turn values. Warm-up alone does not
+guarantee keys on the rig's creation tick. Requery channels to confirm first writes.
+
+`poses({time: {control: value}})` and `poses([(time, {control: value}), ...])`
+use the same rules. They return the Rig, write only the listed controls,
+and use one transaction and refresh for the batch.
+
+`key()`, `keyframes()` and `poses()` default to `interp=None` (UE's current
+behavior). Pass `'constant'`, `'linear'` or `'auto'` on a single-section
+track to set interpolation on the continuous keys at the written frames.
+`r.channels(name='')` and `r.keys(name='')` query existing curves across
+sections. Pass a control name, a group such as `leg1.Rotation`, or one axis
+such as `leg1.Rotation.Y` (Pitch). Location and Scale support the same
+group and XYZ selectors. Rotation also accepts Roll, Pitch, and Yaw.
+`r.clear(name)` uses the same selection and preserves sections and defaults.
+
+```python
+pitch_keys = r.keys('leg1.Rotation.Y')      # on a pig rig
+pitch_keys += 5                            # pitch values in degrees
+pitch_keys.tangents(0.0)                   # scalar slope in degrees per second
+r.clear('waist.Location')                  # on a player rig
+```
+
+- `actor.rig(target=SKM, rig_class=None, *, layered=None)` forwards to the SKM component's `rig()`.
+  `layered` selects the mode when creating a track. `None` keeps the layered default for new tracks.
 - Names: full path, last segment, strip `_CONTROL` / `_CURVE_CONTROL`, case-insensitive; ambiguous → throw
 - FK bones are `EulerTransform`; pass `Rotator` / `Vector` / `Transform` / `EulerTransform`
-- `Rig.key` does `set` then `set_key=True` (a lone first `set_key` on a fresh track misses Sequencer)
+- `Rig.key()` uses the same write path as the batch methods.
 
 `r.get(name, time=None)` returns the control value through the same name resolution and time conversion as `set` / `key`: integer = frame, float = seconds at the sequence display rate, omitted / `None` = current local playhead. It does not call setters or add keys. UE's getter evaluates the sequence at the requested time; it is not a passive dictionary lookup.
 
@@ -150,16 +330,46 @@ mineprep.hotkey('放置空物体')
 
 ```python
 mineprep.panel('生成MC天空_可右键').click(-1)
-mineprep.panel('渲染输出子面板.画质预设选项').select(-1)
-mineprep.panel('渲染输出子面板.ue一键渲染按钮').click(-1)
 ```
 
 Sky blueprint: `/Game/Mineprep/MC_Blueprint/Core/天空/MC天空`. The button keeps a single
 actor of that class; selection alone does not prove creation. Allow an editor
-frame after changing the quality preset before starting a render. One-click
-render uses `Saved/MovieRenders/`; inspect the active output settings for filenames.
-`MoviePipelineQueueSubsystem.is_rendering() == False` means idle, not necessarily
-a successful render. Check completion/error information and the requested output.
+frame for Blueprint-created objects before using them.
+
+## Rendering (RenderPanel)
+
+Pass a preset filename (with or without `.json`), ID or name for fixed-resolution output, or as an alternative when
+MCP scene capture fails. Neither the RenderPanel nor the legacy panel needs to be open.
+
+| Preset | Default output |
+|--------|----------------|
+| `quick_image` | 1920×1080 PNG |
+| `quick_video` | 1280×720, 30 fps, native MP4 |
+
+```python
+from mods.RenderPanel import ops
+task = ops.render_preset('quick_image', viewport=True, name='AgentPreview/Still', notify=False)
+task
+```
+
+Video is a separate call, after the previous task finishes:
+
+```python
+from mods.RenderPanel import ops
+task = ops.render_preset('quick_video', viewport=True, name='AgentPreview/Video', notify=False)
+task
+```
+
+`viewport=True` uses the temporary sequence aligned to the current view; video
+uses that sequence's playback range. For authored animation, omit it and use
+`sequence='/Game/MySequence'`. Optional `width`, `height`, `warmup` and integer
+`fps` override this call only. Choose a fresh output name under `Saved/MovieRenders/`.
+
+Submit one render at a time. Check `task.done` on a later MCP call; once done,
+check `task.error` before reading `task.result['success']` and the files in
+`task.result['output_dir']`. Rendering runs MRQ in PIE, saves dirty packages and
+replaces the editor MRQ queue. Full options and HDR workflows:
+[RenderPanel README](../mods/RenderPanel/README.md).
 
 ## Spawn
 
@@ -398,20 +608,18 @@ mineprep.reload()
 
 ```python
 mineprep.warn('simple message')
-mineprep.warn(f'导入方块失败: {path}', exc)  # Exception → full traceback in log
-mineprep.throw('fatal')                      # on-screen error, then raise
-mineprep.panic('title', 'message')           # Yes → continue; No → throw
+mineprep.warn(f'导入方块失败: {path}', exc)         # Exception → full traceback in log
+mineprep.throw('fatal')                             # on-screen error, then raise
+mineprep.panic('title', 'message', default=False)   # Yes → continue; No → throw
+mineprep.dialog('title', 'message', default=True)   # Yes/No bool
 ```
 
-`panic()` and `dialog()` localize their built-in titles and prompts. Caller-supplied
-text can be an ordinary string; use `i18n` at the call site when multilingual text is needed.
+- `panic(title, message='', *, default=False)` and `dialog(title, message='', *, default=True)` localize built-in titles/prompts.
+- When `mcvars.PyUseDialogDefaults=True` (enabled automatically during synchronous MCP `mcptools.PythonTools.run` calls), both skip the modal window, log a warning, and use `default` (`panic` raises on `False`; `dialog` returns `default`). Native `unreal.EditorDialog` and file pickers remain interactive.
 
 ## File dialogs
 
-`askopenfilename`, `askdirectory` and `asksaveasfilename` use `title=None` by
-default, resolving a localized title when called. An explicit string or Text is
-converted to a string without translation, including an empty title. Outside UE,
-default titles remain `Select File`, `Select Directory` and `Save File`.
+`askopenfilename`, `askopenfilenames` (returns `tuple[str, ...]`, or `()` on cancel), `askdirectory`, and `asksaveasfilename` use localized default titles when `title=None`.
 
 ## Undo
 
@@ -436,4 +644,4 @@ Do not call `unreal.*` or `mineprep.prints` from `@thread` / `@asyncthread` work
 
 ## Live editor (MCP / Remote Execution)
 
-Authoring never requires a live connection for Q&A. Editor work and live test policy: [SKILL.md](SKILL.md) § Testing. Arbitrary in-editor Python: MCP `mcptools.PythonTools.run` ([remote.md](remote.md)). Viewport capture: [remote.md](remote.md) § screenshot. Open Mod / `ui` tabs: [remote.md](remote.md) § panel.
+Authoring never requires a live connection for Q&A. Arbitrary in-editor Python: MCP `mcptools.PythonTools.run` ([remote.md](remote.md)). Viewport capture: [remote.md](remote.md) § screenshot. Open Mod / `ui` tabs: [remote.md](remote.md) § panel.

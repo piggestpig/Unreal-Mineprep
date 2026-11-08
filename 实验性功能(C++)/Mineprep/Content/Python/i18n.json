@@ -136,6 +136,11 @@
       "en": "Select File",
       "zh-Hant": "選擇檔案"
     },
+    "dialog.select_files": {
+      "zh": "选择多个文件",
+      "en": "Select Files",
+      "zh-Hant": "選擇多個檔案"
+    },
     "dialog.select_directory": {
       "zh": "选择文件夹",
       "en": "Select Directory",

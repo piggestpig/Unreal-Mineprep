@@ -1,6 +1,6 @@
-# Remote Execution & agent testing
+# Remote Execution
 
-How the agent runs Unreal Editor Python. Scope and validation policy: [Testing and essential boundaries](SKILL.md#testing-and-essential-boundaries). Use this for requested editor operations and tests, not automatically for code review or explanation.
+How the agent runs Unreal Editor Python when the work needs the editor. This is not a required step for every change. See [Checks](SKILL.md#checks).
 
 Mesh bake / `merge_skm` traps: [pitfalls/mesh.md](pitfalls/mesh.md) — not this file.
 
@@ -12,7 +12,7 @@ mob, use `spawn_mob` directly; see [placement and recovery](api.md#spawn).
 1. **Official Unreal MCP toolsets** (if connected) — Scene / Actor / Object / Material / viewport capture / etc.
 2. **`mcptools.PythonTools`** — Mineprep and arbitrary editor Python (`import mineprep` / `unreal`)
 3. **Python Remote Execution** — multicast client → editor `remote_execution` listener
-4. Neither → **stop testing**; still finish authoring. For `mineprep.ui` / console snippets, give the user the full code to paste into Output Log with the console set to **Python**. Do not add a helper `.py` under `Content/Python/`.
+4. Neither → finish the change anyway. For `mineprep.ui` / console snippets, give the user the full code to paste into Output Log with the console set to **Python**. Do not add a helper `.py` under `Content/Python/`.
 
 Do not invent browser automation or fake editor state as a substitute. Official `ProgrammaticToolset` is a sandbox for chaining other MCP tools; it is **not** a general `execute_python` and cannot replace `mcptools`.
 
@@ -48,6 +48,20 @@ Match these paths to the intended workspace before editing assets or the scene.
 For subsequent calls replace `code` with editor Python, ending with the specific
 value needed. Prefer counts, selected properties or a small sample over whole
 object dumps. `loglevel=0` filters logs, not a large `result`.
+
+### Non-interactive Mineprep prompts
+
+`run` temporarily sets `mcvars.PyUseDialogDefaults=True` while executing the
+snippet synchronously, restoring its previous value in `finally`, including
+errors and nested calls. This makes `mineprep.panic()` use its default No and
+raise, while `mineprep.dialog()` defaults to Yes and returns True. Each call can
+choose a boolean `default=`; automatic choices are included as warnings even at
+`loglevel=0`. See [prompt signatures](api.md#warn--errors).
+
+Dialog Yes can continue overwrite/uninstall operations: establish authorization
+before calling them. Later asynchronous callbacks do not inherit the switch;
+native `EditorDialog` and file pickers remain interactive. This is not a general
+modal-window suppressor. Ordinary editor use keeps the switch off.
 
 ## Connect from Codex
 
@@ -273,45 +287,31 @@ visible. Read the final image after that interval; `delay=0` captures only once.
 
 If the file log is unavailable and the 20,000-entry engine log fallback has lost the call's start marker, `logs` is empty and marked `log_window_limit`; the original count is unknown. Do not interpret this as proof that the call emitted no warnings.
 
-Keep parsing, naming, UV and bind-matrix checks independent of Unreal. Reserve
-editor checks for assets, materials, deformation, placement and lifecycle; a
-panel reopening check must observe a live instance, not registration logs.
-Choose checks for the actual change; [SKILL.md](SKILL.md#testing-and-essential-boundaries)
-covers proportional validation. Documentation checks do not prove editor behavior.
-
 ## Viewport screenshot (agent can Read the png)
 
-Prefer MCP **`EditorToolset.EditorAppToolset.CaptureViewport`** with `bShowUI=false`
-for the current viewport. Inspect the returned image; it is inline, not a saved
-file. Discover the current schema first. If the bridge requires optional
-arguments, pass the current camera transform and an `annotations` object with
+| Need | Method |
+|------|--------|
+| Quick scene view | MCP `EditorToolset.EditorAppToolset.CaptureViewport`, `bShowUI=false`; inline image follows viewport dimensions |
+| Fixed-resolution PNG / MP4, or an alternative if MCP scene capture fails | [RenderPanel presets](api.md#rendering-renderpanel), via the Python bridge or console |
+| Python viewport PNG | `mineprep.screenshot(size=(1920, 1080), path=...)`; asynchronous |
+| Editor UI | MCP `CaptureEditorImage`, or widget capture above; RenderPanel renders the scene only |
+
+Discover the live `CaptureViewport` schema. If omitted arguments fail, use
+`GetCameraTransform` and pass the transform plus an `annotations` object with
 `gridSpacing=0`, `gridExtent=0`, `gridHeight=0`, `maxLabelDistance=0`,
 `maxLabels=0`, `classFilter={"refPath":"/Script/Engine.Actor"}`.
-This tool is not exposed as `unreal.EditorAppToolset.capture_viewport` in Python.
-
-For a high-resolution image or a Python-only session, use `mineprep.screenshot`:
 
 ```python
-import os
 import mineprep
 import unreal
-
-shot_dir = os.path.join(unreal.Paths.project_saved_dir(), 'Screenshots')
-os.makedirs(shot_dir, exist_ok=True)
 import uuid
-path = os.path.join(shot_dir, f'view_{uuid.uuid4().hex}.png')
-mineprep.screenshot(
-    size=(1920, 1080),   # omit → viewport res; (1080,1080) square; (1080,1920) portrait
-    path=path,           # explicit path makes the new image easy to inspect
-    delay=0.3,           # seconds before capture; default 0
-)
+path = unreal.Paths.project_saved_dir() + f'Screenshots/view_{uuid.uuid4().hex}.png'
+mineprep.screenshot(size=(1920, 1080), path=path)
 ```
 
-The Python capture is async. Verify a fresh, decodable PNG before inspecting it;
-delay alone does not guarantee completion in a background viewport. Check Alpha
-if an image looks blank. A `.jpg` suffix does not convert PNG output to JPEG.
-Small tasks do not need screenshots; further captures should check a changed
-result or answer a new visual question. Use widget capture above for panels.
+For Python capture, verify that a fresh, decodable PNG exists; returning from
+the call does not prove capture completed. For RenderPanel, follow the task
+completion checks in the linked API section instead of polling viewport capture.
 
 ## Blueprint defaults and components
 

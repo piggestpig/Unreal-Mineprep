@@ -75,6 +75,8 @@ class BiomeColor(mineprep.PropertyGroup):
     MapColor: unreal.LinearColor = ((1, 1, 1, 1), {'HideAlphaChannel': True})
     Tint: unreal.LinearColor = ((1, 1, 1, 1), {"HideAlphaChannel": True,
         "ToolTip": 'Linear RGB multiplier; 1 is neutral, HDR values allowed'})
+    Retention: float = (.5, {'ClampMin': 0, 'ClampMax': 1,
+        'ToolTip': '0 uses grayscale before RGB tinting; 1 keeps the original colour'})
     H: float = (1., {'ClampMin': .5, 'ClampMax': 1.5,
         'ToolTip': '1 is neutral; 0.9 shifts −36°, range ±180°'})
     S: float = (1., {'ClampMin': 0, 'ClampMax': 65504, 'UIMax': 2})
@@ -303,8 +305,10 @@ class ContentEditors:
             parent.prop(self._biome_colors, properties=['H', 'S', 'V'], categories=[], searching=False,
                         on_property_changed=lambda _: self._hsv_changed(biome))
         else:
-            self._biome_colors.Tint = unreal.LinearColor(*biome.get('vegetation_tint', [1, 1, 1]), 1)
-            parent.prop(self._biome_colors, properties=['Tint'], categories=[], searching=False,
+            rgba = vegetation_tint(biome.get('vegetation_tint', [1, 1, 1]))
+            self._biome_colors.Tint = unreal.LinearColor(*rgba[:3], 1)
+            self._biome_colors.Retention = rgba[3]
+            parent.prop(self._biome_colors, properties=['Tint', 'Retention'], categories=[], searching=False,
                         on_property_changed=lambda _: self._tint_changed(biome))
         box = parent.checkbox(i18n('兜底群系（不参与普通气候盒竞争）', 'Fallback biome (excluded from normal climate candidates)'), size=11,
                               on_check_state_changed=lambda checked: self._fallback(biome, checked))
@@ -343,13 +347,13 @@ class ContentEditors:
             return
         value = self._biome_colors.Tint
         def change():
-            rgb = vegetation_tint([value.r, value.g, value.b])
+            rgba = vegetation_tint([value.r, value.g, value.b, self._biome_colors.Retention])
             self._suspend = True
             try:
-                self._biome_colors.Tint = unreal.LinearColor(*rgb, 1)
+                self._biome_colors.Tint = unreal.LinearColor(*rgba[:3], 1)
             finally:
                 self._suspend = False
-            biome['vegetation_tint'] = list(rgb)
+            biome['vegetation_tint'] = list(rgba)
         self._edit(change, error_key=('vegetation_tint', biome['id']), appearance=True)
 
     def _hsv_changed(self, biome):

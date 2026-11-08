@@ -47,7 +47,6 @@ layout.prop(props)
 - Spawns an Editor Utility tab (template asset title often 「MOD自定义面板」).
 - Execution and console fallback: [remote.md](remote.md#prefer-order).
 - Already-open panel: [remote.md](remote.md) § panel.
-- Optional `mineprep.ui(script, save_path='MyPanel')` saves under `/Game/mc/mods/` and registers a tab from that asset.
 - Keep the script string **self-contained**: imports used inside callbacks (`from collections import defaultdict`, etc.) must appear **inside** the `ui("""...""")` string — outer-scope imports are not visible to the panel script.
 - Each `ui()` execution has its own Python namespace. Top-level `props`, paths,
   helpers and callback bindings belong to that execution; rerunning the script
@@ -56,8 +55,6 @@ layout.prop(props)
   imported modules or registries. PropertyGroup GUIDs distinguish UE classes;
   persistence and `_unique_` behavior remain unchanged. Use descriptive class
   names for different tools, not a random name on every run.
-- Newly saved widget assets use the same isolated execution path on each opening.
-  Existing assets keep their previously stored script until explicitly resaved.
 
 AnimSequence bone tracks (asset CONTROL channels): [pitfalls/anim.md](pitfalls/anim.md). Level Sequence character keys: [api.md](api.md) § Control Rig — not a Layout concern.
 
@@ -388,8 +385,7 @@ class names when settings should differ.
 For an explicitly chosen file, pass the same path to `load` and `save`, keep
 `_autosave_` off (it would still use the default file), and wire saves to Details
 changes or a button. Programmatic changes must also invoke that save helper.
-`ui(save_path=...)` saves a widget asset, not a PropertyGroup state file. Complete
-example using an explicit file in the existing cache directory:
+Example with an explicit file in the existing cache directory:
 
 ```python
 import mineprep

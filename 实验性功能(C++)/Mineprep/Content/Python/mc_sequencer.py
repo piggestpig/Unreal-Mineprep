@@ -6,6 +6,7 @@ Rotator、LinearColor 和 str 属性。子序列使用本地时间和绑定。
 暂不支持 enum、byte 和对象引用属性。"""
 
 import fnmatch
+import math
 from collections.abc import Iterable
 from types import SimpleNamespace
 
@@ -13,12 +14,25 @@ try:
     import unreal
 except ModuleNotFoundError:
     from mc_utils import Lazy as unreal
-from mc_utils import throw, uclass, world, undo
+from mc_utils import throw, unwrap_rotations
+from mc_math import _rotation_axes, unwrap_angles
 
 _TIME_UNIT = unreal.MovieSceneTimeUnit.DISPLAY_RATE
 
-_channel_gather_loc = {}
-_key_gather_loc = {}
+class _LocatedItems(list):
+    """Query-local provenance. The list keeps each indexed wrapper alive."""
+    def __init__(self, items=(), locations=None):
+        locations = locations if locations is not None else (items.locations if isinstance(items, _LocatedItems) else {})
+        super().__init__(items)
+        self.locations = {id(item): locations[id(item)] for item in self if id(item) in locations}
+
+    def extend(self, items):
+        if isinstance(items, _LocatedItems):
+            self.locations.update(items.locations)
+        super().extend(items)
+
+    def select(self, items):
+        return _LocatedItems(items, self.locations)
 
 _TRANSFORM_CHANNELS = (
     'Location.X', 'Location.Y', 'Location.Z',
@@ -44,12 +58,13 @@ _SCALE_PROPS = frozenset({'Scale', 'RelativeScale3D'})
 
 
 def resolve_sequence(target=None) -> unreal.LevelSequence:
-    """解析 Level Sequence：默认取当前聚焦/打开的序列，也可传对象或资产路径"""
+    """解析 Level Sequence：默认取当前序列，也可传句柄、对象或资产路径。"""
     if target is None:
         sequence = unreal.LevelSequenceEditorBlueprintLibrary.get_focused_level_sequence()
         if not sequence:
             sequence = unreal.LevelSequenceEditorBlueprintLibrary.get_current_level_sequence()
         return sequence
+    target = getattr(target, 'target', target)
     if isinstance(target, unreal.LevelSequence):
         return target
     if isinstance(target, str):
@@ -145,7 +160,7 @@ def _iter_all_tracks(sequence):
 def _find_binding_for_object(sequence, obj):
     """在序列中查找对象对应的绑定"""
     for binding in _iter_bindings(sequence):
-        bound_objects = unreal.LevelSequenceEditorBlueprintLibrary.get_bound_objects(_binding_id(binding))
+        bound_objects = sequence.locate_bound_objects(binding, obj.get_world())
         for bound in bound_objects:
             if bound == obj:
                 return binding
@@ -172,19 +187,18 @@ def _ensure_binding(sequence, obj):
         return sequence.add_possessable(obj)
 
     if _is_scene_component(obj):
-        binding = sequence.add_possessable(obj)
         owner = obj.get_owner()
-        if owner:
-            owner_binding = _find_binding_for_object(sequence, owner)
-            if owner_binding:
-                binding.set_parent(owner_binding)
+        owner_binding = _ensure_binding(sequence, owner) if owner else None
+        binding = sequence.add_possessable(obj)
+        if owner_binding:
+            binding.set_parent(owner_binding)
         return binding
 
     throw(f'obj 必须是 Actor 或 SceneComponent，当前类型: {type(obj).__name__}')
 
 
-def _get_or_create_section(track):
-    """取轨道首个 section，没有则新建"""
+def _get_or_create_unbounded_property_section(track):
+    """仅供 Transform/属性轨道：取首个 section，没有则新建无界片段。"""
     sections = track.get_sections()
     if sections:
         return sections[0]
@@ -245,145 +259,23 @@ def _binding_track_map(sequence):
         return mapping
     for binding in _iter_bindings(sequence):
         for track in binding.get_tracks():
-            mapping[id(track)] = binding
+            mapping[track.get_path_name()] = binding
     return mapping
 
 
-def _register_channel_loc(section, channel_index, channel):
-    """登记 channel wrapper 的 (section, index) 位置"""
-    _channel_gather_loc[id(channel)] = (section, channel_index)
-
-
-def _register_key_loc(section, channel_index, key_index, key):
-    """登记 key wrapper 的 (section, channel_index, key_index)"""
-    _key_gather_loc[id(key)] = (section, channel_index, key_index)
-
-
 def _channels_from_section(section):
-    """取出 section 全部通道并登记位置"""
-    channels = []
-    try:
-        raw = section.get_all_channels()
-    except Exception:
-        return channels
-    for channel_index, channel in enumerate(raw):
-        _register_channel_loc(section, channel_index, channel)
-        channels.append(channel)
-    return channels
+    raw = list(section.get_all_channels())
+    return _LocatedItems(raw, {id(ch): (section, i) for i, ch in enumerate(raw)})
 
 
 def _keys_from_channel(channel, section=None, channel_index=-1):
-    """取出 channel 全部关键帧并登记位置"""
-    if section is None:
-        section, channel_index = _channel_gather_loc.get(id(channel), (None, -1))
-    keys = []
-    try:
-        raw = channel.get_keys()
-    except Exception:
-        return keys
-    for key_index, key in enumerate(raw):
-        if section is not None and channel_index >= 0:
-            _register_key_loc(section, channel_index, key_index, key)
-        keys.append(key)
-    return keys
-
-
-def _same_scripting_object(a, b) -> bool:
-    """比较两个 Scripting 包装对象是否同一实体"""
-    if a is b:
-        return True
-    try:
-        return a == b
-    except Exception:
-        return False
+    raw = list(channel.get_keys())
+    locations = {id(key): (section, channel_index) for key in raw} if section is not None else {}
+    return _LocatedItems(raw, locations)
 
 
 def _build_label_context(sequence):
-    """一次遍历构建 label 用的层级索引上下文"""
-    ctx = SimpleNamespace(
-        sequence=sequence,
-        track_bindings=_binding_track_map(sequence),
-        channel_labels={},
-        key_labels={},
-        _channel_loc_cache={},
-        _key_loc_cache={},
-    )
-    if not sequence:
-        return ctx
-    for track in _iter_all_tracks(sequence):
-        for section in track.get_sections():
-            section_label = None
-            try:
-                channels = section.get_all_channels()
-            except Exception:
-                continue
-            for channel_index, channel in enumerate(channels):
-                if section_label is None:
-                    section_label = label_section(section, ctx)
-                channel_label = _join_path(section_label, _channel_name(channel))
-                ctx.channel_labels[(id(section), channel_index)] = channel_label
-                try:
-                    for key_index, key in enumerate(channel.get_keys()):
-                        suffix = _format_key_suffix(key)
-                        ctx.key_labels[(id(section), channel_index, key_index)] = (
-                            _join_path(channel_label, suffix)
-                        )
-                except Exception:
-                    pass
-    return ctx
-
-
-def _resolve_channel(channel, ctx):
-    """解析 channel 所属 section 与下标"""
-    cached = ctx._channel_loc_cache.get(id(channel))
-    if cached is not None:
-        return cached
-    gathered = _channel_gather_loc.get(id(channel))
-    if gathered is not None:
-        ctx._channel_loc_cache[id(channel)] = gathered
-        return gathered
-    for track in _iter_all_tracks(ctx.sequence):
-        for section in track.get_sections():
-            try:
-                channels = section.get_all_channels()
-            except Exception:
-                continue
-            for channel_index, candidate in enumerate(channels):
-                if _same_scripting_object(candidate, channel):
-                    loc = (section, channel_index)
-                    ctx._channel_loc_cache[id(channel)] = loc
-                    return loc
-    ctx._channel_loc_cache[id(channel)] = (None, -1)
-    return None, -1
-
-
-def _resolve_key(key, ctx):
-    """解析 key 所属 section/channel 下标"""
-    cached = ctx._key_loc_cache.get(id(key))
-    if cached is not None:
-        return cached
-    gathered = _key_gather_loc.get(id(key))
-    if gathered is not None:
-        ctx._key_loc_cache[id(key)] = gathered
-        return gathered
-    for track in _iter_all_tracks(ctx.sequence):
-        for section in track.get_sections():
-            try:
-                channels = section.get_all_channels()
-            except Exception:
-                continue
-            for channel_index, channel in enumerate(channels):
-                try:
-                    keys = channel.get_keys()
-                except Exception:
-                    continue
-                for key_index, candidate in enumerate(keys):
-                    if _same_scripting_object(candidate, key):
-                        loc = (section, channel_index, key_index)
-                        ctx._key_loc_cache[id(key)] = loc
-                        return loc
-    ctx._key_loc_cache[id(key)] = (None, -1, -1)
-    return None, -1, -1
+    return SimpleNamespace(sequence=sequence, track_bindings=_binding_track_map(sequence), locations={})
 
 
 def binding_label(binding) -> str:
@@ -403,7 +295,7 @@ def binding_label(binding) -> str:
 def label_track(track, ctx) -> str:
     """生成轨道的层级显示名，如 'Alex.变换'"""
     short = _track_short_name(track)
-    binding = ctx.track_bindings.get(id(track))
+    binding = ctx.track_bindings.get(track.get_path_name())
     if binding:
         return _join_path(binding_label(binding), short)
     return short
@@ -429,11 +321,9 @@ def label_section(section, ctx) -> str:
 
 def label_channel(channel, ctx) -> str:
     """生成通道的层级显示名，如 'Alex.变换.Location.X'"""
-    section, channel_index = _resolve_channel(channel, ctx)
+    section, channel_index = ctx.locations.get(id(channel), (None, -1))
     if section is not None and channel_index >= 0:
-        label = ctx.channel_labels.get((id(section), channel_index))
-        if label:
-            return label
+        return _join_path(label_section(section, ctx), _channel_name(channel))
     return _channel_name(channel)
 
 
@@ -465,11 +355,10 @@ def _format_key_suffix(key) -> str:
 
 def label_key(key, ctx) -> str:
     """生成关键帧的层级显示名，后缀格式为 '@帧:值'"""
-    section, channel_index, key_index = _resolve_key(key, ctx)
-    if section is not None and channel_index >= 0 and key_index >= 0:
-        label = ctx.key_labels.get((id(section), channel_index, key_index))
-        if label:
-            return label
+    section, channel_index = ctx.locations.get(id(key), (None, -1))
+    if section is not None and channel_index >= 0:
+        channel = section.get_all_channels()[channel_index]
+        return _join_path(label_section(section, ctx), _channel_name(channel), _format_key_suffix(key))
     return _format_key_suffix(key)
 
 
@@ -480,7 +369,7 @@ def sequence_label(sequence) -> str:
 
 def is_binding(obj) -> bool:
     """判断对象是否为 Sequencer 绑定包装器"""
-    return hasattr(obj, 'get_tracks') and hasattr(obj, 'get_display_name') and hasattr(obj, 'get_id')
+    return isinstance(obj, unreal.MovieSceneBindingProxy)
 
 
 def labels_for(objects, sequence=None) -> list[str]:
@@ -489,16 +378,29 @@ def labels_for(objects, sequence=None) -> list[str]:
         return []
     ctx = _build_label_context(sequence or resolve_sequence())
     sample = objects[0]
+    if isinstance(sample, (unreal.MovieSceneScriptingChannel, unreal.MovieSceneScriptingKey)):
+        locations = objects.locations if isinstance(objects, _LocatedItems) else {}
+        contexts, labels = {}, []
+        for obj in objects:
+            section, _ = locations.get(id(obj), (None, -1))
+            owner = section.get_typed_outer(unreal.LevelSequence) if section is not None else None
+            if owner is not None:
+                path = owner.get_path_name()
+                if path not in contexts:
+                    contexts[path] = _build_label_context(owner)
+                context = contexts[path]
+            else:
+                context = ctx
+            context.locations = locations
+            labels.append(label_channel(obj, context) if isinstance(obj, unreal.MovieSceneScriptingChannel)
+                          else label_key(obj, context))
+        return labels
     if is_binding(sample):
         return [binding_label(obj) for obj in objects]
     if isinstance(sample, unreal.MovieSceneTrack):
         return [label_track(obj, ctx) for obj in objects]
     if isinstance(sample, unreal.MovieSceneSection):
         return [label_section(obj, ctx) for obj in objects]
-    if isinstance(sample, unreal.MovieSceneScriptingChannel):
-        return [label_channel(obj, ctx) for obj in objects]
-    if isinstance(sample, unreal.MovieSceneScriptingKey):
-        return [label_key(obj, ctx) for obj in objects]
     if isinstance(sample, unreal.LevelSequence):
         return [sequence_label(obj) for obj in objects]
     return [obj.get_name() for obj in objects]
@@ -578,45 +480,38 @@ def filter_items(items, name=None):
 
 def _filter_channels(channels, name=None, ctx=None):
     """按通道名或完整路径通配过滤通道"""
-    channels = list(channels)
+    channels = _LocatedItems(channels)
     if not name:
         return channels
     if isinstance(name, type):
-        return [c for c in channels if isinstance(c, name)]
+        return channels.select(c for c in channels if isinstance(c, name))
     if isinstance(name, str):
         pattern = name if '*' in name else f'*{name}*'
-        if ctx is None:
-            ctx = _build_label_context(resolve_sequence())
-        return [
-            c for c in channels
+        return channels.select(
+            c for c, label in zip(channels, labels_for(channels))
             if fnmatch.fnmatch(_channel_name(c), pattern)
-            or fnmatch.fnmatch(label_channel(c, ctx), pattern)
-        ]
+            or fnmatch.fnmatch(label, pattern))
     if callable(name):
-        return [c for c in channels if name(c)]
+        return channels.select(c for c in channels if name(c))
     return []
 
 
 def _filter_keys(keys, name=None, ctx=None):
     """按帧号、完整路径或后缀通配过滤关键帧"""
-    keys = list(keys)
+    keys = _LocatedItems(keys)
     if not name:
         return keys
     if isinstance(name, int):
-        return [k for k in keys if k.get_time().frame_number.value == name]
+        return keys.select(k for k in keys if k.get_time().frame_number.value == name)
     if isinstance(name, type):
-        return [k for k in keys if isinstance(k, name)]
+        return keys.select(k for k in keys if isinstance(k, name))
     if isinstance(name, str):
         pattern = name if '*' in name else f'*{name}*'
-        if ctx is None:
-            ctx = _build_label_context(resolve_sequence())
-        return [
-            k for k in keys
-            if fnmatch.fnmatch(label_key(k, ctx), pattern)
-            or fnmatch.fnmatch(_format_key_suffix(k), pattern)
-        ]
+        return keys.select(k for k, label in zip(keys, labels_for(keys))
+                           if fnmatch.fnmatch(label, pattern)
+                           or fnmatch.fnmatch(_format_key_suffix(k), pattern))
     if callable(name):
-        return [k for k in keys if name(k)]
+        return keys.select(k for k in keys if name(k))
     return []
 
 
@@ -725,6 +620,8 @@ def gather_channels(source, name=None):
     """从片段收集通道，可按显示名过滤"""
     if source is None:
         return []
+    if isinstance(source, _LocatedItems):
+        return _filter_channels(source, name)
     if isinstance(source, unreal.MovieSceneScriptingChannel):
         return _filter_channels([source], name)
     if isinstance(source, unreal.MovieSceneSection):
@@ -736,7 +633,7 @@ def gather_channels(source, name=None):
         if isinstance(items[0], unreal.MovieSceneScriptingChannel):
             return _filter_channels(items, name)
         if isinstance(items[0], unreal.MovieSceneSection):
-            channels = []
+            channels = _LocatedItems()
             for section in items:
                 channels.extend(_channels_from_section(section))
             return _filter_channels(channels, name)
@@ -747,6 +644,13 @@ def gather_keys(source, name=None):
     """从通道收集关键帧，可按帧号或显示名过滤"""
     if source is None:
         return []
+    if isinstance(source, _LocatedItems):
+        if source and isinstance(source[0], unreal.MovieSceneScriptingChannel):
+            result = _LocatedItems()
+            for channel in source:
+                result.extend(_keys_from_channel(channel, *source.locations.get(id(channel), (None, -1))))
+            return _filter_keys(result, name)
+        return _filter_keys(source, name)
     if isinstance(source, unreal.MovieSceneScriptingKey):
         return _filter_keys([source], name)
     if isinstance(source, unreal.MovieSceneScriptingChannel):
@@ -758,16 +662,11 @@ def gather_keys(source, name=None):
         if isinstance(items[0], unreal.MovieSceneScriptingKey):
             return _filter_keys(items, name)
         if isinstance(items[0], unreal.MovieSceneScriptingChannel):
-            keys = []
+            keys = _LocatedItems()
             for channel in items:
                 keys.extend(_keys_from_channel(channel))
             return _filter_keys(keys, name)
     return []
-
-
-def _add_scalar_key(channel, frame, value):
-    """向标量通道添加一帧关键帧"""
-    channel.add_key(unreal.FrameNumber(frame), value, 0.0, _TIME_UNIT)
 
 
 def _is_transform_prop(prop) -> bool:
@@ -777,9 +676,9 @@ def _is_transform_prop(prop) -> bool:
     return prop in _TRANSFORM_CHANNELS
 
 
-def _log_skip(message):
+def _log_skip(message, *, warning=False):
     """记录 keyframe 跳过原因日志"""
-    unreal.log(f'[mc_keyframe] {message}')
+    (unreal.log_warning if warning else unreal.log)(f'[mc_keyframe] {message}')
 
 
 def _transform_channels_for_prop(prop):
@@ -796,8 +695,15 @@ def _read_transform_values(obj):
     if _is_actor(obj):
         return obj.get_actor_location(), obj.get_actor_rotation(), obj.get_actor_scale3d()
     if _is_scene_component(obj):
-        return obj.get_relative_location(), obj.get_relative_rotation(), obj.get_relative_scale3d()
+        pose = obj.get_relative_transform()
+        return pose.translation, pose.rotation.rotator(), pose.scale3d
     throw(f'无法读取 Transform，obj 类型: {type(obj).__name__}')
+
+
+def _key_value(prop, value):
+    if (prop in _LOCATION_PROPS or prop in _SCALE_PROPS) and isinstance(value, tuple) and len(value) == 3:
+        return unreal.Vector(*value)
+    return value
 
 
 def _validate_transform_value(prop, value) -> bool:
@@ -867,11 +773,11 @@ def _apply_transform_value(obj, prop, value):
         if isinstance(value, unreal.Rotator):
             rot = value
         elif prop.endswith('.X'):
-            rot = unreal.Rotator(rot.pitch, rot.yaw, value)
+            rot = unreal.Rotator(pitch=rot.pitch, yaw=rot.yaw, roll=value)
         elif prop.endswith('.Y'):
-            rot = unreal.Rotator(value, rot.yaw, rot.roll)
+            rot = unreal.Rotator(pitch=value, yaw=rot.yaw, roll=rot.roll)
         else:
-            rot = unreal.Rotator(rot.pitch, value, rot.roll)
+            rot = unreal.Rotator(pitch=rot.pitch, yaw=value, roll=rot.roll)
         if _is_actor(obj):
             obj.set_actor_rotation(rot, True)
         else:
@@ -916,35 +822,23 @@ def _transform_scalar(channel_name, loc, rot, scale) -> float:
     return mapping[channel_name]
 
 
-def _get_or_create_transform_section(binding):
+def _get_or_create_transform_section(binding, pose=None):
     """获取或创建 3DTransform 轨道的 section"""
     tracks = binding.find_tracks_by_exact_type(unreal.MovieScene3DTransformTrack)
     if tracks:
         track = tracks[0]
     else:
         track = binding.add_track(unreal.MovieScene3DTransformTrack)
-    return _get_or_create_section(track)
-
-
-def _key_transform(section, frame, loc, rot, scale, prop) -> bool:
-    """对 Transform section 指定通道打关键帧"""
-    channels = _transform_channels_for_prop(prop)
-    if not channels:
-        _log_skip(f'未知的 Transform 属性: {prop!r}')
-        return False
-
-    target_channels = set(channels)
-    keyed = 0
-    for channel in section.get_all_channels():
-        name = _channel_name(channel)
-        if name not in target_channels:
-            continue
-        _add_scalar_key(channel, frame, _transform_scalar(name, loc, rot, scale))
-        keyed += 1
-    if keyed == 0:
-        _log_skip(f'未在 Transform 轨道中找到通道: {sorted(target_channels)}')
-        return False
-    return True
+    existing = track.get_sections()
+    if existing:
+        return existing[0]
+    section = _get_or_create_unbounded_property_section(track)
+    if pose is not None:
+        for channel in section.get_all_channels():
+            name = _channel_name(channel)
+            if name in _TRANSFORM_CHANNELS:
+                channel.set_default(_transform_scalar(name, *pose))
+    return section
 
 
 def _prop_name_and_path(prop):
@@ -1050,11 +944,11 @@ def _validate_property_keyframe(obj, binding, prop, value):
     if prop.lower() == 'visibility' and not _property_exists(obj, prop):
         prop = 'bHidden'
 
-    if not _property_exists(obj, prop):
+    try:
+        stored = _read_property(obj, prop)
+    except Exception:
         _log_skip(f'找不到属性 {prop!r}')
         return None
-
-    stored = _read_property(obj, prop)
     stored_kind = _resolve_value_kind(stored)
     if stored_kind is None:
         _log_skip(
@@ -1091,7 +985,7 @@ def _validate_property_keyframe(obj, binding, prop, value):
             )
             return None
 
-    return current, kind
+    return stored, kind
 
 
 def _is_property_track(track) -> bool:
@@ -1120,7 +1014,7 @@ def _find_property_track(binding, prop):
     return None
 
 
-def _get_or_create_property_section(binding, prop, kind):
+def _get_or_create_property_section(binding, prop, kind, current):
     """获取或创建属性轨道及其 section"""
     track = _find_property_track(binding, prop)
     if not track:
@@ -1133,7 +1027,17 @@ def _get_or_create_property_section(binding, prop, kind):
         track.set_property_name_and_path(prop_name, prop_path)
         if kind == 'vector2':
             track.set_num_channels_used(2)
-    return _get_or_create_section(track)
+    sections = track.get_sections()
+    if sections:
+        return sections[0]
+    section = _get_or_create_unbounded_property_section(track)
+    values = _channel_values_for_property(current, kind)
+    for channel in section.get_all_channels():
+        if isinstance(channel, (unreal.MovieSceneScriptingFloatChannel, unreal.MovieSceneScriptingDoubleChannel)):
+            name = None if None in values else _channel_name(channel)
+            if name in values:
+                channel.set_default(values[name])
+    return section
 
 
 def _channel_values_for_property(value, kind):
@@ -1173,33 +1077,136 @@ def _channel_values_for_property(value, kind):
     return {}
 
 
-def _key_property_channels(section, frame, value, kind) -> bool:
-    """对属性片段的各通道打关键帧"""
-    values = _channel_values_for_property(value, kind)
-    if not values:
-        _log_skip(f'内部错误: 未知属性种类 {kind!r}')
-        return False
+def _relative_value(value, values, prop):
+    """把最终通道值重组为单次设置姿态/属性所需的原生值。"""
+    if None in values:
+        return values[None]
+    if prop in _TRANSFORM_CHANNELS:
+        return values[prop]
+    if isinstance(value, unreal.Rotator):
+        return unreal.Rotator(roll=values['Rotation.X'], pitch=values['Rotation.Y'], yaw=values['Rotation.Z'])
+    return type(value)(**{name.rsplit('.', 1)[-1].lower(): number for name, number in values.items()})
 
-    if kind in ('bool', 'int', 'float', 'string'):
-        channels = section.get_all_channels()
-        if not channels:
-            _log_skip('属性轨道没有可用通道')
-            return False
-        channels[0].add_key(unreal.FrameNumber(frame), value, 0.0, _TIME_UNIT)
-        return True
 
-    keyed = 0
-    for channel in section.get_all_channels():
-        name = _channel_name(channel)
-        if name not in values:
-            continue
-        _add_scalar_key(channel, frame, values[name])
-        keyed += 1
+def _resolve_interp(value):
+    """公共数字别名与 UE 枚举的数值不同，先识别枚举再查别名。"""
+    mode = unreal.MovieSceneKeyInterpolation
+    if isinstance(value, mode):
+        return value
+    if isinstance(value, unreal.RichCurveInterpMode):
+        return {unreal.RichCurveInterpMode.RCIM_CONSTANT: mode.CONSTANT,
+                unreal.RichCurveInterpMode.RCIM_LINEAR: mode.LINEAR}.get(value, mode.AUTO)
+    names = ('constant', 'linear', 'auto', 'smart_auto', 'user', 'break')
+    modes = (mode.CONSTANT, mode.LINEAR, mode.AUTO, mode.SMART_AUTO, mode.USER, mode.BREAK)
+    mapping = dict(enumerate(modes)) | dict(zip(names, modes))
+    if isinstance(value, str):
+        value = value.strip().casefold()
+    return mapping.get(value, mode.AUTO) if isinstance(value, (int, str)) else mode.AUTO
 
-    if keyed == 0:
-        _log_skip(f'未在属性轨道中找到可写入的通道，属性值类型: {type(value).__name__}')
-        return False
-    return True
+
+def _key_sequence(sequence, times):
+    active = resolve_sequence()
+    target = resolve_sequence(sequence) if sequence is not None else active
+    if target is None:
+        throw('找不到 Level Sequence，请打开序列或传入 sequence')
+    if target != active and any(time is None for time in times):
+        raise ValueError('非当前聚焦序列必须显式指定关键帧时间')
+    return target
+
+
+def _prepare_keyframe(obj, prop, value, sequence, *, relative=False):
+    """一次定位绑定、片段和目标通道，供单次或批量写入共用。"""
+    obj = _unwrap_target(obj)
+    if relative and isinstance(value, unreal.Transform):
+        _log_skip('relative 不支持完整 Transform 值，请分别写 Location/Rotation/Scale', warning=True)
+        return None
+    pose = _read_transform_values(obj) if _is_transform_prop(prop) else None
+    binding = _ensure_binding(sequence, obj)
+    if _is_transform_prop(prop):
+        if value is not None and not _validate_transform_value(prop, value):
+            return None
+        kind = 'transform'
+        section = _get_or_create_transform_section(binding, pose)
+        names = _transform_channels_for_prop(prop)
+    else:
+        if prop.lower() == 'visibility' and not _property_exists(obj, prop):
+            prop = 'bHidden'
+        validated = _validate_property_keyframe(obj, binding, prop, value)
+        if not validated:
+            return None
+        current, kind = validated
+        section = _get_or_create_property_section(binding, prop, kind, current)
+        if section is None:
+            return None
+        names = _channel_values_for_property(current, kind)
+    all_channels = _channels_from_section(section)
+    channels = ({None: all_channels[0]} if None in names and all_channels else
+                {_channel_name(ch): ch for ch in all_channels if _channel_name(ch) in names})
+    if not channels:
+        _log_skip(f'未找到属性 {prop!r} 的可写通道')
+        return None
+    defaults = {}
+    if relative:
+        for name, channel in channels.items():
+            if not isinstance(channel, (unreal.MovieSceneScriptingFloatChannel, unreal.MovieSceneScriptingDoubleChannel)):
+                _log_skip(f'属性 {prop!r} 的 relative 写键只支持 Float/Double 通道', warning=True)
+                return None
+            if not channel.has_default():
+                _log_skip(f'属性 {prop!r} 的通道 {_channel_name(channel)!r} 缺少默认值，无法相对写键', warning=True)
+                return None
+            defaults[name] = channel.get_default()
+    section.modify()
+    snapshot = ({name: _transform_scalar(name, *pose) for name in channels} if pose is not None
+                else _channel_values_for_property(current, kind))
+    return SimpleNamespace(obj=obj, prop=prop, kind=kind, channels=channels,
+                           snapshot=snapshot, defaults=defaults, locations=all_channels.locations)
+
+
+def _write_keyframe(context, frame, value, interp, *, apply=False, relative=False):
+    obj, prop, kind = context.obj, context.prop, context.kind
+    if relative and isinstance(value, unreal.Transform):
+        _log_skip('relative 不支持完整 Transform 值，请分别写 Location/Rotation/Scale', warning=True)
+        return []
+    if kind == 'transform':
+        if value is not None:
+            if not _validate_transform_value(prop, value):
+                return []
+        values = context.snapshot.copy()
+        if isinstance(value, unreal.Transform):
+            values.update((name, _transform_scalar(name, value.translation,
+                          value.rotation.rotator(), value.scale3d)) for name in values)
+        elif value is not None:
+            if isinstance(value, (int, float)):
+                values[prop] = value
+            elif isinstance(value, unreal.Rotator):
+                angles = _channel_values_for_property(value, 'rotator')
+                values.update((name, angles[name]) for name in values)
+            else:
+                values.update((name, getattr(value, name[-1].lower())) for name in values)
+    else:
+        if value is not None:
+            if _resolve_value_kind(value) != kind:
+                _log_skip(f'属性 {prop!r} 的批量 value 类型不匹配: {type(value).__name__}')
+                return []
+        values = context.snapshot if value is None else _channel_values_for_property(value, kind)
+    if value is not None:
+        if relative:
+            values = {name: context.defaults[name] + number for name, number in values.items()}
+        if apply:
+            resolved = _relative_value(value, values, prop) if relative else value
+            obj.modify()
+            if kind == 'transform':
+                _apply_transform_value(obj, prop, resolved)
+            elif not _try_write_property(obj, prop, resolved):
+                return []
+    written = _LocatedItems()
+    for name, channel in context.channels.items():
+        options = {'interpolation': interp} if isinstance(channel, (
+            unreal.MovieSceneScriptingFloatChannel, unreal.MovieSceneScriptingDoubleChannel)) else {}
+        key = channel.add_key(unreal.FrameNumber(frame), values[name], 0.0, _TIME_UNIT, **options)
+        written.append(key)
+        written.locations[id(key)] = context.locations[id(channel)]
+    return written
 
 
 def _refresh_sequencer():
@@ -1208,7 +1215,242 @@ def _refresh_sequencer():
     unreal.LevelSequenceEditorBlueprintLibrary.refresh_current_level_sequence()
 
 
-def keyframe(obj, prop='', value=None, time=None) -> bool:
+def object_channels(obj, prop='', *, sequence=None):
+    """只读查询已有轨道，包含所有 section，支持 Actor/组件集合。"""
+    sequence = resolve_sequence(sequence)
+    if sequence is None:
+        return []
+    obj = _unwrap_target(obj)
+    if obj is None:
+        return []
+    targets = list(obj) if isinstance(obj, Iterable) else [obj]
+    result = _LocatedItems()
+    seen = set()
+    for target in targets:
+        binding = _find_binding_for_object(sequence, target)
+        if binding is None:
+            continue
+        if _is_transform_prop(prop):
+            tracks = binding.find_tracks_by_exact_type(unreal.MovieScene3DTransformTrack)
+            names = _transform_channels_for_prop(prop)
+        else:
+            track = _find_property_track(binding, prop)
+            tracks = [track] if track is not None else []
+            names = None
+        for track in tracks:
+            for section in track.get_sections():
+                located = _channels_from_section(section)
+                for index, channel in enumerate(located):
+                    identity = (section.get_path_name(), index)
+                    if identity not in seen and (names is None or _channel_name(channel) in names):
+                        seen.add(identity)
+                        result.append(channel)
+                        result.locations[id(channel)] = located.locations[id(channel)]
+    return result
+
+
+def _unique_channel_sources(sources):
+    """包装器可重复创建；实际通道以 section 和通道下标去重。"""
+    unique = {}
+    for channel, section, index in sources:
+        if section is None or index < 0:
+            raise ValueError('通道缺少所有者信息，请通过 Actor.channels 或 section 查询通道')
+        unique.setdefault((section.get_path_name(), index), (channel, section))
+    return list(unique.values())
+
+
+def _resolve_loop(mode):
+    enum = unreal.RichCurveExtrapolation
+    if isinstance(mode, enum):
+        return mode
+    modes = {'cycle': enum.RCCE_CYCLE, 'cycle_with_offset': enum.RCCE_CYCLE_WITH_OFFSET,
+             'oscillate': enum.RCCE_OSCILLATE, 'linear': enum.RCCE_LINEAR,
+             'constant': enum.RCCE_CONSTANT, 'none': enum.RCCE_NONE,
+             'offset': enum.RCCE_CYCLE_WITH_OFFSET, 'pingpong': enum.RCCE_OSCILLATE}
+    if isinstance(mode, str) and mode.strip().casefold() in modes:
+        return modes[mode.strip().casefold()]
+    raise ValueError(f'未知循环模式: {mode!r}')
+
+
+def loop_channels(sources, mode='cycle', *, before=False, after=True):
+    if not sources or not (before or after):
+        return
+    mode = _resolve_loop(mode)
+    targets = _unique_channel_sources(sources)
+    if any(not isinstance(ch, (unreal.MovieSceneScriptingFloatChannel,
+                              unreal.MovieSceneScriptingDoubleChannel)) for ch, _ in targets):
+        raise TypeError('循环只支持 Float/Double 通道')
+    with unreal.ScopedEditorTransaction('Loop animation channels'):
+        for channel, section in targets:
+            section.modify()
+            if before:
+                channel.set_pre_infinity_extrapolation(mode)
+            if after:
+                channel.set_post_infinity_extrapolation(mode)
+    _refresh_sequencer()
+
+
+def clear_channels(sources):
+    targets = [(ch, section, list(ch.get_keys()))
+               for ch, section in _unique_channel_sources(sources)]
+    targets = [(ch, section, keys) for ch, section, keys in targets if keys]
+    if not targets:
+        return
+    with unreal.ScopedEditorTransaction('Clear animation keys'):
+        for channel, section, keys in targets:
+            section.modify()
+            for key in keys:
+                channel.remove_key(key)
+    _refresh_sequencer()
+
+
+def require_focused_sequence(sequence):
+    if sequence is None or sequence != resolve_sequence():
+        raise ValueError('播放控制的目标必须是当前聚焦的 LevelSequence')
+
+
+def set_camera_cut(sequence, camera, *, start=None, end=None, lock_viewport=False):
+    """目标序列内的有限 Camera Cut；同范围更新，其余部分重叠拒绝。"""
+    if sequence is None:
+        raise ValueError('找不到 LevelSequence')
+    camera = _unwrap_target(camera)
+    if (not isinstance(camera, unreal.Actor) or not unreal.SystemLibrary.is_valid(camera)
+            or camera.get_component_by_class(unreal.CameraComponent) is None):
+        raise TypeError('camera 必须为带有 CameraComponent 的有效 Actor')
+    if start is None or lock_viewport:
+        require_focused_sequence(sequence)
+    first = _resolve_frame(start, sequence)
+    last = sequence.get_playback_end() if end is None else _resolve_frame(end, sequence)
+    if last <= first:
+        raise ValueError('Camera Cut 必须满足 end > start，范围为 [start,end)')
+    tracks = list(sequence.find_tracks_by_type(unreal.MovieSceneCameraCutTrack))
+    if len(tracks) > 1:
+        raise ValueError('目标序列存在多个 Camera Cut 轨道，无法确定修改目标')
+    track = tracks[0] if tracks else None
+    matched = None
+    for section in track.get_sections() if track is not None else ():
+        if not section.has_start_frame() or not section.has_end_frame():
+            raise ValueError('已有 Camera Cut 缺少有限边界，请先设置其范围')
+        lower, upper = section.get_start_frame(), section.get_end_frame()
+        if (lower, upper) == (first, last) and matched is None:
+            matched = section
+        elif first < upper and lower < last:
+            raise ValueError('Camera Cut 与已有片段部分重叠，不会自动裁剪')
+    with unreal.ScopedEditorTransaction('Set camera cut'):
+        sequence.modify()
+        sequence.get_movie_scene().modify()
+        binding = _ensure_binding(sequence, camera)
+        track = track if track is not None else sequence.add_track(unreal.MovieSceneCameraCutTrack)
+        track.modify()
+        section = matched if matched is not None else track.add_section()
+        section.modify()
+        # Bound before yielding/refreshing: thumbnail caches require finite ranges.
+        section.set_range(first, last)
+        section.set_camera_binding_id(sequence.get_binding_id(binding))
+    _refresh_sequencer()
+    if lock_viewport:
+        unreal.LevelSequenceEditorBlueprintLibrary.set_lock_camera_cut_to_viewport(True)
+
+
+def set_sequence_frame(sequence, frame):
+    require_focused_sequence(sequence)
+    if frame is None:
+        raise ValueError('必须指定播放头位置')
+    number = _resolve_frame(frame, sequence)
+    params = unreal.MovieSceneSequencePlaybackParams(
+        frame=unreal.FrameTime(frame_number=unreal.FrameNumber(number)),
+        position_type=unreal.MovieScenePositionType.FRAME,
+        update_method=unreal.UpdatePositionMethod.JUMP)
+    unreal.LevelSequenceEditorBlueprintLibrary.set_local_position(params, _TIME_UNIT)
+
+
+def _sequence_rate(fps):
+    rate = unreal.FrameRate(numerator=fps, denominator=1) if isinstance(fps, int) else fps
+    if not isinstance(rate, unreal.FrameRate) or rate.numerator <= 0 or rate.denominator <= 0:
+        raise ValueError('fps 必须为正整数或有效的 FrameRate')
+    return rate
+
+
+def _sequence_range_frames(start, end, rate):
+    def frame(value):
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float) and math.isfinite(value):
+            return int(round(value * rate.numerator / rate.denominator))
+        raise ValueError('范围端点必须为整数帧或有限秒数')
+    first, last = frame(start), frame(end)
+    if last <= first:
+        raise ValueError('end 必须大于 start，范围为 [start,end)')
+    return first, last
+
+
+def create_sequence(name, *, fps, duration, open_editor):
+    rate = _sequence_rate(fps)
+    first, last = _sequence_range_frames(0, duration, rate)
+    base = name if '/' in name else f'/Game/Cinematics/{name}'
+    if (not base.startswith('/Game/') or not base.rsplit('/', 1)[1]
+            or '//' in base or unreal.PackageTools.sanitize_package_name(base) != base):
+        raise ValueError('序列名称必须为短名称或完整 /Game/... 包路径')
+    path = base
+    counter = 2
+    while unreal.EditorAssetLibrary.does_asset_exist(path):
+        path = f'{base}_{counter}'
+        counter += 1
+    folder, asset_name = path.rsplit('/', 1)
+    sequence = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+        asset_name, folder, unreal.LevelSequence, unreal.LevelSequenceFactoryNew())
+    if sequence is None:
+        raise RuntimeError(f'无法创建序列 {path}')
+    set_sequence_range(sequence, first, last, fps=rate)
+    if open_editor:
+        unreal.LevelSequenceEditorBlueprintLibrary.open_level_sequence(sequence)
+    return sequence
+
+
+def set_sequence_range(sequence, start, end, *, fps=None):
+    if sequence is None:
+        raise ValueError('找不到 LevelSequence')
+    rate = sequence.get_display_rate() if fps is None else _sequence_rate(fps)
+    first, last = _sequence_range_frames(start, end, rate)
+    with unreal.ScopedEditorTransaction('Set sequence range'):
+        sequence.modify()
+        sequence.get_movie_scene().modify()
+        if fps is not None:
+            sequence.set_display_rate(rate)
+        # Avoid an inverted intermediate range when moving both bounds forward.
+        if first >= sequence.get_playback_end():
+            sequence.set_playback_end(last)
+            sequence.set_playback_start(first)
+        else:
+            sequence.set_playback_start(first)
+            sequence.set_playback_end(last)
+    _refresh_sequencer()
+
+
+def retime_channels(sources, offset=0, scale=1.0, pivot=0):
+    if not sources:
+        return
+    if not math.isfinite(scale) or scale <= 0:
+        raise ValueError('scale 必须为有限正数')
+    if offset is None or pivot is None:
+        raise ValueError('offset 和 pivot 必须显式指定帧数或秒数')
+    # Resolve all rates/times before writing, using each section's sequence.
+    targets = []
+    for channel, section in _unique_channel_sources(sources):
+        sequence = section.get_typed_outer(unreal.LevelSequence)
+        if sequence is None:
+            raise ValueError('重定时通道必须属于 LevelSequence')
+        targets.append((channel, section, _resolve_frame(offset, sequence),
+                        _resolve_frame(pivot, sequence)))
+    with unreal.ScopedEditorTransaction('Retime animation channels'):
+        for channel, section, offset_frame, pivot_frame in targets:
+            section.modify()
+            channel.transform(unreal.FrameNumber(offset_frame), scale, unreal.FrameNumber(pivot_frame),
+                              unreal.SequencerScriptingRange(), _TIME_UNIT)
+    _refresh_sequencer()
+
+
+def keyframe(obj, prop='', value=None, time=None, *, interp='auto', sequence=None, relative=False) -> bool:
     """
     为 obj 在 Sequencer 中打关键帧。
 
@@ -1217,245 +1459,86 @@ def keyframe(obj, prop='', value=None, time=None) -> bool:
         prop: 属性名；空字符串表示 Transform（位置/旋转/缩放）
         value: 新值；None 表示不打值，直接对当前值打帧
         time: 帧号（Display Rate）或秒数；None 表示当前播放头
+        interp: 0 constant / 1 linear / 2 auto / 3 smart_auto / 4 user / 5 break，或字符串/UE枚举
+        sequence: LevelSequence 或资产路径；省略时使用当前聚焦序列
+        relative: 显式值逐分量叠加通道默认值；None 仍使用起始快照
 
     Returns:
         成功返回 True，属性名/类型校验失败返回 False
     """
-    sequence = _get_active_sequence()
-    binding = _ensure_binding(sequence, obj)
+    value = _key_value(prop, value)
+    sequence = _key_sequence(sequence, [time])
     frame = _resolve_frame(time, sequence)
-
-    if _is_transform_prop(prop):
-        if value is not None and not _validate_transform_value(prop, value):
-            return False
-        if value is not None:
-            _apply_transform_value(obj, prop, value)
-        loc, rot, scale = _read_transform_values(obj)
-        section = _get_or_create_transform_section(binding)
-        if not _key_transform(section, frame, loc, rot, scale, prop):
-            return False
-    else:
-        validated = _validate_property_keyframe(obj, binding, prop, value)
-        if not validated:
-            return False
-        current, kind = validated
-        if value is not None and not _try_write_property(obj, prop, value):
-            return False
-        section = _get_or_create_property_section(binding, prop, kind)
-        if not section:
-            return False
-        if not _key_property_channels(section, frame, current, kind):
-            return False
-
+    context = _prepare_keyframe(obj, prop, value, sequence, relative=relative)
+    if context is None or not _write_keyframe(context, frame, value, _resolve_interp(interp), apply=True, relative=relative):
+        return False
     _refresh_sequencer()
     return True
 
 
+def _unwrap_keyframe_values(context, values, axes):
+    single = {'Rotation.X': ('r', 'roll'), 'Rotation.Y': ('p', 'pitch'), 'Rotation.Z': ('y', 'yaw')}
+    if context.kind == 'transform' and context.prop in single:
+        letter, attribute = single[context.prop]
+        if axes != letter:
+            raise ValueError(f'{context.prop} 只支持 unwrap={letter!r}')
+        def convert(segment):
+            return unwrap_angles(getattr(value, attribute) if isinstance(value, unreal.Rotator)
+                                 else value for value in segment)
+    elif context.kind == 'rotator' or (context.kind == 'transform' and context.prop in _ROTATION_PROPS):
+        def convert(segment):
+            return unwrap_rotations(segment, axes=axes)
+    else:
+        raise ValueError('unwrap 只支持 Rotation 组、旋转单轴或 Rotator 属性')
+    result, segment = [], []
+    for value in values:
+        if value is None:
+            result.extend(convert(segment))
+            result.append(None)
+            segment = []
+        else:
+            segment.append(value)
+    result.extend(convert(segment))
+    return result
+
+
+def keyframes(obj, prop, times, values, *, interp='auto', sequence=None, relative=False, unwrap=False):
+    """批量写键，返回原生 keys；不循环调用 keyframe，不逐键刷新。"""
+    times, values = list(times), [_key_value(prop, value) for value in values]
+    if len(times) != len(values):
+        raise ValueError('times 和 values 长度必须一致')
+    if not times:
+        return []
+    obj = _unwrap_target(obj)
+    targets = list(obj) if isinstance(obj, Iterable) else [obj]
+    if not targets:
+        return []
+    sequence = _key_sequence(sequence, times)
+    frames = [_resolve_frame(time, sequence) for time in times]
+    axes = None if unwrap is False else _rotation_axes('y' if unwrap is True else unwrap)
+    if axes is not None and any(second <= first for first, second in zip(frames, frames[1:])):
+        raise ValueError('unwrap 要求换算后的显示帧严格递增')
+    interp = _resolve_interp(interp)
+    written = _LocatedItems()
+    with unreal.ScopedEditorTransaction('Batch keyframes'):
+        try:
+            for target in targets:
+                context = _prepare_keyframe(target, prop, values[0], sequence, relative=relative)
+                if context is None:
+                    raise ValueError(f'无法为属性 {prop!r} 创建关键帧')
+                samples = _unwrap_keyframe_values(context, values, axes) if axes is not None else values
+                for frame, value in zip(frames, samples):
+                    result = _write_keyframe(context, frame, value, interp, relative=relative)
+                    if not result:
+                        raise ValueError(f'写入属性 {prop!r} 第 {frame} 帧失败')
+                    written.extend(result)
+        finally:
+            _refresh_sequencer()
+    return written
+
+
 def _unwrap_target(obj):
     """解开 mineprep 句柄，得到 Actor / SkeletalMeshComponent"""
-    if hasattr(obj, 'target') and not isinstance(obj, (unreal.Actor, unreal.SkeletalMeshComponent)):
+    if not isinstance(obj, (unreal.Actor, unreal.SceneComponent, Iterable)) and hasattr(obj, 'target'):
         obj = obj.target
     return obj
-
-
-def _resolve_skm(target) -> unreal.SkeletalMeshComponent:
-    """从 Actor 或 SkeletalMeshComponent 得到骨骼网格体"""
-    target = _unwrap_target(target)
-    if isinstance(target, unreal.SkeletalMeshComponent):
-        return target
-    if isinstance(target, unreal.Actor):
-        skm = target.get_component_by_class(unreal.SkeletalMeshComponent)
-        if skm:
-            return skm
-        throw(f'{target.get_actor_label()} 没有 SkeletalMeshComponent')
-    throw(f'target 必须是 Actor 或 SkeletalMeshComponent，当前: {type(target).__name__}')
-
-
-def _resolve_rig_class(rig_class):
-    """None → FKControlRig；路径/蓝图 → Generated Class；类型 → UClass"""
-    if rig_class is None:
-        return unreal.FKControlRig.static_class()
-    if isinstance(rig_class, str) or isinstance(rig_class, unreal.Blueprint):
-        cls = uclass(rig_class)
-        if cls is None:
-            throw(f'无法解析 Control Rig 类: {rig_class}')
-        rig_class = cls
-    if isinstance(rig_class, type) and hasattr(rig_class, 'static_class'):
-        return rig_class.static_class()
-    if isinstance(rig_class, unreal.Class):
-        return rig_class
-    if isinstance(rig_class, unreal.ControlRig):
-        return rig_class.get_class()
-    throw(f'不支持的 rig_class: {type(rig_class).__name__}')
-
-
-def _rig_io(ctype):
-    """按控件类型取 ControlRigSequencerLibrary 的 get/set"""
-    lib = unreal.ControlRigSequencerLibrary
-    T = unreal.RigControlType
-    table = {
-        T.BOOL: (lib.get_local_control_rig_bool, lib.set_local_control_rig_bool),
-        T.FLOAT: (lib.get_local_control_rig_float, lib.set_local_control_rig_float),
-        T.SCALE_FLOAT: (lib.get_local_control_rig_float, lib.set_local_control_rig_float),
-        T.INTEGER: (lib.get_local_control_rig_int, lib.set_local_control_rig_int),
-        T.VECTOR2D: (lib.get_local_control_rig_vector2d, lib.set_local_control_rig_vector2d),
-        T.POSITION: (lib.get_local_control_rig_position, lib.set_local_control_rig_position),
-        T.SCALE: (lib.get_local_control_rig_scale, lib.set_local_control_rig_scale),
-        T.ROTATOR: (lib.get_local_control_rig_rotator, lib.set_local_control_rig_rotator),
-        T.EULER_TRANSFORM: (lib.get_local_control_rig_euler_transform, lib.set_local_control_rig_euler_transform),
-    }
-    pair = table.get(ctype)
-    if not pair:
-        throw(f'不支持的控件类型: {ctype}')
-    return pair
-
-
-def _find_sequencer_control_rig(sequence, track, cls, skm, skm_binding):
-    """查找绑定在指定骨骼网格体轨道上的 Control Rig 实例（同一 Actor 可有多个骨骼网格体，因此按组件绑定匹配）。"""
-    lib = unreal.ControlRigSequencerLibrary
-    skm_id = skm_binding.get_id() if skm_binding else None
-    bound_match = None
-    for proxy in lib.get_control_rigs(sequence):
-        rig = proxy.control_rig
-        if not rig or rig.get_class() != cls:
-            continue
-        if proxy.track == track:
-            return rig
-        binding = proxy.proxy
-        if binding and skm_id is not None and binding.get_id() == skm_id:
-            return rig
-        if bound_match is None and binding:
-            for bound in unreal.LevelSequenceEditorBlueprintLibrary.get_bound_objects(_binding_id(binding)):
-                if bound == skm:
-                    bound_match = rig
-                    break
-    return bound_match
-
-
-class Rig:
-    """Sequencer 上的 Control Rig 句柄。默认 FK；已有轨保持 layered，新建为 layered。"""
-
-    def __init__(self, target, rig_class=None):
-        sequence = _get_active_sequence()
-        skm = _resolve_skm(target)
-        cls = _resolve_rig_class(rig_class)
-        owner = skm.get_owner()
-        if owner:
-            _ensure_binding(sequence, owner)
-        skm_binding = _ensure_binding(sequence, skm)
-
-        lib = unreal.ControlRigSequencerLibrary
-        track = lib.find_or_create_control_rig_track(world(), sequence, cls, skm_binding, True)
-        if not track:
-            throw('无法创建或找到 Control Rig 轨道')
-        _refresh_sequencer()
-
-        control_rig = _find_sequencer_control_rig(sequence, track, cls, skm, skm_binding)
-        if control_rig is None:
-            throw('找不到 Control Rig 实例')
-
-        self.sequence = sequence
-        self.skm = skm
-        self.track = track
-        self.target = control_rig
-
-    def names(self) -> list[str]:
-        """列出控件全名（含模块前缀，如 Spine/body_ctrl）"""
-        hier = self.target.get_hierarchy()
-        return [str(key.name) for key in hier.get_controls(True)]
-
-    def _resolve_name(self, name: str) -> str:
-        """匹配全名、短名、FK 骨骼名（head → head_CONTROL）；撞名则报错"""
-        name = str(name)
-        aliases = {}
-        for full in self.names():
-            keys = {full, full.rsplit('/', 1)[-1]}
-            short = full.rsplit('/', 1)[-1]
-            if short.endswith('_CURVE_CONTROL'):
-                keys.add(short[:-len('_CURVE_CONTROL')])
-            elif short.endswith('_CONTROL'):
-                keys.add(short[:-len('_CONTROL')])
-            for key in keys:
-                aliases.setdefault(key, []).append(full)
-
-        matches = aliases.get(name)
-        if matches is None:
-            folded = name.casefold()
-            matches = next((v for k, v in aliases.items() if k.casefold() == folded), None)
-        if not matches:
-            throw(f'找不到控件: {name}')
-        unique = list(dict.fromkeys(matches))
-        if len(unique) > 1:
-            throw(f'控件名 {name} 不唯一: {unique}')
-        return unique[0]
-
-    def _frame(self, time) -> unreal.FrameNumber:
-        return unreal.FrameNumber(_resolve_frame(time, self.sequence))
-
-    def _type(self, full_name):
-        hier = self.target.get_hierarchy()
-        key = unreal.RigElementKey(type=unreal.RigElementType.CONTROL, name=full_name)
-        element = hier.find_control(key)
-        if element is None:
-            throw(f'找不到控件: {full_name}')
-        settings = element.get_control_settings() if hasattr(element, 'get_control_settings') else element.settings
-        return settings.control_type
-
-    def _read(self, full_name, frame):
-        getter, _ = _rig_io(self._type(full_name))
-        return getter(self.sequence, self.target, full_name, frame, _TIME_UNIT)
-
-    def _coerce(self, full_name, ctype, value, frame):
-        T = unreal.RigControlType
-        if ctype == T.EULER_TRANSFORM:
-            if isinstance(value, unreal.EulerTransform):
-                return value
-            cur = self._read(full_name, frame)
-            if isinstance(value, unreal.Rotator):
-                return unreal.EulerTransform(location=cur.location, rotation=value, scale=cur.scale)
-            if isinstance(value, unreal.Vector):
-                return unreal.EulerTransform(location=value, rotation=cur.rotation, scale=cur.scale)
-            if isinstance(value, unreal.Transform):
-                return unreal.EulerTransform(
-                    location=value.translation,
-                    rotation=value.rotation.rotator(),
-                    scale=value.scale3d,
-                )
-        if ctype == T.ROTATOR and isinstance(value, unreal.EulerTransform):
-            return value.rotation
-        if ctype == T.POSITION and isinstance(value, unreal.EulerTransform):
-            return value.location
-        return value
-
-    def _write(self, full_name, value, frame, set_key: bool):
-        ctype = self._type(full_name)
-        value = self._coerce(full_name, ctype, value, frame)
-        _, setter = _rig_io(ctype)
-        setter(self.sequence, self.target, full_name, frame, value, _TIME_UNIT, set_key)
-        return value
-
-    def get(self, name, time=None):
-        """读取控件值；time=None 为播放头（int 帧 / float 秒），不修改姿态或关键帧。"""
-        full = self._resolve_name(name)
-        return self._read(full, self._frame(time))
-
-    @undo
-    def set(self, name, value, time=None):
-        """写入控件值但不打帧"""
-        full = self._resolve_name(name)
-        self._write(full, value, self._frame(time), False)
-        _refresh_sequencer()
-        return self
-
-    @undo
-    def key(self, name, value=None, time=None):
-        """打关键帧；value=None 则对当前值打帧"""
-        full = self._resolve_name(name)
-        frame = self._frame(time)
-        if value is None:
-            value = self._read(full, frame)
-        # 刚创建的轨第一次 set_key 只写 Rig 值，先 set 再 key 才会进 Sequencer
-        self._write(full, value, frame, False)
-        self._write(full, value, frame, True)
-        _refresh_sequencer()
-        return self

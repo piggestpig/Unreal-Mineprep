@@ -254,7 +254,7 @@ class PreparedWorld:
     biome_cell_size: int = 4
     biome_seconds: float = 0.0
     biome_import_seconds: float = 0.0
-    vegetation_tints: tuple = ()  # frozen (biome ID, linear RGB) pairs
+    vegetation_tints: tuple = ()  # frozen (biome ID, linear RGB + retention) pairs
     chunk_count: int = 1
     base_reused: bool = False
     type_group_count: int = 1

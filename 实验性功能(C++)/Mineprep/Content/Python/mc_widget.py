@@ -10,7 +10,7 @@ import random
 import weakref
 import mcvars
 from pathlib import Path
-from mc_utils import (construct, uasset, enum, uclass, copy, debug, SafeList,
+from mc_utils import (construct, uasset, enum, uclass, debug, SafeList,
                       resolve_soft, get_tex_size, get_hotkey_object)
 from mc_config import paths, wclass
 from mc_localization import Internationalization, I18N
@@ -1423,36 +1423,18 @@ class Layout():
         return Layout(add_widget(self.target, widget, props, **kwargs), public=self._public_)
 
 
-def _run_ui_script(script, context=None):
+def _run_ui_script(script):
     """每次执行独立命名空间；回调保留本次变量，类的模块和默认保存路径不变。"""
     code = compile(script, '<mineprep.ui>', 'exec') if isinstance(script, str) else script
     import mineprep
     namespace = globals().copy()
     namespace['mineprep'] = mineprep
-    namespace['context'] = context
-    namespace['layout'] = mineprep.Layout(context.find_child_widget_by_name('Root')) if context is not None else mineprep.Layout()
+    namespace['layout'] = mineprep.Layout()
     exec(code, namespace)
 
 
-def ui(script='', save_path=None, run=True):
-    """创建自定义控件；每次运行的脚本变量独立。save_path 输入名称时保存到/Game/mc/mods/。"""
+def ui(script=''):
+    """创建自定义控件；每次运行的脚本变量独立。"""
     if mcvars.DebugMode:
         unreal.log(script)
-
-    save_script = f"import mc_widget\nmc_widget._run_ui_script({script!r}, context)\n"
-    compiled_code = compile(script, '<mineprep.ui>', 'exec')
-
-    if save_path:
-        #是否是包含'/'的路径
-        if not '/' in save_path:
-            save_path = '/Game/mc/mods/' + save_path
-        widget = copy(wclass.mod_panel, save_path)
-        bp = unreal.get_default_object(uclass(widget))
-        bp.set_editor_property('Script', save_script)
-        bp.set_editor_property('TabDisplayName', '')
-        subsystem = unreal.get_editor_subsystem(unreal.EditorUtilitySubsystem)
-        if run:
-            subsystem.spawn_and_register_tab_with_id(widget, str(random.randint(0, 999999999)))
-        return widget
-    elif run:
-        _run_ui_script(compiled_code)
+    _run_ui_script(script)

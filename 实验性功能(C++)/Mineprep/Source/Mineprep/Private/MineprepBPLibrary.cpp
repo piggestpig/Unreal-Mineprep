@@ -3,6 +3,7 @@
 #include "MineprepBPLibrary.h"
 #include "Mineprep.h"
 #include "MineprepSubsystem.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/GameViewportClient.h"
@@ -38,6 +39,25 @@
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
 #include "Widgets/SToolTip.h"
+
+bool Umineprep::SetISMCustomData(UInstancedStaticMeshComponent* Component, const TArray<float>& Values, int32 NumFloats)
+{
+    if (!IsInGameThread() || !IsValid(Component) || NumFloats <= 0
+        || int64(Component->GetInstanceCount()) * NumFloats != Values.Num())
+    {
+        return false;
+    }
+    for (float Value : Values)
+    {
+        if (!FMath::IsFinite(Value))
+        {
+            return false;
+        }
+    }
+    Component->Modify();
+    Component->SetNumCustomDataFloats(NumFloats);
+    return Values.IsEmpty() || Component->SetCustomData(0, Component->GetInstanceCount() - 1, MakeArrayView(Values), true);
+}
 
 struct FMineprepCaptureSource
 {

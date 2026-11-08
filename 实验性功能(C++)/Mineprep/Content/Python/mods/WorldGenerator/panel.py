@@ -141,7 +141,7 @@ class WorldGenerator(PreviewPanel, PaintPanel, MaskPanel, BiomeMapPanel, Heightm
         if self.view in ('temperature', 'humidity') and self.view not in self.pack.fields:
             self.view = 'landscape'
         self._library = PresetLibrary(pack_id=self.pack.id)
-        self._library_stamp, self._preset_poll_at = self._library.stamp(), 0.
+        self._library_stamp, self._text_poll_at = self._library.stamp(), 0.
         if self.view in ('caves', 'cave_sections') and self.pack.density is None:
             self.view = 'landscape'
         if self.view == 'underground_water' and self.pack.fluids is None:
@@ -790,10 +790,8 @@ class WorldGenerator(PreviewPanel, PaintPanel, MaskPanel, BiomeMapPanel, Heightm
         self._schedule.due = time.monotonic() + .3 if checked and not self._curves_pending else None
 
     def _refresh_pack_text(self):
-        texts = text_catalog(self.pack.name)
         language = unreal.InternationalizationLibrary.get_current_language()
-        changed = texts.refresh()
-        if not changed and language == getattr(self, '_text_language', None):
+        if language == getattr(self, '_text_language', None):
             return
         self._text_language = language
         for cls in {type(g) for g in self.groups.values()}:
@@ -829,16 +827,12 @@ class WorldGenerator(PreviewPanel, PaintPanel, MaskPanel, BiomeMapPanel, Heightm
             self._schedule.curves_due = None
             if self._curves_pending:
                 self.apply_curves()
-        if time.monotonic() >= self._preset_poll_at:
-            self._preset_poll_at = time.monotonic() + 1.
+        if time.monotonic() >= self._text_poll_at:
+            self._text_poll_at = time.monotonic() + 1.
             try:
                 self._refresh_pack_text()
             except (OSError, ValueError, KeyError) as exc:
                 self._set_status(str(exc))
-            stamp = self._library.stamp()
-            if stamp != self._library_stamp:
-                self._library_stamp = stamp
-                self._refresh_preset_labels()
         if self._ui_due is not None and time.monotonic() >= self._ui_due:
             self._save_ui()
         prefs, draft = self._saving.ready(time.monotonic())
@@ -853,6 +847,7 @@ class WorldGenerator(PreviewPanel, PaintPanel, MaskPanel, BiomeMapPanel, Heightm
         if size.y > 250 and size.y != getattr(self, '_frame_height', None):
             self._frame_height = size.y
             self._frame.set_height_override(size.y)
+        self._paint_tick()
         self._transform()
         cells = int(self.range_options.Size.x) * int(self.range_options.Size.y)
         if self._schedule.due is not None and cells > 512 ** 2:

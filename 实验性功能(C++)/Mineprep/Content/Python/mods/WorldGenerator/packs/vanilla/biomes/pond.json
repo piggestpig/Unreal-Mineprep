@@ -1,5 +1,6 @@
 {
   "id": "pond",
+  "vegetation_tint": [0.8, 1.15, 0.7, 0.5],
   "color": "#538D92",
   "climate": [{"water_kind": [4, 4]}],
   "surface": [

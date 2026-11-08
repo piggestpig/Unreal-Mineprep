@@ -1,5 +1,23 @@
 # Python 调用
 
+对于统一骨架的宽臂／细臂玩家，可以显式选用 `biped_v1`。它处理 `hip → waist`、坐标转换和连续欧拉角，并以 FK Replace 模式写入可编辑的关键帧。
+
+```python
+import mineprep
+from mods.BedrockAnimator import ops
+
+actor = mineprep.actor('BipedWave_Wide').target
+seq = mineprep.new_sequence('BasicClap_FK', fps=60, duration=1)
+job = ops.apply_animation(
+    'E:/mc/动画/basic_clap.animation.json', actor,
+    sequence=seq.target, profile='biped_v1', resize_playback=True,
+)
+```
+
+`biped_v1` 要求 `root → waist → body → head/arms`、双腿直挂 `root`，以及对齐的骨骼参考轴。它与自定义 `bone_map` 二选一。源动画省略的标准骨骼写入参考姿态偏移，避免沿用上一段动作的控件值。对新序列可通过 `resize_playback=True` 将结束帧延长到最后一个采样之后。现有面板仍使用下文的骨骼映射流程。
+
+## 自定义骨骼映射
+
 在 UE 编辑器的 Python 中可以直接转换、烘焙动画，不必打开本模组面板。传入角色和关卡序列，避免依赖当前选择。下面的 `actor` 是已有的骨骼网格体 Actor，JSON 路径请换成自己的文件。
 
 ```python

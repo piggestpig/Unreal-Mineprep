@@ -1,7 +1,6 @@
 """Numeric image editing on the existing map; RTs are display-only."""
 from pathlib import Path
 import json
-import time
 
 import numpy as np
 import mineprep
@@ -31,7 +30,7 @@ class PaintPanel:
         self.paint_tools = MapPaintTools()
         self._paint_documents = {}
         self._paint_renderer = None
-        self._paint_due = 0.
+        self._paint_source_stamps = {}
         self._paint_hover = None
         self._paint_new_hint = None
         self._paint_biome_choice = None
@@ -72,26 +71,32 @@ class PaintPanel:
         state.pop('Enabled')
         if self._custom_image_type == 'biome_map':
             state['pack'] = self.pack.fingerprint
-        if self._custom_image_type != 'biome_map' and c.SourceKind=='asset':
-            texture = self._heightmap_texture.Texture if self._custom_image_type=='heightmap' else self._mask_textures[self._custom_image_type].Texture
-            state['source'] = (texture.blueprint_get_texture_source_id_string()
-                               if texture is not None and unreal.SystemLibrary.is_valid(texture) else None)
-        elif c.Path:
-            try:
-                stat = Path(c.Path).stat()
-                state['stamp'] = (stat.st_size,stat.st_mtime_ns,stat.st_ctime_ns)
-            except OSError:
-                state['stamp'] = None
         if not c.Path and (self._custom_image_type == 'biome_map' or not c.AssetPath):
             r = self.range_options
             state['Origin'],state['Size'] = [int(r.Origin.x),int(r.Origin.y)],[int(r.Size.x),int(r.Size.y)]
         return state
 
-    def _paint_document(self):
+    def _paint_source_stamp(self):
+        """Check external edits only when opening an input or starting a stroke."""
+        c = self._paint_options()
+        if self._custom_image_type != 'biome_map' and c.SourceKind=='asset':
+            texture = self._heightmap_texture.Texture if self._custom_image_type=='heightmap' else self._mask_textures[self._custom_image_type].Texture
+            return (texture.blueprint_get_texture_source_id_string()
+                    if texture is not None and unreal.SystemLibrary.is_valid(texture) else None)
+        elif c.Path:
+            try:
+                stat = Path(c.Path).stat()
+                return stat.st_size,stat.st_mtime_ns,stat.st_ctime_ns
+            except OSError:
+                return None
+
+    def _paint_document(self, *, check_source=False):
         kind = self._custom_image_type
         identity = self._paint_identity()
         current = self._paint_documents.get(kind)
-        if current is not None and (current[0]==identity or current[1].unsaved):
+        previous_stamp = self._paint_source_stamps.get(kind)
+        stamp = self._paint_source_stamp() if check_source or current is None or current[0]!=identity else previous_stamp
+        if current is not None and ((current[0]==identity and stamp==previous_stamp) or current[1].unsaved):
             return current[1]
         c = self._paint_options()
         source = self._paint_source()
@@ -117,6 +122,7 @@ class PaintPanel:
             doc = (BiomeCanvas(self.pack,region,palette=self._biome_map_palette()) if kind=='biome_map'
                    else Canvas(kind,region))
         self._paint_documents[kind] = self._paint_identity(),doc
+        self._paint_source_stamps[kind] = stamp
         self._paint_failed = False
         return doc
 
@@ -196,7 +202,7 @@ class PaintPanel:
             self._set_status(i18n('当前资源包不支持此绘图项','This pack does not support this paint input'))
             return False
         try:
-            doc = self._paint_document()
+            doc = self._paint_document(check_source=True)
             if doc.value_at(point) is None:
                 return False
             t = self.paint_tools
@@ -242,6 +248,7 @@ class PaintPanel:
         finally:
             self._suspend = previous
         self._paint_documents[doc.kind] = self._paint_identity(),doc
+        self._paint_source_stamps[doc.kind] = self._paint_source_stamp()
         if doc.categorical:
             self._biome_map_changed()
             if palette_changed and self.page=='custom' and self._custom_image_type=='biome_map':
@@ -338,12 +345,6 @@ class PaintPanel:
         if not self.paint_tools.Visible:
             doc.invalidate_preview()
         if self.paint_tools.Visible and not self._paint_failed and not self._preview_hidden:
-            try:
-                self._paint_flush(doc)
-            except Exception as exc:
-                self._paint_failed = True
-                self._set_status(i18n('绘图显示失败：{error}','Paint display failed: {error}').format(error=str(exc)))
-                return
             a = doc.region
             box = mapping.box(((a.x0,a.z0),(a.x0+a.width-1,a.z0+a.depth-1)))
             if box is not None:
@@ -381,17 +382,29 @@ class PaintPanel:
         else:
             self._paint_hint.set_text('')
 
+    def _paint_tick(self):
+        """Submit pending segments once per Slate frame, never per mouse event."""
+        if not self._paint_active() or not self._paint_supported() or not self.paint_tools.Visible or self._paint_failed or self._preview_hidden:
+            return
+        current = self._paint_documents.get(self._custom_image_type)
+        if current is None or (current[0]!=self._paint_identity() and not current[1].unsaved):
+            return
+        try:
+            self._paint_flush(current[1])
+        except Exception as exc:
+            self._paint_failed = True
+            self._set_status(i18n('绘图显示失败：{error}','Paint display failed: {error}').format(error=str(exc)))
+
     def _paint_flush(self, doc):
         renderer = self._paint_renderer
         if renderer is not None and renderer.document is doc and not doc.preview_reset:
-            if not doc.preview_commands or time.monotonic()<self._paint_due:
+            if not doc.preview_commands:
                 return
         if renderer is None:
             from .paint_render import PaintRender
             renderer = self._paint_renderer = PaintRender(mineprep.world())
             self._paint_image.set_brush_from_material(renderer.overlay)
         renderer.flush(doc)
-        self._paint_due = time.monotonic()+1/30
 
     def _release_paint_rt(self):
         if self._paint_renderer is not None:

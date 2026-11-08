@@ -17,6 +17,7 @@ from mods.WorldGenerator.painting import Canvas, Brush
 from mods.WorldGenerator.paint_render import PaintRender
 from mods.WorldGenerator.biome_paint import BiomeCanvas
 from mods.WorldGenerator import api
+from mods.WorldGenerator.paint_panel import PaintPanel
 
 
 def _read(renderer, target):
@@ -58,9 +59,17 @@ def check():
         identities = tuple(v.get_path_name() for v in renderer.targets)
         yield
         verify('initial float32, negative and non-square pixels',doc)
+        submit = PaintPanel()
+        submit._paint_renderer = renderer
         doc.begin((-15,14),Brush(-18,13.5,.35,.6))
+        submit._paint_flush(doc)
+        passes = renderer.passes
         doc.stroke.segment((-15,14),(48,27))
-        renderer.flush(doc)
+        submit._paint_flush(doc)
+        assert renderer.passes > passes, 'a second dirty submission was time-throttled'
+        passes = renderer.passes
+        submit._paint_flush(doc)
+        assert renderer.passes == passes, 'clean input submitted another pass'
         yield
         verify('soft negative stroke',doc)
         before = doc.values.copy()

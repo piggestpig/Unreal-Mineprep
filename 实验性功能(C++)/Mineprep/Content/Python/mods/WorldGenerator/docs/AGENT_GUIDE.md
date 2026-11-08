@@ -426,7 +426,7 @@ job = api.prepare(target, backend='pcg', merge='cuboids', name='MyScene',
 | `chunk_count` / `type_group_count` | 均为`1`；前者仅ISM空间区块，后者仅GPU模型分组；不是每种方块的Actor数量 |
 | `biome_texture` / `biome_cell_size` | `True` / `4`，每像素覆盖1～16格；ISM分区数大于1时关闭BCT；独立作品没有地形时也关闭 |
 | `biome_color_mode` / `biome_color_power` | `'rgb'` / `1.`；模式`rgb/hsv`，对正数色板先按群系色彩指数乘方，HSV再取负编码。协议见[OUTPUT](OUTPUT.md) |
-| `vegetation_tints` / `vegetation_hsv` | `None`，按群系ID覆盖对应三分量；缺项跟随快照，不改变几何 |
+| `vegetation_tints` / `vegetation_hsv` | `None`，按群系ID覆盖RGB[A]／HSV；RGB缺A时补0.5，HSV保持三分量；缺项跟随快照，不改变几何 |
 | `block_materials` | `None`，按方块ID覆盖`emission/lighting`，显式0有效，字段为None时取消该覆盖；见[R39](OUTPUT.md) |
 | `max_cells` / `max_instances` | `16777216` / `4000000`，二维列数／原始输出上限。后者不是合并后的数量 |
 | `max_preprocess_cells` | `None`，可选宽×深×输出高度上限，任务入口检查；面板默认2147483647 |

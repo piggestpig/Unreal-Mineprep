@@ -1,5 +1,6 @@
 {
   "id": "river",
+  "vegetation_tint": [0.85, 1.2, 0.85, 0.5],
   "color": "#287FAA",
   "climate": [{"water_kind": [2, 2]}],
   "notes": "Newly submerged river corridors; high dry valleys retain land biomes.",

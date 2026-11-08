@@ -1,7 +1,7 @@
 {
   "id": "grassland",
   "color": "#5B9143",
-  "vegetation_tint": [1.0, 1.0, 1.0],
+  "vegetation_tint": [1.05, 1.25, 0.7, 0.5],
   "fallback": true,
   "climate": [],
   "notes": "Used only outside every ordinary climate box, independent of fallback position.",

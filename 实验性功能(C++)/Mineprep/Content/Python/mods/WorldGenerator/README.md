@@ -1,4 +1,4 @@
-# WorldGenerator 0.76.0
+# WorldGenerator 0.77.0
 
 用 Python／NumPy 生成 Minecraft 风格的大场景，输出到 UE 的 ISM、PCG 或 Niagara，用于动画渲染。不追求与原版种子逐方块一致。
 

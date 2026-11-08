@@ -1,7 +1,7 @@
 {
   "id": "snowy_taiga",
   "color": "#B7CBC6",
-  "vegetation_tint": [0.75, 0.85, 1.05],
+  "vegetation_tint": [0.85, 1.0, 1.05, 0.5],
   "vegetation_hsv": [1.04, 0.65, 1.05],
   "climate": [{"snow_cover": [0.5, null], "humidity": [-0.2, null], "forest_region": [-0.5, null]}],
   "surface": [

@@ -40,10 +40,12 @@ Read focused sections relevant to the task, then matching source as needed.
 | UI / persistence / paint | [ui.md](ui.md), [pitfalls/ui.md](pitfalls/ui.md) | `ui()`, PropertyGroup, per-execution state |
 | PropertyGroup metadata / native conditions | [property-metadata.md](property-metadata.md) | Metadata keys and Python declaration limits; callbacks/persistence stay in ui.md |
 | NBT / schematic / procedural blocks | [structure.md](structure.md), [pitfalls/structure.md](pitfalls/structure.md) | `Blocks`, `spawn_structure`, coordinates and units |
+| Low-poly / free instance modeling | [lowpoly.md](lowpoly.md) | `LowPolyModel`, groups/pivots, primitive geometry, eight-channel appearance and ISM output |
 | Terrain / biomes / buildings composed with terrain | [worldgenerator.md](worldgenerator.md) | WorldGenerator public API, batch building, offline checks and previews |
 | Bake reusable block models | [structure.md](structure.md#blocksbake-one-reusable-model) | `Blocks.bake`, culling, compatible tiled UVs, recipe identity |
 | Kept tool / callable Mod operations | [mods.md](mods.md) | Start from `mods/minimal.py` or `mods/template.py`; split only as needed |
 | Level Sequence / Control Rig / AnimSequence | [api.md](api.md), [pitfalls/anim.md](pitfalls/anim.md) | Control Rig belongs on an SKM component; AnimSequence is a different API |
+| Fixed-resolution image / video rendering | [api.md](api.md#rendering-renderpanel), [remote.md](remote.md#viewport-screenshot-agent-can-read-the-png) | RenderPanel presets; alternative when MCP scene capture fails |
 | Mesh merge / generated mesh import | [api.md](api.md), [pitfalls/mesh.md](pitfalls/mesh.md) | `merge_skm`, materials, UVs and skinning |
 | Texture import / black sample / render target | [pitfalls/common.md](pitfalls/common.md#textures--rt) | Compilation, source dimensions, painted-RT preservation |
 | VAT | [pitfalls/vat.md](pitfalls/vat.md) | VAT-specific resource and bake contracts |
@@ -52,11 +54,14 @@ Read focused sections relevant to the task, then matching source as needed.
 | Blueprint defaults / components | [remote.md](remote.md#blueprint-defaults-and-components) | Child template only; construction-script variables; compile can drop a CDO write |
 | Experimental C++ | [cpp.md](cpp.md) | Verify installed bindings before use |
 
-## Testing and essential boundaries
+## Essential boundaries
 
 - Unreal APIs and widgets run on the game thread. A Slate callback must yield
   before work requiring another engine frame; sleeps and same-frame polling do
   not advance that frame. See [parallel.md](parallel.md) and [remote.md](remote.md).
+- For async handoff of UE callback structs containing short-lived UObject references
+  (e.g. MRQ `MoviePipelineOutputData`), copy needed paths/flags into plain Python
+  data inside the callback; do not retain the struct or nested UE wrappers across PIE teardown/GC.
 - Instantiate PropertyGroup before `layout.prop` and before Mod's `super().__init__`
   calls `draw()`. Never call `redraw()` from inside `draw()`; use `Layout.hide` to toggle visibility.
 - Each `ui()` run has its own namespace; put imports inside the script string.
@@ -73,17 +78,26 @@ Read focused sections relevant to the task, then matching source as needed.
 - Pixel-exact data textures such as BPT/BRT require linear colour, nearest filtering, no mipmaps and `never_stream=True` (FP32 for BPT/BRT); `prep_texture()` alone does not set this data policy.
 - A successful transport or log line does not prove a mutation succeeded. Query
   scene/asset postconditions before retrying operations that could duplicate objects.
-  If no editor connection is available, provide the script for Output Log's **Python**
-  console and state that it was not executed.
-- Run checks proportional to the change rather than a full test suite on every task.
-- Small tasks do not need a screenshot. Capture only when the user asks, or when
-  verifying a complex visual result such as modeling or UI layout. See [remote.md](remote.md).
+
+## Checks
+
+A straightforward change that follows an existing pattern needs no test. Do not
+add defensive branches, stubs, or fixtures so a test can pass. If a run fails,
+replace that approach with a simpler correct implementation.
+
+When a check is useful, pick the cheaper single route and batch it: one MCP call
+if the editor is connected, or one offline run for pure data. Do not do both, and
+do not start a new suite for one change. Spend the remaining effort on the feature.
+Capture a screenshot only when the user asks, or when the result is a layout or
+model that has to be seen. If the editor is not connected, give the Python console
+snippet and say it was not run.
 
 ## Source map
 
-The public facade is `mineprep.py`. Follow its imports to `mc_widget` / `mc_mod`
-(UI and lifecycle), `mc_sequencer` (animation), `mc_structure` / `mc_importer`
-(blocks and models), `mc_mesh` (baking and merging), `mc_prep` (textures), and
+The public facade is `mineprep.py`. Follow its imports to `mc_handle` (scene and
+Sequencer handles), `mc_rig` (Control Rig), `mc_sequencer` (Sequencer operations),
+`mc_widget` / `mc_mod` (UI and lifecycle), `mc_structure` / `mc_importer`
+(blocks and models), `mc_lowpoly` (free low-poly recipes and instancing), `mc_mesh` (baking and merging), `mc_prep` (textures), and
 `mc_parallel` (scheduling). `mcptools.py` implements the editor bridge;
 `Source/Mineprep/` contains C++ bindings. References identify relevant functions.
 

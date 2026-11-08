@@ -88,9 +88,21 @@ loc = Internationalization(namespace='MyTool', file=r'E:\Translations\tool.json'
 title = loc.start('开始', 'Start')
 ```
 
+Alternatively, use `@` on `i18n`, `I18N` or an existing node:
+
+```python
+loc = i18n @ r'E:\Translations\tool.json'
+settings = I18N['MyTool'].settings @ r'E:\Translations\settings.json'
+speed = settings.Speed('Speed', '速度')
+```
+
+`@` returns a copy, retaining languages, namespace and key without changing the
+original node. Use parentheses for an immediate call: `(i18n @ path).start('开始')`.
+On a `from_data()` node, it selects file collection without exporting the memory catalog.
+
 `file` accepts a string or Path and means a JSON file, not a Python source file.
-Relative paths resolve against the working directory at construction. The first
-collected entry creates the file and missing parent directories; construction or
+Relative paths resolve against the working directory at construction or when `@`
+is used. The first collected entry creates the file and missing parent directories; construction or
 an empty call creates nothing. Chained nodes, namespace/key overrides and
 `Settings.localize(loc.params)` retain the path. Without `file`, mod-root discovery
 is automatic; non-file scripts remain memory-only.

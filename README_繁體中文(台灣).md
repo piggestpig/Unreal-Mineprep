@@ -289,11 +289,13 @@ Mineprep 0.7-pre1有以下內建模組（目前仍處於早期開發階段，可
   - Mineprep的簡體中文代號從`zh-Hans`改為`zh`，使得繁體中文能沿著“zh ← zh-Hant ← zh-Hant-HK”這條鏈回退。
   - 舊的 bilingual('中文', 'English') 函式可以無縫升級為`i18n('中文', 'English')`。更簡潔的寫法是`i18n('中文')`或`I18N('English')`
   - i18n能在執行時自動檢測模組位置並收集文字，每個模組有獨立的名稱空間
+  - i18n返回unreal.Text，可以使用.format()方法進行格式化。[官方文件](https://dev.epicgames.com/documentation/unreal-engine/text-localization-in-unreal-engine?lang=zh-CN)介紹了高階用法，例如"There {NumCats}|plural(one=is,other=are) {NumCats} {NumCats}|plural(one=cat,other=cats)"
+  - 修改i18n.json後，需要使用頂部選單欄的“重新載入 Python API”或mineprep.reload()來重新整理快取
   - 直接呼叫`PropertyGroup.localize()`能收集整個屬性集的文字，它相當於以英文變數名作為主語言的PropertyGroup.localize(I18N)
   - 關於自訂檔案路徑、namespace和key的更多用法見[Mineprep Wiki](https://github.com/piggestpig/Unreal-Mineprep/wiki/Mineprep-Python-API)
   - 安裝最新的實驗性功能後，註冊本地化文字的速度更快
 
-> 如果要找出Mineprep裡最大的屎山，非本地化系統莫屬。現在所做的工作都是在給它打補丁，已經搞出3套不同的系統了 qwq
+> 如果要找出Mineprep裡最大的屎山，非本地化系統莫屬。現在所做的工作都是在給它打補丁，已經搞出3套不同的系統了qwq
 
 > UE自帶的本地化控制板非常難用，總是收集不到文字，甚至還要編譯，我至今沒搞明白 為什麼給人看的文字需要編譯 (⊙ˍ⊙)？相比之下，Polyglot真是神中神，不僅能動態注入翻譯，還可以修復引擎自帶的機翻。只可惜，前兩年我從未聽說過它，在手搓翻譯的道路上一去難反
 
@@ -303,7 +305,7 @@ Mineprep 0.7-pre1有以下內建模組（目前仍處於早期開發階段，可
 
 - 更新了MC世界生成器模組
   - 新增類似於MiEX的LOD功能，可以用2x2或4x4的較低精度生成世界。左鍵畫方框挖空區域，右鍵畫方框設定核心區域；核心內採用1x1高精度，核心外採用2x2或4x4低精度。啟用LOD將小幅加快生成速度，大幅減少實例數、提高渲染效能
-  - 新增繪製生態域的功能
+  - 新增繪製自訂紋理的功能，包括高度圖、植被分佈、留空區域、生態域分佈圖
 - 修復了一些舊方塊模型，將原點居中，塗上頂點色
 - Mover Pawn NPC現已支援攀爬和可變重力方向
 - 修復了匯入MC結構時，若生成的紋理尺寸為2的冪，會使GPU場景損壞的bug。我直接關閉了稀疏結構紋理的Mipmap和紋理流送。

@@ -9,7 +9,7 @@
 | 大世界：固定LOD、留空、统一粗生成、洞穴、下界与末地 | [COARSE](COARSE.md) |
 | 自定义高度图 | [HEIGHTMAP](HEIGHTMAP.md) |
 | 用颜色分区指定陆地群系 | [BIOME_MAP](BIOME_MAP.md) |
-| 地图绘图：高度、植被密度和景物净空 | [PAINTING](PAINTING.md) |
+| 地图绘图：高度、植被密度、景物净空与群系分类 | [PAINTING](PAINTING.md) |
 | 植被分布与留空区域 | [MASKS](MASKS.md) |
 | 制作内容包：群系、树形、地形字段 | [CONTENT_PACK_GUIDE](CONTENT_PACK_GUIDE.md) |
 | 内容包全部声明 | [EXTENSIONS](EXTENSIONS.md) |

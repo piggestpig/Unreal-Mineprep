@@ -48,6 +48,7 @@
 
 class UTextureRenderTarget2D;
 class UWidget;
+class UInstancedStaticMeshComponent;
 
 UENUM(BlueprintType)
 enum class EMineprepPostProcessStage : uint8
@@ -76,6 +77,10 @@ UCLASS()
 class Umineprep : public UBlueprintFunctionLibrary
 {
 	GENERATED_UCLASS_BODY()
+
+	/** Write a complete per-instance custom-data buffer in one game-thread call. */
+	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")
+	static bool SetISMCustomData(UInstancedStaticMeshComponent* Component, const TArray<float>& Values, int32 NumFloats = 8);
 
 	//设置编辑器UI缩放
 	UFUNCTION(BlueprintCallable, Category = "Mineprep|实验性功能(C++)")

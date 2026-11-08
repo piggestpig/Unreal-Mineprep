@@ -1,7 +1,7 @@
 {
   "id": "desert",
   "color": "#DAC17E",
-  "vegetation_tint": [1.45, 0.9, 0.65],
+  "vegetation_tint": [1.7, 1.4, 0.65, 0.5],
   "vegetation_hsv": [0.88, 0.85, 1.0],
   "climate": [{"temperature": [0.2, null], "humidity": [null, -0.2]}],
   "surface": [{"when": {"surface_rock": {"min": 0}}, "top": "sandstone", "under": "sandstone"}, {"top": "sand", "under": "sand", "deep": "sandstone"}],

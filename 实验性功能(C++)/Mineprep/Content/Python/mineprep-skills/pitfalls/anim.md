@@ -47,3 +47,41 @@ root movement according to whether the requested animation uses root motion.
 
 Inspect installed control-type enums instead of assuming their names. Use
 `pitch=` / `yaw=` / `roll=` for `Rotator`.
+
+## Numeric Bedrock import
+
+`mods.BedrockAnimator.ops.apply_animation()` reads the first animation and samples
+finite numeric constants / XYZ arrays / linear time-keyed channels at the target
+sequence's display rate (examples use 60 fps). Position, rotation and scale are
+interpolated independently before composing a full EulerTransform per control.
+Molang, pre/post discontinuities, nonlinear interpolation, sound/particle timelines
+and animation controllers are unsupported and fail before clearing existing keys.
+The importer replaces the selected Rig track's keys; missing controls are reported
+as skipped. The last sample is included in the playback range.
+
+The existing signed-axis `bone_map` describes a known rig's coordinate mapping;
+it is not a general Bedrock rotation-order or skeleton retargeter. A different
+reference hierarchy/basis needs explicit transform conversion before batch writing.
+FK Replace combines the control transform with the reference offset; animation
+position is an offset, not the bone's absolute reference position. Scale is a
+multiplier. Do not add reference translations twice.
+
+For one control, compile all values first, then write in one batch (60 fps):
+
+```python
+rig = mineprep.actor('Player').rig()
+# Newly created tracks require yielding an editor frame before this separate call.
+rig.keyframes('head', [0, 30, 60], [
+    unreal.Rotator(yaw=0), unreal.Rotator(yaw=25), unreal.Rotator(yaw=0),
+])
+```
+
+A unified player may use `root -> waist -> body -> head/arms`, with legs directly
+under root. Mapping `hip` to `waist` is an explicit player-profile decision, not
+a rule for all mobs. Verify handedness, pivots and rest axes before reusing a clip.
+
+For the unified Mineprep player, pass `profile='biped_v1'` to
+`apply_animation(path, actor, sequence=seq.target, resize_playback=True)`.
+The profile uses FK Replace, converts the reference basis, and selects continuous
+Euler representations before writing. Use the profile or a custom `bone_map`.
+See the [BedrockAnimator example](../../mods/BedrockAnimator/README.md).
