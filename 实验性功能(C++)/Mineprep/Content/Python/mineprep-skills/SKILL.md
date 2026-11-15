@@ -37,14 +37,15 @@ Read focused sections relevant to the task, then matching source as needed.
 | Overview / installation | [intro.md](intro.md) | Verify current product facts when needed |
 | API / console / reload | [api.md](api.md) | Public helpers, defaults and recovery |
 | Multilingual UI / translation | [localization.md](localization.md) | Optional `i18n`, PropertyGroup translations and offline inspection |
-| UI / persistence / paint | [ui.md](ui.md), [pitfalls/ui.md](pitfalls/ui.md) | `ui()`, PropertyGroup, per-execution state |
+| UI / persistence / paint | [ui.md](ui.md), [pitfalls/ui.md](pitfalls/ui.md) | `ui()`, PropertyGroup, per-execution state; UI reference shots in `mods/Showcase/image/` |
 | PropertyGroup metadata / native conditions | [property-metadata.md](property-metadata.md) | Metadata keys and Python declaration limits; callbacks/persistence stay in ui.md |
 | NBT / schematic / procedural blocks | [structure.md](structure.md), [pitfalls/structure.md](pitfalls/structure.md) | `Blocks`, `spawn_structure`, coordinates and units |
-| Low-poly / free instance modeling | [lowpoly.md](lowpoly.md) | `LowPolyModel`, groups/pivots, primitive geometry, eight-channel appearance and ISM output |
+| Low-poly and skeletal box modeling | [modelling.md](modelling.md) | `LowPolyModel`, `SkeletalModel`, groups, rigid skinning, PNG UVs and GLB output |
 | Terrain / biomes / buildings composed with terrain | [worldgenerator.md](worldgenerator.md) | WorldGenerator public API, batch building, offline checks and previews |
 | Bake reusable block models | [structure.md](structure.md#blocksbake-one-reusable-model) | `Blocks.bake`, culling, compatible tiled UVs, recipe identity |
 | Kept tool / callable Mod operations | [mods.md](mods.md) | Start from `mods/minimal.py` or `mods/template.py`; split only as needed |
 | Level Sequence / Control Rig / AnimSequence | [api.md](api.md), [pitfalls/anim.md](pitfalls/anim.md) | Control Rig belongs on an SKM component; AnimSequence is a different API |
+| Character motion / Bedrock biped clips | [anim-biped.md](anim-biped.md), [pitfalls/anim.md](pitfalls/anim.md) | Coordinate signs, contact/clearance craft, dict authoring & MCAnimConverter |
 | Fixed-resolution image / video rendering | [api.md](api.md#rendering-renderpanel), [remote.md](remote.md#viewport-screenshot-agent-can-read-the-png) | RenderPanel presets; alternative when MCP scene capture fails |
 | Mesh merge / generated mesh import | [api.md](api.md), [pitfalls/mesh.md](pitfalls/mesh.md) | `merge_skm`, materials, UVs and skinning |
 | Texture import / black sample / render target | [pitfalls/common.md](pitfalls/common.md#textures--rt) | Compilation, source dimensions, painted-RT preservation |
@@ -85,19 +86,27 @@ A straightforward change that follows an existing pattern needs no test. Do not
 add defensive branches, stubs, or fixtures so a test can pass. If a run fails,
 replace that approach with a simpler correct implementation.
 
-When a check is useful, pick the cheaper single route and batch it: one MCP call
-if the editor is connected, or one offline run for pure data. Do not do both, and
-do not start a new suite for one change. Spend the remaining effort on the feature.
-Capture a screenshot only when the user asks, or when the result is a layout or
-model that has to be seen. If the editor is not connected, give the Python console
-snippet and say it was not run.
+Choose checks by the behavior being changed. For engine transforms, Control Rig,
+Sequencer evaluation, playback and baking, first check the live MCP connection
+and prefer a small batch using real UE objects. Do not reimplement Unreal math,
+channels or object lifecycles in offline substitutes. For independent parsing,
+indexing or curve math, use a focused existing offline check when useful.
+Both routes may cover different risks; avoid repeating the same evidence or
+expanding a suite just to increase coverage counts.
+
+Use task-owned temporary assets and restore the user's editor state. If the
+editor cannot be reached, report which engine checks remain unverified instead
+of replacing them with mocks. Animation/visual work also needs actual playback
+at the intended rate: numeric bounds, key counts and seam tests cannot establish
+visual quality. Use a short preview or relevant views when needed, and distinguish
+engine correctness, observed appearance and the user's visual acceptance.
 
 ## Source map
 
 The public facade is `mineprep.py`. Follow its imports to `mc_handle` (scene and
 Sequencer handles), `mc_rig` (Control Rig), `mc_sequencer` (Sequencer operations),
 `mc_widget` / `mc_mod` (UI and lifecycle), `mc_structure` / `mc_importer`
-(blocks and models), `mc_lowpoly` (free low-poly recipes and instancing), `mc_mesh` (baking and merging), `mc_prep` (textures), and
+(blocks and models), `mc_model` (model recipes and GLB), `mc_mesh` (baking and merging), `mc_prep` (textures), and
 `mc_parallel` (scheduling). `mcptools.py` implements the editor bridge;
 `Source/Mineprep/` contains C++ bindings. References identify relevant functions.
 

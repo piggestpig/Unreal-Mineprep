@@ -9,8 +9,9 @@ try:
 except ModuleNotFoundError:
     from mc_utils import Lazy as unreal
 from mc_math import MODEL_FRAME, model_vertices_to_ue
-from mc_prep import prep_texture, colorize_material, _apply_emission_default
-from mc_utils import warn, debug, get_tex_size, throw
+from mc_prep import prep_texture, apply_mc_material_defaults, _read_png_size, _texture_animation
+from mc_utils import warn, debug, get_tex_size, throw, dialog
+from mc_localization import i18n
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tga", ".bmp", ".exr"}
@@ -88,7 +89,6 @@ ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR单面2_材�
 TWO_SIDED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR1_基础_材质实例.LabPBR1_基础_材质实例"
 TWO_SIDED_ANIMATED_MATERIAL_INSTANCE_PATH = "/Game/Mineprep/材质/Core/LabPBR2_动画_材质实例.LabPBR2_动画_材质实例"
 BASE_TEXTURE_PARAMETER_NAME = "纹理贴图"
-ANIMATION_PARAMETER_NAME = "动画速度/步长/列数/渐变"
 
 # blockstates 中出现过 uvlock:true 的模型名（不含 .json）缓存
 _UVLOCK_MODEL_NAMES_CACHE = None
@@ -394,11 +394,14 @@ def _material_instance_path_for_texture(texture_asset, *, two_sided=False, textu
     return TWO_SIDED_ANIMATED_MATERIAL_INSTANCE_PATH if two_sided else ANIMATED_MATERIAL_INSTANCE_PATH
 
 
-def _sample_texture_alpha_mask(texture_asset, alpha_threshold=0.5, max_resolution=32):
-    """采样贴图 alpha 生成不透明掩码网格"""
-    orig_width, orig_height = get_tex_size(texture_asset)
+def _sample_texture_alpha_mask(texture_asset, alpha_threshold=0.5, max_resolution=128, *, texture_source=None):
+    """采样 alpha；超出建议上限时询问是否保留原分辨率。"""
+    if texture_source is not None and Path(texture_source).suffix.lower() == '.png':
+        orig_width, orig_height = _read_png_size(Path(texture_source))
+    else:
+        orig_width, orig_height = get_tex_size(texture_asset)
 
-    # 保持宽高比的情况下，将最大分辨率限制在 max_resolution
+    # 保持宽高比计算超限采样尺寸；用户可选择保留原分辨率。
     width = orig_width
     height = orig_height
     if width > max_resolution or height > max_resolution:
@@ -408,6 +411,17 @@ def _sample_texture_alpha_mask(texture_asset, alpha_threshold=0.5, max_resolutio
         else:
             width = max(1, int(round(orig_width * max_resolution / orig_height)))
             height = max_resolution
+        keep_original = dialog(
+            i18n.item.resolution.title('物品轮廓分辨率', 'Item Outline Resolution'),
+            i18n.item.resolution.message(
+                '贴图为 {width} × {height}，超过建议上限 {limit}。\n是否按原分辨率生成模型？\n选择“否”将按 {target_width} × {target_height} 采样轮廓；贴图本身保留原分辨率。',
+                'The texture is {width} × {height}, above the recommended limit of {limit}.\nGenerate the mesh at its original resolution?\nChoose No to sample the outline at {target_width} × {target_height}. The texture keeps its original resolution.',
+            ).format(width=orig_width, height=orig_height, limit=max_resolution,
+                     target_width=width, target_height=height),
+            default=False,
+        )
+        if keep_original:
+            width, height = orig_width, orig_height
 
     sample_uvs = []
     for y_index in range(height):
@@ -498,15 +512,6 @@ def _get_triangle_normal(mesh, triangle_id) -> unreal.Vector:
     return normal
 
 
-def _get_triangle_uvs(mesh, triangle_id, uv_set=0):
-    """读取三角形 UV"""
-    result = unreal.GeometryScript_MeshQueries.get_triangle_u_vs(mesh, uv_set, triangle_id)
-    uv_values = [item for item in _as_tuple(result) if isinstance(item, unreal.Vector2D)]
-    if len(uv_values) != 3 or not _extract_bool(result, default=bool(uv_values)):
-        raise RuntimeError(f"Failed to query triangle UVs: {triangle_id}")
-    return uv_values
-
-
 def _set_triangle_uvs(mesh, triangle_id, uv_values, uv_set=0):
     """写入三角形 UV"""
     uv_triangle = unreal.GeometryScriptUVTriangle(uv0=uv_values[0], uv1=uv_values[1], uv2=uv_values[2])
@@ -538,41 +543,6 @@ def _pixel_uv_rect(x_index, y_index, width, height) -> tuple[float, float, float
     v_max = 1.0 - (float(y_index) / float(height))
     v_min = 1.0 - (float(y_index + 1) / float(height))
     return u_min, v_min, u_max, v_max
-
-
-def _append_polygon3d(mesh, vertices, uv_rect, material_id=0):
-    """向 DynamicMesh 追加带 UV 的多边形"""
-    existing_triangle_ids = set(_get_all_triangle_ids(mesh))
-
-    primitive_options = unreal.GeometryScriptPrimitiveOptions()
-    primitive_options.polygroup_mode = unreal.GeometryScriptPrimitivePolygroupMode.PER_FACE
-    primitive_options.material_id = int(material_id)
-    primitive_options.uv_mode = unreal.GeometryScriptPrimitiveUVMode.SCALE_TO_FILL
-
-    unreal.GeometryScript_Primitives.append_triangulated_polygon3d(
-        mesh,
-        primitive_options,
-        _identity_transform(),
-        list(vertices),
-    )
-
-    triangle_ids = [triangle_id for triangle_id in _get_all_triangle_ids(mesh) if triangle_id not in existing_triangle_ids]
-    if not triangle_ids:
-        raise RuntimeError("Failed to identify appended polygon triangles")
-
-    if int(material_id) > 0:
-        _set_material_id_on_triangles(mesh, triangle_ids, material_id)
-    _apply_uv_rect_to_triangles(mesh, triangle_ids, uv_rect, 0)
-
-
-def _read_png_size(source) -> tuple[int, int]:
-    """读取 PNG 宽高"""
-    with source.open("rb") as handle:
-        header = handle.read(24)
-    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n":
-        raise ValueError("Not a PNG file")
-    width, height = struct.unpack(">II", header[16:24])
-    return int(width), int(height)
 
 
 def _read_jpeg_size(source) -> tuple[int, int]:
@@ -620,101 +590,6 @@ def _import_texture_asset(source, texture_package_path, asset_name=None) -> unre
     return texture_asset
 
 
-def _animation_step(indices, frame_count):
-    """识别序列帧是顺序循环 (1) 还是往返循环 (-1)，不支持的自定义帧序返回 None。"""
-    count = len(indices)
-    if count == frame_count and all(indices[(i+1) % count] == (value+1) % frame_count
-                                    for i, value in enumerate(indices)):
-        return 1
-    if count == 2*(frame_count-1) and indices.count(0) == 1:
-        start = indices.index(0)
-        expected = (*range(frame_count), *range(frame_count-2, 0, -1))
-        if all(indices[(start+i) % count] == value for i, value in enumerate(expected)):
-            return -1
-    return None
-
-
-def _texture_animation(texture_source):
-    """解析贴图同名 .png.mcmeta 中的动画配置，返回 (播放速度, 步长, 是否插值)，无动画或格式不支持时返回 None。"""
-    if texture_source is None:
-        return None
-    source = Path(texture_source)
-    metadata = Path(str(source) + '.mcmeta')
-    if source.suffix.lower() != '.png' or not metadata.is_file():
-        return None
-
-    def positive(value):
-        return type(value) is int and 0 < value <= 2**31-1
-
-    try:
-        raw = json.loads(metadata.read_text(encoding='utf-8-sig'))
-        if isinstance(raw, dict) and 'animation' not in raw:
-            return None
-        animation = raw.get('animation')
-        frametime = animation.get('frametime', 1)
-        interpolate = animation.get('interpolate', False)
-        width, height = _read_png_size(source)
-        # MC 规范：只指定宽或高时，另一维默认取整张贴图尺寸
-        fw = animation.get('width', width if 'height' in animation else min(width, height))
-        fh = animation.get('height', height if 'width' in animation else min(width, height))
-    except (OSError, ValueError, AttributeError) as exc:
-        debug(f'Animation metadata skipped: {metadata}: {exc}')
-        return None
-    if not all(positive(v) for v in (fw, fh, frametime)) or type(interpolate) is not bool:
-        debug(f'Animation metadata skipped: {metadata}: invalid dimensions, frametime or interpolate')
-        return None
-    if width <= 0 or height <= width or height % width or fw != width or fh != width:
-        debug(f'Animation metadata skipped: {metadata}: only vertical square-frame strips are supported')
-        return None
-
-    duration, step = frametime, 1
-    notes = []
-    if 'frames' in animation:
-        frames = animation['frames']
-        if not isinstance(frames, list) or not frames:
-            debug(f'Animation metadata: {metadata}: custom frames ignored: expected a nonempty list')
-            return 20.0/frametime, 1, int(interpolate)
-        indices, times = [], []
-        for frame in frames:
-            index = frame.get('index') if isinstance(frame, dict) else frame
-            time = frame.get('time', frametime) if isinstance(frame, dict) else frametime
-            if type(index) is not int or not 0 <= index < height//width or not positive(time):
-                debug(f'Animation metadata: {metadata}: custom frames ignored: invalid index or time')
-                return 20.0/frametime, 1, int(interpolate)
-            indices.append(index)
-            times.append(time)
-        if len(set(times)) == 1:
-            duration = times[0]
-        else:
-            notes.append('variable frame times ignored; using global frametime')
-        recognized = _animation_step(indices, height//width)
-        if recognized is None:
-            notes.append('custom frame order ignored; using forward playback')
-        else:
-            step = recognized
-    if notes:
-        debug(f'Animation metadata: {metadata}: ' + '; '.join(notes))
-    return 20.0/duration, step, int(interpolate)
-
-
-def _apply_texture_animation(material, texture_source):
-    """根据 .png.mcmeta 将序列帧动画参数写入材质实例。"""
-    values = _texture_animation(texture_source)
-    if values is None:
-        return
-    library = unreal.MaterialEditingLibrary
-    if ANIMATION_PARAMETER_NAME not in map(str, library.get_vector_parameter_names(material)):
-        debug(f'Animation parameter not found: {ANIMATION_PARAMETER_NAME}: {texture_source}')
-        return
-    current = library.get_material_instance_vector_parameter_value(material, ANIMATION_PARAMETER_NAME)
-    fps, step, interpolate = values
-    flow = Path(texture_source).stem.lower() in {'lava_flow', 'water_flow'}
-    if not library.set_material_instance_vector_parameter_value(
-            material, ANIMATION_PARAMETER_NAME,
-            unreal.LinearColor(fps, 2 if flow else step, 2 if flow else current.b, interpolate)):
-        debug(f'Could not set animation parameter: {texture_source}')
-
-
 def _create_texture_material(texture_asset, destination_path, asset_name, *, two_sided=False, texture_source=None, reload=False) -> unreal.MaterialInstanceConstant:
     """为贴图创建/更新材质实例"""
     material_name = _mc_material_asset_name(asset_name)
@@ -745,10 +620,7 @@ def _create_texture_material(texture_asset, destination_path, asset_name, *, two
         texture_asset,
     )
 
-    colorize_material(material)
-    _apply_texture_animation(material, texture_source)
-    if created or reload:
-        _apply_emission_default(material, texture_source)
+    apply_mc_material_defaults(material, texture_source)
     unreal.EditorAssetLibrary.save_loaded_asset(material)
     return material
 
@@ -1033,45 +905,6 @@ def _apply_uv_vertex_colors(mesh, triangles_by_alpha):
         )
 
 
-def _apply_uv_rect_to_triangles(mesh, triangle_ids, uv_rect, rotation_deg):
-    """把 UV 矩形应用到三角形集合"""
-    current_by_triangle = {}
-    all_uvs = []
-    for triangle_id in triangle_ids:
-        tri_uvs = _get_triangle_uvs(mesh, triangle_id)
-        current_by_triangle[triangle_id] = tri_uvs
-        all_uvs.extend(tri_uvs)
-
-    if not all_uvs:
-        return
-
-    src_u_min = min(value.x for value in all_uvs)
-    src_u_max = max(value.x for value in all_uvs)
-    src_v_min = min(value.y for value in all_uvs)
-    src_v_max = max(value.y for value in all_uvs)
-
-    src_u_range = src_u_max - src_u_min if src_u_max != src_u_min else 1.0
-    src_v_range = src_v_max - src_v_min if src_v_max != src_v_min else 1.0
-
-    dst_u_min, dst_v_min, dst_u_max, dst_v_max = uv_rect
-    dst_u_range = dst_u_max - dst_u_min
-    dst_v_range = dst_v_max - dst_v_min
-
-    for triangle_id, tri_uvs in current_by_triangle.items():
-        mapped = []
-        for uv_value in tri_uvs:
-            u_norm = (uv_value.x - src_u_min) / src_u_range
-            v_norm = (uv_value.y - src_v_min) / src_v_range
-            u_norm, v_norm = _rotate_uv(u_norm, v_norm, rotation_deg)
-            mapped.append(
-                unreal.Vector2D(
-                    dst_u_min + (u_norm * dst_u_range),
-                    dst_v_min + (v_norm * dst_v_range),
-                )
-            )
-        _set_triangle_uvs(mesh, triangle_id, mapped)
-
-
 def _local_assets_dir(model_path) -> Path | None:
     """模型文件自身的 assets 目录；不在资源包内时返回 None。"""
     for parent in Path(model_path).parents:
@@ -1291,111 +1124,69 @@ def _mc_to_ue_dimensions(bounds_from, bounds_to) -> tuple[float, float, float]:
 
 
 def _build_item_dynamic_mesh(width_cm, height_cm, thickness_cm, opaque_mask) -> unreal.DynamicMesh:
-    """由 alpha 掩码拉伸生成物品厚度网格"""
+    """按像素保留轮廓和 UV，一次提交全部顶点、三角形和属性。"""
     pixel_height = len(opaque_mask)
     pixel_width = len(opaque_mask[0]) if pixel_height else 0
     if pixel_width <= 0 or pixel_height <= 0:
         raise RuntimeError("Item texture has invalid dimensions")
 
-    mesh = _new_dynamic_mesh()
-
-    thickness_value = max(float(thickness_cm), 0.1)
-    half_thickness = thickness_value * 0.5
-    pixel_width_cm = float(width_cm) / float(pixel_width)
-    pixel_height_cm = float(height_cm) / float(pixel_height)
+    half_thickness = max(float(thickness_cm), 0.1) * 0.5
+    pixel_width_cm = float(width_cm) / pixel_width
+    pixel_height_cm = float(height_cm) / pixel_height
     half_width_cm = float(width_cm) * 0.5
     half_height_cm = float(height_cm) * 0.5
+    vertices, triangles, normals, uv0 = [], [], [], []
 
-    def is_opaque(x_index, y_index):
-        if x_index < 0 or y_index < 0 or x_index >= pixel_width or y_index >= pixel_height:
-            return False
-        return bool(opaque_mask[y_index][x_index])
+    def quad(points, normal, uv_rect, uv_order=(0, 1, 2, 3)):
+        offset = len(vertices)
+        vertices.extend(unreal.Vector(*point) for point in points)
+        normals.extend([unreal.Vector(*normal)] * 4)
+        u_min, v_min, u_max, v_max = uv_rect
+        corners = ((u_min, v_max), (u_max, v_max), (u_max, v_min), (u_min, v_min))
+        uv0.extend(unreal.Vector2D(*corners[i]) for i in uv_order)
+        triangles.extend((unreal.IntVector(offset, offset + 1, offset + 2),
+                          unreal.IntVector(offset, offset + 2, offset + 3)))
 
-    for y_index in range(pixel_height):
-        for x_index in range(pixel_width):
-            if not is_opaque(x_index, y_index):
+    for y, row in enumerate(opaque_mask):
+        for x, opaque in enumerate(row):
+            if not opaque:
                 continue
+            x0 = -half_width_cm + x * pixel_width_cm
+            x1 = x0 + pixel_width_cm
+            y1 = half_height_cm - y * pixel_height_cm
+            y0 = y1 - pixel_height_cm
+            front, back = half_thickness, -half_thickness
+            uv = _pixel_uv_rect(x, y, pixel_width, pixel_height)
 
-            y_min = -half_width_cm + (float(x_index) * pixel_width_cm)
-            y_max = y_min + pixel_width_cm
-            z_max = half_height_cm - (float(y_index) * pixel_height_cm)
-            z_min = z_max - pixel_height_cm
-            uv_rect = _pixel_uv_rect(x_index, y_index, pixel_width, pixel_height)
+            quad(((x0, y1, front), (x1, y1, front), (x1, y0, front), (x0, y0, front)),
+                 (0, 0, 1), uv)
+            quad(((x0, y0, back), (x1, y0, back), (x1, y1, back), (x0, y1, back)),
+                 (0, 0, -1), uv)
+            if x == 0 or not row[x - 1]:
+                quad(((x0, y1, back), (x0, y1, front), (x0, y0, front), (x0, y0, back)),
+                     (-1, 0, 0), uv)
+            if x + 1 == pixel_width or not row[x + 1]:
+                quad(((x1, y0, back), (x1, y0, front), (x1, y1, front), (x1, y1, back)),
+                     (1, 0, 0), uv, (2, 3, 0, 1))
+            if y == 0 or not opaque_mask[y - 1][x]:
+                quad(((x1, y1, back), (x1, y1, front), (x0, y1, front), (x0, y1, back)),
+                     (0, 1, 0), uv, (1, 2, 3, 0))
+            if y + 1 == pixel_height or not opaque_mask[y + 1][x]:
+                quad(((x0, y0, front), (x1, y0, front), (x1, y0, back), (x0, y0, back)),
+                     (0, -1, 0), uv)
 
-            # 顶点按绕序给出外法线；UE/GeometryScript 左手系下需与 RH 直觉相反
-            _append_polygon3d(
-                mesh,
-                [
-                    unreal.Vector(y_min, z_max, half_thickness),
-                    unreal.Vector(y_max, z_max, half_thickness),
-                    unreal.Vector(y_max, z_min, half_thickness),
-                    unreal.Vector(y_min, z_min, half_thickness),
-                ],
-                uv_rect,
-                0,
-            )
-            _append_polygon3d(
-                mesh,
-                [
-                    unreal.Vector(y_min, z_min, -half_thickness),
-                    unreal.Vector(y_max, z_min, -half_thickness),
-                    unreal.Vector(y_max, z_max, -half_thickness),
-                    unreal.Vector(y_min, z_max, -half_thickness),
-                ],
-                uv_rect,
-                0,
-            )
-
-            if not is_opaque(x_index - 1, y_index):
-                _append_polygon3d(
-                    mesh,
-                    [
-                        unreal.Vector(y_min, z_max, -half_thickness),
-                        unreal.Vector(y_min, z_max, half_thickness),
-                        unreal.Vector(y_min, z_min, half_thickness),
-                        unreal.Vector(y_min, z_min, -half_thickness),
-                    ],
-                    uv_rect,
-                    0,
-                )
-            if not is_opaque(x_index + 1, y_index):
-                _append_polygon3d(
-                    mesh,
-                    [
-                        unreal.Vector(y_max, z_min, -half_thickness),
-                        unreal.Vector(y_max, z_min, half_thickness),
-                        unreal.Vector(y_max, z_max, half_thickness),
-                        unreal.Vector(y_max, z_max, -half_thickness),
-                    ],
-                    uv_rect,
-                    0,
-                )
-            if not is_opaque(x_index, y_index - 1):
-                _append_polygon3d(
-                    mesh,
-                    [
-                        unreal.Vector(y_max, z_max, -half_thickness),
-                        unreal.Vector(y_max, z_max, half_thickness),
-                        unreal.Vector(y_min, z_max, half_thickness),
-                        unreal.Vector(y_min, z_max, -half_thickness),
-                    ],
-                    uv_rect,
-                    0,
-                )
-            if not is_opaque(x_index, y_index + 1):
-                _append_polygon3d(
-                    mesh,
-                    [
-                        unreal.Vector(y_min, z_min, half_thickness),
-                        unreal.Vector(y_max, z_min, half_thickness),
-                        unreal.Vector(y_max, z_min, -half_thickness),
-                        unreal.Vector(y_min, z_min, -half_thickness),
-                    ],
-                    uv_rect,
-                    0,
-                )
-
-    return mesh
+    buffers = unreal.GeometryScriptSimpleMeshBuffers(
+        vertices=vertices, triangles=triangles, normals=normals, uv0=uv0,
+        vertex_colors=[unreal.LinearColor(1, 1, 1, 1)] * len(vertices))
+    mesh = _new_dynamic_mesh()
+    try:
+        unreal.GeometryScript_MeshEdits.append_buffers_to_mesh(mesh, buffers, material_id=0)
+        if mesh.get_triangle_count() != len(triangles):
+            raise RuntimeError("Item mesh buffer submission was incomplete")
+        return mesh
+    except Exception:
+        _return_dynamic_mesh(mesh)
+        raise
 
 
 def _material_context_for_texture(texture_cache, material_cache, texture_source, texture_package, material_package, *, two_sided=False, reload=False):
@@ -1811,10 +1602,12 @@ def import_item(
     size=100.0,
     thickness=6.25,
     alpha_threshold=0.5,
-    max_resolution=32,  # 默认上限设为 32x32
+    max_resolution=128,
     reload=False,       # 是否重新导入
 ) -> unreal.StaticMesh:
-    """从贴图路径或默认包中的物品名称导入挤出网格；reload=False 时复用已有资产。"""
+    """由贴图导入挤出网格；超出 max_resolution 时询问是否保留原采样精度，reload=False 复用已有资产。"""
+    if not isinstance(max_resolution, int) or max_resolution < 1:
+        raise ValueError('max_resolution must be a positive integer')
     source, source_name, destination_path = _resolve_import_source(filepath, "item", destination_path)
     if source.suffix.lower() not in IMAGE_SUFFIXES:
         raise ValueError(f"import_item only supports image files: {source}")
@@ -1839,7 +1632,8 @@ def import_item(
 
     dynamic_mesh = None
     try:
-        image_width, image_height, opaque_mask = _sample_texture_alpha_mask(texture_asset, alpha_threshold, max_resolution)
+        image_width, image_height, opaque_mask = _sample_texture_alpha_mask(
+            texture_asset, alpha_threshold, max_resolution, texture_source=source)
         if image_width >= image_height:
             width_cm = float(size)
             height_cm = float(size) * (float(image_height) / float(max(image_width, 1)))
@@ -1865,7 +1659,7 @@ def import_block(
     filepath,
     destination_path="/Game/mc",
     asset_name=None,
-    max_resolution=32,
+    max_resolution=128,
     reload=False,
     fluid_level=0,
 ) -> unreal.StaticMesh:

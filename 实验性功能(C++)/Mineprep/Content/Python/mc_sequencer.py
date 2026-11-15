@@ -5,6 +5,7 @@ Rotator、LinearColor 和 str 属性。子序列使用本地时间和绑定。
 主要处理 Possessable Actor/Component；Spawnable 绑定可能需要手动添加。
 暂不支持 enum、byte 和对象引用属性。"""
 
+import contextlib
 import fnmatch
 import math
 from collections.abc import Iterable
@@ -195,6 +196,80 @@ def _ensure_binding(sequence, obj):
         return binding
 
     throw(f'obj 必须是 Actor 或 SceneComponent，当前类型: {type(obj).__name__}')
+
+
+def _resolve_anim_asset(animation):
+    if isinstance(animation, str):
+        animation = unreal.load_asset(animation)
+    if not isinstance(animation, unreal.AnimSequence):
+        raise ValueError('需要 AnimSequence 或其资产路径')
+    return animation
+
+
+def _validate_skeletal_target(component, animation):
+    animation = _resolve_anim_asset(animation)
+    if not isinstance(component, unreal.SkeletalMeshComponent) or not component.get_skeletal_mesh_asset():
+        raise ValueError('目标需要已指定网格的 SkeletalMeshComponent')
+    return component, animation
+
+
+def _resolve_anim_span(sequence, animation, start, end):
+    sequence = resolve_sequence(sequence)
+    if sequence is None:
+        raise ValueError('需要有效的 Level Sequence')
+    first = _resolve_frame(start, sequence)
+    if end is None:
+        rate = sequence.get_display_rate()
+        frames = animation.get_play_length() * rate.numerator / rate.denominator
+        last = first + math.ceil(frames - 1e-5)
+    else:
+        last = _resolve_frame(end, sequence)
+    if last <= first:
+        raise ValueError('动画片段结束帧必须晚于起始帧')
+    return sequence, first, last
+
+
+def _insert_skeletal_section(sequence, component, animation, first, last):
+    binding = _ensure_binding(sequence, component)
+    track = next((t for t in binding.get_tracks()
+                  if isinstance(t, unreal.MovieSceneSkeletalAnimationTrack)), None)
+    if track is None:
+        track = binding.add_track(unreal.MovieSceneSkeletalAnimationTrack)
+    section = track.add_section()
+    section.set_range(first, last)
+    params = section.get_editor_property('params')
+    params.animation = animation
+    section.set_editor_property('params', params)
+    return section
+
+
+def add_skeletal_animation(component, animation, *, start=0, end=None, sequence=None):
+    """Add a section that repeats the native animation when extended beyond one cycle."""
+    component, animation = _validate_skeletal_target(component, animation)
+    sequence, first, last = _resolve_anim_span(sequence, animation, start, end)
+    with unreal.ScopedEditorTransaction('Add skeletal animation section'):
+        section = _insert_skeletal_section(sequence, component, animation, first, last)
+    _refresh_sequencer()
+    return section
+
+
+def add_skeletal_animation_pair(body_component, body_animation, head_component=None,
+                                head_animation=None, *, start=0, end=None, sequence=None):
+    """Add paired body and optional Head skeletal animation sections over identical bounds."""
+    body_component, body_animation = _validate_skeletal_target(body_component, body_animation)
+    if head_animation is not None:
+        head_component, head_animation = _validate_skeletal_target(head_component, head_animation)
+        if head_component == body_component:
+            raise ValueError('Head 组件不能与身体组件相同')
+    sequence, first, last = _resolve_anim_span(sequence, body_animation, start, end)
+    with unreal.ScopedEditorTransaction('Add paired skeletal animation section'):
+        result = {
+            'body': _insert_skeletal_section(sequence, body_component, body_animation, first, last),
+            'head': (_insert_skeletal_section(sequence, head_component, head_animation, first, last)
+                     if head_animation is not None else None),
+        }
+    _refresh_sequencer()
+    return result
 
 
 def _get_or_create_unbounded_property_section(track):
@@ -1209,10 +1284,33 @@ def _write_keyframe(context, frame, value, interp, *, apply=False, relative=Fals
     return written
 
 
+_REFRESH_HOLD = 0
+_REFRESH_PENDING = False
+
+
 def _refresh_sequencer():
     """强制刷新当前 Level Sequence 编辑器"""
+    global _REFRESH_PENDING
+    if _REFRESH_HOLD > 0:
+        _REFRESH_PENDING = True
+        return
+    _REFRESH_PENDING = False
     unreal.LevelSequenceEditorBlueprintLibrary.force_update()
     unreal.LevelSequenceEditorBlueprintLibrary.refresh_current_level_sequence()
+
+
+@contextlib.contextmanager
+def _defer_refresh():
+    """在批量写键期间合并 Sequencer 刷新，退出最外层作用域时执行一次"""
+    global _REFRESH_HOLD, _REFRESH_PENDING
+    _REFRESH_HOLD += 1
+    try:
+        yield
+    finally:
+        _REFRESH_HOLD -= 1
+        if _REFRESH_HOLD == 0 and _REFRESH_PENDING:
+            _REFRESH_PENDING = False
+            _refresh_sequencer()
 
 
 def object_channels(obj, prop='', *, sequence=None):

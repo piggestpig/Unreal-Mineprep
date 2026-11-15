@@ -1,7 +1,8 @@
-# LowPolyModel: static low-poly recipes
+# Model authoring with LowPolyModel and SkeletalModel
 
-Public entry: `mineprep.LowPolyModel`; implementation: `../mc_lowpoly.py`.
-No PCG, Niagara, polygon editor, whole-model bake or animation is involved.
+Use `mineprep.LowPolyModel` for instanced static meshes and
+`mineprep.SkeletalModel` for rigidly skinned box models.
+Both are implemented in [mc_model.py](../mc_model.py).
 Recipes and data validation work without Unreal; placement and asset preparation
 require the editor. Do not install extra packages.
 
@@ -44,32 +45,22 @@ that group's recipe and child groups, without changing placed output.
 - `add(source, position=(0,0,0), scale=1, pitch=0, yaw=0, roll=0, ...)` accepts a
   block model name/JSON path, StaticMesh asset path or actual StaticMesh.
 - `add_many(source, positions, ...)`: positions `[N,3]`; scale scalar, shared XYZ
-  or `[N,3]`; each angle scalar or `[N]`. Input arrays are copied. No full list of
-  Unreal Transforms is retained; submission batches hold at most 8192 transforms.
+  or `[N,3]`; each angle scalar or `[N]`.
 - `add`, `add_many` and primitives accept `pivot=None`: an optional rotation
   center in the current group's coordinates (`[3]` or `[N,3]` for add_many).
   It rotates the supplied position about that point, without creating a group.
   Geometry size/scale stays about the mesh's own origin; it does not scale the
-  distance to pivot. Imported mesh origins remain unchanged.
+  distance to pivot.
 - `LowPolyModel.from_blocks(blocks, cell_size=1, cull=2, merge=3)` copies and
   expands existing Blocks through the MC pipeline, converts Y-up to Z-up, and
   preserves the MC origin cell's minimum corner as the model origin. Cell size
   scales both positions and geometry. Existing Blocks are not modified.
 
-Free instances append; they do not overwrite occupied cells, auto-connect,
-auto-cull, merge, perform booleans or eliminate coplanar overlaps. Use `Blocks`
-first when occupancy/culling/merging is needed. Author non-overlapping boundaries
-to avoid z-fighting. Future polygon sources can join the geometry resolver while
-keeping group poses, appearance and output ownership unchanged; future meshes
-must retain corner UV/normal seams and per-face material assignments.
+Free instances append without grid occupancy, face culling or boolean merging (use `Blocks` first when occupancy/culling/merging is needed). Author non-overlapping boundaries to avoid coplanar z-fighting.
 
 ## Appearance: fixed eight-float layout
 
-The shared color material is `/Game/Mineprep/材质/Core/纯色实例材质`.
-The API consumes it; it does not rewrite the user's graph or change its blend mode.
-The agreed default material is Masked + two-sided; opacity is a mask, not smooth
-transparency. A translucent variant needs alpha connected to Opacity and an
-appropriate lighting mode. Different material variants form different batches.
+The shared color material is `/Game/Mineprep/材质/Core/纯色实例材质` (Masked + two-sided by default):
 
 | Index | Value | Default |
 |---|---|---|
@@ -81,22 +72,82 @@ appropriate lighting mode. Different material variants form different batches.
 
 `color` accepts `#RRGGBB`, `#RRGGBBAA`, or 0..1 sRGB(A), including `[N,3/4]`
 for `add_many`. RGB is converted to linear; alpha is not. `metallic`, `specular`,
-`roughness` accept 0..1 and `emissive` accepts finite nonnegative values. Each can
-be scalar or `[N]`. Primitive helpers default to white; imported assets keep
-their original materials unless appearance is explicitly overridden.
+`roughness` accept 0..1 and `emissive` accepts finite nonnegative values (scalar or `[N]`).
+Primitive helpers default to white; imported assets keep their original materials
+unless appearance is overridden. `material` accepts a MaterialInterface object/path
+or a slot-ordered sequence (mutually exclusive with color/surface overrides).
 
-`material` accepts a MaterialInterface object/path, or a complete slot-ordered
-list/tuple. A single material replaces every slot. It is mutually exclusive with
-color/surface overrides. Pure color replaces the source materials; it does not
-attempt to tint an arbitrary shader. MC vertex-alpha UV metadata stays unchanged.
+## LowPolyModel skeletal output
 
-Colored batches always allocate and write all eight values, including defaults.
-The optional `unreal.mineprep.set_ism_custom_data` C++ function uploads the whole
-buffer. If absent, official UE Python setters provide the same result, requesting
-a render refresh only on the last value; large buffers are slower on this fallback.
-There is no experimental-C++ dependency for recipe construction or placement.
+`bake_skeletal(name=None, *, destination_path='/Game/mc/entity')` saves a
+Skeletal Mesh and Skeleton and returns the mesh. Each named group becomes a
+bone with its local pivot and reference rotation. Boxes bind rigidly to their
+own group, with RGBA colours stored in an embedded palette. Use a new asset name
+for each bake. This path supports coloured boxes with default PBR parameters
+and uniformly scaled groups. Use the existing Sequencer Rig API to animate
+the resulting mesh.
 
-## Output and update
+## SkeletalModel
+
+`mineprep.SkeletalModel` is a box recipe with rigid bindings. Positions and
+pivots use the same units as LowPolyModel. Each bone takes parent-local pitch,
+yaw, roll and positive uniform scale. Bone names are case-insensitively unique
+ASCII names containing letters, digits or underscores.
+
+```python
+model = mineprep.SkeletalModel('Bird')
+model.root.box(size=(.8, .4, .3), color='#f1efdc')
+wing = model.bone('wing_left', pivot=(0, -.2, .06), roll=10)
+wing.box(position=(0, -.25, 0), size=(.35, .5, .08), color='#838fa3')
+mesh = model.bake()
+```
+
+- `set_skin(path_or_png_bytes)` attaches a PNG. Pass `uv=` to a box with a
+  rectangle `(u, v, width, height)` for each local face `+X`, `-X`, `+Y`,
+  `-Y`, `+Z`, and `-Z`. The image origin is top left. Looking at a face from
+  outside, +Z is up on the sides and +X is up on the top and bottom. Colour
+  and UV boxes can share a model and use separate LabPBR slots.
+- For a box net, pass `uv=(u, v)` with the top-left pixel origin.
+  `pixels_per_unit=16` sets the pixel density for this shorthand. Box
+  dimensions are rounded to the nearest pixel with a minimum of one pixel
+  per dimension. Bone scale affects the mesh and keeps the assigned UVs.
+- `model.uv_layout()` returns the minimum PNG `size`, the local `up` and
+  `right` directions for each face in `face_axes`, and the pixel rectangles
+  for textured `boxes`. Each box record includes its bone and zero-based index
+  on that bone. `flip_u` tells whether the box reads those rectangles from
+  right to left. Use the layout to paint a PNG before calling `set_skin()`.
+
+- `describe()` returns parent names, parent-local pivot, pitch/yaw/roll,
+  uniform scale, model-space pivot and box count for each bone.
+  `reparent(name, parent)` keeps the branch in place in the reference pose.
+- `model.mirror_bone('wing_left', 'wing_right')` copies the whole branch across
+  the model-space XZ plane and returns the new root bone. Use `parent=` to place
+  that root under a different bone. Descendant names swap a lowercase
+  `left_` / `right_` prefix or `_left` / `_right` suffix. Other names gain
+  `_mirror`. The copy shares the same skin pixels, swaps the two Y faces
+  and reverses each face's horizontal UV direction.
+- `SkeletalModel.from_lowpoly(recipe)` and `model.to_lowpoly()` round-trip
+  coloured box recipes. Use default PBR values and uniform group scales.
+  A per-face UV box has no equivalent LowPolyModel recipe.
+- `to_glb()` returns GLB bytes without the editor.
+  `bake(name=None, *, destination_path='/Game/mc/entity', reload=False)`
+  creates a Skeletal Mesh and Skeleton in a new named folder. Open a Level
+  Sequence and use Rig to animate it.
+- To replace the skin or edit geometry on a prior bake, call
+  `model.bake(reload=True)` with the same name and destination. This updates
+  the existing mesh and keeps its Skeleton. The bone names, parents and
+  local reference transforms must match. If you change the reference rig,
+  bake under a new name.
+
+```python
+model = mineprep.SkeletalModel('SkinnedBox')
+model.root.box(size=(.5, .75, 1), uv=(0, 0))
+layout = model.uv_layout()
+# Draw the face rectangles in layout['boxes'][0]['faces'] onto a PNG
+# with at least layout['size'] pixels, then call model.set_skin(png).
+```
+
+## LowPolyModel component output
 
 `spawn(position=(0,0,0), pitch=0, yaw=0, roll=0, scale=1, collision=False)` returns
 a raw root Actor, or `None` for an empty recipe. Each model is **one Actor**:
@@ -138,28 +189,4 @@ wing.channels('Rotation.X').loop('cycle')
 - **Tilted spinning wheels**: place the fixed mounting orientation on a parent group and animate Euler keys (`0 → 360`, `interp='linear'`, `loop('offset')`) on a child spin group's local axis with quaternion interpolation disabled.
 - Full keyframe, wave, tangent and channel contracts: [Sequencer in api.md](api.md#sequencer-level-sequence).
 
-Ownership is stored in Actor/component tags, so update works after saving/reopening a map
-and recreating the Python recipe. Untagged user attachments survive; when their
-generated parent disappears, they move to the root with world transform preserved.
-Resources/new batches are prepared before replacing old output. Failures during
-preparation clean new components and retain old output; group rollback restores
-local transforms. There is one editor transaction
-per create/update. It never automatically saves maps or deletes source assets.
-
-Component creation uses the official editor SubobjectDataSubsystem, including
-registration, serialization and undo. It does not require experimental Mineprep
-C++ functions. The optional bulk data writer and its Python fallback are unchanged.
-Delete the root Actor to remove a complete model, or reuse it via `update(root)`.
-Legacy outputs made from multiple Actors are left untouched; recreate those from
-their recipes in a new map. They are not accepted by the new `update` method.
-
-`collision=False` disables collision/navigation; `True` enables the component's
-BlockAll profile. This does not create collision geometry for an asset lacking it.
-`spawn_blocks()` retains its existing UE-centimeter/local-Transform contract and
-raw Actor return type; it also accepts Transform iterators and optional `collision`.
-
-Validate recipe math offline and component lifetime in the editor, choosing the
-most convenient route and batching checks. A data check does not prove rendered
-appearance. The API does not eliminate overlapping surfaces: author clean joints
-and avoid coincident faces with different colors. Baking, mesh mirroring and
-WorldGenerator StaticMesh scattering are not delivered by this API.
+Ownership is stored in Actor/component tags, so `update(root)` works across map reloads and preserves untagged user-attached components. Delete the root Actor to remove the model. `collision=True` enables the `BlockAll` profile on generated components (`False` by default).

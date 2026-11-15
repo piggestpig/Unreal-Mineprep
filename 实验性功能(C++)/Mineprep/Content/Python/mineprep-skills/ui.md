@@ -2,6 +2,8 @@
 
 Source: `mc_widget.py`. Export: `mineprep.Layout`, `mineprep.PropertyGroup`, `mineprep.ui`.
 
+When you need to see how a UI looks, check the reference screenshots in `mods/Showcase/image/`.
+
 ## Delivery: `ui` vs `Layout` vs Mod
 
 | Form | When |
@@ -296,9 +298,6 @@ does not refresh existing rows; assigning the same object again is a no-op.
 Use native conditions or retained containers for interaction; see
 [property metadata](property-metadata.md#conditions-and-inline-toggles).
 
-For native visibility changes, check actual rows and enabled states; metadata,
-whitelist arrays and widget identity alone do not prove the rendered result.
-
 - Full Details callbacks may report a struct member (`X`, `R`, `FilePath`), or
   an inline toggle's dependent field. For top-level PropertyGroup names, use:
 
@@ -409,7 +408,7 @@ layout.button('Save settings', on_clicked=save_state)
 """)
 ```
 
-Choose a distinct filename for each tool. Because save/load are best-effort, verify the file and restored values when persistence is part of the task; a callback returning without an exception is not proof of a successful write.
+Choose a distinct filename for each tool.
 
 ### Rules
 

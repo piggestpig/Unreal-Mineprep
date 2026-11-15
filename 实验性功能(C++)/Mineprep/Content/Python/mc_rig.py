@@ -28,7 +28,12 @@ _CONTROL_SUFFIXES = frozenset(
     + ['.' + axis for axis in 'xyzw']
     + [f'{group}.{axis}' for group in _CONTROL_GROUPS for axis in 'xyz']
 )
-_CONTROL_PARTS = tuple(suffix for suffix in _CONTROL_SUFFIXES if suffix.count('.') == 2) + _CONTROL_GROUPS
+_CONTROL_PARTS = tuple(sorted((s for s in _CONTROL_SUFFIXES if s), key=len, reverse=True)) + _CONTROL_GROUPS
+
+
+def _key_tick_time(key, tick_unit):
+    ft = key.get_time(tick_unit)
+    return ft.frame_number.value + ft.sub_frame
 
 
 def _resolve_skm(target) -> unreal.SkeletalMeshComponent:
@@ -124,6 +129,22 @@ def _rig_batch_io(ctype):
     return table[ctype]
 
 
+def describe_skeleton(component):
+    """Read the mesh reference pose without evaluating or changing the live pose."""
+    bones = {}
+    axes = [unreal.Vector(x, y, z) for x, y, z in ((1, 0, 0), (0, 1, 0), (0, 0, 1))]
+    for index in range(component.get_num_bones()):
+        name = component.get_bone_name(index)
+        parent = str(component.get_parent_bone(name))
+        parent = None if parent.casefold() == 'none' else parent
+        local = component.get_ref_pose_transform(index)
+        reference = local if parent is None else local.multiply(bones[parent]['reference'])
+        bones[str(name)] = dict(parent=parent, local=local, reference=reference,
+                                pivot=reference.translation,
+                                axes=dict(zip('xyz', (reference.rotation.rotate_vector(axis) for axis in axes))))
+    return bones
+
+
 class Rig:
     """Sequencer 上的 Control Rig 句柄。默认 FK；已有轨保持 layered，新建为 layered。"""
 
@@ -156,6 +177,10 @@ class Rig:
         """列出控件全名（含模块前缀，如 Spine/body_ctrl）"""
         hier = self.target.get_hierarchy()
         return [str(key.name) for key in hier.get_controls(True)]
+
+    def describe(self):
+        """Return parent, local and component reference poses, pivot and axes for each bone."""
+        return describe_skeleton(self.skm)
 
     def _resolve_name(self, name: str, *, controls=None) -> str:
         """匹配全名、短名、FK 骨骼名（head → head_CONTROL）；撞名则报错"""
@@ -192,11 +217,11 @@ class Rig:
             throw(f'找不到控件: {full_name}')
         return hier.get_control_settings(key).control_type
 
-    def _read(self, full_name, frame):
+    def _read(self, full_name, frame, time_unit=_TIME_UNIT):
         getter, _ = _rig_io(self._type(full_name))
-        return getter(self.sequence, self.target, full_name, frame, _TIME_UNIT)
+        return getter(self.sequence, self.target, full_name, frame, time_unit)
 
-    def _coerce(self, full_name, ctype, value, frame):
+    def _coerce(self, full_name, ctype, value, frame, time_unit=_TIME_UNIT):
         T = unreal.RigControlType
         if ctype == T.EULER_TRANSFORM:
             if isinstance(value, unreal.EulerTransform):
@@ -208,7 +233,7 @@ class Rig:
                     scale=value.scale3d,
                 )
             if isinstance(value, (unreal.Rotator, unreal.Vector)):
-                cur = self._read(full_name, frame)
+                cur = self._read(full_name, frame, time_unit)
                 if isinstance(value, unreal.Rotator):
                     return unreal.EulerTransform(location=cur.location, rotation=value, scale=cur.scale)
                 return unreal.EulerTransform(location=value, rotation=cur.rotation, scale=cur.scale)
@@ -242,75 +267,162 @@ class Rig:
 
     def key(self, name, value=None, time=None, *, interp=None):
         """打关键帧；value=None 则对目标帧原值打帧。"""
-        frame = _resolve_frame(time, self.sequence)
-        return self.keyframes(name, [frame], [value], interp=interp)
+        return self._key_batches({name: ([self._time_tick(time)], [value])}, interp,
+                                 time_unit=unreal.MovieSceneTimeUnit.TICK_RESOLUTION)
 
     def keyframes(self, name, times, values, *, interp=None):
-        """批量写控件键；部分姿态和 None 使用写入前各目标帧的值。"""
+        """写整控件、分组或单轴；返回本次写入的 keys，按样本排列。"""
         times, values = list(times), list(values)
         if len(times) != len(values):
             raise ValueError('times 和 values 长度必须一致')
-        if not times:
-            return self
-        return self._key_batches({self._resolve_name(name): (times, values)}, interp)
+        times = [self._time_tick(time) for time in times]
+        return self._key_batches({name: (times, values)}, interp,
+                                 time_unit=unreal.MovieSceneTimeUnit.TICK_RESOLUTION)
+
+    def _time_tick(self, time):
+        if isinstance(time, float):
+            if not math.isfinite(time):
+                raise ValueError('关键帧时间须为有限数值')
+            rate = self.sequence.get_tick_resolution()
+            return math.floor(time * rate.numerator / rate.denominator + 0.5)
+        if time is not None and (isinstance(time, bool) or not isinstance(time, int)):
+            raise TypeError('关键帧时间须为整数显示帧或浮点秒')
+        return self._key_tick(self._frame(time))
 
     def poses(self, poses, *, interp=None):
         """按时刻批量写姿势；未列出的控件不写键。"""
         batches = {}
-        names = {}
         for time, controls in poses.items() if isinstance(poses, Mapping) else poses:
             for name, value in controls.items():
-                if name not in names:
-                    names[name] = self._resolve_name(name)
-                times, values = batches.setdefault(names[name], ([], []))
-                times.append(time)
+                times, values = batches.setdefault(name, ([], []))
+                times.append(self._time_tick(time))
                 values.append(value)
-        return self._key_batches(batches, interp)
+        self._key_batches(batches, interp, time_unit=unreal.MovieSceneTimeUnit.TICK_RESOLUTION)
+        return self
 
-    def _key_batches(self, batches, interp):
+    def _key_batches(self, batches, interp, *, replace_span=False, playback_end=None,
+                     time_unit=_TIME_UNIT, hold_ticks=()):
+        from mc_handle import keys
         if not batches:
-            return self
+            return keys([], sequence=self.sequence)
+        modes = {
+            'constant': unreal.RichCurveInterpMode.RCIM_CONSTANT,
+            'linear': unreal.RichCurveInterpMode.RCIM_LINEAR,
+            'auto': unreal.RichCurveInterpMode.RCIM_CUBIC,
+        }
+        if interp is not None and interp not in modes:
+            raise ValueError("Rig interp 必须为 None、'constant'、'linear' 或 'auto'")
+        for name, (times, values) in batches.items():
+            if len(times) != len(values):
+                raise ValueError('times 和 values 长度必须一致')
+        if not any(times for times, _ in batches.values()):
+            return keys([], sequence=self.sequence)
         mcseq.require_focused_sequence(self.sequence)
         sections = self.track.get_sections()
-        if interp is not None:
-            modes = {
-                'constant': unreal.RichCurveInterpMode.RCIM_CONSTANT,
-                'linear': unreal.RichCurveInterpMode.RCIM_LINEAR,
-                'auto': unreal.RichCurveInterpMode.RCIM_CUBIC,
-            }
-            if interp not in modes:
-                raise ValueError("Rig interp 必须为 None、'constant'、'linear' 或 'auto'")
-            if len(sections) != 1:
-                raise ValueError('Rig 显式插值只支持单个 section，请使用 rig.keys() 选择要编辑的键')
-        prepared = [self._prepare_keys(full, times, values)
-                    for full, (times, values) in batches.items()]
+        if len(sections) != 1:
+            raise ValueError('Rig 写键需要单个 section')
+        tick_unit = unreal.MovieSceneTimeUnit.TICK_RESOLUTION
+        key_tick = (lambda frame: frame.value) if time_unit == tick_unit else self._key_tick
+        channels = mcseq.gather_channels(sections)
+        prepared = []
+        selected = []
+        occupied = set()
+        for name, (times, values) in batches.items():
+            if not times:
+                continue
+            full, part = self._control_selection(name)
+            chosen = self._control_channels(channels, full, part)
+            if part:
+                frames = ([self._frame(t) for t in times] if time_unit == _TIME_UNIT
+                          else [unreal.FrameNumber(t) for t in times])
+                encoded = [self._part_values(full, part, value, frame, time_unit)
+                           for frame, value in zip(frames, values)]
+                expected = len(encoded[0])
+                if len(chosen) != expected:
+                    raise ValueError(f'{name}: 找不到完整的目标通道')
+                item = (full, frames, encoded, None, None)
+            else:
+                item = self._prepare_keys(full, times, values, time_unit)
+            for frame in item[1]:
+                for channel in chosen:
+                    identity = (chosen.locations[id(channel)], key_tick(frame))
+                    if identity in occupied:
+                        raise ValueError(f'{name}: 同一时刻重复写入同一通道')
+                    occupied.add(identity)
+            prepared.append(item)
+            selected.append(chosen)
+        if not prepared:
+            return keys([], sequence=self.sequence)
+        if replace_span:
+            first, end_tick = self._replace_bounds(replace_span, prepared, time_unit, tick_unit)
+            unique_channels = {chosen.locations[id(channel)]: channel
+                               for chosen in selected for channel in chosen}
+            removals = (
+                [
+                    (channel, key)
+                    for channel in unique_channels.values()
+                    for key in channel.get_keys()
+                    if first <= _key_tick_time(key, tick_unit) < end_tick
+                ]
+                if end_tick > first else []
+            )
         try:
             with unreal.ScopedEditorTransaction('Batch Control Rig keys'):
                 self.track.modify()
                 for section in sections:
                     section.modify()
-                for full, frames, values, single, batch in prepared:
-                    single(self.sequence, self.target, full, frames[0], values[0], _TIME_UNIT, False)
-                    batch(self.sequence, self.target, full, frames, values, _TIME_UNIT)
+                if replace_span:
+                    for channel, key in removals:
+                        channel.remove_key(key)
+                written = mcseq._LocatedItems()
+                for (full, frames, values, single, batch), chosen in zip(prepared, selected):
+                    if batch is not None:
+                        single(self.sequence, self.target, full, frames[0], values[0], time_unit, False)
+                        batch(self.sequence, self.target, full, frames, values, time_unit)
+                    else:
+                        for frame, row in zip(frames, values):
+                            for channel, value in zip(chosen, row):
+                                key = channel.add_key(frame, value, time_unit=time_unit)
+                                written.append(key)
+                                written.locations[id(key)] = chosen.locations[id(channel)]
+                        continue
+                    # Native batches return no keys. Query each channel once, then order by sample.
+                    if batch is not None and not chosen:
+                        chosen = self._control_channels(mcseq.gather_channels(sections), full)
+                    lookup = [{_key_tick_time(k, tick_unit): k for k in channel.get_keys()} for channel in chosen]
+                    for frame in frames:
+                        for channel, table in zip(chosen, lookup):
+                            key = table[key_tick(frame)]
+                            written.append(key)
+                            written.locations[id(key)] = chosen.locations[id(channel)]
                 if interp is not None:
-                    self._apply_interp(sections[0], prepared, modes[interp])
+                    for key in written:
+                        mode = unreal.RichCurveInterpMode.RCIM_CONSTANT if _key_tick_time(key, tick_unit) in hold_ticks else modes[interp]
+                        if isinstance(key, (unreal.MovieSceneScriptingFloatKey, unreal.MovieSceneScriptingDoubleKey)):
+                            key.set_interpolation_mode(mode)
+                            if mode == unreal.RichCurveInterpMode.RCIM_CUBIC:
+                                key.set_tangent_mode(unreal.RichCurveTangentMode.RCTM_AUTO)
+                if playback_end is not None and playback_end > self.sequence.get_playback_end():
+                    self.sequence.modify()
+                    self.sequence.set_playback_end(playback_end)
         finally:
             mcseq._refresh_sequencer()
-        return self
+        return keys(written, sequence=self.sequence)
 
-    def _prepare_keys(self, full, times, values):
+    def _prepare_keys(self, full, times, values, time_unit):
         if any(not isinstance(time, (int, float)) or not math.isfinite(time) for time in times):
             raise ValueError('批量时间必须为有限的整数帧或浮点秒')
         ctype = self._type(full)
         getter, single = _rig_io(ctype)
         batch, value_type = _rig_batch_io(ctype)
-        frames = [self._frame(time) for time in times]
+        frames = ([self._frame(time) for time in times] if time_unit == _TIME_UNIT
+                  else [unreal.FrameNumber(time) for time in times])
         encoded = []
         for frame, value in zip(frames, values):
             if value is None:
-                value = getter(self.sequence, self.target, full, frame, _TIME_UNIT)
+                value = getter(self.sequence, self.target, full, frame, time_unit)
             else:
-                value = self._coerce(full, ctype, value, frame)
+                value = self._coerce(full, ctype, value, frame, time_unit)
             encoded.append(value)
         # Validate native value conversion before the warm-up changes the rig.
         return full, frames, unreal.Array.cast(value_type, encoded), single, batch
@@ -332,29 +444,91 @@ class Rig:
                 return full, ''
         for part in _CONTROL_PARTS:
             if folded.endswith(part):
-                return self._resolve_name(name[:-len(part)], controls=controls), part
+                full = self._resolve_name(name[:-len(part)], controls=controls)
+                part = _ROTATION_ALIASES.get(part, part)
+                T = unreal.RigControlType
+                ctype = self._type(full)
+                allowed = ({g for g in _CONTROL_GROUPS} |
+                           {f'{g}.{axis}' for g in _CONTROL_GROUPS for axis in 'xyz'}
+                           if ctype == T.EULER_TRANSFORM else
+                           {'.x', '.y'} if ctype == T.VECTOR2D else
+                           {'.x', '.y', '.z'} if ctype in (T.POSITION, T.SCALE, T.ROTATOR) else set())
+                if part not in allowed:
+                    raise ValueError(f'{name}: 控件类型不支持该分量')
+                return full, part
         return self._resolve_name(name, controls=controls), ''
 
-    def _apply_interp(self, section, prepared, mode):
-        channels = mcseq.gather_channels(section)
-        continuous = (unreal.MovieSceneScriptingFloatChannel, unreal.MovieSceneScriptingDoubleChannel)
-        tick_unit = unreal.MovieSceneTimeUnit.TICK_RESOLUTION
-        display_rate = self.sequence.get_display_rate()
-        tick_rate = self.sequence.get_tick_resolution()
-        for full, frames, _, _, _ in prepared:
-            ticks = set()
-            for frame in frames:
-                converted = unreal.TimeManagementLibrary.transform_time(
-                    unreal.FrameTime(frame), display_rate, tick_rate)
-                # Match the native Rig writer's RoundToFrame.
-                ticks.add(converted.frame_number.value + int(converted.sub_frame >= 0.5))
-            for channel in self._control_channels(channels, full):
-                if isinstance(channel, continuous):
-                    for key in channel.get_keys():
-                        if key.get_time(tick_unit).frame_number.value in ticks:
-                            key.set_interpolation_mode(mode)
-                            if mode == unreal.RichCurveInterpMode.RCIM_CUBIC:
-                                key.set_tangent_mode(unreal.RichCurveTangentMode.RCTM_AUTO)
+    def _part_values(self, full, part, value, frame, time_unit):
+        """Encode one selected group/axis, taking None from the pre-write pose."""
+        ctype = self._type(full)
+        group, _, axis = part.lstrip('.').partition('.')
+        scalar = bool(axis) or group in 'xyz'
+        if value is None:
+            value = self._read(full, frame, time_unit)
+            if ctype == unreal.RigControlType.EULER_TRANSFORM:
+                value = getattr(value, {'location':'location', 'rotation':'rotation', 'scale':'scale'}[group])
+            if scalar:
+                axis = axis or group
+                value = getattr(value, dict(x='roll', y='pitch', z='yaw')[axis]
+                                if isinstance(value, unreal.Rotator) else axis)
+        if scalar:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError('单轴关键帧须为有限数值或 None')
+            return (value,)
+        if group == 'rotation':
+            if not isinstance(value, unreal.Rotator):
+                raise TypeError('Rotation 组需要 unreal.Rotator')
+            row = (value.roll, value.pitch, value.yaw)
+        else:
+            if isinstance(value, unreal.Vector):
+                row = (value.x, value.y, value.z)
+            elif isinstance(value, (tuple, list)) and len(value) == 3:
+                row = tuple(value)
+            else:
+                raise TypeError('Location / Scale 组需要 Vector 或 XYZ 三元组')
+        if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) for v in row):
+            raise ValueError('分组关键帧须为有限数值')
+        return row
+
+    def _key_tick(self, frame):
+        converted = unreal.TimeManagementLibrary.transform_time(
+            unreal.FrameTime(frame), self.sequence.get_display_rate(), self.sequence.get_tick_resolution())
+        # Match the native Rig writer's RoundToFrame.
+        return converted.frame_number.value + int(converted.sub_frame >= 0.5)
+
+    def _replace_bounds(self, replace_span, prepared, time_unit, tick_unit):
+        """Return half-open [start_tick, end_tick) bounds for replace_span."""
+        if isinstance(replace_span, slice):
+            if (time_unit != tick_unit or replace_span.step not in (None, 1)
+                    or any(isinstance(t, bool) or not isinstance(t, int)
+                           for t in (replace_span.start, replace_span.stop))
+                    or replace_span.stop < replace_span.start):
+                raise ValueError('tick 区间须为有限整数 slice(start, end)')
+            return replace_span.start, replace_span.stop
+        if replace_span is True:
+            if time_unit == tick_unit:
+                rate = self.sequence.get_display_rate()
+                res = self.sequence.get_tick_resolution()
+                ticks = [frame.value for _, frames, _, _, _ in prepared for frame in frames]
+                last_tick = unreal.TimeManagementLibrary.transform_time(
+                    unreal.FrameTime(unreal.FrameNumber(max(ticks))), res, rate)
+                return min(ticks), self._key_tick(unreal.FrameNumber(last_tick.frame_number.value + 1))
+            frames = [frame.value for _, frames, _, _, _ in prepared for frame in frames]
+            return self._key_tick(unreal.FrameNumber(min(frames))), self._key_tick(unreal.FrameNumber(max(frames) + 1))
+        if isinstance(replace_span, range):
+            if replace_span.step != 1:
+                raise ValueError('Rig replace_span range 步长必须为 1')
+            span_start, span_end = replace_span.start, replace_span.stop
+        elif isinstance(replace_span, (tuple, list)) and len(replace_span) == 2:
+            span_start, span_end = replace_span
+        else:
+            raise ValueError('Rig replace_span 必须为 bool、range 或 (start_frame, end_frame)')
+        if (isinstance(span_start, bool) or not isinstance(span_start, int)
+                or isinstance(span_end, bool) or not isinstance(span_end, int)):
+            raise ValueError('Rig replace_span 区间端点必须为整数显示帧')
+        if span_end < span_start:
+            raise ValueError('Rig replace_span 结束帧不能小于起始帧')
+        return self._key_tick(unreal.FrameNumber(span_start)), self._key_tick(unreal.FrameNumber(span_end))
 
     def channels(self, name=''):
         """查询整轨、控件、分组或单轴通道。"""

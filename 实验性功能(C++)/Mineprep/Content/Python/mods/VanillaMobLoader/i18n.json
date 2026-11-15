@@ -1,5 +1,213 @@
 {
   "VanillaMobLoader": {
+    "准备 {name} · {source}": {
+      "zh": "准备 {name} · {source}",
+      "en": "Preparing {name} · {source}",
+      "zh-Hant": "準備 {name} · {source}",
+      "zh-Hant-HK": "準備 {name} · {source}"
+    },
+    "导入 {name} · {source}": {
+      "zh": "导入 {name} · {source}",
+      "en": "Importing {name} · {source}",
+      "zh-Hant": "匯入 {name} · {source}",
+      "zh-Hant-HK": "匯入 {name} · {source}"
+    },
+    "names.baby": {
+      "en": "Baby {name}",
+      "zh": "幼年{name}",
+      "zh-Hant": "幼年{name}",
+      "zh-Hant-HK": "幼年{name}"
+    },
+    "names.saddle": {
+      "en": "{name} Saddle",
+      "zh": "{name}鞍",
+      "zh-Hant": "{name}鞍",
+      "zh-Hant-HK": "{name}鞍"
+    },
+    "names.armor": {
+      "en": "{name} Armor",
+      "zh": "{name}铠",
+      "zh-Hant": "{name}鎧",
+      "zh-Hant-HK": "{name}鎧"
+    },
+    "names.collar": {
+      "en": "{name} Collar",
+      "zh": "{name}项圈",
+      "zh-Hant": "{name}項圈",
+      "zh-Hant-HK": "{name}頸圈"
+    },
+    "names.decor": {
+      "en": "{name} Decor",
+      "zh": "{name}装饰",
+      "zh-Hant": "{name}裝飾",
+      "zh-Hant-HK": "{name}裝飾"
+    },
+    "names.wool": {
+      "en": "{name} Wool",
+      "zh": "{name}的羊毛",
+      "zh-Hant": "{name}的羊毛",
+      "zh-Hant-HK": "{name}的羊毛"
+    },
+    "names.wool_undercoat": {
+      "en": "{name} Wool Undercoat",
+      "zh": "{name}的羊毛底绒",
+      "zh-Hant": "{name}的羊毛底絨",
+      "zh-Hant-HK": "{name}的羊毛底絨"
+    },
+    "names.sheep_wool": {
+      "en": "Sheep Wool",
+      "zh": "羊毛",
+      "zh-Hant": "羊毛",
+      "zh-Hant-HK": "羊毛"
+    },
+    "names.sheep_wool_undercoat": {
+      "en": "Sheep Wool Undercoat",
+      "zh": "羊毛底绒",
+      "zh-Hant": "羊毛底絨",
+      "zh-Hant-HK": "羊毛底絨"
+    },
+    "names.tag.outer": {
+      "en": "{name} [Outer]",
+      "zh": "{name} [外层]",
+      "zh-Hant": "{name} [外層]",
+      "zh-Hant-HK": "{name} [外層]"
+    },
+    "names.tag.inner": {
+      "en": "{name} [Inner]",
+      "zh": "{name} [内层]",
+      "zh-Hant": "{name} [內層]",
+      "zh-Hant-HK": "{name} [內層]"
+    },
+    "names.tag.patch": {
+      "en": "{name} [Patch]",
+      "zh": "{name} [补丁]",
+      "zh-Hant": "{name} [補丁]",
+      "zh-Hant-HK": "{name} [補丁]"
+    },
+    "names.tag.left": {
+      "en": "{name} [Left]",
+      "zh": "{name} [左]",
+      "zh-Hant": "{name} [左]",
+      "zh-Hant-HK": "{name} [左]"
+    },
+    "names.tag.right": {
+      "en": "{name} [Right]",
+      "zh": "{name} [右]",
+      "zh-Hant": "{name} [右]",
+      "zh-Hant-HK": "{name} [右]"
+    },
+    "names.tag.small": {
+      "en": "{name} [Small]",
+      "zh": "{name} [小]",
+      "zh-Hant": "{name} [小]",
+      "zh-Hant-HK": "{name} [小]"
+    },
+    "names.tag.medium": {
+      "en": "{name} [Medium]",
+      "zh": "{name} [中]",
+      "zh-Hant": "{name} [中]",
+      "zh-Hant-HK": "{name} [中]"
+    },
+    "names.tag.large": {
+      "en": "{name} [Large]",
+      "zh": "{name} [大]",
+      "zh-Hant": "{name} [大]",
+      "zh-Hant-HK": "{name} [大]"
+    },
+    "names.tag.pattern": {
+      "en": "{name} [Pattern]",
+      "zh": "{name} [花纹]",
+      "zh-Hant": "{name} [花紋]",
+      "zh-Hant-HK": "{name} [花紋]"
+    },
+    "names.tag.screen": {
+      "en": "{name} [Screen]",
+      "zh": "{name} [界面]",
+      "zh-Hant": "{name} [介面]",
+      "zh-Hant-HK": "{name} [介面]"
+    },
+    "names.tag.shoulder": {
+      "en": "{name} [Shoulder]",
+      "zh": "{name} [肩上]",
+      "zh-Hant": "{name} [肩上]",
+      "zh-Hant-HK": "{name} [肩上]"
+    },
+    "names.tag.slim": {
+      "en": "{name} [Slim]",
+      "zh": "{name} [纤细]",
+      "zh-Hant": "{name} [纖細]",
+      "zh-Hant-HK": "{name} [纖細]"
+    },
+    "names.tag.ghost": {
+      "en": "{name} [Ghost]",
+      "zh": "{name} [虚影]",
+      "zh-Hant": "{name} [虛影]",
+      "zh-Hant-HK": "{name} [虛影]"
+    },
+    "names.tag.layer_2": {
+      "en": "{name} [Layer 2]",
+      "zh": "{name} [第2层]",
+      "zh-Hant": "{name} [第2層]",
+      "zh-Hant-HK": "{name} [第2層]"
+    },
+    "names.tag.old_uv": {
+      "en": "{name} [Old UV]",
+      "zh": "{name} [旧UV]",
+      "zh-Hant": "{name} [舊UV]",
+      "zh-Hant-HK": "{name} [舊UV]"
+    },
+    "names.tag.double": {
+      "en": "{name} [Double]",
+      "zh": "{name} [大型]",
+      "zh-Hant": "{name} [大型]",
+      "zh-Hant-HK": "{name} [大型]"
+    },
+    "names.tag.destroy_stages": {
+      "en": "{name} [Destroy Stages]",
+      "zh": "{name} [破坏阶段]",
+      "zh-Hant": "{name} [破壞階段]",
+      "zh-Hant-HK": "{name} [破壞階段]"
+    },
+    "names.tag.mushrooms": {
+      "en": "{name} [Mushrooms]",
+      "zh": "{name} [蘑菇]",
+      "zh-Hant": "{name} [蘑菇]",
+      "zh-Hant-HK": "{name} [蘑菇]"
+    },
+    "names.tag.collar": {
+      "en": "{name} [Collar]",
+      "zh": "{name} [项圈]",
+      "zh-Hant": "{name} [項圈]",
+      "zh-Hant-HK": "{name} [頸圈]"
+    },
+    "names.tag.wool": {
+      "en": "{name} [Wool]",
+      "zh": "{name} [羊毛]",
+      "zh-Hant": "{name} [羊毛]",
+      "zh-Hant-HK": "{name} [羊毛]"
+    },
+    "names.tag.decor": {
+      "en": "{name} [Decor]",
+      "zh": "{name} [装饰]",
+      "zh-Hant": "{name} [裝飾]",
+      "zh-Hant-HK": "{name} [裝飾]"
+    },
+    "LoaderOptions.TrySplitHead": {
+      "en": "Try Head/Body Split",
+      "zh": "尝试头身分离",
+      "zh-Hant": "嘗試頭身分離",
+      "_native": "en"
+    },
+    "LoaderOptions.TrySplitHead.tooltip": {
+      "zh": "尝试从本地 Java GLB 拆出头部，保留一体模型，并共享材质和贴图。不能拆分时沿用一体模型。",
+      "en": "Try splitting the head from a local Java GLB. Keep the full model and share its materials and textures. Use the full model when splitting is unavailable.",
+      "zh-Hant": "嘗試從本機 Java GLB 拆出頭部，保留一體模型，並共用材質和貼圖。無法拆分時沿用一體模型。"
+    },
+    "头身分离": {
+      "zh": "头身分离",
+      "en": "Split head",
+      "zh-Hant": "頭身分離"
+    },
     "MC原版生物加载器": {
       "zh": "MC原版生物加载器",
       "en": "Vanilla Mob Loader",
@@ -16,6 +224,17 @@
       "zh": "显示详情",
       "zh-Hant": "顯示詳情",
       "_native": "en"
+    },
+    "LoaderOptions.PreferJava": {
+      "en": "Prefer Hierarchical Models (Java GLB)",
+      "zh": "优先使用层级模型（Java GLB）",
+      "zh-Hant": "優先使用階層模型（Java GLB）",
+      "_native": "en"
+    },
+    "LoaderOptions.PreferJava.tooltip": {
+      "en": "Use the local Java GLB for a single matching entry. Combinations and entries without a GLB use CEM.",
+      "zh": "单选且找到对应的本地 Java GLB 时使用层级骨架。多选组合及缺少 GLB 时使用 CEM。",
+      "zh-Hant": "單選且找到對應的本機 Java GLB 時使用階層骨架。多選組合及缺少 GLB 時使用 CEM。"
     },
     "LoaderOptions.SavePath": {
       "en": "Save Path",
@@ -161,6 +380,11 @@
       "zh": "*需要联网下载资源，模型来自 Blockbench CEM Template Loader\n 按住Shift进行多选，按顺序组合模型",
       "en": "*Internet required to download resources from Blockbench CEM Template Loader\n Hold Shift to select multiple mobs and combine them in order",
       "zh-Hant": "*需要連線下載資源，模型來自 Blockbench CEM Template Loader\n 按住 Shift 可多選，依順序組合模型"
+    },
+    "浏览 CEM 目录，可优先导入本地 Java GLB。刷新资源需要联网。\n 按住 Shift 多选，按顺序组合 CEM 模型。": {
+      "zh": "浏览 CEM 目录，可优先导入本地 Java GLB。刷新资源需要联网。\n 按住 Shift 多选，按顺序组合 CEM 模型。",
+      "en": "Browse the CEM catalog and optionally prefer local Java GLBs. Refreshing requires internet.\n Hold Shift to combine CEM models in selection order.",
+      "zh-Hant": "瀏覽 CEM 目錄，可優先匯入本機 Java GLB。重新整理資源需要連線。\n 按住 Shift 多選，依順序組合 CEM 模型。"
     },
     "刷新资源": {
       "zh": "刷新资源",
@@ -308,6 +532,14 @@
       "zh": "无法写入模型缓存：",
       "en": "Cannot write model cache: ",
       "zh-Hant": "無法寫入模型快取："
+    },
+    "目标资产名称被占用，请更换保存名称：": {
+      "zh": "目标资产名称被占用，请更换保存名称：",
+      "en": "Destination is occupied. Choose a different save name: "
+    },
+    "放置 {name}": {
+      "zh": "放置 {name}",
+      "en": "Placing {name}"
     }
   }
 }

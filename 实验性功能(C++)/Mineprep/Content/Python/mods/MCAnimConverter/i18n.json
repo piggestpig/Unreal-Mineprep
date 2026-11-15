@@ -1,9 +1,9 @@
 {
-  "BedrockAnimator": {
-    "基岩版动画转换器": {
-      "zh": "基岩版动画转换器",
-      "en": "Bedrock Animation Converter",
-      "zh-Hant": "基岩版動畫轉換器"
+  "MCAnimConverter": {
+    "MC动画转换器": {
+      "zh": "MC动画转换器",
+      "en": "Minecraft Animation Converter",
+      "zh-Hant": "MC 動畫轉換器"
     },
     "Props.category.Props": {
       "en": "Properties",
@@ -53,17 +53,15 @@
       "zh-Hant": "時間縮放",
       "_native": "en"
     },
-    "Props.BoneMap": {
-      "en": "Bone Mapping",
-      "zh": "骨骼映射",
-      "zh-Hant": "骨骼對應",
-      "_native": "en",
-      "zh-Hant-HK": "骨骼映射"
+    "动画片段": {
+      "zh": "动画片段",
+      "en": "Clip",
+      "zh-Hant": "動畫片段"
     },
-    "将基岩版 animation.json 导入 Sequencer 或烘焙为动画序列": {
-      "zh": "将基岩版 animation.json 导入 Sequencer 或烘焙为动画序列",
-      "en": "Import Bedrock animation.json into Sequencer or bake to an Animation Sequence",
-      "zh-Hant": "將基岩版 animation.json 匯入 Sequencer 或烘焙為動畫序列"
+    "请选择动画 JSON": {
+      "zh": "请选择动画 JSON",
+      "en": "Choose an animation JSON",
+      "zh-Hant": "請選擇動畫 JSON"
     },
     "将动画写入 Sequencer": {
       "zh": "写入 Sequencer",
@@ -74,6 +72,21 @@
       "zh": "烘焙动画序列",
       "en": "Bake Anim Sequence",
       "zh-Hant": "烘焙動畫序列"
+    },
+    "将 Java、基岩版与 Blockbench 动画导入 Sequencer 或烘焙为动画序列": {
+      "zh": "将 Java、基岩版与 Blockbench 动画导入 Sequencer 或烘焙为动画序列",
+      "en": "Import Java, Bedrock and Blockbench animations into Sequencer or bake to an Animation Sequence",
+      "zh-Hant": "將 Java、基岩版與 Blockbench 動畫匯入 Sequencer 或烘焙為動畫序列"
+    },
+    "mod_info.Name": {
+      "zh": "MC动画转换器",
+      "en": "Minecraft Animation Converter",
+      "zh-Hant": "MC 動畫轉換器"
+    },
+    "mod_info.Description": {
+      "zh": "将 Java、基岩版与 Blockbench 动画导入 Sequencer 或烘焙为动画序列",
+      "en": "Import Java, Bedrock and Blockbench animations into Sequencer or bake to an Animation Sequence",
+      "zh-Hant": "將 Java、基岩版與 Blockbench 動畫匯入 Sequencer 或烘焙為動畫序列"
     }
   }
 }

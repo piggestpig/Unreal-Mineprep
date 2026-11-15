@@ -22,7 +22,7 @@ from .storage import SAVED_DIR
 from .naming import validate_output_name
 
 BACKENDS = ('ism', 'pcg', 'niagara')
-from mc_structure_tex import ENCODING_VERSION
+from mc_structure_data import ENCODING_VERSION
 from mc_math import TYPE_GROUP_VERSION
 RESOURCE_VERSION = 'wg-resource-12-resident-structure-textures'
 PREVIEW_VERSION = 'r36-volume-floor-decor-1'
@@ -766,7 +766,7 @@ def prepare_world(spec, *, backend='pcg', merge='cuboids', execution='serial', w
                     directory = SAVED_DIR / 'cache' / group.key
 
                     def encode():
-                        from mc_structure_tex import write_structure_textures
+                        from mc_structure_data import write_structure_textures
                         check_cancel(job.event)
                         payloads = {data.names[i]: data.payload(indices[i]) for i in group.type_ids}
                         return write_structure_textures(payloads, directory)

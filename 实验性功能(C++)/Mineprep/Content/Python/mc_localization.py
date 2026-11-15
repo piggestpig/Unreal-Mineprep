@@ -5,6 +5,7 @@ except ModuleNotFoundError:
 
 import os
 import ast
+import re
 import shutil
 import mcvars
 import json
@@ -112,6 +113,8 @@ class Internationalization:
     新语言自动补入词典，已有译文（包括空译文）以 JSON 为准。  
     check=True 默认检查源文差异并记日志，DebugMode 下同时警告。  
     check=False 平时跳过源文差异检查，DebugMode 下仅写普通日志。  
+    read_only=True 单次调用只查词典，忽略 check；缺词回退 source 或 key，不补词、不注册回退。  
+    i18n | '文本' 等价于单字符串 read_only=True 调用；格式化使用 (i18n | '模板').format(...)。  
     JSON 格式为 {namespace: {key: {语言代码: 文本, '_native': 源语言}}}。  
     _native 省略时为 zh，其他下划线字段也视为元数据；语言排列不影响源语言。  
     zh 提供通用中文回退；zh-Hans / zh-Hant 可作为更具体的译文覆盖。  
@@ -122,6 +125,9 @@ class Internationalization:
     file 指定 JSON 路径（相对当前工作目录），构造时规范化，首次补词时创建文件及父目录。  
     i18n @ 'path/i18n.json' 返回指定文件的副本，继承语言、namespace 和 key，不修改原节点。  
     @ 用于 from_data 节点时切换到文件收集模式，不导出内存词典。  
+    迭代当前 namespace 的 (key, 语言字典)，指定 key 后迭代 (语言, 文本)，排除元数据。  
+    '文本' in i18n 精确匹配已存原文及译文，re.compile(...) in i18n 用 search 匹配。  
+    迭代保留开始时的快照，语言字典为副本；查询不补词或写文件。  
     显式文件默认以所在文件夹名为 namespace；公共 Python 目录仍用 Core。  
     属性链、下标及 PropertyGroup.localize 继承文件配置；建议同时指定稳定的 namespace。  
     不传 file 时仍根据调用来源自动定位；临时脚本默认仅在内存中使用 UObjectDisplayNames。  
@@ -135,9 +141,11 @@ class Internationalization:
 
     _catalogs = {}
     _texts = {}
+    _text_indexes = {}
     _readonly = set()
     _reported = set()
     _memory = object()  # 与文件路径及临时脚本的 None 缓存分开
+    _python_dir = Path(__file__).resolve().parent
 
     def __init__(self, namespace=None, key='', file=None, *, langs=None):
         self._namespace = namespace
@@ -182,12 +190,61 @@ class Internationalization:
     def __matmul__(self, file):
         """返回使用指定 JSON 文件的收集节点，保留原节点的其他配置。"""
         path = Path(file).resolve()
-        if path.suffix.lower() != '.json':
-            raise ValueError('file 须为 JSON 文件路径')
         node = copy(self)
         node._file = path
         node._memory_mode = False
         return node
+
+    def __or__(self, source):
+        """单字符串只读查找；先保留调用来源，再复用普通调用。"""
+        node = copy(self)
+        node._source = self._source or sys._getframe(1).f_code.co_filename
+        return node(source, read_only=True)
+
+    def _resolve(self, file, namespace=None):
+        """收集和查询共用词典位置及 namespace；显式路径已在配置时规范化。"""
+        if self._memory_mode:
+            path, default_namespace = self._memory, self._namespace
+        elif self._file is None:
+            path, default_namespace = self._location(self._source or file)
+        else:
+            path = self._file
+            default_namespace = 'Core' if path.parent == self._python_dir else path.parent.name
+        if namespace is None:
+            namespace = self._namespace if self._namespace is not None else default_namespace
+        return path, namespace
+
+    def _view(self, file, namespace=None):
+        path, namespace = self._resolve(file, namespace)
+        data = self._catalogs.get(path, {}) if self._memory_mode else self._load(path)
+        return path, namespace, data.get(namespace, {})
+
+    def __iter__(self):
+        """按存储顺序迭代语言数据；在返回迭代器前取得词典快照。"""
+        _, _, entries = self._view(sys._getframe(1).f_code.co_filename)
+        if self._key:
+            return ((lang, text) for lang, text in entries.get(self._key, {}).items()
+                    if not lang.startswith('_'))
+        return ((key, {lang: text for lang, text in translations.items() if not lang.startswith('_')})
+                for key, translations in entries.items())
+
+    def __contains__(self, query):
+        """查找实际存储的语言文本；字符串精确匹配，文本正则按 search 匹配。"""
+        if not (isinstance(query, str)
+                or isinstance(query, re.Pattern) and isinstance(query.pattern, str)):
+            raise TypeError('i18n 搜索需要字符串或编译后的文本正则')
+        path, namespace, entries = self._view(sys._getframe(1).f_code.co_filename)
+        records = (entries.get(self._key, {}),) if self._key else entries.values()
+        values = (text for translations in records for lang, text in translations.items()
+                  if not lang.startswith('_'))
+        if isinstance(query, re.Pattern):
+            return any(query.search(text) is not None for text in values)
+        if self._key:
+            return any(query == text for text in values)
+        identity = path, namespace
+        if identity not in self._text_indexes:
+            self._text_indexes[identity] = set(values)
+        return query in self._text_indexes[identity]
 
     @staticmethod
     @lru_cache(maxsize=None)
@@ -263,16 +320,21 @@ class Internationalization:
     def _sync(cls, path, data):
         previous = cls._catalogs.get(path, {})
         changed = []
+        affected = set()
         for namespace, entries in previous.items():
             for key in entries.keys() - data.get(namespace, {}).keys():
                 cls._texts.pop((path, namespace, key), None)
+                affected.add(namespace)
         for namespace, entries in data.items():
             for key, translations in entries.items():
                 if ((path, namespace, key) not in cls._texts
                         or translations != previous.get(namespace, {}).get(key)):
                     changed.append((namespace, key, translations))
+                    affected.add(namespace)
         if changed:
             cls._register(path, changed)
+        for namespace in affected:
+            cls._text_indexes.pop((path, namespace), None)
         cls._catalogs[path] = data
 
     @classmethod
@@ -298,23 +360,16 @@ class Internationalization:
     def _collect(self, file, supplied_entries, namespace=None, *, native_cultures=None, check=True):
         """批量合并，一次写回；native_cultures 可覆盖各个新词条的源语言。"""
         native = self._langs[0]
+        path, namespace = self._resolve(file, namespace)
         if self._memory_mode:
-            namespace = self._namespace if namespace is None else namespace
-            entries = self._catalogs.get(self._memory, {}).get(namespace, {})
+            entries = self._catalogs.get(path, {}).get(namespace, {})
             records = {}
             for key, supplied in supplied_entries.items():
                 culture = (native_cultures or {}).get(key, native)
                 records[key] = entries[key] if key in entries else {
                     '_native': culture, culture: supplied.get(culture) or key,
                 }
-            return self._memory, namespace, records
-        if self._file is None:
-            path, default_namespace = self._location(self._source or file)
-        else:
-            path = self._file
-            default_namespace = 'Core' if path.parent == Path(__file__).resolve().parent else path.parent.name
-        if namespace is None:
-            namespace = self._namespace if self._namespace is not None else default_namespace
+            return path, namespace, records
 
         data = self._load(path)
         entries = data.get(namespace, {})
@@ -356,7 +411,8 @@ class Internationalization:
                         self._reported.add(report)
         return path, namespace, {key: entries[key] for key in supplied_entries}
 
-    def __call__(self, source=None, *texts, namespace=None, key=None, check=True, **languages):
+    def __call__(self, source=None, *texts, namespace=None, key=None, check=True,
+                 read_only=False, **languages):
         if len(texts) + 1 > len(self._langs):
             raise TypeError('位置文本数量超过 langs 配置，请使用语言关键字或扩展 langs')
         if any(lang.startswith('_') for lang in languages):
@@ -374,6 +430,10 @@ class Internationalization:
         if not key:
             return unreal.Text(source or '')
         file = self._source or sys._getframe(1).f_code.co_filename
+        if read_only:
+            path, namespace, _ = self._view(file, namespace)
+            text = self._texts.get((path, namespace, key))
+            return text if text is not None else unreal.Text(source or key)
         path, namespace, _ = self._collect(file, {key: supplied}, namespace, check=check)
         return self._texts[path, namespace, key]
 
@@ -465,6 +525,7 @@ def _offline_i18n(path, languages=None, write=False):
     languages = list(('zh', 'en') if languages is None else languages)
     report = {name: [] for name in ('added', 'untranslated', 'unused', 'dynamic', 'errors')}
     files, catalogs, scopes, entries, conflicts = [], set(), {}, {}, set()
+    references = set()
     if path.is_file():
         files = [path]
     else:
@@ -473,7 +534,7 @@ def _offline_i18n(path, languages=None, write=False):
             files.extend(Path(folder) / name for name in sorted(names)
                          if name.endswith('.py') or name in ('i18n.json', 'mod_manifest.toml'))
 
-    def add(namespace, key, texts, native, source):
+    def add(namespace, key, texts, native, source, read_only=False):
         if not key:
             return
         if (not isinstance(namespace, str) or not isinstance(key, str)
@@ -482,6 +543,9 @@ def _offline_i18n(path, languages=None, write=False):
             raise ValueError('namespace、key 和语言文本须为字符串')
         identity = catalog, namespace, key
         scopes.setdefault(catalog, set()).add(namespace)
+        references.add(identity)
+        if read_only:
+            return
         entry = entries.setdefault(identity, {'native': native, 'texts': {}, 'source': source})
         if texts and not entry['texts']:
             entry['native'] = native
@@ -522,10 +586,23 @@ def _offline_i18n(path, languages=None, write=False):
         classes = {node.name: node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
                    and any(ast.unparse(base) in ('PropertyGroup', 'mineprep.PropertyGroup') for base in node.bases)}
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
+            if not isinstance(node, (ast.Call, ast.BinOp)):
                 continue
             location = f'{file}:{node.lineno}'
             try:
+                if isinstance(node, ast.BinOp):
+                    if not isinstance(node.op, ast.BitOr):
+                        continue
+                    config = _i18n_node(node.left, namespace)
+                    if config is None:
+                        continue
+                    text = ast.literal_eval(node.right)
+                    if not isinstance(text, str):
+                        raise ValueError('i18n | 需要字符串')
+                    ns, prefix, langs = config
+                    add(ns, prefix or text, {langs[0]: text} if text else {}, langs[0],
+                        location, read_only=True)
+                    continue
                 config = _i18n_node(node.func, namespace)
                 if config:
                     ns, prefix, langs = config
@@ -538,9 +615,10 @@ def _offline_i18n(path, languages=None, write=False):
                     ns = ns if override is None else override
                     key = options.pop('key', None)
                     options.pop('check', None)
+                    read_only = options.pop('read_only', False)
                     texts = {lang: text for lang, text in {**dict(zip(langs, args)), **options}.items() if text}
                     key = key if key is not None else prefix or texts.get(langs[0], '')
-                    add(ns, key, texts, langs[0], location)
+                    add(ns, key, texts, langs[0], location, read_only=read_only)
                 elif isinstance(node.func, ast.Attribute) and node.func.attr == 'localize':
                     for ns, key, texts, native in _i18n_properties(node, classes, namespace):
                         add(ns, key, texts, native, location)
@@ -582,7 +660,7 @@ def _offline_i18n(path, languages=None, write=False):
                 continue  # 共享词典只比较本次涉及的 namespace。
             for key, record in rows.items():
                 item = {'file': str(catalog), 'namespace': ns, 'key': key}
-                if (catalog, ns, key) not in entries:
+                if (catalog, ns, key) not in references:
                     report['unused'].append(item)
                 missing = [lang for lang in languages if not record.get(lang)]
                 if missing:

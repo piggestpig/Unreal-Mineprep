@@ -37,6 +37,7 @@ class MCpath:
     config: str = mineprep + 'Mineprep_config.txt'
     installer: str = ''
     assets: str = ''
+    glb: str = ''
     cache: str = project + 'cache/'
     mcprep_data: str = mineprep + 'mcprep_data.json'
 
@@ -146,7 +147,10 @@ class config(metaclass=ConfigMeta):
 
 paths = MCpath()
 if unreal:
-    paths.installer = config['Settings']['installer_dir']
-    _pack = (config.config_dict['Settings'].get('default_resource_pack')
+    _settings = config.config_dict.get('Settings', {})
+    paths.installer = _settings.get('installer_dir') or ''
+    _pack = (_settings.get('default_resource_pack')
              or paths.installer + '/Blender扩展资源/mc_default')
     paths.assets = _pack.rstrip('/\\') + '/assets'
+    paths.glb = ((_settings.get('glb_dir') or '').strip()
+                 or (paths.installer.rstrip('/\\') + '/Blender扩展资源/GLB' if paths.installer else ''))

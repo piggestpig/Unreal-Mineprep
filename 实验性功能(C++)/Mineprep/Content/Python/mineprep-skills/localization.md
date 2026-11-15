@@ -34,6 +34,40 @@ Manifest arrays and language dictionaries use the same catalog; see
 `bilingual`, `localize` and `loctext` remain available for existing callers.
 See the [Internationalization docstring](../mc_localization.py) for other options.
 
+## Read-only calls
+
+Use `read_only=True` to look up a text without collecting entries or translations:
+
+```python
+text = i18n.start('开始', 'Start', read_only=True)
+english = I18N.start('Start', read_only=True)
+existing = loc.start(read_only=True)
+```
+
+For one string, `|` is equivalent to a `read_only=True` call:
+
+```python
+text = i18n | '开始'
+english = I18N | 'Start'
+keyed = i18n.start | '备用文本'
+custom = i18n['Shared'] @ path | '开始'
+formatted = (i18n | '已完成 {count} 项').format(count=3)
+```
+
+Only a string is accepted; other types raise `TypeError`. The string is the source
+and missing-key fallback, not a reverse search across translations. A node's key
+takes precedence. Keep parentheses around `|` when formatting its returned Text.
+
+A hit returns the catalog's cached Text. A miss returns `unreal.Text(source or key)`;
+additional translations are ignored, and the fallback is not registered or added
+to catalog/search caches. An empty call returns empty Text. `check` is ignored.
+The normal initial catalog load and registration still occur when needed.
+
+The flag applies to one call and works with namespace/key overrides and `@` files.
+Default `read_only=False` collects as usual, including after a read-only miss.
+It never makes a `from_data()` catalog writable. This is separate from
+`check=False`, which only changes source-difference checks.
+
 ## Formatting
 
 The result is `unreal.Text`: pass it directly to widgets, use `.format(...)` for
@@ -139,6 +173,43 @@ the snapshot, call `localize()` again to update bindings. Missing property recor
 use metadata as fallback without changing the catalog. File loading, inheritance
 and binding aliases remain the caller's responsibility.
 
+## Iteration and translation search
+
+Iteration and membership inspect the current catalog's **current namespace**:
+
+```python
+import re
+from mineprep import i18n
+
+loc = i18n['MyMod'] @ 'translations/i18n.json'
+for key, translations in loc:
+    print(key, translations)              # 'start', {'zh': '开始', 'en': 'Start'}
+for language, text in loc.start:
+    print(language, text)                 # 'zh', '开始'; 'en', 'Start'
+
+exact = 'Start' in loc                    # full, case-sensitive text equality
+partial = re.compile('start', re.IGNORECASE) in loc
+entry_only = 'Start' in loc.start
+```
+
+A key selects only its exact record, even when dotted child keys exist. Missing
+keys or namespaces give empty iteration and no matches. Order follows the catalog;
+underscore metadata is excluded. Returned language dictionaries are copies.
+Iterators retain the snapshot from their creation; subsequent iterations see updates.
+For a dictionary, use `dict(iter(loc))`: `dict(loc)` can invoke the dynamic `keys`
+attribute. Methods such as `keys` and `items` remain available as localization keys.
+
+Search examines stored source and translation values, including explicitly empty
+strings. It does not match keys, metadata, language fallback or formatted output.
+Compiled text regexes use `search()` with their flags; other types, including bytes
+regexes, raise `TypeError`.
+
+Queries do not collect or write entries or check source differences. File catalogs
+use the normal initial load and registration; later queries read cached data.
+Namespace-wide exact searches lazily share a text index, invalidated when that
+namespace changes. A selected key scans only its languages; regex searches stop at
+the first match without building an index. JSON edits still need the normal reload.
+
 ## Offline localization tools
 
 Inspect a mod folder or Python file without importing or running it:
@@ -159,6 +230,9 @@ Reports contain `added`, `untranslated`, `unused`, `dynamic` and `errors` lists.
 Standard `i18n` / `I18N` / `mineprep.i18n` / `mineprep.I18N` names are recognized;
 aliases and wrappers such as `tr(...)` may be missed entirely, without appearing
 in `dynamic`. Custom instances and explicit file paths are not statically expanded.
+Recognized `read_only=True` calls and `|` expressions count as references but do not
+supply collection candidates; ordinary calls to the same key can still supply
+translations. Dynamic right operands of recognized `|` expressions appear in `dynamic`.
 
 `check_i18n` defaults to `zh` and `en`; use `languages=[...]` to inspect others.
 `untranslated=0` does not prove the whole UI is localized: unwrapped strings are

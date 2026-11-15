@@ -2,6 +2,7 @@
 import json
 import uuid
 import unreal
+from mc_model_assets import RECIPE, import_glb, pipeline
 from mineprep import i18n
 from . import importer
 from .assets import CACHE
@@ -18,34 +19,21 @@ def prerequisites():
         raise RuntimeError('Skin material has no skin texture parameter')
 
 
-def pipeline():
-    p = unreal.InterchangeGenericAssetsPipeline()
-    p.asset_type_sub_folders = False
-    p.scene_name_sub_folder = False
-    p.import_offset_uniform_scale = 1
-    p.import_offset_rotation = unreal.Rotator()
-    p.import_offset_translation = unreal.Vector()
-
-    p.mesh_pipeline.import_static_meshes = False
-    p.mesh_pipeline.import_skeletal_meshes = True
-    p.mesh_pipeline.create_physics_asset = False
-    p.animation_pipeline.import_animations = False
-    p.material_pipeline.import_materials = False
-    p.material_pipeline.texture_pipeline.import_textures = False
-
-    p.common_meshes_properties.keep_sections_separate = True
-    p.common_meshes_properties.recompute_normals = False
-    p.common_meshes_properties.recompute_tangents = True
-    p.common_meshes_properties.use_full_precision_u_vs = True
-    p.common_skeletal_meshes_and_animations_properties.skeleton = None
-    p.common_skeletal_meshes_and_animations_properties.use_t0_as_ref_pose = False
-    return p
 
 
-def create_assets(entry, version, target, geometry, skin_path=None, reload=False, material_sources=None):
+
+def mark_assets(mesh, entry, keys, source, **metadata):
+    lib = unreal.EditorAssetLibrary
+    for asset in (mesh, mesh.skeleton):
+        lib.set_metadata_tag(asset, RECIPE, entry.key)
+        lib.set_metadata_tag(asset, importer.ENTRIES, json.dumps(keys))
+        lib.set_metadata_tag(asset, importer.SOURCE, source)
+    for key, value in metadata.items():
+        lib.set_metadata_tag(mesh, 'VanillaMobLoader.' + key, value)
+
+
+def create_assets(entry, version, target, geometry, *, keys, material_sources):
     folder, name, existing = target
-    if existing and not reload:
-        return existing, []
 
     lib = unreal.EditorAssetLibrary
     destinations = [folder+'/SKM_'+name, folder+'/SK_'+name]
@@ -63,25 +51,18 @@ def create_assets(entry, version, target, geometry, skin_path=None, reload=False
         raise RuntimeError(str(i18n('无法写入模型缓存：', 'Cannot write model cache: ')) + str(exc)) from exc
 
     if existing:
-        return reimport_asset(entry, version, target, geometry, skin_path, path, mapping, material_sources)
+        return reimport_asset(entry, version, target, geometry, path, mapping, material_sources, keys)
 
     stage = importer.BASE+'/__import_'+uuid.uuid4().hex
     created, moved, warnings = [], [], list(geometry.warnings)
     # Texture/material paths absent at entry are exclusively owned by this call.
-    sources = material_sources or [(entry, name, skin_path, geometry)]
-    owned_skin = [folder+'/'+prefix+n+suffix for _,n,_,_ in sources
+    sources = material_sources
+    owned_skin = [folder+'/'+prefix+n+suffix for _,n,_ in sources
                   for prefix,suffix in (('T_',''),('MI_',''))
                   if not lib.does_asset_exist(folder+'/'+prefix+n+suffix)]
 
     try:
-        p = pipeline()  # Keep a strong reference until synchronous import completes.
-        parameters = unreal.ImportAssetParameters()
-        parameters.is_automated = True
-        parameters.replace_existing = False
-        parameters.override_pipelines = [unreal.SoftObjectPath(p.get_path_name())]
-        manager = unreal.InterchangeManager.get_interchange_manager_scripted()
-        source = unreal.InterchangeManager.create_source_data(str(path))
-        objects = manager.import_asset(stage, source, parameters) or []
+        objects = import_glb(stage, path, pipeline())
 
         meshes = [o for o in objects if isinstance(o, unreal.SkeletalMesh)]
         skeletons = [o for o in objects if isinstance(o, unreal.Skeleton)]
@@ -99,11 +80,8 @@ def create_assets(entry, version, target, geometry, skin_path=None, reload=False
             moved.append(destination)
         created += [skeleton,mesh]
 
-        for asset in (mesh, skeleton):
-            lib.set_metadata_tag(asset, importer.KEY, entry.key)
-        for key,value in {'Version':version, 'Model':entry.model, 'Name':entry.name,
-                          'Bones':json.dumps(mapping), 'Parts':json.dumps(geometry.parts)}.items():
-            lib.set_metadata_tag(mesh, 'VanillaMobLoader.'+key, value)
+        mark_assets(mesh, entry, keys, 'cem', Version=version, Model=entry.model, Name=entry.name,
+                    Bones=json.dumps(mapping), Parts=json.dumps(geometry.parts))
         for asset in created:
             if not lib.save_loaded_asset(asset):
                 raise RuntimeError('Failed to save '+asset.get_path_name())
@@ -122,34 +100,23 @@ def create_assets(entry, version, target, geometry, skin_path=None, reload=False
             lib.delete_directory(stage)
 
 
-def reimport_asset(entry, version, target, geometry, skin_path, path, mapping, material_sources):
+def reimport_asset(entry, version, target, geometry, path, mapping, sources, keys):
     """原地重新导入骨骼网格体，保留场景组件与动画资产对原骨架的引用。"""
     folder, name, mesh = target
     lib = unreal.EditorAssetLibrary
     skeleton = mesh.skeleton
-    if not skeleton or lib.get_metadata_tag(skeleton, importer.KEY) != lib.get_metadata_tag(mesh, importer.KEY):
+    if not skeleton or lib.get_metadata_tag(skeleton, RECIPE) != lib.get_metadata_tag(mesh, RECIPE):
         raise ValueError('Cannot update a missing or foreign skeleton')
     created, warnings = [], list(geometry.warnings)
-    sources = material_sources or [(entry, name, skin_path, geometry)]
     p = pipeline()
     p.common_skeletal_meshes_and_animations_properties.skeleton = skeleton
     p.mesh_pipeline.update_skeleton_reference_pose = True
-    parameters = unreal.ImportAssetParameters()
-    parameters.is_automated = True
-    parameters.replace_existing = True
-    parameters.reimport_asset = mesh
-    parameters.override_pipelines = [unreal.SoftObjectPath(p.get_path_name())]
-    manager = unreal.InterchangeManager.get_interchange_manager_scripted()
-    source = unreal.InterchangeManager.create_source_data(str(path))
-    result = manager.import_asset(folder, source, parameters)
+    result = import_glb(folder, path, p, mesh)
     if not result or mesh not in result or mesh.skeleton != skeleton:
         raise RuntimeError('Skeletal mesh reimport failed; existing assets were not deleted')
     assign_materials(mesh, folder, sources, created, warnings)
-    for asset in (mesh,skeleton):
-        lib.set_metadata_tag(asset, importer.KEY, entry.key)
-    for key,value in {'Version':version, 'Model':entry.model, 'Name':entry.name,
-                      'Bones':json.dumps(mapping), 'Parts':json.dumps(geometry.parts)}.items():
-        lib.set_metadata_tag(mesh, 'VanillaMobLoader.'+key, value)
+    mark_assets(mesh, entry, keys, 'cem', Version=version, Model=entry.model, Name=entry.name,
+                Bones=json.dumps(mapping), Parts=json.dumps(geometry.parts))
     for asset in created + [skeleton, mesh]:
         if not lib.save_loaded_asset(asset):
             raise RuntimeError('Failed to save updated asset: '+asset.get_path_name())
@@ -158,11 +125,11 @@ def reimport_asset(entry, version, target, geometry, skin_path, path, mapping, m
 
 def assign_materials(mesh, folder, sources, created, warnings):
     materials = []
-    for entry,name,path,geo in sources:
+    for entry,name,path in sources:
         begin = len(created)
-        materials.append(importer.surface_material(entry, folder, name, path, created, warnings, geo))
+        materials.append(importer.skin_material(entry, folder, name, path, created, warnings))
         for asset in created[begin:]:
-            unreal.EditorAssetLibrary.set_metadata_tag(asset, importer.KEY, entry.key)
+            unreal.EditorAssetLibrary.set_metadata_tag(asset, RECIPE, entry.key)
     slots = list(mesh.materials)
     if len(materials) == 1 and len(slots) == 1:
         slots[0].material_interface = materials[0]

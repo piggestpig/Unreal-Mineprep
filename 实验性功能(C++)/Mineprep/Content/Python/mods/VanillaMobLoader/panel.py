@@ -7,7 +7,7 @@ import mineprep
 from mineprep import i18n
 from .assets import AssetStore, load_settings, save_settings
 from .props import LoaderOptions
-from . import composition, api
+from . import composition, api, names
 
 CATEGORIES = {'ALL': ('全部', 'All'), 'Regular': ('常规', 'Regular'),
               'Babies': ('幼体', 'Babies'), 'Custom': ('自定义', 'Custom'),
@@ -38,11 +38,11 @@ class VanillaMobLoader(mineprep.Mod):
         if self.catalog and self.category not in ['ALL'] + self.catalog.categories:
             self.category = 'Regular' if 'Regular' in self.catalog.categories else self.catalog.categories[0]
         previous = settings.get('selected', []) if self.catalog else []
-        if isinstance(previous, str):
-            previous = [previous] if previous else []
         self.selected_keys = list(dict.fromkeys(k for k in previous if self.catalog and k in self.catalog.by_key))
-        self.options.SavePath = str(settings.get('save_path', '/Game/mc/mob/')) if self.catalog else '/Game/mc/mob/'
-        self.options.SaveName = str(settings.get('save_name', composition.automatic_name(self.selected_entries()))) if self.catalog else ''
+        self.options.SavePath = settings.get('save_path') or composition.DEFAULT_SAVE_PATH
+        self.options.PreferJava = settings.get('prefer_java', True)
+        self.options.TrySplitHead = settings.get('try_split_head', False)
+        self.options.SaveName = str(settings.get('save_name', composition.automatic_name(self.selected_entries())))
         self.query = ''
 
         self.rows = []
@@ -94,9 +94,9 @@ class VanillaMobLoader(mineprep.Mod):
         root = self.frame.col(align=(0, 0), padding=8)
 
         header = root.row(padding=(0, 4))
-        header.text(i18n('*需要联网下载资源，模型来自 Blockbench CEM Template Loader\n 按住Shift进行多选，按顺序组合模型',
-                       '*Internet required to download resources from Blockbench CEM Template Loader'
-                       '\n Hold Shift to select multiple mobs and combine them in order'),
+        header.text(i18n('浏览 CEM 目录，可优先导入本地 Java GLB。刷新资源需要联网。\n 按住 Shift 多选，按顺序组合 CEM 模型。',
+                       'Browse the CEM catalog and optionally prefer local Java GLBs. Refreshing requires internet.'
+                       '\n Hold Shift to combine CEM models in selection order.'),
                     size=10, wrap=True, align=(1, 2), fill=1)
         self.refresh_button = header.button(i18n('刷新资源', 'Refresh Assets'), size=12, on_clicked=self.refresh)
 
@@ -154,6 +154,8 @@ class VanillaMobLoader(mineprep.Mod):
 
     def _build_grid(self, rebuild=False):
         if rebuild:
+            if self.catalog:
+                names.register(self.catalog)
             self.grid.clear_children()
             self._grid_images.clear()
             self._buttons.clear()
@@ -179,7 +181,7 @@ class VanillaMobLoader(mineprep.Mod):
                 image = picture(content, 88)
                 self._grid_images.setdefault(entry.id, []).append(image)
 
-                title = content.text(entry.name, size=11, wrap=True, align=(2, 1), padding=(-5, 1))
+                title = content.text(names.text(entry.name), size=11, wrap=True, align=(2, 1), padding=(-5, 1))
 
                 count = len(self.catalog.variants.get(entry.key, []))
                 if entry.parent_key:
@@ -187,7 +189,8 @@ class VanillaMobLoader(mineprep.Mod):
                 elif count:
                     self._badges[entry.key] = content.text('', size=9, align=(2, 1), padding=(0, 1))
 
-                button.set_tool_tip_text(entry.name + (' · ' + entry.parent_name if entry.parent_name else ''))
+                button.set_tool_tip_text(str(names.text(entry.name)) + ' · ' + entry.id
+                                         + (' · ' + str(names.text(entry.parent_name)) if entry.parent_name else ''))
                 self._buttons[entry.key] = button
                 self._cells[entry.key] = cell
                 if entry.id in self.textures:
@@ -227,9 +230,11 @@ class VanillaMobLoader(mineprep.Mod):
         self._update_status()
 
     def _save(self):
-        if self.catalog and not save_settings(self.category, self.selected_keys, save_path=self.options.SavePath,
-                                              save_name=self.options.SaveName, expansion=self.options.LayerExpansion,
-                                              random_scale=self.options.RandomScale):
+        previous = {} if self.catalog else load_settings()
+        if not save_settings(previous.get('category', self.category), previous.get('selected', self.selected_keys),
+                             save_path=self.options.SavePath, save_name=self.options.SaveName,
+                             expansion=self.options.LayerExpansion, random_scale=self.options.RandomScale,
+                             prefer_java=self.options.PreferJava, try_split_head=self.options.TrySplitHead):
             self._status = str(i18n('设置未保存：缓存目录不可写', 'Settings not saved: cache is not writable'))
 
     def select(self, key):
@@ -302,21 +307,21 @@ class VanillaMobLoader(mineprep.Mod):
         if tex:
             self._fit_image(self._detail_image, tex, 170)
         entries = self.selected_entries()
-        self._detail_name.set_text(" + ".join(e.name for e in entries))
+        self._detail_name.set_text(" + ".join(str(names.text(e.name)) for e in entries))
         values = {
             'id': entry.id,
             'category': label(entry.category),
             'textures': i18n('仅应用主皮肤，附加贴图暂不加载', 'Primary skin only; additional textures are not loaded')
                         if self.catalog.texture_count(entry) > 1 else '',
-            'parent': i18n('父模板：{name}', 'Parent: {name}').format(name=entry.parent_name) if entry.parent_name else '',
-            'description': entry.description,
+            'parent': i18n('父模板：{name}', 'Parent: {name}').format(name=names.text(entry.parent_name)) if entry.parent_name else '',
+            'description': names.description(entry),
             'model': 'Model: ' + entry.model,
             'filename': 'JEM: ' + entry.filename + '.jem',
         }
         if len(entries) > 1:
             values = dict.fromkeys(values, '')
             values['description'] = '\n+\n'.join(
-                '\n'.join(filter(None, (e.name, e.id, str(label(e.category)), e.description,
+                '\n'.join(filter(None, (str(names.text(e.name)), e.id, str(label(e.category)), names.description(e),
                                           'Model: '+e.model, 'JEM: '+e.filename+'.jem',
                                           str(i18n('仅使用主皮肤', 'Primary skin only')) if self.catalog.texture_count(e)>1 else '')))
                 for e in entries)
@@ -381,8 +386,14 @@ class VanillaMobLoader(mineprep.Mod):
                         return
                     result = job.result
                     if not reload:
-                        importer.place(result['mesh'], scale, placement)
-                    self._status = str(i18n('已更新：', 'Updated: ') if reload else i18n('已放置：', 'Placed: ')) + result['name']
+                        importer.place(result['mesh'], scale, placement, head_mesh=result['head_mesh'])
+                    source = 'Java GLB' if result['source'] == 'java_glb' else 'CEM'
+                    if result.get('rig_profile'):
+                        source += ' / FK'
+                    if result['head_mesh'] is not None:
+                        source += ' / ' + str(i18n('头身分离', 'Split head'))
+                    self._status = (str(i18n('已更新：', 'Updated: ') if reload else i18n('已放置：', 'Placed: '))
+                                    + result['name'] + ' · ' + source)
                     if result['warnings']:
                         self._status += ' · ' + '; '.join(result['warnings'])
                 except Exception as exc:
@@ -393,7 +404,9 @@ class VanillaMobLoader(mineprep.Mod):
 
             self._build_job = api.build_entity(self.catalog, [e.key for e in entries],
                 save_path=self.options.SavePath, name=name, layer_expansion=self.options.LayerExpansion,
-                random_scale=self.options.RandomScale, reload=reload, cache=self.store.cache, on_progress=progress,
+                random_scale=self.options.RandomScale, reload=reload, prefer_java=self.options.PreferJava,
+                try_split_head=self.options.TrySplitHead,
+                cache=self.store.cache, on_progress=progress,
                 on_conflict=conflict, on_stall=stalled, on_done=finished)
         except Exception as exc:
             self._status = str(i18n('加载失败：', 'Import failed: ')) + str(exc)[:220]

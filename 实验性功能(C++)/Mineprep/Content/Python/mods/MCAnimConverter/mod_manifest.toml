@@ -1,0 +1,11 @@
+schema_version = 2
+Name = ["MC动画转换器", "Minecraft Animation Converter"]
+Description = ["将 Java、基岩版与 Blockbench 动画导入 Sequencer 或烘焙为动画序列", "Import Java, Bedrock and Blockbench animations into Sequencer or bake to an Animation Sequence"]
+Version = "4.2"
+CreatedBy = "Pig"
+EnabledByDefault = true
+ReloadWithMineprep = true
+Priority = 1
+
+[build]
+paths_exclude_pattern = ["/Anim/vanilla/"]

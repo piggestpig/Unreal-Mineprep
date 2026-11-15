@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from html import unescape
 from html.parser import HTMLParser
 import json
+from . import names
 
 
 class _Text(HTMLParser):
@@ -41,6 +42,8 @@ class Entry:
     filename: str
     description: str
     textureless: bool
+    translations: dict
+    search_text: str
 
 
 class Catalog:
@@ -82,7 +85,7 @@ class Catalog:
         ident = str(item['id'])
         key = json.dumps([category, parent.id if parent else '', ident], ensure_ascii=True)
         popup = item.get('popup', '')
-        args = [display(item)]
+        args = []
 
         if isinstance(popup, list):
             args += popup[1:]
@@ -91,13 +94,16 @@ class Catalog:
             popup = popups.get(popup, popup)
         if isinstance(popup, dict):
             popup = popup.get('message', '')
-        for i, value in enumerate(args):
+        for i, value in enumerate(args, start=1):
             popup = str(popup).replace('{' + str(i) + '}', str(value))
 
-        entry = Entry(key, ident, display(item), category, group,
+        name = display(item)
+        filename = str(item.get('file') or ident)
+        entry = Entry(key, ident, name, category, group,
                       parent.key if parent else '', parent.name if parent else '',
                       str(item.get('model') or (parent.model if parent else ident)),
-                      str(item.get('file') or ident), plain(popup), bool(item.get('textureless')))
+                      filename, plain(popup), bool(item.get('textureless')),
+                      names.translations(name), names.search_text(name, ident, filename, parent))
         if key in self.by_key:
             raise ValueError('Duplicate catalog entry')
         self.entries.append(entry)
@@ -116,11 +122,11 @@ class Catalog:
         return len(value) if isinstance(value, list) else 1
 
     def search(self, category='Regular', query=''):
-        tokens = query.lower().replace('_', ' ').split()
+        tokens = names.normalize(query).split()
         return [e for e in self.entries
                 if (category == 'ALL' or e.category == category)
                 and (bool(tokens) or not e.parent_key)
-                and all(t in (e.name + ' ' + e.id).lower().replace('_', ' ') for t in tokens)]
+                and all(t in e.search_text for t in tokens)]
 
     def family(self, entry):
         base = self.by_key[entry.parent_key] if entry.parent_key else entry

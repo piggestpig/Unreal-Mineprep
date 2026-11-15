@@ -1,6 +1,7 @@
 # MC structure / block import
 
 Sources: `mc_structure.py`, `mc_structure_data.py`, `mc_blockstates.py`, `mc_math.py`, `mc_importer.py`, `mc_config.paths`.  
+`mc_structure_data.py` contains the Unreal-free cell container, VarInt decoder and BPT/BRT encoding/output; `cv2` is loaded only when writing EXR files.
 Resources: `…/assets/minecraft/models/block` + sibling `blockstates/`.  
 User file → `spawn_structure(source=path)`. For procedural structures, use `Blocks.add` → explicit `connect()` when needed → `spawn_structure(b, gpu=0/1/2)`; [api.md](api.md) has an oak example. Do not assume a matching NBT/schematic is bundled. Generator presets are a separate UI feature. Common mistakes: [pitfalls/structure.md](pitfalls/structure.md). Unsure of a model name: `mineprep.get_all_blocks`.
 
@@ -46,7 +47,7 @@ Source dimensions do not change placement, centering or baking; WorldGenerator
 
 ## File processing and editable cells
 
-For large structure files (`.nbt`, `.mcstructure`, `.schem`, `.schematic`), pass the file path directly to `spawn_structure(path, ...)` or `parse_structure(path, ...)` (`mc_structure_data.py`). Use `Blocks.from_file(path)` when you need an editable sparse cell dictionary.
+For large structure files (`.nbt`, `.mcstructure`, `.schem`, `.schematic`), pass the file path directly to `spawn_structure(path, ...)` or `parse_structure(path, ...)` (`mc_structure.py`). Use `Blocks.from_file(path)` when you need an editable sparse cell dictionary.
 
 File import preserves native states and coordinates: only missing glass-pane links and Bedrock door-half properties are synced automatically, while trapdoor neighbour repair requires `repair_trapdoors=True`. `spawn_structure` logs CPU preparation and submission times, not GPU rendering completion.
 
@@ -144,59 +145,14 @@ ISM and PCG/Niagara both start from packed arrays. ISM then turns each model int
 
 `Blocks` (`add` / `connect` / `types()`) is the public cell container. PCG (`gpu=1`) and Niagara (`gpu=2`) use packed arrays, not `types()`. One cell can expand to multiple meshes via `structure_parts`. Never place `oak_fence_side` as its own grid cell.
 
-**Placement defaults:** `spawn_structure(..., name='', center=False)` preserves grid coordinates for both files and `Blocks`; `loc` is the position of the MC origin cell's minimum corner. `center=True` anchors the original logical grid bounds at their bottom-center, before culling or merging. Source names are used unless overridden. Empty structures return `[]` without creating textures or Actors. `Blocks.types()` skips a model with no JSON, or when `import_block` returns `None`, and does not warn. `spawn_structure` looks up a same-name or `name_` inventory fallback when the exact JSON is missing. Missing, failed or null model imports warn and skip that type before GPU palette construction.
+**Placement defaults:** `spawn_structure(..., name='', center=False, repair_trapdoors=False)` (or `blocks.spawn(...)`) preserves grid coordinates for both files and `Blocks`; `loc` is the position of the MC origin cell's minimum corner. `center=True` anchors the original logical grid bounds at their bottom-center before culling or merging. `repair_trapdoors=True` opts into neighbour-based facing repair for faulty file exports.
 
-**Faithful trapdoor import:** `Blocks.from_file(path)`, `parse_structure(path)`
-and `spawn_structure(path)` preserve the recorded trapdoor facing by default.
-For a faulty old export, pass `repair_trapdoors=True` to opt into the existing
-heuristic: an open trapdoor with exactly one full-block neighbour faces away
-from it. This option applies only to file sources. Bedrock door-half syncing
-and filling entirely absent pane links remain enabled.
+**GPU groups:** `spawn_structure(..., gpu=1, groups=4)` requests four groups (ISM accepts only `groups=1`). Both PCG (`gpu=1`, balanced by type count) and Niagara (`gpu=2`, minimizes `sum(types * instances)`) allow at most **256 model types per Actor**, automatically increasing `groups` with `mineprep.warn` when needed. Each group writes its own BPT/BRT (`name_1_BPT.exr`, etc.), and subsequent Actors attach to the first.
 
-**GPU groups:** `spawn_structure(..., gpu=1, groups=4)` and
-`blocks.spawn(gpu=2, groups=4)` request four groups, capped by the available
-model count. `groups` is a positive integer (not bool); ISM accepts only
-`groups=1`. Both GPU backends allow at most **256 model types per Actor**;
-the group count increases automatically when needed, with `mineprep.warn`.
-Counting uses the final nonempty model payloads after culling, merging, model
-expansion and unavailable-model filtering, not source palette entries.
-PCG divides model types evenly in their existing order (group sizes differ by
-at most one), without Niagara's optimization. Niagara minimizes
-`sum(types * instances)` subject to the 256-type cap. Neither backend splits
-a type. Equal type counts do not guarantee equal instance loads.
-Each group has its own BPT/BRT and local model palette; later Actors attach to
-the first with world transforms preserved. The return value remains an Actor list.
-
-Default `groups=1` keeps existing texture names when no automatic split is needed.
-Requested or automatically increased `groups>1` writes
-`name_1_BPT.exr`, `name_1_BRT.exr`, `name_1_names.json`, etc., in the existing
-directories and overwrites same-name resources. Old excess files are retained.
-Existing Actors can still reference overwritten textures with an older palette;
-use another `name` to retain a separate version. Texture overwrites are outside
-undo. All pairs are prepared before a single Actor transaction; placement failure
-cleans the new Actors and reports any residual paths. Texture dimensions and
-Niagara padded spawn capacity are checked per group; indivisible overflow errors
-do not split a type or change engine settings.
-
-`blocks.spawn(gpu=1, merge=3)` is the same editor operation as
-`mineprep.spawn_structure(blocks, gpu=1, merge=3)`. The public facade re-exports
-`mc_structure.spawn_structure`; `Blocks.spawn()` calls that same implementation
-directly, without importing `mineprep`. It forwards the same named options,
-defaults to `center=False`, returns an Actor list, and leaves cells unchanged.
-Importing, preparing and placing resources still require Unreal.
-
-**Cull** (before merge): complete geometry contains an unrotated
-`from=[0,0,0] to=[16,16,16]` element with six faces, after state expansion
-(including double slabs and eight-layer snow). This does not imply opacity.
-`cull=1` removes interiors within each complete block type.
-`cull=2` lets complete opaque blocks occlude other complete blocks; complete
-transparent blocks only occlude the same block type. Opaque and same-type
-neighbours may jointly enclose a transparent block. Water retains its separate
-same-fluid interior rule. `cull=3` applies mode 2, then drops AABB side and bottom
-blocks (keeps the top). Opacity follows source texture alpha and explicit
-`force_translucent`; these are approximate whole-block culls, not per-face
-collision simulation. Model facts and texture alpha are reused within an
-operation, with no persistent source-file cache.
+**Cull** (before merge):
+- `cull=1`: removes interiors within each complete block type (`[0,0,0]..[16,16,16]` six-face cube).
+- `cull=2`: complete opaque blocks occlude other complete blocks; complete transparent blocks only occlude the same type (water uses its same-fluid interior rule).
+- `cull=3`: mode 2 + drops AABB side and bottom boundary blocks (keeps top).
 
 **Merge** (after cull; only **full cubes**, not leaves/stairs/fences/…): greedy meshing per `(model, rot_id)` for rotation codes 0–23. A negative yaw stays 1×1×1 and is not merged.  
 `merge=0` off; `1` 1D runs (X→Z→Y); `2` 2D quads per Y layer; `3` 2D then stack +Y.  
@@ -328,18 +284,7 @@ model-level default, not an exact per-placement blockstate selection. Renaming t
 output asset does not change its UV policy. Synthesized water/lava cubes always
 use locked top/bottom faces, including nonzero `fluid_level`.
 
-The material must decode 0.92 as XY compensation without direction locking;
-this replaces a separate `lockTop` input. Updating Python alone does not update
-material graphs or existing meshes.
-
-JSON block meshes are reused only when metadata matches both
-`MineprepModelFrame=cell-center-1` and `MineprepMeshStyleVersion=4`. A stale mesh
-logs an import warning and returns `None`; explicitly use `import_block(...,
-reload=True)` to rebuild it at the same asset path. No automatic asset migration
-or deletion occurs. Item and external-mesh imports keep their existing cache
-rules. In-session geometry sharing includes the full UV policy: meshes with
-different top/bottom locking cannot reuse the same prototype. Equal-style meshes
-can still share geometry and collision while retaining their own materials.
+JSON block meshes are reused when metadata matches both `MineprepModelFrame=cell-center-1` and `MineprepMeshStyleVersion=4` (pass `reload=True` to `import_block` to rebuild stale meshes).
 
 ## Resource paths (`mineprep.paths`)
 
@@ -356,6 +301,16 @@ mineprep.import_item("D:/pack/assets/minecraft/textures/item/diamond.png")
 ```
 
 Names resolve under `paths.assets` to `<namespace>/models/block/<name>.json` or `<namespace>/textures/item/<name>.png`; the default namespace is `minecraft`. Names refer to individual resources, not blockstate combinations. File paths retain their existing behavior; use a `Path` object to explicitly pass an extensionless file. Custom namespace names get a namespace prefix in the default asset name and a namespace subfolder under `destination_path`, including textures and materials. `asset_name` still overrides the mesh name. Missing resources call `throw` with the searched file path, showing an error and raising `RuntimeError`.
+
+`import_item(..., max_resolution=128)` samples alpha to form the extruded outline.
+Front/back faces are generated per opaque pixel and sides only along exposed edges;
+vertices, normals and UVs are submitted to Geometry Script in one buffer batch.
+The texture keeps its original resolution. If either source dimension exceeds
+`max_resolution`, `mineprep.dialog` asks whether to use the original outline resolution:
+Yes keeps it; No scales the sampling dimensions proportionally to the limit.
+Existing mesh reuse (`reload=False`) skips both sampling and the dialog.
+`import_block` uses the same default when forwarding generated-item models.
+Synchronous MCP calls use the dialog's default No through `PyUseDialogDefaults`.
 
 Material emission uses `load_mcprep_data()['blocks']['emit']`, matching texture source names/relative paths and setting `发光亮度=0.1` on new or `reload=True` materials.
 

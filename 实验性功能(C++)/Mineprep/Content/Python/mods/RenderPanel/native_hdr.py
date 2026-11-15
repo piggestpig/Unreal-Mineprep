@@ -6,6 +6,7 @@ EXR defaults to display-referred Rec.2020 PQ; optional scRGB uses 1.0 = 80 nits.
 from datetime import datetime
 import json
 import math
+import struct
 from pathlib import Path
 from uuid import uuid4
 
@@ -281,4 +282,278 @@ def _video_task(state, subsystem, config, output_dir, ffmpeg, notify):
         return dict(success=False, cancelled=True, output_file=None, output_dir=output_dir,
                     frames=len(frames), errors=state['errors'])
     finally:
+        ops._release_task(state)
+
+
+def _gainmap_parameters(peak_nits, paper_white_nits, sdr_quality, hdr_quality):
+    if not math.isfinite(peak_nits) or not 203 <= peak_nits <= 10000:
+        raise ValueError('Gainmap peak must be between 203 and 10000 nits.')
+    if not math.isfinite(paper_white_nits) or not 0 < paper_white_nits <= peak_nits:
+        raise ValueError('Paper white must be positive and no greater than the peak.')
+    if any(type(q) is not int or not 1 <= q <= 100 for q in (sdr_quality, hdr_quality)):
+        raise ValueError('SDR and HDR quality must be integers from 1 to 100.')
+    return dict(peak_nits=float(peak_nits), paper_white_nits=float(paper_white_nits),
+                sdr_quality=sdr_quality, hdr_quality=hdr_quality)
+
+
+def _gainmap_image_size(path):
+    """Read EXR dataWindow without decoding pixels or requiring an EXR Python package."""
+    from . import hdr
+    if Path(path).suffix.lower() != '.exr':
+        return hdr._image_size(path)
+    with Path(path).open('rb') as stream:
+        if stream.read(4) != b'\x76\x2f\x31\x01':
+            raise ValueError('Invalid EXR input: ' + str(path))
+        stream.read(4)  # Version and flags.
+
+        def string():
+            value = bytearray()
+            while True:
+                byte = stream.read(1)
+                if not byte:
+                    raise ValueError('Truncated EXR header: ' + str(path))
+                if byte == b'\0':
+                    return bytes(value)
+                value.extend(byte)
+
+        while name := string():
+            kind = string()
+            size = struct.unpack('<I', stream.read(4))[0]
+            if name == b'dataWindow' and kind == b'box2i' and size == 16:
+                x0, y0, x1, y1 = struct.unpack('<4i', stream.read(size))
+                return x1 - x0 + 1, y1 - y0 + 1
+            stream.seek(size, 1)
+    raise ValueError('EXR has no dataWindow: ' + str(path))
+
+
+def _gainmap_graph(s, *, graph=None, expose=False):
+    """Shared builder for the saved example and transient single-frame jobs."""
+    from . import mrg, ops
+    cls = getattr(unreal, 'MovieGraphFilmicHDRRenderPassNode', None)
+    if cls is None:
+        raise RuntimeError('Build the Mineprep C++ plugin and restart the editor to load the Filmic HDR graph node.')
+    graph = graph if graph is not None else unreal.MovieGraphConfig()
+    if not any(str(member.get_member_name()) == 'DefaultLayer' for member in graph.get_inputs()):
+        graph.add_input('DefaultLayer')
+    resolution = unreal.MovieGraphNamedResolution(profile_name='Custom',
+        resolution=unreal.IntPoint(s['width'], s['height']))
+    bound = unreal.MovieGraphSequencePlaybackRangeBound
+    start = bound(type=unreal.MovieGraphSequenceRangeType.CUSTOM, value=s['frame'])
+    end = bound(type=unreal.MovieGraphSequenceRangeType.CUSTOM, value=s['frame'] + 1)
+    output = mrg._node(graph, unreal.MovieGraphGlobalOutputSettingNode,
+        OutputResolution=resolution, OutputDirectory=unreal.DirectoryPath(s['output_dir']),
+        bOverwriteExistingOutput=True, ZeroPadFrameNumbers=4,
+        CustomPlaybackRangeStart=start, CustomPlaybackRangeEnd=end)
+    warmup = mrg._node(graph, unreal.MovieGraphWarmUpSettingNode,
+        NumWarmUpFrames=int(s['warmup']), bEmulateMotionBlur=True)
+    globals_ = [warmup,
+        mrg._node(graph, unreal.MovieGraphGlobalGameOverridesNode, SoftGameModeOverride=ops._game_mode(s)),
+        output,
+        mrg._node(graph, unreal.MovieGraphSamplingMethodNode, TemporalSampleCount=int(s['temporal'])),
+        mrg._node(graph, unreal.MovieGraphSetCVarValueNode, Name='r.LUT.TonemappingMethod', Value=0.0)]
+    mrg._connect(graph, globals_, 'Globals')
+    graph.add_labeled_edge(graph.get_input_node(), 'Globals', globals_[0], '')
+    filename = s['stem'] + '.{layer_name}.{frame_number}'
+    file_nodes = []
+    hdr_renderer = None
+    for index, (branch, renderer_cls, file_cls) in enumerate((
+            ('SDR', unreal.MovieGraphDeferredRenderPassNode, unreal.MovieGraphImageSequenceOutputNode_PNG),
+            ('HDR', cls, unreal.MovieGraphImageSequenceOutputNode_EXR))):
+        graph.add_output(branch)
+        renderer = mrg._node(graph, renderer_cls, SpatialSampleCount=int(s['spatial']),
+            bDisableToneCurve=False, bAllowOCIO=False)
+        file_node = mrg._node(graph, file_cls, FileNameFormat=filename,
+            OCIOConfiguration=unreal.OpenColorIODisplayConfiguration())
+        if branch == 'HDR':
+            hdr_renderer = renderer
+            ops._set(renderer, bOverride_bOutputPQ=True, bOutputPQ=True,
+                     bOverride_PeakNits=True, PeakNits=s['peak_nits'],
+                     bOverride_PaperWhiteNits=True, PaperWhiteNits=s['paper_white_nits'])
+            ops._set(file_node, bOverride_Compression=True, Compression=unreal.EXRCompressionFormat.ZIP)
+        file_nodes.append(file_node)
+        nodes = [renderer, file_node, mrg._node(graph, unreal.MovieGraphRenderLayerNode, LayerName=branch)]
+        mrg._connect(graph, nodes, branch)
+        graph.add_labeled_edge(graph.get_input_node(), 'DefaultLayer', renderer, '')
+        if expose:
+            for column, node in enumerate(nodes):
+                cls.set_graph_node_position(node, column * 380, 360 + index * 360)
+    if expose:
+        for column, node in enumerate(globals_):
+            cls.set_graph_node_position(node, column * 280, 0)
+        cls.set_graph_node_position(graph.get_output_node(), 1550, 0)
+        cls.set_graph_node_position(graph.get_input_node(), -380, 0)
+        bindings = [
+            ('分辨率', unreal.MovieGraphValueType.STRUCT, unreal.MovieGraphNamedResolution.static_struct(), resolution.export_text(), [(output, 'OutputResolution')]),
+            ('起始帧', unreal.MovieGraphValueType.STRUCT, bound.static_struct(), start.export_text(), [(output, 'CustomPlaybackRangeStart')]),
+            ('结束帧', unreal.MovieGraphValueType.STRUCT, bound.static_struct(), end.export_text(), [(output, 'CustomPlaybackRangeEnd')]),
+            ('暖场帧', unreal.MovieGraphValueType.INT32, None, str(s['warmup']), [(warmup, 'NumWarmUpFrames')]),
+            ('文件名', unreal.MovieGraphValueType.STRING, None, filename, [(node, 'FileNameFormat') for node in file_nodes]),
+            ('HDR峰值', unreal.MovieGraphValueType.FLOAT, None, str(s['peak_nits']), [(hdr_renderer, 'PeakNits')]),
+            ('参考白', unreal.MovieGraphValueType.FLOAT, None, str(s['paper_white_nits']), [(hdr_renderer, 'PaperWhiteNits')]),
+        ]
+        for index, (name, value_type, type_object, value, targets) in enumerate(bindings):
+            variable = graph.add_variable(name)
+            variable.set_value_type(value_type, type_object)
+            if not variable.set_value_serialized_string(value):
+                raise RuntimeError('Cannot initialize graph variable: ' + name)
+            getter = graph.create_node_by_class(unreal.MovieGraphVariableNode)
+            getter.set_variable(variable)
+            cls.set_graph_node_position(getter, -380, 180 + index * 150)
+            for target, prop in targets:
+                target.promote_property_to_pin(prop)
+                graph.add_labeled_edge(getter, name, target, prop)
+    return graph
+
+
+def render_gainmap(settings=None, *, peak_nits=1000, paper_white_nits=203,
+                   sdr_quality=100, hdr_quality=98, on_done=None, notify=True):
+    """Render one SDR/HDR MRG frame pair, then compose an Ultra HDR JPEG."""
+    from . import hdr, ops
+    subsystem = ops._idle_subsystem()
+    params = _gainmap_parameters(peak_nits, paper_white_nits, sdr_quality, hdr_quality)
+    s = ops.prepare_settings(ops.capture_settings() if settings is None else settings)
+    ops._validate(s)
+    if any(s.get(key) == 1 for key in ('vr', 'stereo', 'layers')):
+        raise ValueError('Filmic gainmap rendering supports ordinary Deferred images. Disable panorama, stereo and layers.')
+    dimensions = (s['width'], s['height'])
+    if any(not math.isfinite(v) or v < 2 or v != int(v) or int(v) % 2 for v in dimensions):
+        raise ValueError('Gainmap dimensions must be positive even integers.')
+    folder, stem = ops.encoding.output_name(s['name'])
+    output = (Path(s['project_dir']) / 'Saved/MovieRenders' / folder / (stem + '_FilmicGainmap')
+              / (datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex[:8]))
+    context = hdr._context(params)
+    frame = s['frame'] if 'frame' in s and not s.get('sequence_fallback') else ops.current_frame(s)
+    if type(frame) is not int:
+        raise ValueError('Frame must be an integer.')
+    s.update(params, width=int(s['width']), height=int(s['height']), frame=frame,
+             output_dir=str(output), stem=stem, name=s['name'])
+    graph = _gainmap_graph(s)
+    return _start_gainmap(s, context, subsystem=subsystem, graph=graph, on_done=on_done, notify=notify)
+
+
+def compose_gainmap(sdr_path, hdr_path, output_file, *, peak_nits=1000,
+                    sdr_quality=100, hdr_quality=98, on_done=None, notify=True):
+    """Compose matching sRGB SDR and Rec.2020 PQ HDR inputs; preserve all inputs."""
+    from . import hdr, ops
+    ops._idle_subsystem()
+    params = _gainmap_parameters(peak_nits, 203, sdr_quality, hdr_quality)
+    paths = [Path(path).resolve() for path in (sdr_path, hdr_path)]
+    if any(not path.is_file() for path in paths):
+        raise ValueError('Both SDR and HDR image files must exist.')
+    width, height = hdr._image_size(paths[0])
+    if _gainmap_image_size(paths[1]) != (width, height) or min(width, height) < 2 or width % 2 or height % 2:
+        raise ValueError('SDR and HDR inputs must have identical, positive even dimensions.')
+    context = hdr._context(params)
+    output_file = Path(output_file).resolve()
+    if output_file in paths:
+        raise ValueError('The output JPEG must have a different path from the inputs.')
+    cache = Path(context['cache_dir'])
+    s = dict(params, width=width, height=height, sdr_path=str(paths[0]), hdr_path=str(paths[1]),
+             output_file=str(output_file), output_dir=str(cache))
+    return _start_gainmap(s, context, on_done=on_done, notify=notify)
+
+
+def _start_gainmap(s, context, *, subsystem=None, graph=None, on_done=None, notify=True):
+    from . import ops
+    for key in ('ffmpeg', 'ultrahdr'):
+        if not Path(context[key]).is_file():
+            raise ValueError('Missing executable: ' + context[key])
+    state = dict(finished=False, success=True, fatal=False, errors=[], settings=s,
+                 phase='Filmic gainmap', notify=notify)
+    ops._active = state
+    try:
+        task = _gainmap_task(s, context, state, subsystem, graph)
+        state['task'] = task
+        if on_done:
+            task.on_done = on_done
+        return task
+    except Exception:
+        ops._release_task(state)
+        raise
+
+
+@mineprep.asynctask
+def _gainmap_task(s, context, state, subsystem, graph):
+    from . import batch, hdr, ops
+    output = Path(s['output_dir'])
+    notice = None
+    success = False
+    result = dict(success=False, sdr_path=s.get('sdr_path'), hdr_path=s.get('hdr_path'),
+                  output_file=None, output_dir=str(output), errors=state['errors'])
+    try:
+        yield 0
+        output.mkdir(parents=True, exist_ok=True)
+        if graph is not None:
+            if not unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True):
+                raise RuntimeError('Could not save the current map and assets.')
+            state.update(success=False, phase='Filmic SDR/HDR rendering')
+            batch._changed()
+            # A private queue keeps existing editor MRQ jobs available.
+            queue = unreal.MoviePipelineQueue()
+            job = unreal.MoviePipelineEditorLibrary.create_job_from_sequence(queue, ops._sequence(s['sequence']))
+            job.set_graph_preset(graph)
+            job.map = unreal.SoftObjectPath(s['map'])
+            executor = unreal.MoviePipelinePIEExecutor()
+            finished = lambda ex, ok: ops._on_finished(state, ex, ok)
+            errored = lambda ex, pipeline, fatal, text: ops._on_error(state, ex, pipeline, fatal, text)
+            executor.on_executor_finished_delegate.add_callable(finished)
+            executor.on_executor_errored_delegate.add_callable(errored)
+            try:
+                subsystem.render_queue_instance_with_executor_instance(queue, executor)
+                while not state['finished']:
+                    yield 0.1
+            finally:
+                executor.on_executor_finished_delegate.remove_callable(finished)
+                executor.on_executor_errored_delegate.remove_callable(errored)
+            if not state['success']:
+                return result
+            yield 0
+            for branch, extension in (('SDR', 'png'), ('HDR', 'exr')):
+                paths = list(output.glob(s['stem'] + '.' + branch + '.*.' + extension))
+                if len(paths) != 1 or not paths[0].stat().st_size:
+                    raise RuntimeError('Expected exactly one completed ' + branch + ' image.')
+                s[branch.lower() + '_path'] = str(paths[0])
+            s['output_file'] = str(output / (s['stem'] + '_Gainmap.jpg'))
+        result.update(sdr_path=s['sdr_path'], hdr_path=s['hdr_path'])
+        if _gainmap_image_size(s['sdr_path']) != (s['width'], s['height']) or _gainmap_image_size(s['hdr_path']) != (s['width'], s['height']):
+            raise RuntimeError('Rendered SDR/HDR dimensions do not match the requested dimensions.')
+        processing = {**context, **s, 'cache_dir': str(output), 'quality': s['hdr_quality']}
+        state['phase'] = 'Filmic gainmap composition'
+        batch._changed()
+        notice = hdr._ProcessingNotice('Filmic HDR gainmap')
+        # The EXR pixels are PQ already. zscale performs only gamut-matrix/range conversion.
+        commands = hdr._conversion_args(processing, pq=True)
+        hdr_filter = ('format=gbrpf32le,zscale=matrixin=gbr:transferin=smpte2084:primariesin=bt2020:'
+                      'rangein=full:primaries=bt2020:transfer=smpte2084:matrix=bt2020nc:'
+                      'range=limited:dither=error_diffusion,format=p010le')
+        commands[1][commands[1].index('-vf') + 1] = hdr_filter
+        ultra = hdr._ultrahdr_args(processing)
+        ultra[ultra.index('-L') + 1] = str(s['peak_nits'])
+        ultra.extend(['-c', '0', '-R', '0'])
+        (output / 'commands.json').write_text(json.dumps([*commands, ultra], ensure_ascii=False, indent=2), encoding='utf-8')
+        for command, label in zip([*commands, ultra], ('SDR', 'HDR', 'UltraHDR')):
+            yield from hdr._run_process(command, output / (label + '.log'), label, notice=notice)
+        final = Path(s['output_file'])
+        temporary = output / 'result.jpg'
+        if hdr._image_size(temporary) != (s['width'], s['height']):
+            raise RuntimeError('The Ultra HDR output dimensions are incorrect.')
+        final.parent.mkdir(parents=True, exist_ok=True)
+        temporary.replace(final)
+        success = True
+        result.update(success=True, output_file=str(final))
+        if state['notify']:
+            try:
+                ops._finish(context, str(final.parent), True, label='Filmic gainmap complete', refresh=False)
+            except Exception as exc:
+                mineprep.warn(str(exc))
+        return result
+    except hdr._ProcessingCancelled:
+        result['cancelled'] = True
+        return result
+    except Exception as exc:
+        state['errors'].append(str(exc))
+        raise
+    finally:
+        if notice:
+            notice.finish(success)
         ops._release_task(state)

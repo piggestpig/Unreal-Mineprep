@@ -44,6 +44,7 @@ public class Mineprep : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"MovieScene",
+				"SequencerScripting",
 				"Slate",
 				"SlateCore",
 				"Blutility",
@@ -74,6 +75,18 @@ public class Mineprep : ModuleRules
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
+
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(
+				new string[]
+				{
+					"MeshUtilitiesEngine",
+					"MeshUtilitiesCommon",
+					"AssetRegistry",
+				}
+				);
+		}
 		
 		
 		DynamicallyLoadedModuleNames.AddRange(

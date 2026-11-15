@@ -96,22 +96,11 @@ python <skill>/scripts/mcp_run.py --project <project> --file <snippet.py> --logl
 ```
 
 It reads this project's existing `.codex/config.toml` Unreal MCP URL, or accepts
-`--url`. It never edits configuration. Each invocation discovers the bridge and
-checks the editor's absolute project path before submitting the supplied code.
-Files and HTTP bodies are UTF-8; stdout is ASCII-safe JSON. The host helper adds
-`error_kind` and `outcome` to the bridge envelope: `not_submitted`, `uncertain`,
-`execution_failed`, or `completed`. The latter means the Python call completed,
-not that an async operation or asset import is finished. An exception can follow
-partial side effects. Neither Python errors nor transport failures are retried;
-after `uncertain`, inspect postconditions before deciding what to do. The default
-network timeout is 30 seconds (`--timeout`); it does not cancel editor work.
-
-For another client, follow the session initialization and response decoding in
-the helper rather than copying a fixed protocol version. Use an MCP/SSE-capable
-client for event-stream responses. Check JSON-RPC `error`, MCP `isError`, and the
-inner bridge `ok`; this server wraps the bridge JSON inside `returnValue`.
-HTTP success does not imply native tool registration or completed editor work.
-After a restart or expired session, reconnect and recheck project identity.
+`--url`. Each invocation discovers the bridge and verifies the editor's project
+path before submitting code (UTF-8 input, ASCII-safe JSON output; default
+`--timeout` 30s). The helper reports `outcome` (`not_submitted`, `uncertain`,
+`execution_failed`, or `completed`). After `uncertain`, inspect scene/asset
+postconditions before retrying.
 
 ## MCP Python (`mcptools.PythonTools`)
 
@@ -241,14 +230,12 @@ def ue_run(code: str, *, node_id: str, exec_mode=None, command_port=None):
         re.stop()
 ```
 
-- Prefer `MODE_EXEC_FILE` for multi-line scripts (and for `mineprep.ui("""...""")` blobs)
-- Host-side: write a short `_tmp_re_*.py` runner if the shell mangles quotes; **delete after** the probe. Read the editor snippet as **UTF-8 from a file** (`open(path, encoding='utf-8')`). Do not `sys.stdin.read()` through `cmd.exe` (GBK / surrogate `UnicodeEncodeError` on `—` / CJK)
-- Keep editor `print` to a few ASCII tokens (`CELLS 2144`, `OK`). `import_block` already logs; huge output plus a GBK host `print` can crash the client **after** a successful spawn
-- Check the returned `success`, error information and task-specific postconditions. Spawn logs may precede a failure; `len(spawn_structure(...))` counts actors, not placed blocks or successfully imported model types.
-- If output decoding fails or a submitted command times out, mark the outcome **uncertain**. Do not blindly repeat the spawn. Run a read-only check in the same verified project using recorded actor paths, a unique operation name, asset paths or other task-specific evidence. Labels alone may be ambiguous.
-- Retry a mutation only after proving it was not applied, or after an explicit reconciliation of partial output within the task's scope. If status cannot be established, report the uncertainty. This does not prohibit harmless status queries.
-- After editing plugin Python or a reloadable mod: `mineprep.reload()` inside the remote snippet
-- Discovery OK + bind fail → change `command_port`, do not conclude RE is disabled
+- Prefer `MODE_EXEC_FILE` for multi-line scripts (and for `mineprep.ui("""...""")` blobs).
+- Host-side: read the editor snippet as **UTF-8 from a file** (`open(path, encoding='utf-8')`); delete any temporary runner script after use. Do not `sys.stdin.read()` through `cmd.exe` (GBK / surrogate `UnicodeEncodeError`).
+- Keep editor `print` concise (`CELLS 2144`, `OK`) to avoid GBK host stdout crashes.
+- If a command times out or decoding fails, check scene/asset postconditions before retrying a mutation.
+- After editing plugin Python or a reloadable mod: `mineprep.reload()` inside the remote snippet.
+- Discovery OK + bind fail → change `command_port`, do not conclude RE is disabled.
 
 ## mineprep handles under RE
 

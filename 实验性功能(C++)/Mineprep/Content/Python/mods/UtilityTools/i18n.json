@@ -238,6 +238,80 @@
       "zh": "纯色图片",
       "en": "Solid Color",
       "zh-Hant": "純色圖片"
+    },
+    "烟花": {
+      "zh": "烟花",
+      "en": "Firework",
+      "zh-Hant": "煙花"
+    },
+    "无法创建烟花表: {path}": {
+      "zh": "无法创建烟花表: {path}",
+      "en": "Cannot create firework table: {path}",
+      "zh-Hant": "無法建立煙花表: {path}",
+      "zh-Hant-HK": "無法建立煙花表: {path}"
+    },
+    "无法写入烟花表: {path}": {
+      "zh": "无法写入烟花表: {path}",
+      "en": "Cannot write firework table: {path}",
+      "zh-Hant": "無法寫入煙花表: {path}",
+      "zh-Hant-HK": "無法寫入煙花表: {path}"
+    },
+    "预览图": {
+      "zh": "预览图",
+      "en": "Preview",
+      "zh-Hant": "預覽圖"
+    },
+    "生成表格": {
+      "zh": "生成表格",
+      "en": "Generate Table",
+      "zh-Hant": "生成表格"
+    },
+    "留空则跳过": {
+      "zh": "留空则跳过",
+      "en": "Leave empty to skip",
+      "zh-Hant": "留空則跳過"
+    },
+    "代码需要给 points 赋值": {
+      "zh": "代码需要给 points 赋值",
+      "en": "The script must assign points",
+      "zh-Hant": "程式需要給 points 賦值",
+      "zh-Hant-HK": "程式需要給 points 賦值"
+    },
+    "{kind} 执行失败": {
+      "zh": "{kind} 执行失败",
+      "en": "{kind} failed",
+      "zh-Hant": "{kind} 執行失敗",
+      "zh-Hant-HK": "{kind} 執行失敗"
+    },
+    "FireworkProps.Path": {
+      "zh": "表格路径",
+      "en": "Table Path",
+      "zh-Hant": "表格路徑"
+    },
+    "FireworkProps.A": {
+      "zh": "A",
+      "en": "A",
+      "zh-Hant": "A"
+    },
+    "FireworkProps.B": {
+      "zh": "B",
+      "en": "B",
+      "zh-Hant": "B"
+    },
+    "FireworkProps.C": {
+      "zh": "C",
+      "en": "C",
+      "zh-Hant": "C"
+    },
+    "FireworkProps.D": {
+      "zh": "D",
+      "en": "D",
+      "zh-Hant": "D"
+    },
+    "FireworkProps.category.烟花": {
+      "zh": "烟花",
+      "en": "Firework",
+      "zh-Hant": "煙花"
     }
   }
 }

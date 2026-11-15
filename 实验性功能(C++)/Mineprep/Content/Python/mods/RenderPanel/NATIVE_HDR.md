@@ -16,7 +16,38 @@
 
 代理仍转发 MRQ 自己的纹理、RDG、UAV、尺寸与资源，不捕获视口。每个镜头及任务收尾时等待渲染命令完成，释放代理、恢复 Filmic 选择；保留失败、取消和销毁清理。
 
-## Python 单帧入口
+## MRG 双分支与增益图
+
+`/Game/Mineprep/Render/FilmicHDR增益图jpg渲染配置` 在同一个 MRG 任务中渲染 SDR 与 HDR 两条分支。两条分支共用场景曝光与 Film 参数，Globals 的 `r.LUT.TonemappingMethod=0` 选择 Filmic，任务结束或取消后由 MRG 恢复。
+
+- SDR 使用普通 Deferred、Tone Curve 和 sRGB PNG。
+- HDR 使用 **Mineprep Filmic HDR Renderer** 与单层 ZIP EXR。节点支持 `Output PQ`、`Peak Nits`、`Paper White Nits` 覆盖，默认 Rec.2020/D65 PQ、1000 nit、203 nit 参考白。
+- 图中暴露分辨率、起止帧、暖场帧、文件名、HDR 峰值与参考白。默认 1920×1080、1×1 采样、40 帧暖场，文件名带层名和帧号。两个分支的 OCIO 均关闭。
+
+```python
+from mods.RenderPanel import native_hdr
+
+task = native_hdr.render_gainmap(notify=False)
+```
+
+`render_gainmap(settings=None, *, peak_nits=1000, paper_white_nits=203, sdr_quality=100, hdr_quality=98, on_done=None, notify=True)` 从旧面板采集设置，或使用显式设置副本。显式 `settings['frame']` 指定帧，省略时使用当前光标，临时序列固定第 0 帧。一次提交双分支单帧 `[frame, frame+1)`，随后合成 Ultra HDR JPG。游戏模式采用 RenderPanel 的选项与预设规则。首轮支持普通 Deferred 单帧，尺寸须为正偶数。
+
+也可手动运行示例图，再调用合成入口：
+
+```python
+task = native_hdr.compose_gainmap(
+    r'E:\Renders\Image.SDR.0000.png',
+    r'E:\Renders\Image.HDR.0000.exr',
+    r'E:\Renders\Image_Gainmap.jpg', notify=False)
+```
+
+`compose_gainmap(sdr_path, hdr_path, output_file, *, peak_nits=1000, sdr_quality=100, hdr_quality=98, on_done=None, notify=True)` 要求两个输入尺寸一致且为正偶数，HDR 输入为 Rec.2020 PQ。峰值范围为 203～10000 nit，参考白为正数且不大于峰值。
+
+两个入口返回 `done / result / error` 句柄，在后续编辑器调用中检查完成状态。结果包含 `success`、`sdr_path`、`hdr_path`、`output_file`、`output_dir` 和 `errors`。渲染输出位于 `Saved/MovieRenders/<名称>_FilmicGainmap/<唯一目录>/`，独立合成的日志保存在项目 `cache/RenderPanelHDR/<唯一目录>/`。输入、转换材料与命令日志保留，失败或取消后可继续检查。
+
+HDR EXR 中已经是 PQ 像素。合成只进行 RGB→BT.2020 窄范围 P010 转换，不添加 Gamma 或再次进行 PQ 编码。Ultra HDR 明确使用 HDR BT.2020/PQ、SDR BT.709 和相应峰值。现阶段使用引擎 EXR 写入器，独立查看 EXR 时应手动指定 Rec.2020 PQ，标准 EXR 色域标签可能仍反映引擎的全局显示设置。
+
+## MRQ Python 单帧入口
 
 ```python
 from mods.RenderPanel import native_hdr
@@ -54,6 +85,8 @@ FFmpeg 明确按 PQ / Rec.2020 读取，只做 RGB→limited-range BT.2020 non-c
 render_video(settings=None, *, on_done=None, notify=True) 返回现有异步句柄（done/result/error）；显式设置不读旧控件。旧面板的 `🔲后台编码` 开启时，渲染结束释放渲染占用，编码进入最多两个并发的 Python 后台进程，允许下一份渲染开始；关闭时通过 MRQ CLI 编码，MRQ 会等待它完成。句柄始终等到编码结束才完成，关闭面板不取消任务。UE 取消后若已有连续帧，允许编码部分视频但返回 success=False。无输入正常返回未完成；编码错误保留材料。完整成功才播放提示，目录沿用原偏好。
 
 ## 验收
+
+2026-11-12 已完成 UE 5.8 编译和实测。双分支输出 1920×1080 PNG／PQ EXR，自动合成与独立合成均通过 Ultra HDR 探测。已检查保存后重开的示例图、任务变量覆盖、双镜头、取消与 CVar 恢复，并输出 MRQ 对照图；最终显示观感由用户验收。
 
 完整编译后由用户重开编辑器，以同一帧对比原生 PQ 与正确的 scRGB 重编码参考，检查灰阶、高光、饱和色和尺寸。检查 bool 的配置复制、CLI/OCIO 组合不再被拦截、成功及取消后的 CVar 恢复。
 

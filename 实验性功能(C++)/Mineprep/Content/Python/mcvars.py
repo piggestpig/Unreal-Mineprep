@@ -13,6 +13,7 @@ ActorCache = None
 SpawnIDCache = None
 SpawnNameCache = None
 LocalizationCache = None
+InventoryComboCache = {}
 
 def help():
     """打印所有cvars"""

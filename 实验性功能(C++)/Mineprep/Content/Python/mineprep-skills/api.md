@@ -26,13 +26,13 @@ Outside Unreal, the public modules use `mc_utils.Lazy` as an `unreal` placeholde
 | Optional localization | [localization.md](localization.md): `i18n`, `I18N`, `collect_i18n`, `check_i18n` |
 | Spawn | `spawn_block/item/mob/preset`, `attach`, `spawn_blocks`, `spawn_structure`, `Blocks`, `structure_parts`, `get_all_blocks` |
 | Mesh | `merge_skm`, `Blocks.bake` |
-| Low-poly | `LowPolyModel`: groups, centered boxes/cylinders/cones, assets and batch ISM; [contracts](lowpoly.md) |
+| Modelling | `LowPolyModel` for primitives and instancing, `SkeletalModel` for rigidly skinned boxes and GLB output. [Contracts](modelling.md) |
 | Assets & Config | `uasset`, `uclass`, `bpclass`, `construct`, `copy`, `config`, `paths` |
 | Blueprint libs | `BPLib`, `EditorBPLib`, `BPLibCaller` — call a Blueprint function library by function, attribute, or subscript. Not `unreal.mineprep` |
 | Utils | `prints`, `warn`, `throw`, `panic`, `undo`, `world`, `cast`, `enum`, `startfile`, `dialog`, file dialogs, `send2trash`, `screenshot` |
 | Mouse state | `left_mouse_down()`, `middle_mouse_down()`, `right_mouse_down()` → `bool` or unavailable `None`; current state, UI main thread; [drag usage](ui.md#border--mouse) |
 | Parallel | `delay`, `tick`, `asynctask`, `thread`, `asyncthread`, `until` — [parallel.md](parallel.md) |
-| Prep & Textures | `prep_texture`, `colorize_material`, `load_mcprep_data`, `tex_to_color`, `color_to_tex`, `ColorList`, `tex_source_files`, `export_tex_cache`, `import_data_tex`, `register_biome_tex`, `clear_biome_tex` |
+| Prep & Textures | `prepare_scene`, `prepare_materials`, `replace_materials`, `prep_from_panel`, `prep_texture`, `colorize_material`, `load_mcprep_data`, `apply_mc_material_defaults`, `identify_mc_texture`, `resolve_mc_texture`, `tex_to_color`, `color_to_tex`, `ColorList`, `tex_source_files`, `export_tex_cache`, `import_data_tex`, `register_biome_tex`, `clear_biome_tex` |
 | Experimental C++ | `unreal.mineprep.*` — last resort after `mineprep.*`; [cpp.md](cpp.md) |
 
 ## Handles (actors / components / materials)
@@ -213,11 +213,18 @@ ks[ks.frame == 0].remove()              # delete selected keys from their channe
 ks.tangents(120.0)                      # User mode: set both arrive & leave slopes (units/sec)
 ks[ks.frame == 24].tangents(leave=0.0)  # Break mode: set arrive and/or leave slopes (units/sec)
 slopes = ks.arrive_tangent              # read arrive_tangent / leave_tangent (List in units/sec)
+ks.tangents(arrive=20.0, leave=-10.0, arrive_weight=0.4, leave_weight=0.6)
+weights = ks.arrive_tangent_weight      # leave_tangent_weight also available
+modes = ks.tangent_weight_mode         # List: none / arrive / leave / both
+ks.tangents(weight_mode='none')         # disable weights, retain stored lengths and slopes
 ```
 
 - **Properties**: `ks.value` (native values), `ks.frame` (`int` display frames), `ks.time` (`float` seconds), `ks.arrive_tangent` and `ks.leave_tangent` (`float` units/sec) all return `List` objects supporting mask comparisons (`ks[ks.time > 3]`).
 - **Tangents (`ks.tangents(slopes=None, *, arrive=None, leave=None)`)**: accepts channel units per second (internally converted to per-tick slopes and set to cubic `USER` or `BREAK` mode). Pass a scalar, a 1D sequence matching `len(ks)`, or a sequence of `unreal.Vector` / `unreal.Rotator` matching a 3-axis `Location` / `Rotation` key batch.
   For vector or rotator samples, use the complete XYZ groups returned by `keyframes()`, in sample order. A channel query can return keys grouped by axis.
+
+- **Weighted tangents**: `tangents(..., arrive_weight=None, leave_weight=None, weight_mode=None)` accepts scalar weights or 1D arrays matching the selection. Weights must be finite, nonnegative numbers (zero is allowed). `weight_mode` accepts `none`, `arrive`, `leave`, `both`, or a matching array of these strings. Supplying a weight enables that side and preserves the other side's enabled state; an explicit mode overrides this inference. Slope-only edits preserve weights and their modes. Weight edits use Cubic/BREAK; a mode-only edit changes only the weight mode. All inputs are checked before the edit transaction.
+- Weights are UE's native handle lengths in the **seconds / channel-value plane**, without tick-rate conversion. For a Bezier handle offset `(delta_seconds, delta_value)`, use `slope = delta_value / delta_seconds` and `weight = math.hypot(delta_seconds, delta_value)` (`import math`). Arrive offsets point left (negative time); leave offsets point right. A vertical handle with nonzero value offset cannot be represented by a finite slope. Read `arrive_tangent_weight`, `leave_tangent_weight`, and `tangent_weight_mode` alongside the slopes to reconstruct the handles. Lengths remain readable when weighting is disabled.
 
 ### Channel loops and retiming
 
@@ -233,6 +240,21 @@ merged = mineprep.channels([curves_a, curves_b])  # deduplicated with section ow
   The section and sequence playback range must cover the frames where you want to see the loop.
 - **`channels.retime(offset=0, scale=1.0, pivot=0)`**: maps key times to `pivot + (old - pivot) * scale + offset` (`int` frames / `float` seconds; `scale > 0`).
 - **`channels.clear()`**: deletes all keys on the selected channels while preserving channel defaults and extrapolation settings.
+
+### Playing AnimSequence (`play_anim`)
+
+```python
+handle = mineprep.actor(actor)
+handle.play_anim(body_anim, start=0, end=180, sequence=seq)
+# Split-head actors can pass bake_animation()'s {'body', 'head'} dict or head=... directly:
+sections = handle.play_anim(assets, start=0, end=180, sequence=seq)
+# Or target Head individually:
+handle.play_anim(head_anim, start=0, end=180, sequence=seq, target='Head')
+```
+
+- `start=0` / `end=None` treat `int` as display-rate frames and `float` as seconds; `[start, end)` is half-open. Omitting `end` covers one clip cycle; extending `end` beyond one cycle loops the animation.
+- Passing a `{'body': ..., 'head': ...}` mapping (from `bake_animation`) or `head=head_anim` plays both components over identical bounds in one transaction and returns `{'body': section, 'head': section | None}` (skipping `Head` cleanly if `'head'` is `None`).
+- `target` selects the body `SkeletalMeshComponent` (default first SKM); `head_target='Head'` selects the attached split-head component.
 
 **Not AnimSequence bone tracks.** Listing / clearing skeletal animation curves is engine API — [pitfalls/anim.md](pitfalls/anim.md).
 
@@ -272,28 +294,56 @@ head_keys = r.keys('head')
 # r.clear('head') removes only head keys. r.clear() removes all track keys.
 ```
 
-`keyframes(name, times, values)` returns `r` and writes a batch with one
-transaction and refresh. Times are explicit integer frames or float seconds.
+`key(name, value=None, time=None)` and `keyframes(name, times, values)` return
+the keys written by that call, in sample order (XYZ within each group).
+`keyframes` uses one transaction and refresh. Integer times are display frames;
+float times are seconds rounded to the sequence's tick resolution, preserving
+sub-display-frame times such as `0.37` seconds.
+After undo or reloading a package, query keys again: UE may rebuild the native
+channel/key handles.
 The batch reads original values at each target frame before writing. For FK
 EulerTransform controls, Rotator values keep that frame's location and scale,
 and Vector values keep its rotation and scale. Each `None` keys the original
 value at its target frame. Full EulerTransform values write directly.
 Position and Scale controls also accept `(x, y, z)`.
-Explicit Euler angles preserve multi-turn values. Warm-up alone does not
-guarantee keys on the rig's creation tick. Requery channels to confirm first writes.
+Explicit Euler angles preserve multi-turn values.
 
 `poses({time: {control: value}})` and `poses([(time, {control: value}), ...])`
-use the same rules. They return the Rig, write only the listed controls,
+use the same selectors and time rules. They return the Rig, write only the listed controls,
 and use one transaction and refresh for the batch.
 
 `key()`, `keyframes()` and `poses()` default to `interp=None` (UE's current
-behavior). Pass `'constant'`, `'linear'` or `'auto'` on a single-section
-track to set interpolation on the continuous keys at the written frames.
-`r.channels(name='')` and `r.keys(name='')` query existing curves across
-sections. Pass a control name, a group such as `leg1.Rotation`, or one axis
-such as `leg1.Rotation.Y` (Pitch). Location and Scale support the same
-group and XYZ selectors. Rotation also accepts Roll, Pitch, and Yaw.
-`r.clear(name)` uses the same selection and preserves sections and defaults.
+behavior) and require a single-section track; empty `times` / `poses` remain no-ops.
+Pass `'constant'`, `'linear'` or `'auto'` to set interpolation on the continuous
+keys at the written frames. `r.channels(name='')`, `r.keys(name='')`, and
+`r.clear(name='')` still query or clear across sections. Pass a control name, a
+group such as `leg1.Rotation`, or one axis such as `leg1.Rotation.Y` (Pitch).
+Location and Scale support the same group and XYZ selectors. Rotation also
+accepts Roll, Pitch, and Yaw.
+
+`key()`, `keyframes()` and `poses()` also accept write selectors. Whole-control
+writes retain the native batch path, and selectors write only the selected
+channels. `Location`/`Scale` groups accept Vector or XYZ
+tuples/lists; `Rotation` takes Rotator. Scalar axes take finite numbers or `None`
+(snapshot the pre-write value at that exact time). Standalone Position/Scale/
+Rotator controls accept `.X/.Y/.Z`, and Vector2D accepts `.X/.Y`.
+Duplicate writes to the same axis at the same tick are rejected before editing,
+including aliases; mixing whole-control and axis writes at different times works.
+
+```python
+written = r.keyframes('head.Rotation', [0.0, 0.37, 1.0], [
+    unreal.Rotator(), unreal.Rotator(pitch=25), unreal.Rotator(),
+])
+written.tangents([unreal.Rotator()] * 3)
+r.key('head.Rotation.Pitch', 15.0, 30)
+```
+
+Writing or retaining enabled tangent weights automatically calls the optional
+`unreal.mineprep.sync_key_tick_resolution()` once per tangent edit transaction.
+It synchronizes the owning Float/Double channels without opening Curve Editor.
+If that C++ binding is unavailable, weighted edits fail before writing; disabling
+weights and ordinary Cubic/Linear/Step edits remain available. MCAnimConverter's
+scalar curve preparation offers an explicit nonweighted fitting fallback.
 
 ```python
 pitch_keys = r.keys('leg1.Rotation.Y')      # on a pig rig
@@ -307,10 +357,12 @@ r.clear('waist.Location')                  # on a player rig
 - Names: full path, last segment, strip `_CONTROL` / `_CURVE_CONTROL`, case-insensitive; ambiguous → throw
 - FK bones are `EulerTransform`; pass `Rotator` / `Vector` / `Transform` / `EulerTransform`
 - `Rig.key()` uses the same write path as the batch methods.
+- `r.describe()` reads the mesh's reference skeleton, keyed by bone name.
+  Each record contains `parent` (or `None`), parent-local `local` and
+  component-space `reference` transforms, and the component-space `pivot`
+  and unit `axes` (x, y, z). The result is independent of the playhead pose.
 
-`r.get(name, time=None)` returns the control value through the same name resolution and time conversion as `set` / `key`: integer = frame, float = seconds at the sequence display rate, omitted / `None` = current local playhead. It does not call setters or add keys. UE's getter evaluates the sequence at the requested time; it is not a passive dictionary lookup.
-
-On a newly created Control Rig track, even `Rig.key()` can return before any keys exist when creation and first keying happen in the same editor tick. Let the editor process a frame (for example, use a subsequent MCP call), then key and inspect the actual channels. Do not recreate tracks repeatedly or report success from the return value alone.
+`r.get(name, time=None)` returns the control value through the same name resolution and time conversion as `set` / `key`: integer = frame, float = seconds at the sequence display rate, omitted / `None` = current local playhead. It does not call setters or add keys.
 
 Axes, retiming, split Body/Head SKMs: [pitfalls/anim.md](pitfalls/anim.md).
 
@@ -420,8 +472,6 @@ If the cached catalog has no match, try `mob_api.load_catalog(refresh=True)` onc
 
 ### Structures and repeated blocks
 
-These APIs still require the Unreal Editor and Mineprep assets; this is not a claim of commandlet or standalone Python support.
-
 ```python
 mineprep.spawn_blocks(mesh, transforms, loc=(0, 0, 0), rot=(0, 0, 0))
 mineprep.spawn_structure(
@@ -500,21 +550,7 @@ b.connect()  # fences/panes/bars/walls, gate in_wall and stair corners
 ```
 
 User-supplied `.nbt` → `spawn_structure(source=path)` (or `Blocks.from_file`).
-Direct file placement uses numeric palette data; `Blocks.from_file` creates
-editable cells. See [file processing](structure.md#file-processing-and-editable-cells).
-`b.bounds()` returns current non-air `(lo, hi)` in MC XYZ (exclusive hi), or
-`None`; read-only `b.source_size` retains original file dimensions, or `None`
-for ordinary construction. See [bounds and source dimensions](structure.md#cell-bounds-and-source-dimensions).
-`Blocks.from_file`, `parse_structure` and `spawn_structure` default to
-`repair_trapdoors=False`, preserving authored trapdoor facing.
-`b.connect(families=None, positions=None)` can limit recomputation by family
-and existing cell positions while reading neighbours from the full container.
-
-`Blocks.rotate(90, pivot=(0,0,0))` and `Blocks.mirror('x', pivot=0.5)` transform
-cells and Java states in place. Positive rotation maps north to east; pivots use
-MC cell-centre coordinates. `connect_fences()` remains the fence/pane/bar-only
-entry. Full contracts, offline `mc_blockstates` and state-only
-`rotate_state` / `mirror_state`: [structure.md](structure.md#connections-and-grid-transforms).
+For `b.bounds()`, `b.source_size`, `b.connect(families=..., positions=...)`, and in-place `b.rotate()` / `b.mirror()`, see [structure.md](structure.md).
 
 
 ## `merge_skm`
@@ -641,6 +677,69 @@ def task():
 ```
 
 Do not call `unreal.*` or `mineprep.prints` from `@thread` / `@asyncthread` workers. Do not poll a `Future` with ticker `delay=0`.
+
+## Minecraft material & scene preparation (`mc_prep.py`)
+
+### Low-level material & texture helpers
+
+- **`materials(mat).get(name)` / `.set(name, value)`**: reads/writes declared `scalar`, `vector` (accepts RGB/RGBA tuples or `LinearColor`), or `texture` parameters on `Material` (read-only default), `MIC`, and `MID`. Missing parameters return `None` on `get` and raise `ValueError` on `set`.
+- **`apply_mc_material_defaults(material, texture_source)`**: applies MCprep desaturated tint, default emission (`0.1`), and `.png.mcmeta` vertical strip animation (`1` col, or `2` for water/lava flow) to declared `MIC`/`MID` parameters, resetting stale auto-values from previous textures. Apply explicit user overrides after this call.
+- **`identify_mc_texture(target)`**: resolves a canonical ID (`'minecraft:block/stone'`) or `None` from a `MaterialInterface`, `Texture2D`, or path (`纹理贴图` → `Mineprep.TextureID` metadata → `tex_source_files` → MCprep name table).
+- **`resolve_mc_texture(texture_id, resource_pack)`**: exact lookup returning `{'id', 'base', 'normal', 'specular', 'mcmeta'}` (`Path` or `None`; raises `FileNotFoundError` if `base` is missing).
+
+```python
+mat = unreal.load_asset('/Game/YourMaterial')
+tex_id = mineprep.identify_mc_texture(mat)
+files = mineprep.resolve_mc_texture(tex_id, 'E:/ResourcePacks/Example')
+mineprep.apply_mc_material_defaults(mat, files['base'])
+mineprep.materials(mat).set('发光亮度', 0.5)
+```
+
+### Component materials, resource packs, and scene preparation
+
+All high-level prep calls share one active `AsyncTaskRunner` slot (concurrent calls log a warning and return the running job; cancel via `job.destroy()` or the editor task notification). `targets` accepts an `Actor`, `MeshComponent`, iterable, or handle (Actors expand to all `MeshComponent`s including `Body`/`Head` and `ISM`/`HISM`).
+
+| Function | Signature & key options | Behavior & `job.result` |
+|---|---|---|
+| `prepare_materials` | `(targets, *, level=None, parameters=None, scope=None, effect=None, save=False)` | Binds persistent component-owned LabPBR `MID`s (`MID_<tex>_<slot>`) without mutating shared `MIC`/mesh assets. Ordinary `Material`/`MIC`/`MID` graphs auto-convert by extracting the first upstream `BaseColor` `Texture2D`, simple `Multiply` RGB/VertexColor factors, and scalar opacity. `level` (`1–4` or `None`) switches within the LabPBR family (1 basic, 2 anim, 3 enchant/wind, 4 parallax; `0` is invalid). `parameters` maps shader param names to values (`(r, g, b, a)` tuples may use `None` to keep individual channels). `result`: `{components, modified_slots, converted_slots, imported_assets, changed, skipped, component_changes, saved}`. |
+| `replace_materials` | `(targets, resource_pack, *, level=None, parameters=None, scope=None)` | Resolves each slot's canonical texture ID in `resource_pack`, imports readable ID-based names into `<mesh_folder>/<pack_name>/`, and updates component `MID`s and `.mcmeta` animation. Vanilla blocks use `T_oak_planks`; other categories/namespaces retain their path, e.g. `T_entity_chest_normal`, `T_item_oak`, `T_example_block_stone`. Normal/specular append `_n`/`_s` and use linear RGBA BC7; missing auxiliaries bind LabPBR defaults. Slots with unknown IDs or missing base textures remain untouched. |
+| `prepare_scene` | `(targets, *, collision=None, complex_collision=None, flat_shading=False, ray_tracing_wpo=True, level=None, parameters=None, scope=None, save=True)` | Deduplicates static meshes for `complex_collision` (`True`=`ComplexAsSimple`, `False`=`SimpleAndComplex`, `None`=keep; skipped if `collision=False`) and `flat_shading` (per-face normals + rebuilt tangents on single-LOD non-Nanite static meshes), updates component `collision` (`BlockAll`/`NoCollision`) and `ray_tracing_wpo`, then runs `prepare_materials`. `save=True` runs `save_dirty_packages(True, True)` on completion. `result`: `{meshes, components, materials, skipped, warnings, saved}`. |
+| `prep_from_panel` | `(action='prepare', *, import_format=None)` | Snapshots the legacy panel and selected level Actors. Actions: `prepare/replace/scene`, effects `enchant/wind/translucent/emissive`, double-clicks `collision/complex_collision/flat_shading/interpolate`, or `import_world`. Ordinary actions require viewport selection mode. `import_world` ignores selection-mode/category toggles and the quality slider: static normal slots, level 1, format `1` (jmc2obj) forces flat shading; other formats use the checkbox. Collision/complexity and checked parameter rows still apply; import preparation saves all dirty content on success. |
+
+- **`scope`**: `None` (all slots), or any combination of `'static'` (`StaticMeshComponent` normal slots), `'skeletal'` (`SkeletalMeshComponent` normal slots), and `'overlay'` (global and per-slot overlays on all mesh components).
+- **Saving/cancellation**: `save=True` saves **all loaded dirty assets and maps, including unrelated edits**. Replacement overwrites and immediately saves same-name textures but does not save maps. Cancellation stops subsequent steps and keeps completed changes; it does not roll back already saved textures. Shared mesh normals/collision affect all mesh references; ISM changes apply to the whole component.
+- **`effect` modes** (silent, `save=False` by default):
+  - `'enchant'`: raises level to `>=3`; `'disenchant'` keeps level and zeroes `附魔颜色` Alpha.
+  - `'wind'`: raises level to `>=3` and enables ray-tracing WPO on processed static components.
+  - `'translucent'`: switches to single-sided translucent template and sets `不透明R~G+B*A` to `(0, 1, B, A)`.
+  - `'emissive'`: enables `emissive_light_source` on processed components.
+  - `'interpolate'`: raises level to `>=2`; pass `parameters={'动画速度/步长/列数/渐变': (None, None, None, 1)}` to enable interpolation. Only the panel action reads the checkbox automatically.
+
+```python
+import mineprep
+
+targets = mineprep.selected()
+job = mineprep.prepare_materials(targets, level=2, parameters={
+    '金属/高光/粗糙/孔隙率': (None, None, 0.7, None),
+})
+# In a later call after completion:
+job = mineprep.replace_materials(targets, 'E:/ResourcePacks/Example')
+# In another call, after replacement completes:
+job = mineprep.prepare_scene(targets, collision=True, flat_shading=True, level=2)
+```
+
+### Content Browser assets
+
+- **`prepare_assets(assets, *, action='sharpen', resource_pack=None, save=True)`**: accepts explicit assets/iterables/handles without reading UI. `sharpen` deduplicates project Texture2Ds used by selected textures, Material/MICs, static/skeletal meshes (including slot overlays), and only changes filtering to nearest. Engine/runtime textures are skipped. `replace_textures` updates selected project MICs declaring the MC base/normal/specular texture parameters in place; `resource_pack` is required. Parent, sidedness and non-texture overrides stay unchanged; animation layout follows the new source. Missing base/unknown IDs leave the MIC untouched; missing auxiliaries use defaults. Textures go into `<MIC_folder>/<pack_name>/` with existing readable names and overwrite behavior.
+- **`prep_from_browser(action='sharpen', *, resource_pack=None, save=True)`**: snapshots selected assets once; no folder recursion or scene selection. With `replace_textures` and no path, asks for a resource pack; cancelling returns `None` without changing settings. A confirmed path updates the remembered pack path, not the panel's processing-mode toggles.
+- Both return the shared mutually exclusive `AsyncTaskRunner`, use cancellable notifications and short transactions. `result` contains `changed/skipped/imported_assets/saved`. Default `save=True` saves **all dirty assets and maps, including unrelated edits**. Cancelled/failed tasks skip the final save; already imported textures remain saved. `save=False` disables only the final full save.
+- Legacy Blueprint wiring: [scene preparation and asset commands](../../../docs/scene-preparation.md).
+
+```python
+job = mineprep.prepare_assets([unreal.load_asset('/Game/YourTexture')], save=False)
+# Run the next operation only after the previous job finishes:
+job = mineprep.prep_from_browser('replace_textures')
+```
 
 ## Live editor (MCP / Remote Execution)
 

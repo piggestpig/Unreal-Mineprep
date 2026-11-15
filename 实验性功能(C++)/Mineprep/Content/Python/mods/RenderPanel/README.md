@@ -117,6 +117,8 @@ task = ops.render_preset('quick_video', sequence='/Game/seq', fps=60,
 
 Filmic HDR 的独立 MRQ 实验入口见 [NATIVE_HDR.md](NATIVE_HDR.md)：默认 Rec.2020 PQ，单帧接口可通过 `output_pq=False` 保留线性 scRGB（1.0＝80 nit）。临时视频入口 `native_hdr.render_video(settings=None, on_done=None, notify=True)` 明确使用 PQ，返回现有异步任务句柄。
 
+MRG 双分支示例图为 `/Game/Mineprep/Render/FilmicHDR增益图jpg渲染配置`。`native_hdr.render_gainmap()` 一次渲染 SDR PNG 与 Filmic HDR PQ EXR 后合成 Ultra HDR JPG，`native_hdr.compose_gainmap()` 可单独合成已有双图。参数与颜色约定见 [MRG 双分支说明](NATIVE_HDR.md#mrg-双分支与增益图)。
+
 以下采集／构建调用不启动渲染，不修改原配置资产或 UE 队列：
 
 ```python

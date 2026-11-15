@@ -13,13 +13,12 @@ from mc_structure_data import CellData, decode_varints
 from pathlib import Path
 from pprint import pformat
 from mc_utils import warn, uclass, set_actor_label, select_actors
-from mc_localization import loctable_col
 from mc_config import paths
 from mc_math import boxes_to_packed, decode_rotation, encode_rotation, validate_packed, partition_types
 from mc_importer import (
     _make_import_task, _run_import_task, _load_mc_model,
     _model_data_is_full_cube, _resolve_texture_reference,
-    resolve_block_json_path, import_block,
+    resolve_block_json_path, get_all_blocks, import_block,
 )
 from mc_prep import prep_texture
 
@@ -1529,7 +1528,7 @@ def spawn_structure(source='', loc=(0,0,0), rot=(0,0,0), gpu=0, cull=0, merge=0,
     if not any(len(p['pos']) for p in payload_map.values()):
         return []
 
-    inventory = loctable_col(6,2)
+    inventory = get_all_blocks()
     actors = []
     meshes = {}
     available = {}
@@ -1696,7 +1695,7 @@ def import_structure_textures(files, destination=None):
 
 def structure_to_tex(ue_data, name='structure', fp32=True):
     """将结构数据编码为 BPT/BRT 贴图并导入到 UE（支持 Transform 列表或打包数组格式）。"""
-    from mc_structure_tex import write_structure_textures
+    from mc_structure_data import write_structure_textures
     if not ue_data:
         unreal.log_warning('ue_data 为空，取消贴图导出。')
         return

@@ -36,6 +36,52 @@ def to_linear(c):
     return unreal.LinearColor(*c)
 
 
+def material_parameter_type(material, name):
+    """按声明查找参数类型；不存在返回 None，同名多类型要求调用者消除歧义。"""
+    library = unreal.MaterialEditingLibrary
+    kinds = [kind for kind in ('scalar', 'vector', 'texture')
+             if str(name).casefold() in {str(n).casefold() for n in
+                 getattr(library, 'get_' + kind + '_parameter_names')(material)}]
+    if len(kinds) > 1:
+        raise ValueError('材质参数名称对应多个类型: ' + str(name))
+    return kinds[0] if kinds else None
+
+
+def get_material_param(material, name):
+    """读取真实类型的材质参数，支持 Material、MIC 和 MID；缺失返回 None。"""
+    if not material or not name:
+        return None
+    kind = material_parameter_type(material, name)
+    if kind is None:
+        return None
+    if isinstance(material, unreal.MaterialInstance):
+        return getattr(material, 'get_' + kind + '_parameter_value')(name)
+    return getattr(unreal.MaterialEditingLibrary, 'get_material_default_' + kind + '_parameter_value')(material, name)
+
+
+def set_material_param(material, name, value):
+    """设置实例参数，MID 直接调用运行时接口，MIC 使用编辑器接口。"""
+    if not isinstance(material, unreal.MaterialInstance):
+        raise TypeError('参数写入需要 MaterialInstanceConstant 或 MaterialInstanceDynamic')
+    kind = material_parameter_type(material, name)
+    if kind is None:
+        raise ValueError('材质没有参数: ' + str(name))
+    return _set_material_param(material, name, value, kind)
+
+
+def _set_material_param(material, name, value, kind):
+    """写入已解析类型的实例参数，供批量准备复用模板元数据。"""
+    if kind == 'scalar':
+        value = float(value)
+    elif kind == 'vector':
+        value = to_linear(value)
+    if isinstance(material, unreal.MaterialInstanceDynamic):
+        getattr(material, 'set_' + kind + '_parameter_value')(name, value)
+    else:
+        getattr(unreal.MaterialEditingLibrary, 'set_material_instance_' + kind + '_parameter_value')(material, name, value)
+    return material
+
+
 def _is_color_like(c):
     if isinstance(c, (unreal.LinearColor, unreal.Color, int, float)):
         return True

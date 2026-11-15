@@ -85,7 +85,6 @@ class MeshData:
     parts: list = field(default_factory=list)
     vertex_parts: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
-    single_sided: bool = False
     triangle_materials: list = field(default_factory=list)
     materials: list = field(default_factory=list)
 
@@ -161,7 +160,6 @@ def build_geometry(model, alpha=None, expansion=0., random_scale=0.):
                 usable = [f for f in usable if alpha(f[2], texture_size)]
             if not usable:
                 return
-            result.single_sided = True
             candidates = usable
 
         for face, indices, rect in candidates:

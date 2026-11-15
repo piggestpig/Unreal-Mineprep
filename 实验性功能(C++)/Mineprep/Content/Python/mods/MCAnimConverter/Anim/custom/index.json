@@ -1,0 +1,33 @@
+[
+  {
+    "file": "Bedrock/walk_lively_mojang.animation.json",
+    "clip": "animation.mineprep.player.walk_mojang",
+    "source_version": "Mineprep authored Mojang-style walk (recommended speed ~1.7 blocks/s)",
+    "skeleton": "bedrock_player"
+  },
+  {
+    "file": "Bedrock/run_lively_mojang.animation.json",
+    "clip": "animation.mineprep.player.run_mojang",
+    "source_version": "Mineprep authored Mojang-style run (recommended speed ~4.8 blocks/s)",
+    "skeleton": "bedrock_player"
+  },
+  {
+    "file": "Bedrock/quadruped_walk_mojang.animation.json",
+    "clip": "animation.mineprep.quadruped.walk_mojang",
+    "source_version": "Mineprep authored Mojang-style quadruped walk (recommended speed ~0.7 blocks/s pig / ~0.8 blocks/s wolf)",
+    "skeleton": "quadruped"
+  },
+  {
+    "file": "Bedrock/quadruped_run_mojang.animation.json",
+    "clip": "animation.mineprep.quadruped.run_mojang",
+    "source_version": "Mineprep authored Mojang-style quadruped run (recommended speed ~1.4 blocks/s pig / ~1.7 blocks/s wolf)",
+    "skeleton": "quadruped"
+  },
+  {
+    "file": "Bedrock/wolf_play_bow.animation.json",
+    "clip": "animation.mineprep.wolf.play_bow",
+    "source_version": "Mineprep authored articulated wolf play-bow with tail wag (local quadruped_edit)",
+    "skeleton": "quadruped",
+    "skeleton_mode": "local"
+  }
+]

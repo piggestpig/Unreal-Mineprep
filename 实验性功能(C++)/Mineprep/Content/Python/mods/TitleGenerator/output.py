@@ -67,7 +67,7 @@ def prepare(glyphs, mode):
 
 def write_textures(plan, directory):
     """后台线程：将 GPU 分组实例数据编码写成 BPT/BRT EXR 贴图。"""
-    from mc_structure_tex import write_structure_textures
+    from mc_structure_data import write_structure_textures
     return [write_structure_textures({str(i): plan['payloads'][str(i)] for i in group}, directory,
                                     name=f'Instances_{n}') for n, group in enumerate(plan['groups'], 1)]
 

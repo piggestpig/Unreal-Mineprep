@@ -420,7 +420,7 @@ def unready_textures(meshes, textures):
 
 def _shared_material(source, root, *, two_sided=True):
     import mc_importer
-    from mc_prep import load_mcprep_data, colorize_material, _apply_emission_default
+    from mc_prep import load_mcprep_data, apply_mc_material_defaults
     from .resources import template_texture_key
     source=Path(source);key=template_texture_key(source)
     path,texture=_shared_path(root+'/tex',source.stem,key,'WGTextureKey')
@@ -453,10 +453,7 @@ def _shared_material(source, root, *, two_sided=True):
             raise RuntimeError('failed to create shared template material: '+path)
         unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(
             material,mc_importer.BASE_TEXTURE_PARAMETER_NAME,texture)
-        # Hashed asset names no longer match the importer's tint lookup by name.
-        if tint is not None:colorize_material(material,unreal.LinearColor(*tint,1.0))
-        mc_importer._apply_texture_animation(material,source)
-        _apply_emission_default(material,source)
+        apply_mc_material_defaults(material,source)
         _tag_assets((material,),material_key,'WGMaterialKey')
     if unreal.MaterialEditingLibrary.get_material_instance_texture_parameter_value(
             material,mc_importer.BASE_TEXTURE_PARAMETER_NAME)!=texture:

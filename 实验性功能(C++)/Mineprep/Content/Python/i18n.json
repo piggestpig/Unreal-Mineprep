@@ -1,5 +1,17 @@
 {
   "Core": {
+    "item.resolution.title": {
+      "zh": "物品轮廓分辨率",
+      "en": "Item Outline Resolution",
+      "zh-Hant": "物品輪廓解析度",
+      "zh-Hant-HK": "物品輪廓解像度"
+    },
+    "item.resolution.message": {
+      "zh": "贴图为 {width} × {height}，超过建议上限 {limit}。\n是否按原分辨率生成模型？\n选择“否”将按 {target_width} × {target_height} 采样轮廓；贴图本身保留原分辨率。",
+      "en": "The texture is {width} × {height}, above the recommended limit of {limit}.\nGenerate the mesh at its original resolution?\nChoose No to sample the outline at {target_width} × {target_height}. The texture keeps its original resolution.",
+      "zh-Hant": "貼圖為 {width} × {height}，超過建議上限 {limit}。\n是否依原解析度產生模型？\n選擇「否」將以 {target_width} × {target_height} 取樣輪廓；貼圖本身保留原解析度。",
+      "zh-Hant-HK": "貼圖為 {width} × {height}，超過建議上限 {limit}。\n是否按原解像度產生模型？\n選擇「否」將以 {target_width} × {target_height} 取樣輪廓；貼圖本身保留原解像度。"
+    },
     "menu.render": {
       "zh": "渲染",
       "en": "Render",

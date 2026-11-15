@@ -287,12 +287,16 @@ def _setting(config, cls, enabled=True, **values):
 
 
 def _optional(config, path, enabled, **values):
+    if not enabled:
+        # 从旧资产复制的设置仍需关闭，临时配置则无需加载可选模块。
+        for setting in config.get_user_settings():
+            if setting.get_class().get_path_name() == path:
+                setting.set_is_enabled(False)
+        return None
     cls = unreal.load_class(None, path)
-    if cls:
-        return _setting(config, cls, enabled, **values)
-    if enabled:
+    if not cls:
         raise RuntimeError(i18n('所选渲染功能需要未安装的 UE 类：{path}').format(path=str(path)))
-    return None
+    return _setting(config, cls, **values)
 
 
 def current_frame(settings):
@@ -367,10 +371,13 @@ def _build_config(settings, base=None):
         DataLayers=[unreal.SoftObjectPath(path) for path in s['data_layers']] if s['layers'] == 1 else [])
     _setting(config, unreal.MoviePipelineDeferredPassBase,
              s['vr'] != 1 and not stereo, **layer_values)
-    _optional(config, '/Script/MoviePipelineMaskRenderPass.MoviePipelinePanoramicPass', panoramic,
-              bStereo=stereo, bDisablePanoramic=s['vr'] == -1 or s['vr'] == 0 and stereo and s['platform'] == 'Mac',
-              StereoOutputFormat=_enum(unreal.StereoOutputFormat, s['stereo_format']), NumHorizontalSteps=5 if stereo else 4,
-              HorzFieldOfView=120., bAllocateHistoryPerPane=True, bFollowCameraOrientation=True)
+    panoramic_pass = _optional(config, '/Script/MoviePipelineMaskRenderPass.MoviePipelinePanoramicPass', panoramic,
+                               bStereo=stereo, bDisablePanoramic=s['vr'] == -1 or s['vr'] == 0 and stereo and s['platform'] == 'Mac',
+                               NumHorizontalSteps=5 if stereo else 4, HorzFieldOfView=120.,
+                               bAllocateHistoryPerPane=True, bFollowCameraOrientation=True)
+    if panoramic_pass:
+        stereo_format = type(panoramic_pass.get_editor_property('StereoOutputFormat'))
+        _set(panoramic_pass, StereoOutputFormat=_enum(stereo_format, s['stereo_format']))
     _optional(config, '/Script/DisplayClusterMoviePipeline.DisplayClusterMoviePipelineViewportPassBase',
               stereo and s['vr'] == 0, **layer_values)
     _optional(config, '/Script/DisplayClusterMoviePipeline.DisplayClusterMoviePipelineSettings',
@@ -384,9 +391,11 @@ def _build_config(settings, base=None):
     _optional(config, '/Script/MovieRenderPipelineMP4Encoder.MoviePipelineMP4EncoderOutput',
               route['native'] and s['codec'] == 0,
               ConstantRateFactor=(28, 23, 19, 16)[s['quality']], bIncludeAudio=s['audio'] == 1)
-    _optional(config, '/Script/AppleProResMedia.MoviePipelineAppleProResOutput',
-              route['native'] and s['codec'] == 3,
-              Codec=_enum(unreal.AppleProResEncoderCodec, s['quality'] + 1), bIncludeAudio=s['audio'] == 1)
+    prores_output = _optional(config, '/Script/AppleProResMedia.MoviePipelineAppleProResOutput',
+                              route['native'] and s['codec'] == 3, bIncludeAudio=s['audio'] == 1)
+    if prores_output:
+        codec = type(prores_output.get_editor_property('Codec'))
+        _set(prores_output, Codec=_enum(codec, s['quality'] + 1))
     _setting(config, unreal.MoviePipelineCommandLineEncoder,
              route['ffmpeg'] and not s.get('single_frame') and not encoding.uses_background(s),
              Quality=_enum(unreal.MoviePipelineEncodeQuality, s['quality']),

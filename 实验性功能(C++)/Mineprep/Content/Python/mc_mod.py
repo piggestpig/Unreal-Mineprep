@@ -7,6 +7,7 @@ import sys
 import random
 import re
 import tomllib
+from datetime import datetime
 import mcvars
 from fnmatch import translate
 from pathlib import Path
@@ -25,6 +26,8 @@ DEFAULT_INFO = {
 
 PAUSE_BREAK = unreal.Key()
 PAUSE_BREAK.import_text('Pause')
+NUMPAD_ADD = unreal.Key()
+NUMPAD_ADD.import_text('Add')
 
 
 def read_manifest(path):
@@ -361,11 +364,34 @@ class Mod():
         pass
 
     def on_key_down(self, key: unreal.Key):
-        """由蓝图模板传递的按键事件，按下键盘时调用。默认示例：按PauseBreak打开模组文件夹"""
+        """由蓝图模板传递的按键事件。默认按PauseBreak打开模组文件夹，按小键盘加号给当前面板截图"""
+
+        def _screenshot_panel(self):
+            showcase = MODS_DIR / 'Showcase'
+            if not (showcase / MANIFEST_NAME).is_file() and not (showcase / '__init__.py').is_file():
+                return
+            shoot = getattr(getattr(unreal, 'mineprep', None), 'widget_screenshot', None)
+            widget = self.layout.outer if self.layout else None
+            if not callable(shoot) or widget is None:
+                return
+            folder = showcase / 'image'
+            folder.mkdir(exist_ok=True)
+            stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            path = folder / f'{type(self).__name__}_{stamp}.png'
+            index = 2
+            while path.exists():
+                path = folder / f'{type(self).__name__}_{stamp}_{index}.png'
+                index += 1
+            saved = str(shoot(widget, str(path)) or '')
+            if not saved.lower().endswith('.png') or not Path(saved).is_file():
+                warn(saved or 'widget_screenshot failed')
+
         if unreal.InputLibrary.equal_equal_key_key(key, PAUSE_BREAK):
             path = getattr(sys.modules.get(type(self).__module__), '__file__', None)
             if path:
                 startfile(str(Path(path).resolve().parent))
+        elif unreal.InputLibrary.equal_equal_key_key(key, NUMPAD_ADD):
+            _screenshot_panel(self)
 
     def on_key_up(self, key: unreal.Key):
         """由蓝图模板传递的按键事件，松开键盘时调用"""

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
 import mc_widget, mc_mod, mc_mesh, mc_material, mc_parallel, mc_bplib, mc_math
-import mc_handle, mc_rig, mc_sequencer, mc_blockstates, mc_lowpoly
+import mc_handle, mc_rig, mc_sequencer, mc_blockstates, mc_model
 from mc_bplib import BPLibCaller, BPLib, EditorBPLib
 from mc_handle import (
     MineprepAPIHandle, actor, actors, camera, selected, component, components, materials,
@@ -28,7 +28,11 @@ from mc_parallel import (
     delay, tick, asynctask, thread, asyncthread, until,
     DelayRunner, TickRunner, AsyncTaskRunner, ThreadRunner,
 )
-from mc_prep import prep_texture, load_mcprep_data, colorize_material
+from mc_prep import (
+    prep_texture, load_mcprep_data, colorize_material,
+    apply_mc_material_defaults, identify_mc_texture, resolve_mc_texture,
+    prepare_materials, replace_materials, prepare_scene, prepare_assets,
+)
 from mc_material import (
     tex_to_color, color_to_tex, ColorList,
     register_biome_tex, clear_biome_tex,
@@ -54,7 +58,7 @@ from mc_sequencer import keyframe
 from mc_widget import Layout, PropertyGroup, add_widget, ui, make_combo_text
 from mc_mod import mods, Mod
 from mc_mesh import merge_skm
-from mc_lowpoly import LowPolyModel
+from mc_model import LowPolyModel, SkeletalModel
 
 
 ####################################################################################
@@ -244,6 +248,132 @@ class panel(MineprepAddonHandle):
             warn(tooltip('未找到面板', name), '---------------', tooltip('你可能在寻找'), candidate)
         super().__init__(target, label)
 
+
+def _panel_material_parameters(rows=None):
+    """Read checked rows, or all explicitly named shortcut rows, without changing UI."""
+    parameters = {}
+    for path in tuple(mc_widget.WidgetsCache):
+        if not path.startswith('材质参数_') or not path.endswith('.🔲启用'):
+            continue
+        root = path.rsplit('.', 1)[0]
+        if rows is not None:
+            if root not in rows:
+                continue
+        elif panel(path).get(int) != 1:
+            continue
+        row = unreal.UserWidgetFunctionLibrary.get_outer_user_widget(panel(path).target)
+        name = str(row.get_editor_property('解析参数名'))
+        if name in ('', 'None'):
+            continue
+        channel = row.get_editor_property('解析颜色通道')
+        if channel == 4:
+            color = panel(root + '.颜色选择框').get()
+            parameters[name] = [color.r, color.g, color.b, color.a]
+        elif channel == -1:
+            parameters[name] = panel(root + '.➖滑条').get(float)
+        else:
+            parameters.setdefault(name, [None] * 4)[channel] = panel(root + '.➖滑条').get(float)
+    return parameters
+
+
+def prep_from_browser(action='sharpen', *, resource_pack=None, save=True):
+    """一次性读取内容浏览器资产并准备；不递归文件夹，不改变主面板范围开关。
+
+    action 为 sharpen/replace_textures；换包未传路径时选包，取消返回 None 且不修改配置。
+    返回共用互斥的 AsyncTaskRunner，save=True 成功后保存全部脏资源和关卡。
+    """
+    running = mc_prep._running_preparation()
+    if running is not None:
+        return running
+    if action not in ('sharpen', 'replace_textures'):
+        raise ValueError('未知资产准备动作: ' + str(action))
+    assets = tuple(unreal.EditorUtilityLibrary.get_selected_assets())
+    if not assets:
+        raise ValueError('请先在内容浏览器选择需要处理的资产')
+    if action == 'replace_textures' and resource_pack is None:
+        resource_pack = askdirectory(title='选择 Minecraft 资源包')
+        if not resource_pack:
+            return None
+        resource_pack = Path(resource_pack).expanduser().resolve()
+        if not resource_pack.is_dir():
+            raise NotADirectoryError(resource_pack)
+        mc_config.config.load()
+        settings = dict(mc_config.config.config_dict.get('Settings', {}))
+        settings['texture_pack_path'] = str(resource_pack)
+        mc_config.config['Settings'] = settings
+        if 'ue材质包路径' in mc_widget.WidgetsCache:
+            panel('ue材质包路径').set(str(resource_pack))
+    return prepare_assets(assets, action=action, resource_pack=resource_pack, save=save)
+
+
+def prep_from_panel(action='prepare', *, import_format=None):
+    """读取旧面板的一次性准备配置，处理场景选中 Actor；不触发旧蓝图流程。
+
+    action 选择 prepare/replace/scene/import_world、四个效果或碰撞/法线/渐变动作。
+    普通准备读取明确勾选行；快捷动作只读所属设置，不读等级或无关参数行。
+    import_world 固定等级1，格式1强制平直法线；scene/import_world 成功后全部保存。
+    返回 AsyncTaskRunner，忙碌时返回当前任务；内容浏览器资产模式不支持。
+    """
+    effect_rows = {
+        'enchant': ('材质参数_附魔颜色', '材质参数_附魔缩放', '材质参数_附魔速度', '材质参数_附魔对比度'),
+        'wind': ('材质参数_摇摆速度', '材质参数_摇摆幅度'),
+        'translucent': ('材质参数_不透明度',),
+        'emissive': ('材质参数_发光亮度', '材质参数_照明强度'),
+    }
+    geometry_controls = {'collision': '🔲启用碰撞', 'complex_collision': '🔲复杂碰撞',
+                         'flat_shading': '🔲平直着色'}
+    if action not in ('prepare', 'replace', 'scene', 'import_world', 'interpolate', *effect_rows, *geometry_controls):
+        raise ValueError('未知准备动作: ' + str(action))
+    running = mc_prep._running_preparation()
+    if running is not None:
+        return running
+    quality = panel('➖动态准备材质_滑条')
+    if quality.target is None:
+        raise RuntimeError('请先打开 Mineprep 旧面板')
+    if action == 'import_world':
+        if type(import_format) is not int:
+            raise ValueError('import_world 需要传入整数 import_format；1 为 jmc2obj')
+        scope = ('static',)
+    else:
+        if panel('🔲内容浏览器选中项').get(int) == 1:
+            raise ValueError('当前材质入口只处理场景组件，请取消“内容浏览器选中项”')
+        if panel('🔲视口选中项').get(int) != 1:
+            raise ValueError('请勾选“视口选中项”，当前材质入口不处理内容浏览器资产')
+        scope = tuple(kind for kind, control in (
+            ('static', '🔲方块材质'), ('skeletal', '🔲生物材质'), ('overlay', '🔲覆层材质'))
+            if panel(control).get(int) == 1)
+        if not scope:
+            raise ValueError('请至少勾选一种材质范围：方块、生物或覆层')
+    targets = tuple(unreal.get_editor_subsystem(unreal.EditorActorSubsystem).get_selected_level_actors())
+    if not targets:
+        raise ValueError('请先在场景中选择需要处理的 Actor')
+    if action in geometry_controls:
+        return mc_prep._prepare_scene_shortcut(targets, action, panel(geometry_controls[action]).get(int), scope)
+    if action == 'interpolate':
+        return prepare_materials(targets, scope=scope, effect=action,
+            parameters={mc_prep.ANIMATION_PARAMETER_NAME:
+                        (None, None, None, int(panel('🔲渐变动画纹理').get(int) == 1))})
+    if action in effect_rows:
+        if action == 'enchant' and panel('🔲祛魔').get(int) == 1:
+            return prepare_materials(targets, scope=scope, effect='disenchant')
+        return prepare_materials(targets, scope=scope, effect=action,
+            parameters=_panel_material_parameters(effect_rows[action]))
+    level = 1 if action == 'import_world' else int(quality.get(float))
+    parameters = _panel_material_parameters()
+    if action == 'replace':
+        resource_pack = panel('ue材质包路径').get(str)
+        return replace_materials(targets, resource_pack, level=level, parameters=parameters, scope=scope)
+    if action in ('scene', 'import_world'):
+        collision = panel('🔲启用碰撞').get(int)
+        complexity = panel('🔲复杂碰撞').get(int)
+        return prepare_scene(targets, collision=None if collision == -1 else collision == 1,
+            complex_collision=None if complexity == -1 else complexity == 1,
+            flat_shading=(action == 'import_world' and import_format == 1)
+                         or panel('🔲平直着色').get(int) == 1,
+            level=level, parameters=parameters, scope=scope)
+    return prepare_materials(targets, level=level, parameters=parameters, scope=scope)
+
+
 class toolbar(MineprepAddonHandle):
     def __init__(self, name = ''):
         """触发工具栏按钮"""
@@ -305,14 +435,31 @@ def spline(points, samples, *, closed=False, uniform_speed=False, tangents=False
 
 def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None) -> unreal.Actor:
     """通过生成器面板放置 Actor，可指定位置/旋转/缩放"""
-    mcvars.SpawnIDCache = id if id else target if isinstance(target, int) else None
+    is_inventory = button in ('放置方块', '放置物品')
+    mcvars.SpawnIDCache = None if is_inventory else (id if id else target if isinstance(target, int) else None)
     mcvars.SpawnNameCache = target if isinstance(target, str) else None
     mcvars.ActorCache = None
 
-    panel(f'生成器子面板.{button}选项').set_string(target)
-    panel(f'生成器子面板.{button}_可右键').click(0)
-    mcvars.SpawnIDCache = None
-    mcvars.SpawnNameCache = None
+    try:
+        option_widget = panel(f'生成器子面板.{button}选项')
+        should_click = True
+        if is_inventory:
+            if isinstance(target, str):
+                if target:
+                    import mc_inventory
+
+                    category = 'Blocks' if button == '放置方块' else 'Items'
+                    should_click = bool(mc_inventory.select_option_by_target(option_widget.target, category, target))
+            elif target:
+                should_click = False
+        else:
+            option_widget.set_string(target)
+
+        if should_click:
+            panel(f'生成器子面板.{button}_可右键').click(0)
+    finally:
+        mcvars.SpawnIDCache = None
+        mcvars.SpawnNameCache = None
     actor = mcvars.ActorCache
 
     if not actor:
@@ -328,13 +475,13 @@ def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None) 
     return actor
 
 
-def spawn_block(target='', loc=None, rot=None, scale=None, id: int=None) -> unreal.Actor:
-    """放置单个方块, 指定id时忽略target名称"""
-    return spawn_helper('放置方块', target, loc, rot, scale, id)
+def spawn_block(target='', loc=None, rot=None, scale=None) -> unreal.Actor:
+    """放置单个方块"""
+    return spawn_helper('放置方块', target, loc, rot, scale)
 
-def spawn_item(target='', loc=None, rot=None, scale=None, id: int=None) -> unreal.Actor:
-    """放置物品, 指定id时忽略target名称"""
-    return spawn_helper('放置物品', target, loc, rot, scale, id)
+def spawn_item(target='', loc=None, rot=None, scale=None) -> unreal.Actor:
+    """放置物品"""
+    return spawn_helper('放置物品', target, loc, rot, scale)
 
 def spawn_mob(target='', loc=None, rot=None, scale=None, baby=False, id: int=None) -> unreal.Actor:
     """放置生物, 指定id时忽略target名称"""

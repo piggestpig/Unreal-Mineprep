@@ -3,7 +3,7 @@
 import builtins
 import math
 import operator
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pprint import pformat
 from typing import Any
 
@@ -14,6 +14,7 @@ except ModuleNotFoundError:
 
 import mc_sequencer as mcseq
 import mc_utils
+from mc_material import get_material_param, set_material_param
 from mc_localization import tooltip
 from mc_rig import Rig
 from mc_sequencer import keyframe
@@ -304,6 +305,33 @@ class actor(MineprepWorldHandle):
     def rig(self, target=unreal.SkeletalMeshComponent, rig_class=None, *, layered=None):
         """取骨骼网格体上的 Control Rig；layered 仅用于新建轨道。"""
         return self.component(target).rig(rig_class, layered=layered)
+
+    def play_anim(self, animation, *, start=0, end=None, sequence=None,
+                  target=unreal.SkeletalMeshComponent, head=None, head_target='Head'):
+        """将 AnimSequence 或 {'body', 'head'} 成对映射加入骨骼动画轨，返回片段或 {'body', 'head'}。"""
+        if isinstance(animation, Mapping):
+            if head is not None:
+                raise ValueError('传入动画字典时不能同时指定 head 参数')
+            if 'body' not in animation:
+                raise ValueError("动画字典必须包含 'body'")
+            body_anim = animation['body']
+            head_anim = animation.get('head')
+            paired = True
+        else:
+            body_anim = animation
+            head_anim = head
+            paired = head is not None
+        if not paired:
+            return mcseq.add_skeletal_animation(
+                self.component(target).target, body_anim,
+                start=start, end=end, sequence=sequence,
+            )
+        head_comp = self.component(head_target).target if head_anim is not None else None
+        return mcseq.add_skeletal_animation_pair(
+            self.component(target).target, body_anim,
+            head_comp, head_anim,
+            start=start, end=end, sequence=sequence,
+        )
 
 
 def _positive_camera_value(value, name):
@@ -620,44 +648,8 @@ class materials(MineprepWorldHandle):
         """从多个网格组件汇总材质，可选名称过滤"""
         return [m for c in mesh_comps if isinstance(c, unreal.MeshComponent) for m in materials.find(c, name)]
 
-    @staticmethod
-    def get_material_param(mat, name):
-        """读取材质标量/向量/贴图参数值"""
-        if not mat or not name:
-            return None
-        for getter in ('get_scalar_parameter_value', 'get_vector_parameter_value', 'get_texture_parameter_value'):
-            fn = getattr(mat, getter, None)
-            if callable(fn):
-                try:
-                    return fn(name)
-                except Exception:
-                    pass
-        return None
-
-    @staticmethod
-    def set_material_param(mat, name, value):
-        """设置材质标量/向量/贴图参数值"""
-        if not mat or not name:
-            return
-        if isinstance(value, unreal.Texture):
-            setter, args = 'set_texture_parameter_value', (name, value)
-        elif isinstance(value, (int, float, bool)):
-            setter, args = 'set_scalar_parameter_value', (name, float(value))
-        else:
-            setter, args = 'set_vector_parameter_value', (name, value)
-        fn = getattr(mat, setter, None)
-        if callable(fn):
-            fn(*args)
-            return
-        lib = getattr(unreal, 'MaterialEditingLibrary', None)
-        if lib and isinstance(mat, unreal.MaterialInstance):
-            if isinstance(value, unreal.Texture):
-                lib.set_material_instance_texture_parameter_value(mat, name, value)
-            elif isinstance(value, (int, float, bool)):
-                lib.set_material_instance_scalar_parameter_value(mat, name, float(value))
-            else:
-                lib.set_material_instance_vector_parameter_value(mat, name, value)
-
+    get_material_param = staticmethod(get_material_param)
+    set_material_param = staticmethod(set_material_param)
 
     def get(self, param=''):
         """获取当前材质集合的参数值；单个材质时返回标量结果"""
@@ -932,6 +924,12 @@ class channels(MineprepSequencerHandle):
         return mcseq.gather_channels(parent, name)
 
 
+def _tick_resolution_sync():
+    """Optional native correction used by exact weighted edits and import capability checks."""
+    fn = getattr(getattr(unreal, 'mineprep', None), 'sync_key_tick_resolution', None)
+    return fn if fn and callable(fn) else None
+
+
 class keys(MineprepSequencerHandle):
     _collection = True
 
@@ -1035,6 +1033,35 @@ class keys(MineprepSequencerHandle):
         """按选择顺序返回出切线斜率，单位为通道值每秒。"""
         return List(self._tangent_rate(key) * key.get_leave_tangent() for key in self.target)
 
+    @staticmethod
+    def _weight_modes():
+        enum = unreal.RichCurveTangentWeightMode
+        return dict(zip(('none', 'arrive', 'leave', 'both'), (
+            enum.RCTWM_WEIGHTED_NONE, enum.RCTWM_WEIGHTED_ARRIVE,
+            enum.RCTWM_WEIGHTED_LEAVE, enum.RCTWM_WEIGHTED_BOTH)))
+
+    @property
+    def arrive_tangent_weight(self):
+        """入手柄在秒／通道值平面中的原生长度。"""
+        for key in self.target:
+            self._tangent_rate(key)
+        return List(key.get_arrive_tangent_weight() for key in self.target)
+
+    @property
+    def leave_tangent_weight(self):
+        """出手柄在秒／通道值平面中的原生长度。"""
+        for key in self.target:
+            self._tangent_rate(key)
+        return List(key.get_leave_tangent_weight() for key in self.target)
+
+    @property
+    def tangent_weight_mode(self):
+        """返回 none / arrive / leave / both 字符串。"""
+        names = {value: name for name, value in self._weight_modes().items()}
+        for key in self.target:
+            self._tangent_rate(key)
+        return List(names[key.get_tangent_weight_mode()] for key in self.target)
+
     def _vector_tangent_values(self, samples):
         kind = type(samples[0])
         if len(self) != 3 * len(samples) or any(type(sample) is not kind for sample in samples):
@@ -1043,10 +1070,21 @@ class keys(MineprepSequencerHandle):
             'Rotation', ('roll', 'pitch', 'yaw'))
         locations = [self._items.locations.get(id(key), (None, None)) for key in self.target]
         section = locations[0][0]
-        if not isinstance(section, unreal.MovieScene3DTransformSection):
-            raise ValueError('向量切线需要 Transform 通道来源')
+        if not isinstance(section, (unreal.MovieScene3DTransformSection,
+                                    unreal.MovieSceneControlRigParameterSection)):
+            raise ValueError('向量切线需要 Transform 或 Control Rig 通道来源')
         names = [mcseq._channel_name(channel) for channel in section.get_all_channels()]
-        expected = [f'{group}.{axis}' for axis in 'XYZ']
+        first_name = names[locations[0][1]]
+        prefix = first_name[:-len('Location.X')] if first_name.endswith('Location.X') else (
+            first_name[:-len('Rotation.X')] if first_name.endswith('Rotation.X') else (
+                first_name[:-len('Scale.X')] if first_name.endswith('Scale.X') else None))
+        if prefix is None and first_name.endswith('.X'):
+            prefix, group = first_name[:-1], ''
+        if prefix is None:
+            raise ValueError('向量切线需要完整的 XYZ 通道组')
+        if kind is unreal.Vector and first_name.endswith('Scale.X'):
+            group = 'Scale'
+        expected = [f'{prefix}{group + "." if group else ""}{axis}' for axis in 'XYZ']
         unit = unreal.MovieSceneTimeUnit.TICK_RESOLUTION
         seen = set()
         for start in range(0, len(self), 3):
@@ -1060,9 +1098,11 @@ class keys(MineprepSequencerHandle):
             seen.add(first)
         return [getattr(sample, axis) for sample in samples for axis in axes]
 
-    def tangents(self, slopes=None, *, arrive=None, leave=None):
-        """为选中键设置每秒斜率，返回当前句柄。"""
-        if not self or slopes is arrive is leave is None:
+    def tangents(self, slopes=None, *, arrive=None, leave=None,
+                 arrive_weight=None, leave_weight=None, weight_mode=None):
+        """设置每秒斜率及原生手柄长度；单独传 weight_mode 只切换加权模式。"""
+        if not self or all(value is None for value in (
+                slopes, arrive, leave, arrive_weight, leave_weight, weight_mode)):
             return self
         mode = unreal.RichCurveTangentMode.RCTM_BREAK
         if slopes is not None:
@@ -1070,33 +1110,69 @@ class keys(MineprepSequencerHandle):
                 raise TypeError('slopes 与 arrive、leave 互斥')
             mode = unreal.RichCurveTangentMode.RCTM_USER
 
-        def expand(values):
+        def expand(values, *, weight=False):
             if values is None:
                 return [None] * len(self)
             values = list(values) if iscollection(values) else [values] * len(self)
-            if any(isinstance(value, (unreal.Vector, unreal.Rotator)) for value in values):
+            if not weight and any(isinstance(value, (unreal.Vector, unreal.Rotator)) for value in values):
                 if not isinstance(values[0], (unreal.Vector, unreal.Rotator)):
                     raise ValueError('切线样本不能混合标量和向量')
                 values = self._vector_tangent_values(values)
             if len(values) != len(self):
-                raise ValueError('切线斜率数组长度须与关键帧选择相同')
-            if not all(math.isfinite(value) for value in values):
-                raise ValueError('切线斜率须为有限数值')
+                raise ValueError('切线参数数组长度须与关键帧选择相同')
+            if not all(isinstance(value, (int, float)) and not isinstance(value, bool)
+                       and math.isfinite(value) and (not weight or value >= 0)
+                       for value in values):
+                raise ValueError('切线参数须为有限数值，权重须非负')
             return values
 
         if slopes is not None:
             incoming = outgoing = expand(slopes)
         else:
             incoming, outgoing = expand(arrive), expand(leave)
+        in_weights = expand(arrive_weight, weight=True)
+        out_weights = expand(leave_weight, weight=True)
+        modes = self._weight_modes()
+        if weight_mode is None:
+            names = list(self.tangent_weight_mode)
+            for i, name in enumerate(names):
+                has_in = name in ('arrive', 'both') or arrive_weight is not None
+                has_out = name in ('leave', 'both') or leave_weight is not None
+                names[i] = ('none', 'arrive', 'leave', 'both')[int(has_in) + 2 * int(has_out)]
+        else:
+            names = list(weight_mode) if iscollection(weight_mode) else [weight_mode] * len(self)
+            if len(names) != len(self) or any(name not in modes for name in names):
+                raise ValueError('weight_mode 须为 none / arrive / leave / both，数量须匹配关键帧')
+        change_curve = any(value is not None for value in (
+            slopes, arrive, leave, arrive_weight, leave_weight))
+        if arrive_weight is not None or leave_weight is not None:
+            mode = unreal.RichCurveTangentMode.RCTM_BREAK
         edits = []
-        for key, in_slope, out_slope in zip(self.target, incoming, outgoing):
+        for key, in_slope, out_slope, in_weight, out_weight, name in zip(
+                self.target, incoming, outgoing, in_weights, out_weights, names):
             rate = self._tangent_rate(key)
-            edits.extend(((key.set_interpolation_mode, (unreal.RichCurveInterpMode.RCIM_CUBIC,)),
-                          (key.set_tangent_mode, (mode,))))
+            if change_curve:
+                edits.extend(((key.set_interpolation_mode, (unreal.RichCurveInterpMode.RCIM_CUBIC,)),
+                              (key.set_tangent_mode, (mode,))))
             if in_slope is not None:
                 edits.append((key.set_arrive_tangent, (in_slope / rate,)))
             if out_slope is not None:
                 edits.append((key.set_leave_tangent, (out_slope / rate,)))
+            if in_weight is not None:
+                edits.append((key.set_arrive_tangent_weight, (in_weight,)))
+            if out_weight is not None:
+                edits.append((key.set_leave_tangent_weight, (out_weight,)))
+            if weight_mode is not None or arrive_weight is not None or leave_weight is not None:
+                edits.append((key.set_tangent_weight_mode, (modes[name],)))
+        weighted = [key for key, name in zip(self.target, names) if name != 'none']
+        if weighted:
+            sync = _tick_resolution_sync()
+            if sync is None:
+                raise RuntimeError('加权切线需要编译 Mineprep C++ sync_key_tick_resolution；转换器可使用非加权拟合回退')
+            def synchronize():
+                if not sync(weighted):
+                    raise RuntimeError('无法同步关键帧所属通道的 tick resolution')
+            edits.insert(0, (synchronize, ()))
         self._edit('Edit animation key tangents', edits)
         return self
 

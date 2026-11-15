@@ -1,71 +1,39 @@
-"""生物材质、静态网格资产创建与关卡视口放置辅助（需在主线程调用）。"""
-import hashlib
+"""生物材质和关卡视口放置辅助（需在主线程调用）。"""
 import json
 import math
-import re
 
 import unreal
 import mineprep
 from mineprep import i18n
+from mc_model_assets import COMPLETE, RECIPE, SOURCE, SKIN_MATERIAL as MATERIAL, skin_instance
+from . import names
 
 BASE = '/Game/mc/mob'
-MATERIAL = '/Game/Mineprep/材质/皮肤/Core/皮肤_Steve'
-KEY = 'VanillaMobLoader.Selection'
-COMPLETE = 'VanillaMobLoader.Complete'
+ENTRIES = 'VanillaMobLoader.Entries'
+BASE_ACTOR = '/Game/Mineprep/生物模型rigs/Core/基础生物模型'
+SPLIT_ACTOR = '/Game/Mineprep/生物模型rigs/Core/头身分离绑定基础生物模型'
 
 
-def slug(ident):
-    value = re.sub(r'[^a-zA-Z0-9_]', '_', ident).strip('_') or 'entity'
-    return value[:96]
-
-
-def asset_target(entry, catalog, skeletal=False):
-    prefix = 'SKM_' if skeletal else 'SM_'
-    asset_class = unreal.SkeletalMesh if skeletal else unreal.StaticMesh
-    name = slug(entry.id)
-    if sum(slug(e.id).lower() == name.lower() for e in catalog.entries) > 1:
-        name += '_' + hashlib.sha256(entry.key.encode()).hexdigest()[:10]
-
-    folder = BASE + '/' + name
-    path = folder + '/' + prefix + name
-    existing = unreal.load_asset(path) if unreal.EditorAssetLibrary.does_asset_exist(path) else None
-    if existing and unreal.EditorAssetLibrary.get_metadata_tag(existing, KEY) != entry.key:
-        name += '_' + hashlib.sha256(entry.key.encode()).hexdigest()[:10]
-        folder = BASE + '/' + name
-        path = folder + '/' + prefix + name
-        existing = unreal.load_asset(path) if unreal.EditorAssetLibrary.does_asset_exist(path) else None
-
-    if existing:
-        if not isinstance(existing, asset_class) or unreal.EditorAssetLibrary.get_metadata_tag(existing, KEY) != entry.key:
-            raise ValueError(str(i18n('目标资产名称被占用：', 'Asset name is occupied: ')) + path)
-        if unreal.EditorAssetLibrary.get_metadata_tag(existing, COMPLETE) != '1':
-            raise ValueError(str(i18n('存在未完成的资产，请先在内容浏览器检查：', 'Inspect the incomplete asset in the Content Browser: ')) + path)
-    return folder, name, existing
-
-
-def prerequisites():
-    required = ('GeometryScript_MeshEdits', 'GeometryScript_NewAssetUtils', 'GeometryScriptSimpleMeshBuffers')
-    if not all(hasattr(unreal, name) for name in required):
-        raise RuntimeError(str(i18n('请启用 Geometry Script 插件', 'Enable the Geometry Script plugin')))
-    material = unreal.load_asset(MATERIAL)
-    if not isinstance(material, unreal.MaterialInstanceConstant):
-        raise RuntimeError(str(i18n('找不到模板材质：', 'Missing template material: ')) + MATERIAL)
-    if '纹理贴图' not in [str(n) for n in unreal.MaterialEditingLibrary.get_texture_parameter_names(material)]:
-        raise RuntimeError(str(i18n('模板材质缺少“纹理贴图”参数', 'Template material has no skin texture parameter')))
-
-
-def composition_target(entry, folder, name, reload=False):
+def composition_target(recipe, folder, name, source, keys, reload=False):
     path = folder+'/SKM_'+name
     lib = unreal.EditorAssetLibrary
     existing = unreal.load_asset(path) if lib.does_asset_exist(path) else None
     if existing:
-        if not isinstance(existing, unreal.SkeletalMesh) or not lib.get_metadata_tag(existing, KEY):
-            raise ValueError(str(i18n('目标路径被外部资产占用：', 'Foreign asset at destination: '))+path)
+        if not isinstance(existing, unreal.SkeletalMesh) or lib.get_metadata_tag(existing, SOURCE) != source:
+            raise ValueError(str(i18n('目标资产名称被占用，请更换保存名称：',
+                                      'Destination is occupied. Choose a different save name: '))+path)
         if lib.get_metadata_tag(existing, COMPLETE) != '1':
             raise ValueError('Incomplete asset: '+path)
-        if lib.get_metadata_tag(existing, KEY) != entry.key and not reload:
-            raise ValueError(str(i18n('目标资产的生物组合不同，请点击“重新导入生物”或更换保存名称',
-                                     'Existing asset uses a different mob combination; reimport or change the save name')))
+        if lib.get_metadata_tag(existing, ENTRIES) != json.dumps(keys):
+            raise ValueError(str(i18n('目标资产的条目不同，请更换保存名称',
+                                     'Existing asset uses a different selection. Choose a different save name.')))
+        if (source == 'java_glb' or not reload) and lib.get_metadata_tag(existing, RECIPE) != recipe:
+            raise ValueError(str(i18n('目标资产的导入选项不同，请重新导入或更换保存名称',
+                                     'Import options changed. Reimport or choose a different save name.')))
+        skeleton = existing.skeleton
+        if (not skeleton or lib.get_metadata_tag(skeleton, SOURCE) != source
+                or lib.get_metadata_tag(skeleton, ENTRIES) != json.dumps(keys)):
+            raise ValueError('Missing or foreign Skeleton: ' + path)
     return folder,name,existing
 
 
@@ -80,14 +48,10 @@ def skin_name(entry, folder, base, reserved=()):
             path = folder+'/'+prefix+name
             if lib.does_asset_exist(path):
                 asset = unreal.load_asset(path)
-                occupied |= not isinstance(asset, cls) or lib.get_metadata_tag(asset, KEY) != entry.key
+                occupied |= not isinstance(asset, cls) or lib.get_metadata_tag(asset, RECIPE) != entry.key
         if not occupied:
             return name
         suffix += 1
-
-
-def surface_material(entry, folder, name, skin_path, created, warnings, geometry):
-    return skin_material(entry, folder, name, skin_path, created, warnings)
 
 
 def skin_material(entry, folder, name, skin_path, created, warnings):
@@ -96,7 +60,7 @@ def skin_material(entry, folder, name, skin_path, created, warnings):
     for path, cls in ((paths[1], unreal.Texture2D), (paths[2], unreal.MaterialInstanceConstant)):
         if unreal.EditorAssetLibrary.does_asset_exist(path):
             asset = unreal.load_asset(path)
-            if not isinstance(asset, cls) or unreal.EditorAssetLibrary.get_metadata_tag(asset, KEY) != entry.key:
+            if not isinstance(asset, cls) or unreal.EditorAssetLibrary.get_metadata_tag(asset, RECIPE) != entry.key:
                 raise ValueError("Conflicting skin asset: " + path)
             existing[path] = asset
 
@@ -122,69 +86,10 @@ def skin_material(entry, folder, name, skin_path, created, warnings):
         created.append(texture)
         mineprep.prep_texture(texture)
 
-    material = unreal.EditorAssetLibrary.duplicate_asset(MATERIAL, paths[2])
-    if not material:
-        raise RuntimeError('Failed to duplicate skin material')
-    created.append(material)
-
-    # UE 5.7+ 的 setter 可能恒返回 False，需通过回读参数确认是否绑定成功
-    unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(material, '纹理贴图', texture)
-    if unreal.MaterialEditingLibrary.get_material_instance_texture_parameter_value(material, '纹理贴图') != texture:
-        raise RuntimeError('Failed to assign skin texture')
-    return material
+    return skin_instance(texture, paths[2], created)
 
 
-def create_assets(entry, version, target, geometry, skin_path=None):
-    folder, name, existing = target
-    if existing:
-        return existing, []
 
-    paths = [folder + '/SM_' + name, folder + '/T_' + name, folder + '/MI_' + name]
-    if unreal.EditorAssetLibrary.does_asset_exist(paths[0]):
-        raise ValueError(str(i18n('目标目录存在冲突资产，未覆盖：', 'Conflicting assets; nothing overwritten: ')) + folder)
-    owned = [p for p in paths if not unreal.EditorAssetLibrary.does_asset_exist(p)]
-    created = []
-    warnings = list(geometry.warnings)
-
-    try:
-        material = surface_material(entry, folder, name, skin_path, created, warnings, geometry)
-
-        mesh = unreal.DynamicMesh()
-        buffers = unreal.GeometryScriptSimpleMeshBuffers(
-            vertices=[unreal.Vector(*p) for p in geometry.vertices],
-            triangles=[unreal.IntVector(*t) for t in geometry.triangles],
-            normals=[unreal.Vector(*n) for n in geometry.normals],
-            uv0=[unreal.Vector2D(*uv) for uv in geometry.uv],
-            tri_group_i_ds=geometry.groups,
-            vertex_colors=[unreal.LinearColor(1,1,1,1)] * len(geometry.vertices))
-        unreal.GeometryScript_MeshEdits.append_buffers_to_mesh(mesh, buffers)
-
-        options = unreal.GeometryScriptCreateNewStaticMeshAssetOptions()
-        static_mesh, outcome = unreal.GeometryScript_NewAssetUtils.create_new_static_mesh_asset_from_mesh(mesh, paths[0], options)
-        if not static_mesh or outcome != unreal.GeometryScriptOutcomePins.SUCCESS:
-            raise RuntimeError('StaticMesh creation failed')
-        created.append(static_mesh)
-        static_mesh.set_material(0, material)
-
-        for asset in created:
-            unreal.EditorAssetLibrary.set_metadata_tag(asset, KEY, entry.key)
-        metadata = {'VanillaMobLoader.Version': version,
-                    'VanillaMobLoader.Model': entry.model,
-                    'VanillaMobLoader.Name': entry.name,
-                    'VanillaMobLoader.Parts': json.dumps(geometry.parts, ensure_ascii=True),
-                    COMPLETE: '1'}
-        for key, value in metadata.items():
-            unreal.EditorAssetLibrary.set_metadata_tag(static_mesh, key, value)
-        for asset in created:
-            if not unreal.EditorAssetLibrary.save_loaded_asset(asset):
-                raise RuntimeError('Failed to save ' + asset.get_path_name())
-        return static_mesh, warnings
-    except Exception:
-        # 仅清理本次新建的资产，保留原有的同名资产
-        for path in (paths[0], paths[3], paths[2], paths[1]):
-            if path in owned and unreal.EditorAssetLibrary.does_asset_exist(path):
-                unreal.EditorAssetLibrary.delete_asset(path)
-        raise
 
 
 def placement_target():
@@ -205,13 +110,21 @@ def placement_target():
     return location + direction * 500, False
 
 
-def place(mesh, scale=1., target=None):
+def place(mesh, scale=1., target=None, *, head_mesh=None):
     scale = float(scale)
     if not math.isfinite(scale) or scale <= 0:
         raise ValueError('Scale must be positive')
 
     position, grounded = target or placement_target()
     skeletal = isinstance(mesh, unreal.SkeletalMesh)
+    if head_mesh is not None and (not skeletal or not isinstance(head_mesh, unreal.SkeletalMesh)):
+        raise ValueError('头身分离需要身体和头部两个 SkeletalMesh')
+    actor_class = unreal.StaticMeshActor
+    if skeletal:
+        blueprint = SPLIT_ACTOR if head_mesh is not None else BASE_ACTOR
+        actor_class = unreal.load_class(None, blueprint + '.' + blueprint.rsplit('/', 1)[-1] + '_C')
+    if actor_class is None:
+        raise RuntimeError('找不到生物基础蓝图')
     if grounded:
         if skeletal:
             bounds = mesh.get_bounds()
@@ -222,16 +135,24 @@ def place(mesh, scale=1., target=None):
 
     subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     with unreal.ScopedEditorTransaction(str(i18n('放置原版生物', 'Place Vanilla Mob'))):
-        actor = subsystem.spawn_actor_from_class(unreal.SkeletalMeshActor if skeletal else unreal.StaticMeshActor, position, unreal.Rotator())
+        actor = subsystem.spawn_actor_from_class(actor_class, position, unreal.Rotator())
         if not actor:
-            raise RuntimeError('Failed to spawn StaticMeshActor')
+            raise RuntimeError('Failed to spawn mob Actor')
         try:
             if skeletal:
                 actor.skeletal_mesh_component.set_skeletal_mesh_asset(mesh)
+                if head_mesh is not None:
+                    head = next(c for c in actor.get_components_by_class(unreal.SkeletalMeshComponent)
+                                if c.get_name() == 'Head')
+                    head.set_anim_instance_class(None)
+                    head.set_skeletal_mesh_asset(head_mesh)
+                    head.set_animation_mode(unreal.AnimationMode.ANIMATION_CUSTOM_MODE)
+                    head.set_relative_transform(unreal.Transform(), False, True)
             else:
                 actor.static_mesh_component.set_static_mesh(mesh)
             actor.set_actor_scale3d(unreal.Vector(scale, scale, scale))
-            actor.set_actor_label(unreal.EditorAssetLibrary.get_metadata_tag(mesh, 'VanillaMobLoader.Name') or mesh.get_name())
+            source_name = unreal.EditorAssetLibrary.get_metadata_tag(mesh, 'VanillaMobLoader.Name') or mesh.get_name()
+            actor.set_actor_label(str(names.text(source_name)))
             subsystem.set_selected_level_actors([actor])
         except Exception:
             subsystem.destroy_actor(actor)

@@ -9,7 +9,7 @@ from mineprep import i18n
 mod_info = {
     'Name': i18n('MC原版生物加载器', 'Vanilla Mob Loader'),
     'Description': i18n('浏览、导入并放置 Minecraft 原版生物模型', 'Browse, import, and place vanilla Minecraft mobs'),
-    'Version': '2.0',
+    'Version': '2.2',
     'CreatedBy': 'Pig',
     'Credits': '[CEM Template Loader](https://ewanhowell.com/plugins/cem-template-loader/)',
     'EnabledByDefault': True,

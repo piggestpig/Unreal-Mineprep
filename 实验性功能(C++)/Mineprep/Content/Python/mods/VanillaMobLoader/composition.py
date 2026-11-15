@@ -4,13 +4,12 @@ from dataclasses import replace
 import hashlib
 import json
 import math
-import re
+from mc_model import clean_asset_name as clean_name, model_destination as destination
 from .geometry import MeshData, build_geometry
 from .skin import alpha_reader
+from . import names
 
-
-def clean_name(value):
-    return re.sub(r'[^a-zA-Z0-9_]', '_', str(value)).strip('_')[:96]
+DEFAULT_SAVE_PATH = '/Game/mc/entity/'
 
 
 def automatic_name(entries):
@@ -20,16 +19,6 @@ def automatic_name(entries):
             words.append('' if word in seen else word)
             seen.add(word)
     return '_'.join(words).strip('_')[:96]
-
-
-def destination(path, name):
-    path = str(path).strip().rstrip('/')
-    if not re.fullmatch(r'/Game(?:/[a-zA-Z0-9_]+)*', path):
-        raise ValueError('保存路径必须为合法 /Game/... 路径 / Invalid /Game path')
-    name = clean_name(name)
-    if not name:
-        raise ValueError('保存名称不能为空 / Save name is empty')
-    return path+'/'+name, name
 
 
 def recipe(entries, expansion, random_scale=0.):
@@ -46,13 +35,15 @@ def recipe(entries, expansion, random_scale=0.):
 
 
 def aggregate_entry(entries, name, expansion, random_scale=0.):
-    return replace(entries[0], id=name, name=' + '.join(e.name for e in entries),
-                   key=recipe(entries, expansion, random_scale), model=' + '.join(e.model for e in entries))
+    display = ' + '.join(e.name for e in entries)
+    return replace(entries[0], id=name, name=display,
+                   key=recipe(entries, expansion, random_scale), model=' + '.join(e.model for e in entries),
+                   translations=names.translations(display),
+                   search_text=names.normalize(name + ' ' + ' '.join(e.search_text for e in entries)))
 
 
 def combine(entries, models, skins, expansion, random_scale=0.):
     """按选择顺序合并多个生物模板的几何与骨骼；同名骨骼优先保留首个模板的定义，并返回冲突列表。"""
-    recipe(entries, expansion, random_scale)
     if not entries or len(entries) != len(models) or len(entries) != len(skins):
         raise ValueError('Composition requires one model and skin per selection')
     out, conflicts, bones, slots = MeshData(), [], {}, {}
@@ -85,7 +76,7 @@ def combine(entries, models, skins, expansion, random_scale=0.):
         material_key = digest
         if material_key not in slots:
             slots[material_key] = len(out.materials)
-            out.materials.append(dict(source=source, digest=digest, single_sided=False))
+            out.materials.append(dict(source=source, digest=digest))
         slot = slots[material_key]
         base = len(out.vertices)
         out.vertices.extend(geo.vertices)

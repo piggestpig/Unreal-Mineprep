@@ -52,6 +52,8 @@ Check available enums against the installed bindings:
 
 - `unreal.EditorNotificationState`: `NONE`, `PENDING`, `SUCCESS`, `FAIL`
 - `unreal.MineprepPostProcessStage`: `SCENE_COLOR_BEFORE_DOF`, `SCENE_COLOR_AFTER_DOF`, `TRANSLUCENCY_AFTER_DOF`, `SSR_INPUT`, `SCENE_COLOR_BEFORE_BLOOM`, `REPLACING_TONEMAPPER`, `SCENE_COLOR_AFTER_TONEMAPPING`
+- `unreal.MineprepBodyPhysicsMode`: `DEFAULT`, `KINEMATIC`, `SIMULATED`
+- `unreal.MineprepAngularMotion`: `LOCKED`, `LIMITED`, `FREE`
 
 ## Functions
 
@@ -60,8 +62,10 @@ Do not recommend `inject_display_name` / `set_property_tooltip` (`DeprecatedFunc
 | Python | Use when |
 |--------|----------|
 | `register_polyglot_texts(text_data) -> Array[Text]` | Batch-register `PolyglotTextData` on the game thread. Results preserve input order; invalid entries return empty Text. `Internationalization` detects this optional function and falls back to Python registration on older builds; cached reads do not call it |
-| `set_ism_custom_data(component, values, num_floats=8) -> bool` | Optional full-buffer ISM custom-data upload, game thread only. Requires exactly instance-count × stride finite floats; returns false on invalid input before editing. LowPolyModel prefers this binding and falls back to official Python setters when absent. See [eight-channel layout](lowpoly.md#appearance-fixed-eight-float-layout) |
+| `set_ism_custom_data(component, values, num_floats=8) -> bool` | Optional full-buffer ISM custom-data upload, game thread only. Requires exactly instance-count × stride finite floats; returns false on invalid input before editing. LowPolyModel prefers this binding and falls back to official Python setters when absent. See [eight-channel layout](modelling.md#appearance-fixed-eight-float-layout) |
 | `finish_build_texture(texture) -> bool` | Complete an imported source texture's async build, rebuilding invalid platform data synchronously if needed. Optional binding; game thread only. Prefer the preparation entrypoint; see [Texture2D completion](pitfalls/common.md#source-texture2d-completion). Not a painted-RT refresh or a visual correctness test |
+| `clear_skeletal_thumbnail_cache() -> bool` | Manually reset default SkeletalMesh/Skeleton thumbnail renderers and run full GC to reclaim their preview worlds. Editor game thread only, outside PIE/SIE, package saving and GC; preserves custom renderers. May briefly stall; does not save assets/config or delete disk caches. No automatic invocation |
+| `sync_key_tick_resolution(native_keys) -> bool` | Editor game thread: deduplicates keys' owning sections and synchronizes their Float/Double channel tick resolutions to the owning MovieScene. Prevalidates owners; modifies only changed sections in the caller's transaction. Does not move keys or change tangents/weights, save assets, or open UI. `keys.tangents()` calls it automatically when weights remain enabled. Missing binding: public weighted edits fail before changing keys; the animation converter can fit nonweighted Cubic instead |
 | `show_editor_notification(message, sub_text, state=NONE, duration=3.0, use_throbber=False)` | Editor toast. Prefer `mineprep.prints` / `warn` for ordinary script feedback |
 | `set_editor_ui_scale(scale) -> float` | Slate UI scale. `scale < 0` returns current without changing |
 | `get_widget_text_under_mouse() -> (str, str)` | Widget text + tooltip under the cursor |
@@ -81,6 +85,18 @@ Do not recommend `inject_display_name` / `set_property_tooltip` (`DeprecatedFunc
 | `expose_struct_variables(user_defined_struct) -> bool` | Keyframe buttons on struct vars |
 | `gather_property_names(obj, set_enum_key=False) -> (types, keys, source_strings)` | Public BP vars/functions, user-enum values, material/Niagara params. `set_enum_key=True` writes user-enum DisplayName identity (ns `UObjectDisplayNames`, key `{AssetName}.{DisplayNameWithoutSpaces}`) only when namespace/key differ — no `MarkPackageDirty` if already matching |
 | `bind_niagara_param(parameter_track, niagara_variable, default_value_data)` | Bind a Niagara parameter track |
+| `get_bone_local_bounds(skeletal_mesh, lod_index=0, dominant_weight_only=True) -> (Array[MineprepBoneBounds], str)` | Read-only query of per-bone local vertex bounds and parent-relative `RefSkeleton` transforms on the game thread (`#if WITH_EDITOR`). Does not mutate mesh CPU access flags; returns `([], error)` if unreadable or invalid |
+| `build_box_physics_asset(reference_mesh, asset_path, boxes, joints, disabled_pairs, overwrite_existing=True) -> (PhysicsAsset, str)` | Atomically build or overwrite a `UPhysicsAsset` from `MineprepPhysicsBox` / `MineprepPhysicsJoint` / `MineprepDisabledBodyPair` definitions (`#if WITH_EDITOR`, game thread only). Does not mutate `reference_mesh` itself; overwriting an existing asset is non-undoable (`UPhysicsAsset::Modify()` is not called) |
+
+After importing or browsing many skeletal assets, run manually in the Python console:
+
+```python
+unreal.mineprep.clear_skeletal_thumbnail_cache()
+```
+
+This releases thumbnail preview caches; open asset-editor previews and the current level
+remain in use. GC can also reclaim other unreferenced temporary objects. Browsing assets
+again recreates thumbnail caches normally; do not call this every frame.
 
 ## Other plugin C++ (not this BFL)
 

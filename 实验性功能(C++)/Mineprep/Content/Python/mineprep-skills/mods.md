@@ -123,8 +123,7 @@ Build the required structure in `draw()`; update existing controls when the
 structure has not changed. A full redraw remains appropriate for a real rebuild.
 
 **Mod keys / close:** override `on_key_down` / `on_key_up` / `destruct` as needed.
-Default `on_key_down` opens the Mod folder on Pause/Break; call
-`super().on_key_down(key)` to retain that shortcut. Key events need panel focus.
+Default `on_key_down` opens the Mod folder on Pause/Break, and saves a screenshot of the focused panel to `mods/Showcase/image/` on numpad Add. The shot is skipped when Showcase or `unreal.mineprep.widget_screenshot` is absent. Call `super().on_key_down(key)` to retain both shortcuts. Key events need panel focus.
 Unbind any owned selection callbacks in `destruct` before their widgets disappear.
 
 **Paint RT:** [ui.md](ui.md) § Sketch RT; [pitfalls/ui.md](pitfalls/ui.md).

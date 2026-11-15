@@ -30,34 +30,7 @@ Dest exists on **VAT DA copy** is the opposite policy (load + reuse) — [vat.md
 
 ## Generated meshes and skeletal import
 
-Keep pure geometry construction separate from editor import. Source-format axis
-and UV conventions belong to the adapter; check installed translator behavior.
-
-- Test geometry outside UE where possible. Use an asymmetric box with six
-  marked faces; assert **position-to-UV corner pairs**, not only UV ranges or
-  sets. Separate box-atlas layout from per-face UVs and explicit UV mirroring.
-  A correct silhouette and winding do not prove a correct texture orientation.
-- Use one consistent basis change for vertices, normals, bones and full inverse
-  bind matrices. Check world-bind × inverse-bind = identity; rotated/nested
-  parts need more than inverse translation. Determine winding from the basis
-  determinant and the target importer, then verify in UE; avoid a second
-  automatic flip. Do not transfer Blender's V convention to UE by habit.
-- To validate actual deformation, rotate a test bone, allow an editor tick,
-  then copy the component using `GeometryScriptCopyMeshFromComponentOptions`
-  with `requested_lod=GeometryScriptMeshReadLOD(lod_type=GeometryScriptLODType.RENDER_DATA)`.
-  Default/source mesh reads can return the bind pose. Check vertices from each
-  expected material section, then restore the pose or remove the test actor.
-- For generated GLB, a single mesh/skin can have multiple primitives with
-  distinct slot identifiers. Verify imported slot names/indices before assigning
-  materials; use a temporary pipeline to control materials, animations,
-  PhysicsAsset and scaling rather than changing global import settings.
-- Validate actual imported object types/counts, skeleton and material references,
-  save results and Actor count. Stage new assets in an operation-owned directory;
-  mark completion only after success. Reimport in place when scene references
-  must survive. A failed reimport is not automatically transactional; do not
-  claim rollback merely because existing assets were not deleted.
-
-With reused assets, separate ownership from the complete build recipe. Recipe
-identity may depend on ordered inputs and options; a matching destination name
-alone is insufficient. Cleanup should touch only assets created by that operation.
-For material setters, verify the resulting reference as well as the return value.
+- Use one consistent basis change across vertices, normals, bone transforms, and full 4×4 inverse bind matrices (`world_bind × inverse_bind = identity`). Determine triangle winding from the basis determinant and avoid a second automatic flip.
+- For generated GLB, a single mesh/skin can have multiple primitives with distinct material slots. Use a temporary `InterchangeGenericAssetsPipeline` instance to configure materials, animations, PhysicsAsset and scaling rather than mutating global import settings.
+- In UE 5.7+, `MaterialEditingLibrary.set_material_instance_texture_parameter_value` can return `False` even when assignment succeeds; read back `get_material_instance_texture_parameter_value` to confirm.
+- To update an existing SkeletalMesh in place without breaking scene references, reimport onto the existing mesh and keep its `Skeleton` asset (requires matching bone names and hierarchy).

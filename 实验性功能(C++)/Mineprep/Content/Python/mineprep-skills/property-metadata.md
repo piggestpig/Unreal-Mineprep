@@ -58,23 +58,20 @@ Saving fields: [PropertyGroup](ui.md#propertygroup).
 
 | Need | Metadata / choice | Boundary |
 | --- | --- | --- |
-| Numeric limits | `ClampMin`, `ClampMax` | Editor constraints; also validate programmatic inputs |
-| Comfortable drag range | `UIMin`, `UIMax` | UI range, not an application limit |
-| Drag increments / sensitivity | `Delta`, `SliderExponent` | Do not assume typed values are quantized |
-| Seed/identifier entry | `NoSpinbox=True` | Avoid numeric dragging; preserve the numeric type |
-| Physical units | `Units='cm'`, `ForceUnits='cm'` | Units may adapt display units; ForceUnits fixes them; establish application conversions separately |
-| Numeric presentation | `MaxFractionalDigits` | Not a storage or generation precision contract |
-| Multiline text/code | `MultiLine=True` on `str` | Preserve ordinary text and its persistence |
+| Numeric limits | `ClampMin`, `ClampMax` | Enforced by the Details widget (does not clamp direct Python assignment) |
+| Comfortable drag range | `UIMin`, `UIMax` | Slider drag range only; manual entry can exceed it |
+| Drag increments / sensitivity | `Delta`, `SliderExponent` | Drag step sensitivity only |
+| Seed/identifier entry | `NoSpinbox=True` | Hides spinbox arrows on numeric fields |
+| Physical units | `Units='cm'`, `ForceUnits='cm'` | Display suffix only |
+| Numeric presentation | `MaxFractionalDigits` | Display rounding only |
+| Multiline text/code | `MultiLine=True` on `str` | Multiline text box in Details |
 | Opaque-only color | `HideAlphaChannel=True` | Keep Alpha for painting or transparency |
-| Asset selection | Typed UObject; `AllowedClasses` for soft paths | Typed Texture2D/StaticMesh already narrows the picker; validate operations too |
-| Files/directories | `unreal.FilePath` + `FilePathFilter`; `unreal.DirectoryPath` | Package paths are not filesystem paths; changing an existing string type requires migration |
-| Display text | `DisplayName`, `ToolTip`, `ShortTooltip` | Plain strings are sufficient; optional [property localization](localization.md#property-groups) uses the `Group.localize()` class method, not a metadata key |
+| Asset selection | Typed UObject; `AllowedClasses` for soft paths | Typed `Texture2D`/`StaticMesh` already filters the picker |
+| Files/directories | `unreal.FilePath` + `FilePathFilter`; `unreal.DirectoryPath` | Package paths (`/Game/...`) are `str` or `SoftObjectPath`, not `FilePath` |
+| Display text | `DisplayName`, `ToolTip`, `ShortTooltip` | Plain strings are sufficient; optional [property localization](localization.md#property-groups) uses `Group.localize()` |
 | Order within a category | `DisplayPriority`, `DisplayAfter` | PropertyGroup already assigns declaration-order priority |
 
 Vector/custom struct widgets may process metadata differently from scalar widgets.
-Check their customization before assuming every key reaches every component. Do
-not attach physical units to dimensionless noise or block coordinates merely to
-shorten a label.
 
 ## Metadata versus property flags
 

@@ -1,0 +1,14 @@
+schema_version = 2
+Name = ["内容展示", "Showcase"]
+Description = [
+    "界面参考图库，仅供参考，图片可能尚未更新。做界面前直接查看 image/，不必启用本模组。",
+    "A UI reference library. Images may be out of date. Read image/ before building a panel; do not enable this mod.",
+]
+Version = "1.0"
+CreatedBy = "Pig"
+Advanced = true
+EnabledByDefault = false
+ReloadWithMineprep = true
+
+[build]
+paths_exclude_pattern = ["/image/"]

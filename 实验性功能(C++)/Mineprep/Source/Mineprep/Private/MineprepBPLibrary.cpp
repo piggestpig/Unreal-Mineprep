@@ -39,6 +39,153 @@
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
 #include "Widgets/SToolTip.h"
+#include "Misc/PackageName.h"
+#include "UObject/Package.h"
+#include "UObject/UObjectHash.h"
+#include "Engine/SkeletalMesh.h"
+#include "PhysicsEngine/PhysicsAsset.h"
+#include "PhysicsEngine/SkeletalBodySetup.h"
+#include "PhysicsEngine/PhysicsConstraintTemplate.h"
+#include "PhysicsEngine/ConstraintInstance.h"
+#include "PhysicsEngine/BoxElem.h"
+#include "PhysicsEngine/BodyInstance.h"
+#if WITH_EDITOR
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "MeshUtilitiesCommon.h"
+#include "MeshUtilitiesEngine.h"
+#include "Rendering/SkeletalMeshRenderData.h"
+#include "Rendering/SkinWeightVertexBuffer.h"
+#include "Animation/Skeleton.h"
+#include "ThumbnailRendering/ThumbnailManager.h"
+#include "ThumbnailRendering/SkeletalMeshThumbnailRenderer.h"
+#include "ThumbnailRendering/SkeletonThumbnailRenderer.h"
+#include "UObject/GarbageCollection.h"
+#include "MovieSceneScriptingChannel.h"
+#include "Channels/MovieSceneFloatChannel.h"
+#include "Channels/MovieSceneDoubleChannel.h"
+#endif
+
+bool Umineprep::SyncKeyTickResolution(const TArray<UMovieSceneScriptingKey*>& Keys)
+{
+#if WITH_EDITOR
+    if (!IsInGameThread() || !GEditor)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SyncKeyTickResolution requires the editor GameThread."));
+        return false;
+    }
+    TSet<UMovieSceneSection*> Sections;
+    for (UMovieSceneScriptingKey* Key : Keys)
+    {
+        UMovieSceneSection* Section = Key ? Key->OwningSection.Get() : nullptr;
+        if (!Section || !Section->GetTypedOuter<UMovieScene>())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("SyncKeyTickResolution: key has no owning MovieScene section."));
+            return false;
+        }
+        Sections.Add(Section);
+    }
+    for (UMovieSceneSection* Section : Sections)
+    {
+        const FFrameRate Rate = Section->GetTypedOuter<UMovieScene>()->GetTickResolution();
+        bool bModified = false;
+        auto Sync = [&](auto Channels)
+        {
+            for (auto* Channel : Channels)
+            {
+                if (Channel->GetTickResolution() != Rate)
+                {
+                    if (!bModified) { Section->Modify(); bModified = true; }
+                    Channel->SetTickResolution(Rate);
+                }
+            }
+        };
+        Sync(Section->GetChannelProxy().GetChannels<FMovieSceneFloatChannel>());
+        Sync(Section->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>());
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool Umineprep::ClearSkeletalThumbnailCache()
+{
+#if WITH_EDITOR
+    if (!IsInGameThread() || !GEditor || GEditor->PlayWorld || GEditor->bIsSimulatingInEditor)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ClearSkeletalThumbnailCache requires the editor GameThread outside PIE/SIE."));
+        return false;
+    }
+    if (IsGarbageCollecting() || UE::IsSavingPackage())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ClearSkeletalThumbnailCache cannot run during GC or package saving."));
+        return false;
+    }
+
+    UThumbnailManager& Manager = UThumbnailManager::Get();
+    // The registry is protected; inspect its reflected array without modifying it.
+    const FArrayProperty* RegistryProperty = FindFProperty<FArrayProperty>(Manager.GetClass(), TEXT("RenderableThumbnailTypes"));
+    const FStructProperty* EntryProperty = RegistryProperty ? CastField<FStructProperty>(RegistryProperty->Inner) : nullptr;
+    if (!EntryProperty || EntryProperty->Struct->GetFName() != TEXT("ThumbnailRenderingInfo"))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ClearSkeletalThumbnailCache: unsupported thumbnail registry layout."));
+        return false;
+    }
+    const TArray<FThumbnailRenderingInfo>& Entries = *RegistryProperty->ContainerPtrToValuePtr<TArray<FThumbnailRenderingInfo>>(&Manager);
+    TArray<TPair<UClass*, UClass*>> RenderersToReset;
+    TArray<UThumbnailRenderer*> OldRenderers;
+    for (const FThumbnailRenderingInfo& Info : Entries)
+    {
+        UClass* AssetClass = Info.ClassNeedingThumbnail.Get();
+        UClass* DefaultRenderer = AssetClass == USkeletalMesh::StaticClass() ? USkeletalMeshThumbnailRenderer::StaticClass()
+            : AssetClass == USkeleton::StaticClass() ? USkeletonThumbnailRenderer::StaticClass() : nullptr;
+        if (!DefaultRenderer || !Info.Renderer)
+        {
+            continue;
+        }
+        if (Info.Renderer->GetClass() != DefaultRenderer)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("ClearSkeletalThumbnailCache: preserving custom renderer %s for %s."),
+                *Info.Renderer->GetClass()->GetName(), *AssetClass->GetName());
+            continue;
+        }
+        RenderersToReset.Emplace(AssetClass, DefaultRenderer);
+        OldRenderers.Add(Info.Renderer.Get());
+    }
+
+    if (!RenderersToReset.IsEmpty())
+    {
+        FlushRenderingCommands();
+        for (const auto& Entry : RenderersToReset)
+        {
+            Manager.UnregisterCustomRenderer(Entry.Key);
+        }
+        // Renderers created during engine startup can be rooted independently
+        // of the registry. Unroot only the default instances just unregistered.
+        for (UThumbnailRenderer* Renderer : OldRenderers)
+        {
+            if (Renderer->IsRooted())
+            {
+                Renderer->RemoveFromRoot();
+            }
+        }
+        // First destroy the renderers (which release FPreviewScene references),
+        // then collect the worlds that were still referenced during the first GC.
+        CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, true);
+        CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, true);
+        FlushRenderingCommands();
+        for (const auto& Entry : RenderersToReset)
+        {
+            Manager.RegisterCustomRenderer(Entry.Key, Entry.Value);
+        }
+    }
+    UE_LOG(LogTemp, Display, TEXT("ClearSkeletalThumbnailCache: reset %d default thumbnail renderer(s)."), RenderersToReset.Num());
+    return true;
+#else
+    UE_LOG(LogTemp, Warning, TEXT("ClearSkeletalThumbnailCache is only available in Editor builds."));
+    return false;
+#endif
+}
 
 bool Umineprep::SetISMCustomData(UInstancedStaticMeshComponent* Component, const TArray<float>& Values, int32 NumFloats)
 {
@@ -1910,6 +2057,423 @@ bool Umineprep::FinishBuildTexture(UTexture* Texture)
     return !NeedsRebuild(Texture);
 #else
     return false;
+#endif
+}
+
+#if WITH_EDITOR
+namespace
+{
+    EPhysicsType ToUePhysicsType(EMineprepBodyPhysicsMode Mode)
+    {
+        return Mode == EMineprepBodyPhysicsMode::Kinematic ? PhysType_Kinematic
+            : (Mode == EMineprepBodyPhysicsMode::Simulated ? PhysType_Simulated : PhysType_Default);
+    }
+
+    EAngularConstraintMotion ToUeAngularMotion(EMineprepAngularMotion Motion)
+    {
+        return Motion == EMineprepAngularMotion::Locked ? ACM_Locked
+            : (Motion == EMineprepAngularMotion::Free ? ACM_Free : ACM_Limited);
+    }
+
+    template <typename... TArgs>
+    bool AreFinite(TArgs... Values)
+    {
+        return (FMath::IsFinite(Values) && ...);
+    }
+
+    bool ResolveLongPackageAndAssetName(
+        const FString& AssetPath,
+        FString& OutPackageName,
+        FString& OutAssetName,
+        FString& OutError)
+    {
+        OutPackageName = AssetPath.TrimStartAndEnd();
+        if (OutPackageName.IsEmpty())
+        {
+            OutError = TEXT("AssetPath cannot be empty.");
+            return false;
+        }
+        int32 SlashIndex = INDEX_NONE;
+        int32 DotIndex = INDEX_NONE;
+        if (OutPackageName.FindLastChar(TEXT('/'), SlashIndex) && OutPackageName.FindLastChar(TEXT('.'), DotIndex) && DotIndex > SlashIndex)
+        {
+            OutPackageName.LeftInline(DotIndex, EAllowShrinking::No);
+        }
+
+        FText Reason;
+        if (!FPackageName::IsValidLongPackageName(OutPackageName, false, &Reason))
+        {
+            OutError = FString::Printf(TEXT("Invalid AssetPath '%s': %s"), *AssetPath, *Reason.ToString());
+            return false;
+        }
+        OutAssetName = FPackageName::GetLongPackageAssetName(OutPackageName);
+        if (OutAssetName.IsEmpty())
+        {
+            OutError = FString::Printf(TEXT("Could not resolve asset name from '%s'."), *AssetPath);
+            return false;
+        }
+        return true;
+    }
+
+    bool ValidatePhysicsInputs(
+        const FReferenceSkeleton& RefSkeleton,
+        const FString& MeshName,
+        const TArray<FMineprepPhysicsBox>& Boxes,
+        const TArray<FMineprepPhysicsJoint>& Joints,
+        const TArray<FMineprepDisabledBodyPair>& DisabledPairs,
+        TMap<FName, int32>& OutBodyIndexByName,
+        FString& OutError)
+    {
+        OutBodyIndexByName.Reset();
+        OutBodyIndexByName.Reserve(Boxes.Num());
+
+        for (int32 Index = 0; Index < Boxes.Num(); ++Index)
+        {
+            const FMineprepPhysicsBox& BoxSpec = Boxes[Index];
+            if (BoxSpec.BoneName == NAME_None || RefSkeleton.FindBoneIndex(BoxSpec.BoneName) == INDEX_NONE)
+            {
+                OutError = FString::Printf(TEXT("Bone '%s' (Boxes[%d]) is invalid or missing in '%s'."), *BoxSpec.BoneName.ToString(), Index, *MeshName);
+                return false;
+            }
+            if (OutBodyIndexByName.Contains(BoxSpec.BoneName))
+            {
+                OutError = FString::Printf(TEXT("Duplicate body bone '%s' at Boxes[%d]."), *BoxSpec.BoneName.ToString(), Index);
+                return false;
+            }
+            if (!AreFinite(
+                    BoxSpec.Center.X, BoxSpec.Center.Y, BoxSpec.Center.Z,
+                    BoxSpec.Rotation.Pitch, BoxSpec.Rotation.Yaw, BoxSpec.Rotation.Roll,
+                    BoxSpec.Size.X, BoxSpec.Size.Y, BoxSpec.Size.Z) ||
+                BoxSpec.Size.GetMin() < KINDA_SMALL_NUMBER ||
+                !AreFinite(BoxSpec.MassScale, BoxSpec.MassOverrideKg, BoxSpec.LinearDamping, BoxSpec.AngularDamping) ||
+                BoxSpec.MassScale <= 0.0f ||
+                BoxSpec.MassOverrideKg < 0.0f ||
+                BoxSpec.LinearDamping < 0.0f ||
+                BoxSpec.AngularDamping < 0.0f)
+            {
+                OutError = FString::Printf(TEXT("Invalid transform, size, mass, or damping for body '%s'."), *BoxSpec.BoneName.ToString());
+                return false;
+            }
+            OutBodyIndexByName.Add(BoxSpec.BoneName, Index);
+        }
+
+        for (int32 Index = 0; Index < Joints.Num(); ++Index)
+        {
+            const FMineprepPhysicsJoint& JointSpec = Joints[Index];
+            if (!OutBodyIndexByName.Contains(JointSpec.ChildBone) ||
+                !OutBodyIndexByName.Contains(JointSpec.ParentBone) ||
+                JointSpec.ChildBone == JointSpec.ParentBone)
+            {
+                OutError = FString::Printf(
+                    TEXT("Joint[%d] (%s -> %s) must reference two distinct bodies in Boxes."),
+                    Index,
+                    *JointSpec.ChildBone.ToString(),
+                    *JointSpec.ParentBone.ToString());
+                return false;
+            }
+            const float Limits[3] = { JointSpec.Swing1LimitDegrees, JointSpec.Swing2LimitDegrees, JointSpec.TwistLimitDegrees };
+            for (float Limit : Limits)
+            {
+                if (!FMath::IsFinite(Limit) || Limit < 0.0f || Limit > 180.0f)
+                {
+                    OutError = FString::Printf(TEXT("Joint[%d] angular limit degrees must be in [0, 180]."), Index);
+                    return false;
+                }
+            }
+        }
+
+        for (int32 Index = 0; Index < DisabledPairs.Num(); ++Index)
+        {
+            const FMineprepDisabledBodyPair& Pair = DisabledPairs[Index];
+            if (!OutBodyIndexByName.Contains(Pair.BodyA) ||
+                !OutBodyIndexByName.Contains(Pair.BodyB) ||
+                Pair.BodyA == Pair.BodyB)
+            {
+                OutError = FString::Printf(
+                    TEXT("DisabledPairs[%d] (%s, %s) must reference two distinct bodies in Boxes."),
+                    Index,
+                    *Pair.BodyA.ToString(),
+                    *Pair.BodyB.ToString());
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    void ResetPhysicsAssetForRebuild(UPhysicsAsset* PhysicsAsset)
+    {
+        // Programmatic overwrite destroys replaced subobjects instead of recording a full undo transaction.
+        PhysicsAsset->ClearAllPhysicsMeshes();
+        PhysicsAsset->SkeletalBodySetups.Reset();
+        PhysicsAsset->ConstraintSetup.Reset();
+        PhysicsAsset->CollisionDisableTable.Reset();
+#if WITH_EDITORONLY_DATA
+        PhysicsAsset->EditorBodyFlags.Reset();
+#endif
+        PhysicsAsset->BoundsBodies.Reset();
+        PhysicsAsset->BodySetupIndexMap.Reset();
+
+        TArray<UObject*> OldSubobjects;
+        GetObjectsWithOuter(PhysicsAsset, OldSubobjects, EGetObjectsFlags::None);
+        for (UObject* Subobj : OldSubobjects)
+        {
+            if (Subobj && (Subobj->IsA<USkeletalBodySetup>() || Subobj->IsA<UPhysicsConstraintTemplate>()))
+            {
+                Subobj->ClearFlags(RF_Public | RF_Standalone);
+                Subobj->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
+                Subobj->MarkAsGarbage();
+            }
+        }
+    }
+}
+#endif
+
+TArray<FMineprepBoneBounds> Umineprep::GetBoneLocalBounds(
+    USkeletalMesh* SkeletalMesh,
+    FString& OutError,
+    int32 LODIndex,
+    bool bDominantWeightOnly)
+{
+    TArray<FMineprepBoneBounds> OutBounds;
+    OutError.Reset();
+
+#if WITH_EDITOR
+    if (!IsInGameThread() || !IsValid(SkeletalMesh))
+    {
+        OutError = !IsInGameThread() ? TEXT("GetBoneLocalBounds must be called on the GameThread.") : TEXT("SkeletalMesh is null or invalid.");
+        return OutBounds;
+    }
+    if (LODIndex < 0 || !SkeletalMesh->IsValidLODIndex(LODIndex))
+    {
+        OutError = FString::Printf(TEXT("Invalid LODIndex %d for SkeletalMesh '%s'."), LODIndex, *SkeletalMesh->GetName());
+        return OutBounds;
+    }
+
+    const FSkeletalMeshRenderData* RenderData = SkeletalMesh->GetResourceForRendering();
+    if (!RenderData || !RenderData->LODRenderData.IsValidIndex(LODIndex))
+    {
+        OutError = FString::Printf(TEXT("RenderData unavailable for LOD %d of '%s'."), LODIndex, *SkeletalMesh->GetName());
+        return OutBounds;
+    }
+
+    const FSkeletalMeshLODRenderData& LODRenderData = RenderData->LODRenderData[LODIndex];
+    const bool bPosCPU = LODRenderData.StaticVertexBuffers.PositionVertexBuffer.GetAllowCPUAccess();
+    const bool bTanCPU = LODRenderData.StaticVertexBuffers.StaticMeshVertexBuffer.GetAllowCPUAccess();
+    const bool bWeightCPU = LODRenderData.SkinWeightVertexBuffer.GetNeedsCPUAccess();
+    if (!bPosCPU || !bTanCPU || !bWeightCPU)
+    {
+        OutError = FString::Printf(
+            TEXT("CPU buffers are not readable for LOD %d of '%s' (Position=%d, Tangent=%d, SkinWeight=%d)."),
+            LODIndex,
+            *SkeletalMesh->GetName(),
+            bPosCPU ? 1 : 0,
+            bTanCPU ? 1 : 0,
+            bWeightCPU ? 1 : 0);
+        return OutBounds;
+    }
+
+    TArray<FBoneVertInfo> BoneVertInfos;
+    FMeshUtilitiesEngine::CalcBoneVertInfos(SkeletalMesh, BoneVertInfos, bDominantWeightOnly, LODIndex);
+
+    const FReferenceSkeleton& RefSkeleton = SkeletalMesh->GetRefSkeleton();
+    const int32 RawBoneCount = RefSkeleton.GetRawBoneNum();
+    if (BoneVertInfos.Num() != RawBoneCount)
+    {
+        OutError = FString::Printf(
+            TEXT("CalcBoneVertInfos returned %d entries for %d raw bones on '%s'."),
+            BoneVertInfos.Num(),
+            RawBoneCount,
+            *SkeletalMesh->GetName());
+        return OutBounds;
+    }
+
+    const TArray<FTransform>& LocalPose = RefSkeleton.GetRefBonePose();
+    OutBounds.Reserve(RawBoneCount);
+
+    for (int32 BoneIndex = 0; BoneIndex < RawBoneCount; ++BoneIndex)
+    {
+        FMineprepBoneBounds Entry;
+        Entry.BoneName = RefSkeleton.GetBoneName(BoneIndex);
+        const int32 ParentIndex = RefSkeleton.GetParentIndex(BoneIndex);
+        Entry.ParentBoneName = (ParentIndex != INDEX_NONE) ? RefSkeleton.GetBoneName(ParentIndex) : NAME_None;
+        Entry.LocalTransform = LocalPose.IsValidIndex(BoneIndex) ? LocalPose[BoneIndex] : FTransform::Identity;
+
+        const TArray<FVector3f>& Positions = BoneVertInfos[BoneIndex].Positions;
+        Entry.VertexCount = Positions.Num();
+        if (Positions.Num() > 0)
+        {
+            FBox Bounds(ForceInit);
+            for (const FVector3f& Pos : Positions)
+            {
+                Bounds += FVector(Pos);
+            }
+            if (Bounds.IsValid)
+            {
+                Entry.LocalMin = Bounds.Min;
+                Entry.LocalMax = Bounds.Max;
+                Entry.bHasBounds = true;
+            }
+        }
+
+        OutBounds.Add(MoveTemp(Entry));
+    }
+
+    return OutBounds;
+#else
+    OutError = TEXT("GetBoneLocalBounds is only available in Editor builds.");
+    return OutBounds;
+#endif
+}
+
+UPhysicsAsset* Umineprep::BuildBoxPhysicsAsset(
+    USkeletalMesh* ReferenceMesh,
+    const FString& AssetPath,
+    const TArray<FMineprepPhysicsBox>& Boxes,
+    const TArray<FMineprepPhysicsJoint>& Joints,
+    const TArray<FMineprepDisabledBodyPair>& DisabledPairs,
+    FString& OutError,
+    bool bOverwriteExisting)
+{
+    OutError.Reset();
+
+#if WITH_EDITOR
+    if (!IsInGameThread() || !IsValid(ReferenceMesh) || Boxes.IsEmpty())
+    {
+        OutError = !IsInGameThread() ? TEXT("BuildBoxPhysicsAsset must be called on the GameThread.")
+            : (!IsValid(ReferenceMesh) ? TEXT("ReferenceMesh is null or invalid.") : TEXT("Boxes array cannot be empty."));
+        return nullptr;
+    }
+
+    FString PackageName;
+    FString AssetName;
+    TMap<FName, int32> BodyIndexByName;
+    if (!ResolveLongPackageAndAssetName(AssetPath, PackageName, AssetName, OutError) ||
+        !ValidatePhysicsInputs(ReferenceMesh->GetRefSkeleton(), ReferenceMesh->GetName(), Boxes, Joints, DisabledPairs, BodyIndexByName, OutError))
+    {
+        return nullptr;
+    }
+
+    UPackage* Package = FindPackage(nullptr, *PackageName);
+    if (!Package && FPackageName::DoesPackageExist(PackageName))
+    {
+        Package = LoadPackage(nullptr, *PackageName, LOAD_None);
+    }
+    if (!Package)
+    {
+        Package = CreatePackage(*PackageName);
+    }
+    if (!Package)
+    {
+        OutError = FString::Printf(TEXT("Failed to create or load package '%s'."), *PackageName);
+        return nullptr;
+    }
+
+    UObject* ExistingObject = StaticFindObjectFast(UObject::StaticClass(), Package, *AssetName);
+    UPhysicsAsset* PhysicsAsset = Cast<UPhysicsAsset>(ExistingObject);
+    if (ExistingObject && !PhysicsAsset)
+    {
+        OutError = FString::Printf(TEXT("Asset '%s' already exists as '%s', expected UPhysicsAsset."), *PackageName, *ExistingObject->GetClass()->GetName());
+        return nullptr;
+    }
+
+    bool bCreatedNew = false;
+    if (PhysicsAsset)
+    {
+        if (!bOverwriteExisting)
+        {
+            OutError = FString::Printf(TEXT("PhysicsAsset '%s' already exists and bOverwriteExisting is false."), *PackageName);
+            return nullptr;
+        }
+        ResetPhysicsAssetForRebuild(PhysicsAsset);
+    }
+    else
+    {
+        PhysicsAsset = NewObject<UPhysicsAsset>(Package, *AssetName, RF_Public | RF_Standalone | RF_Transactional);
+        if (!PhysicsAsset)
+        {
+            OutError = FString::Printf(TEXT("Failed to create UPhysicsAsset '%s'."), *PackageName);
+            return nullptr;
+        }
+        bCreatedNew = true;
+    }
+
+    PhysicsAsset->SetPreviewMesh(ReferenceMesh, false);
+    PhysicsAsset->SkeletalBodySetups.Reserve(Boxes.Num());
+    for (const FMineprepPhysicsBox& BoxSpec : Boxes)
+    {
+        USkeletalBodySetup* BodySetup = NewObject<USkeletalBodySetup>(PhysicsAsset, NAME_None, RF_Transactional);
+        BodySetup->BoneName = BoxSpec.BoneName;
+        BodySetup->CollisionTraceFlag = CTF_UseSimpleAsComplex;
+        BodySetup->PhysicsType = ToUePhysicsType(BoxSpec.PhysicsMode);
+        BodySetup->CollisionReponse = BoxSpec.bCollisionEnabled
+            ? EBodyCollisionResponse::BodyCollision_Enabled
+            : EBodyCollisionResponse::BodyCollision_Disabled;
+        BodySetup->bConsiderForBounds = BoxSpec.bConsiderForBounds;
+        BodySetup->DefaultInstance.MassScale = BoxSpec.MassScale;
+        BodySetup->DefaultInstance.LinearDamping = BoxSpec.LinearDamping;
+        BodySetup->DefaultInstance.AngularDamping = BoxSpec.AngularDamping;
+        if (BoxSpec.MassOverrideKg > 0.0f)
+        {
+            BodySetup->DefaultInstance.SetMassOverride(BoxSpec.MassOverrideKg, true);
+        }
+
+        FKBoxElem BoxElem(BoxSpec.Size.X, BoxSpec.Size.Y, BoxSpec.Size.Z);
+        BoxElem.Center = BoxSpec.Center;
+        BoxElem.Rotation = BoxSpec.Rotation;
+        BodySetup->AggGeom.BoxElems.Add(BoxElem);
+
+        BodySetup->InvalidatePhysicsData();
+        BodySetup->CreatePhysicsMeshes();
+        PhysicsAsset->SkeletalBodySetups.Add(BodySetup);
+    }
+
+    PhysicsAsset->UpdateBodySetupIndexMap();
+    PhysicsAsset->UpdateBoundsBodiesArray();
+#if WITH_EDITORONLY_DATA
+    PhysicsAsset->EditorBodyFlags.SetNumZeroed(PhysicsAsset->SkeletalBodySetups.Num());
+#endif
+
+    PhysicsAsset->ConstraintSetup.Reserve(Joints.Num());
+    for (const FMineprepPhysicsJoint& JointSpec : Joints)
+    {
+        UPhysicsConstraintTemplate* Constraint = NewObject<UPhysicsConstraintTemplate>(PhysicsAsset, NAME_None, RF_Transactional);
+        FConstraintInstance& Instance = Constraint->DefaultInstance;
+        Instance.JointName = (JointSpec.JointName != NAME_None) ? JointSpec.JointName : JointSpec.ChildBone;
+        Instance.ConstraintBone1 = JointSpec.ChildBone;
+        Instance.ConstraintBone2 = JointSpec.ParentBone;
+        Instance.SetLinearLimits(LCM_Locked, LCM_Locked, LCM_Locked, 0.0f);
+        Instance.SetAngularSwing1Limit(ToUeAngularMotion(JointSpec.Swing1Motion), JointSpec.Swing1LimitDegrees);
+        Instance.SetAngularSwing2Limit(ToUeAngularMotion(JointSpec.Swing2Motion), JointSpec.Swing2LimitDegrees);
+        Instance.SetAngularTwistLimit(ToUeAngularMotion(JointSpec.TwistMotion), JointSpec.TwistLimitDegrees);
+        Instance.SetDisableCollision(JointSpec.bDisableCollision);
+        Instance.ProfileInstance.bEnableProjection = JointSpec.bEnableProjection;
+        Instance.SnapTransformsToDefault(EConstraintTransformComponentFlags::All, PhysicsAsset);
+        Constraint->SetDefaultProfile(Instance);
+        PhysicsAsset->ConstraintSetup.Add(Constraint);
+
+        if (JointSpec.bDisableCollision)
+        {
+            PhysicsAsset->DisableCollision(BodyIndexByName[JointSpec.ChildBone], BodyIndexByName[JointSpec.ParentBone]);
+        }
+    }
+
+    for (const FMineprepDisabledBodyPair& Pair : DisabledPairs)
+    {
+        PhysicsAsset->DisableCollision(BodyIndexByName[Pair.BodyA], BodyIndexByName[Pair.BodyB]);
+    }
+
+    PhysicsAsset->RefreshPhysicsAssetChange();
+    PhysicsAsset->MarkPackageDirty();
+    if (bCreatedNew)
+    {
+        FAssetRegistryModule::AssetCreated(PhysicsAsset);
+    }
+
+    return PhysicsAsset;
+#else
+    OutError = TEXT("BuildBoxPhysicsAsset is only available in Editor builds.");
+    return nullptr;
 #endif
 }
 
