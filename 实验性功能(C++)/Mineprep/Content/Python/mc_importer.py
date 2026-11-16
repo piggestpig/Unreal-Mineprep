@@ -1600,12 +1600,12 @@ def import_item(
     destination_path="/Game/mc",
     asset_name=None,
     size=100.0,
-    thickness=6.25,
+    thickness=1,
     alpha_threshold=0.5,
     max_resolution=128,
     reload=False,       # 是否重新导入
 ) -> unreal.StaticMesh:
-    """由贴图导入挤出网格；超出 max_resolution 时询问是否保留原采样精度，reload=False 复用已有资产。"""
+    """由贴图导入挤出网格。thickness 为采样轮廓像素，默认 1；超出 max_resolution 时询问是否保留原采样精度，reload=False 复用已有资产。"""
     if not isinstance(max_resolution, int) or max_resolution < 1:
         raise ValueError('max_resolution must be a positive integer')
     source, source_name, destination_path = _resolve_import_source(filepath, "item", destination_path)
@@ -1641,7 +1641,9 @@ def import_item(
             height_cm = float(size)
             width_cm = float(size) * (float(image_width) / float(max(image_height, 1)))
 
-        dynamic_mesh = _build_item_dynamic_mesh(width_cm, height_cm, thickness, opaque_mask)
+        pixel_cm = float(size) / float(max(image_width, image_height, 1))
+        thickness_cm = float(thickness) * pixel_cm
+        dynamic_mesh = _build_item_dynamic_mesh(width_cm, height_cm, thickness_cm, opaque_mask)
         mesh_asset = _create_static_mesh_asset(
             dynamic_mesh,
             target_mesh_path,

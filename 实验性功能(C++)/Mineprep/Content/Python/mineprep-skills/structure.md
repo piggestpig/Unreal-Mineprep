@@ -303,6 +303,7 @@ mineprep.import_item("D:/pack/assets/minecraft/textures/item/diamond.png")
 Names resolve under `paths.assets` to `<namespace>/models/block/<name>.json` or `<namespace>/textures/item/<name>.png`; the default namespace is `minecraft`. Names refer to individual resources, not blockstate combinations. File paths retain their existing behavior; use a `Path` object to explicitly pass an extensionless file. Custom namespace names get a namespace prefix in the default asset name and a namespace subfolder under `destination_path`, including textures and materials. `asset_name` still overrides the mesh name. Missing resources call `throw` with the searched file path, showing an error and raising `RuntimeError`.
 
 `import_item(..., max_resolution=128)` samples alpha to form the extruded outline.
+`thickness` is the extrusion depth in those outline pixels and defaults to `1` (`size / max(sampled width, sampled height)` centimeters per pixel).
 Front/back faces are generated per opaque pixel and sides only along exposed edges;
 vertices, normals and UVs are submitted to Geometry Script in one buffer batch.
 The texture keeps its original resolution. If either source dimension exceeds

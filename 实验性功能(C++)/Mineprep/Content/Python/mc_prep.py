@@ -709,6 +709,10 @@ def _save_preparation(task):
     return True
 
 
+def _is_core_asset(asset):
+    return asset.get_path_name().split('.', 1)[0].casefold().startswith('/game/mineprep/材质/core/')
+
+
 def _sharpen_asset_textures(assets, report, task):
     materials, textures = set(), set()
     for asset in assets:
@@ -732,13 +736,18 @@ def _sharpen_asset_textures(assets, report, task):
             for material in surfaces:
                 if material not in materials:
                     materials.add(material)
-                    used.extend(unreal.MaterialEditingLibrary.get_material_used_textures(material))
+                    if _is_core_asset(material):
+                        report['skipped'].append(dict(asset=material.get_path_name(), reason='protected_core_asset'))
+                    else:
+                        used.extend(unreal.MaterialEditingLibrary.get_material_used_textures(material))
         for texture in used:
             if texture in textures:
                 continue
             textures.add(texture)
             path = texture.get_path_name()
-            if not isinstance(texture, unreal.Texture2D) or not path.startswith('/Game/'):
+            if _is_core_asset(texture):
+                report['skipped'].append(dict(asset=path, reason='protected_core_asset'))
+            elif not isinstance(texture, unreal.Texture2D) or not path.startswith('/Game/'):
                 report['skipped'].append(dict(asset=path, reason='non_project_texture'))
             elif texture.get_editor_property('filter') != unreal.TextureFilter.TF_NEAREST:
                 task.stage(f'清晰化 · {texture.get_name()}')
@@ -804,6 +813,13 @@ def _replace_asset_textures(assets, resource_pack, report, task):
 def _asset_steps(assets, action, resource_pack, save, task):
     report = dict(changed=[], skipped=[], imported_assets=[], saved=False)
     yield
+    editable = []
+    for asset in assets:
+        if _is_core_asset(asset):
+            report['skipped'].append(dict(asset=asset.get_path_name(), reason='protected_core_asset'))
+        else:
+            editable.append(asset)
+    assets = tuple(editable)
     if action == 'sharpen':
         yield from _sharpen_asset_textures(assets, report, task)
     else:
