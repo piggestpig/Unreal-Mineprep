@@ -1,6 +1,6 @@
 # UE 动画制作速查
 
-**已有角色和 AnimSequence** 时，可以跳过模型构建与 JSON 导入，直接用 `mineprep.actor(actor).play_anim(anim, start=0, end=171, sequence=seq)` 上轨。整数是帧，浮点数是秒。省略 `end` 时覆盖一个周期，延长片段可循环。
+**已有角色和 AnimSequence** 时，可以跳过模型构建与 JSON 导入，直接用 `mineprep.actor(actor).play_anim(anim, start=0, end=171, rate=1.0, reverse=False, clip_start=0, clip_end=None, clip_offset=0, fade_in=None, fade_out=None, crossfade=True, ease=None, sequence=seq)` 上轨，或用 `mineprep.sections(sec).set_clip(...)` / `mineprep.sections(sec).fade(1.0, 1.0)` 调整已有片段。整数是帧，浮点数是秒。省略 `end` 时覆盖一个有效裁剪/变速周期，延长片段可循环；同轨重叠片段默认自动交叉淡化，退回空轨的独立淡入/淡出需在 `AnimationBlueprint`（如运行时 `MC基础动画蓝图_C`）下生效，未开启时仅打印提示且不改动画模式。
 
 **需要新角色和源动画** 时，可在 UE Python 控制台或 Mineprep Python MCP 中运行以下两步。提交异步任务后让编辑器推进，再执行下一步。
 
@@ -105,5 +105,7 @@ direct = export_anim_sequence(
 # 返回的 {'body', 'head', ...} 同样可直接传给 play_anim(...)
 sections = mineprep.actor(actor).play_anim(direct, start=0, end=direct['frames'], sequence=playback)
 ```
+
+已有输出资产须与目标骨架及采样帧率一致；帧率不同请使用新的输出路径，程序不会删除重建旧资产。拆分头导出会先检查身体、头部两个目标，再开始写入。`save=False` 只控制是否保存写入结果。
 
 想用面板操作时，在 VanillaMobLoader 选择玩家条目并放置，再在 MCAnimConverter 选中场景 Actor 和 Clip，点击「写入 Sequencer」。

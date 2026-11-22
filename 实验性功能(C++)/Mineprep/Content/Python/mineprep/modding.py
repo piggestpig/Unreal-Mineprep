@@ -1,7 +1,7 @@
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 import importlib
 import sys
 import random
@@ -11,12 +11,12 @@ from datetime import datetime
 import mcvars
 from fnmatch import translate
 from pathlib import Path
-from mc_config import wclass
-from mc_widget import Layout
-from mc_utils import uclass, startfile, warn, copy
-from mc_localization import Internationalization, i18n
+from mineprep.settings import wclass
+from mineprep.widgets import Layout
+from mineprep.utils import uclass, startfile, warn, copy, debug
+from mineprep.localization import Internationalization, i18n
 
-MODS_DIR = Path(__file__).with_name('mods')
+MODS_DIR = Path(__file__).resolve().parents[1] / 'mods'
 MANIFEST_NAME = 'mod_manifest.toml'
 DEFAULT_INFO = {
     'Description': '', 'Version': '-', 'CreatedBy': '',
@@ -447,7 +447,7 @@ subsystem.spawn_and_register_tab_with_id(widget_bp, {id})
             copy(cls._template_ or wclass.mod_panel, widget_path)
             unreal.log(f"已创建自定义控件蓝图: {widget_path}")
         else:
-            unreal.log(f"自定义控件蓝图已存在, 更新 {widget_path}")
+            debug(f"自定义控件蓝图已存在, 更新 {widget_path}")
 
         widget_bp = unreal.load_object(None, widget_path)
         default_widget = unreal.get_default_object(uclass(widget_path))

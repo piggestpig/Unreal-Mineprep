@@ -1,6 +1,6 @@
 # Pitfalls — mesh import / merge_skm / Geometry Script
 
-Call `mineprep.merge_skm` — [../api.md](../api.md). Implementation: `mc_mesh.py`. Common `Rotator` / `force_update`: [common.md](common.md).
+Call `mineprep.merge_skm` — [../api.md](../api.md). Implementation: `mineprep/mesh.py`. Common `Rotator` / `force_update`: [common.md](common.md).
 
 ## GeometryScript Python bindings
 
@@ -34,3 +34,4 @@ Dest exists on **VAT DA copy** is the opposite policy (load + reuse) — [vat.md
 - For generated GLB, a single mesh/skin can have multiple primitives with distinct material slots. Use a temporary `InterchangeGenericAssetsPipeline` instance to configure materials, animations, PhysicsAsset and scaling rather than mutating global import settings.
 - In UE 5.7+, `MaterialEditingLibrary.set_material_instance_texture_parameter_value` can return `False` even when assignment succeeds; read back `get_material_instance_texture_parameter_value` to confirm.
 - To update an existing SkeletalMesh in place without breaking scene references, reimport onto the existing mesh and keep its `Skeleton` asset (requires matching bone names and hierarchy).
+- **Interchange welds coincident morph vertices by position (`FVertexID`)**: When importing a GLB with morph targets, UE Interchange merges vertices that share the same 3D `POSITION` (within `THRESH_POINTS_ARE_SAME`) into one `FVertexID` even when `TEXCOORD_0` or `COLOR_0` differs. If a moving seam vertex (e.g. a lifting eye-wide rim) sits on the exact same 3D coordinate as an adjacent static quad (e.g. nose bridge or temple), Interchange welds them and one delta overwrites the other — pinning corners to `0` (creating 45° chamfers or locking out the morph completely). Never emit two GLB vertices at identical 3D positions with different morph deltas; offset the moving seam vertices slightly (e.g. `-0.025 cm` along `-normal`, well above `THRESH_POINTS_ARE_SAME` yet invisible at Minecraft scale) and guard generated GLBs with a position-bucket morph-delta consistency check.

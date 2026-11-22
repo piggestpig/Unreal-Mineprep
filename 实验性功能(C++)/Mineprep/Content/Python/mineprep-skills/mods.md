@@ -8,7 +8,7 @@ format and build rules are in [Mod manifest](../mods/ModManager/MANIFEST.md).
 Manifest-backed disabled mods are listed without importing their code; enabling
 syncs `mod_info` from the manifest.
 
-This file covers kept toolbar / Mod Manager tools. One-shot panels can use `mineprep.ui` — [ui.md](ui.md). Public API changes also require checking and updating affected callers in `mods/`.
+This file covers kept toolbar / Mod Manager tools. One-shot panels can use `mineprep.ui` — [ui.md](ui.md).
 
 **Sizing:** Use `mineprep.ui` for a one-shot panel and a Mod for a kept tool. Start from `mods/minimal.py` or `mods/template.py`; split into a folder package when complexity warrants it.
 
@@ -161,5 +161,5 @@ For a custom unload/re-import workflow outside full `mineprep.reload()`, clear a
 ### Panel lifecycle — UE 5.8
 
 - **Closing & `destruct()`**: `Mod.unregister()` calls `close()` on each open instance (using its saved `tab_id`), and the widget's Blueprint close event pops `mcvars.WidgetModMap` and calls `mod.destruct()`.
-- **Cleanup in `destruct()`**: release owned tick/delegate handles and pending tasks in `destruct()`. Any callback that can outlive the panel must guard against destroyed widgets. Note that `mc_parallel` handles are not auto-destroyed by `Mod`, and `runner.destroy()` on a `@thread` cancels the game-thread callback/polling without stopping the background worker thread itself.
+- **Cleanup in `destruct()`**: release owned tick/delegate handles and pending tasks in `destruct()`. Any callback that can outlive the panel must guard against destroyed widgets. Note that `mineprep.parallel` handles are not auto-destroyed by `Mod`, and `runner.destroy()` on a `@thread` cancels the game-thread callback/polling without stopping the background worker thread itself.
 - **Unclosed windows on reload**: if an instance remains in `WidgetModMap` after `close()`, Mineprep warns and clears its layout best-effort; ask the user to close that leftover window manually and reopen from the Mineprep menu.

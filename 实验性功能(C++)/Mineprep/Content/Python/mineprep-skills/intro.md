@@ -11,7 +11,7 @@ Use the sources needed for the question. GitHub is the product reference; curren
 | Source | Use for | Skip |
 |--------|---------|------|
 | **This skill package** | What *this agent* can do (console, `ui()`, compose spawn, mods) | Pasting Route / pitfalls at the user |
-| **Plugin source** (`Content/Python/mineprep.py`, generator panels) | Confirm a button/API still exists | Inventing features from memory |
+| **Plugin source** (`Content/Python/mineprep/__init__.py`, generator panels) | Confirm a button/API still exists | Inventing features from memory |
 | **[Unreal-Mineprep on GitHub](https://github.com/piggestpig/Unreal-Mineprep)** | Product story, install, requirements, mobs, **changelog**, wiki, discussions | Stale version numbers from chat history |
 
 GitHub extras (same org):

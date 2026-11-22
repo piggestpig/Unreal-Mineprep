@@ -113,7 +113,7 @@ def encode(geometry, name):
 
 def split_head(data):
     """按 head 分支拆分 Mineprep 刚性蒙皮 GLB，保留材质与身体骨架。"""
-    from mc_model import read_glb, pack_glb
+    from mineprep.model import read_glb, pack_glb
 
     original, binary = read_glb(data)
     skin, = original['skins']
@@ -123,6 +123,11 @@ def split_head(data):
     head = next((i for i in joints if nodes[i]['name'] == 'head'), None)
     if head is None:
         raise ValueError('模型没有 head 骨骼')
+    head_parent = parents.get(head)
+    if head_parent is not None and nodes[head_parent]['name'] == 'head_parts':
+        siblings = [nodes[c]['name'] for c in nodes[head_parent].get('children', []) if c != head]
+        if siblings:
+            raise ValueError(f"head 挂在复合节点 head_parts 下且存在同级部件 ({', '.join(siblings)})，按 head 拆分会截断头吻，已沿用一体模型")
     if any(any(key in nodes[i] for key in ('translation', 'rotation', 'scale')) for i in joints):
         raise ValueError('拆分需要 Mineprep GLB 的矩阵绑定姿势')
     worlds = {}

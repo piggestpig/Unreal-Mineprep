@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 
 import numpy as np
-from mc_blockstates import connect as connect_cells, family, mirror_state, rotate_state
+from mineprep.blockstates import connect as connect_cells, family, mirror_state, rotate_state
 
 from .data import MAX_COORD, require_int
 from .surface import block_name, parse_candidates

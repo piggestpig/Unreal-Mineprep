@@ -13,11 +13,8 @@ MCAnimConverter & Control Rig details: [pitfalls/anim.md](pitfalls/anim.md). Rig
 
 ## Build the main action before secondary motion
 
-Start with a reference the user likes. Preserve its timing and main poses before
-adding embellishment. A previous accepted clip or hand-keyed Blender action is
-more useful than repeatedly inventing a new waveform. Inspect the actual source
-bone hierarchy; the existing Blender run uses a multi-bone UE-style skeleton,
-even though its action mostly keys thighs, upper arms, pelvis and chest.
+Preserve the chosen reference's timing and main poses before adding secondary
+motion. Inspect its actual source hierarchy and keyed bones before adapting it.
 
 - **Timing and weight**: establish contact, weight acceptance, passing/recovery and the next contact. Running can include flight; walking should transfer support without unintended flight. Judge the complete two-step cycle in seconds, at the intended playback rate. Adjust cadence with the user before multiplying variants.
 - **Stable attachments**: compute the moving torso's lower seam in the target pose and place each hip around it, then add the intended reach/tuck offset. A zero leg translation only anchors it to `pelvis`, not to a displaced `body`. Do not rotate the whole leg action just to repair its connection.
@@ -25,8 +22,8 @@ even though its action mostly keys thighs, upper arms, pelvis and chest.
 - **Secondary motion**: add small chest recoil, shoulder reach and lag after the basic gait works. Check the accumulated head pose through its parent chain; adding independent head/waist/body oscillations can compound wobble instead of stabilizing the gaze. Avoid automatically adding motion on every axis.
 - **Smoothness**: periodic functions or hand-keyed curves are both usable. Keep transitions continuous and inspect interpolation between keys. Per-frame min/max contact clamps and abrupt phase switches can create visible jerks; use a smooth support/flight trajectory or fit the correction. Higher sample density does not repair bad timing or poses.
 
-For the current run's torso/leg siblings, a position-only attachment correction
-in their common parent space can be written as:
+For torso/leg siblings, a position-only attachment correction in their common
+parent space can be written as:
 
 ```python
 # body_offset and body_rotation are evaluated UE target offsets, not raw JSON.

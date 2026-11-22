@@ -10,15 +10,15 @@ from typing import Any
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 
-import mc_sequencer as mcseq
-import mc_utils
-from mc_material import get_material_param, set_material_param
-from mc_localization import tooltip
-from mc_rig import Rig
-from mc_sequencer import keyframe
-from mc_utils import List, WrapList, enum, iscollection, prints, throw, undo, world
+from mineprep import sequencer_tools as mcseq
+from mineprep import utils
+from mineprep.material_tools import get_material_param, set_material_param
+from mineprep.localization import tooltip
+from mineprep.rig import Rig
+from mineprep.sequencer_tools import keyframe
+from mineprep.utils import List, WrapList, enum, iscollection, prints, throw, undo, world
 
 
 class helper:
@@ -85,13 +85,13 @@ class MineprepAPIHandle:
             if callable(attr) and target:
                 doc = getattr(getattr(target[0], name), '__doc__', None)
                 def wrapper(*args, **kwargs):
-                    args, kwargs = mc_utils.convert_ue_call_args(args, kwargs, doc)
+                    args, kwargs = utils.convert_ue_call_args(args, kwargs, doc)
                     return attr(*args, **kwargs)
                 return wrapper
             return attr
 
         attr = getattr(target, name)
-        return mc_utils.wrap_ue_method(attr) if callable(attr) else attr
+        return utils.wrap_ue_method(attr) if callable(attr) else attr
 
     def __call__(self, fn, *args, **kwargs):
         target = self.target
@@ -234,8 +234,8 @@ class MineprepWorldHandle(MineprepAPIHandle):
     def lookat_rotation(self, target, *, origin=None, pitch=True, roll=0):
         """计算当前世界目标对应的 Rotation；组件返回父级相对旋转，不修改姿态。"""
         if self._collection:
-            return [mc_utils._lookat_rotation(obj, target, origin=origin, pitch=pitch, roll=roll) for obj in self.target]
-        return mc_utils._lookat_rotation(self.target, target, origin=origin, pitch=pitch, roll=roll)
+            return [utils._lookat_rotation(obj, target, origin=origin, pitch=pitch, roll=roll) for obj in self.target]
+        return utils._lookat_rotation(self.target, target, origin=origin, pitch=pitch, roll=roll)
 
     def lookat(self, target, *, pitch=True, roll=0):
         """以 +X 朝向当前世界目标；pitch=False 为水平面，roll 为度，返回自身。"""
@@ -302,13 +302,41 @@ class actor(MineprepWorldHandle):
         self.comps = ComponentsHandle
         self.mats = MaterialsHandle
 
-    def rig(self, target=unreal.SkeletalMeshComponent, rig_class=None, *, layered=None):
+    def rig(self, target=unreal.SkeletalMeshComponent, rig_class=None, *, layered=None, section=None):
         """取骨骼网格体上的 Control Rig；layered 仅用于新建轨道。"""
-        return self.component(target).rig(rig_class, layered=layered)
+        return self.component(target).rig(rig_class, layered=layered, section=section)
+
+    def face_rig(self, *, rig_class=None, layered=False, priority=None, auto_visibility=True):
+        """校验表情能力并在当前序列中挂载 CR_MC_Face；不支持时 warn 并返回 None。"""
+        from mineprep.face import FACE_RIG_CR_PATH, add_face_rig
+        return add_face_rig(
+            self.target,
+            rig_class=FACE_RIG_CR_PATH if rig_class is None else rig_class,
+            layered=layered,
+            priority=priority,
+            auto_visibility=auto_visibility,
+        )
+
+    def bake_face_rig(self, *, start=None, end=None, step=1, rig_class=None,
+                      layered=False, priority=None, interp='linear'):
+        """将当前序列中底层的 face_* 表情曲线烘焙到 CR_MC_Face，不禁用身体骨骼动画轨。"""
+        from mineprep.face import FACE_RIG_CR_PATH, bake_face_to_rig
+        return bake_face_to_rig(
+            self.target,
+            start=start,
+            end=end,
+            step=step,
+            rig_class=FACE_RIG_CR_PATH if rig_class is None else rig_class,
+            layered=layered,
+            priority=priority,
+            interp=interp,
+        )
 
     def play_anim(self, animation, *, start=0, end=None, sequence=None,
-                  target=unreal.SkeletalMeshComponent, head=None, head_target='Head'):
-        """将 AnimSequence 或 {'body', 'head'} 成对映射加入骨骼动画轨，返回片段或 {'body', 'head'}。"""
+                  target=unreal.SkeletalMeshComponent, head=None, head_target='Head',
+                  rate=1.0, reverse=False, clip_start=0, clip_end=None, clip_offset=0,
+                  fade_in=None, fade_out=None, crossfade=True, ease=None):
+        """将 AnimSequence 或 {'body', 'head'} 成对映射加入骨骼动画轨，支持倍速、裁剪、交叉淡化与空轨淡入淡出。"""
         if isinstance(animation, Mapping):
             if head is not None:
                 raise ValueError('传入动画字典时不能同时指定 head 参数')
@@ -321,16 +349,17 @@ class actor(MineprepWorldHandle):
             body_anim = animation
             head_anim = head
             paired = head is not None
+        options = dict(
+            start=start, end=end, sequence=sequence,
+            rate=rate, reverse=reverse,
+            clip_start=clip_start, clip_end=clip_end, clip_offset=clip_offset,
+            fade_in=fade_in, fade_out=fade_out, crossfade=crossfade, ease=ease,
+        )
         if not paired:
-            return mcseq.add_skeletal_animation(
-                self.component(target).target, body_anim,
-                start=start, end=end, sequence=sequence,
-            )
+            return mcseq.add_skeletal_animation(self.component(target).target, body_anim, **options)
         head_comp = self.component(head_target).target if head_anim is not None else None
         return mcseq.add_skeletal_animation_pair(
-            self.component(target).target, body_anim,
-            head_comp, head_anim,
-            start=start, end=end, sequence=sequence,
+            self.component(target).target, body_anim, head_comp, head_anim, **options,
         )
 
 
@@ -550,12 +579,38 @@ class component(MineprepWorldHandle):
             return next((c for c in comps if name(c)), None)
         return None
 
-    def rig(self, rig_class=None, *, layered=None):
+    def rig(self, rig_class=None, *, layered=None, section=None):
         """当前组件必须是 SkeletalMeshComponent，返回 Rig"""
         if not isinstance(self.target, unreal.SkeletalMeshComponent):
             kind = type(self.target).__name__ if self.target else 'None'
             throw(f'rig() 需要 SkeletalMeshComponent，当前: {kind}')
-        return Rig(self.target, rig_class, layered=layered)
+        return Rig(self.target, rig_class, layered=layered, section=section)
+
+    def face_rig(self, *, rig_class=None, layered=False, priority=None, auto_visibility=True):
+        """校验当前骨骼网格体组件的表情能力并挂载 CR_MC_Face；不支持时 warn 并返回 None。"""
+        from mineprep.face import FACE_RIG_CR_PATH, add_face_rig
+        return add_face_rig(
+            self.target,
+            rig_class=FACE_RIG_CR_PATH if rig_class is None else rig_class,
+            layered=layered,
+            priority=priority,
+            auto_visibility=auto_visibility,
+        )
+
+    def bake_face_rig(self, *, start=None, end=None, step=1, rig_class=None,
+                      layered=False, priority=None, interp='linear'):
+        """将当前序列中底层的 face_* 表情曲线烘焙到 CR_MC_Face，不禁用身体骨骼动画轨。"""
+        from mineprep.face import FACE_RIG_CR_PATH, bake_face_to_rig
+        return bake_face_to_rig(
+            self.target,
+            start=start,
+            end=end,
+            step=step,
+            rig_class=FACE_RIG_CR_PATH if rig_class is None else rig_class,
+            layered=layered,
+            priority=priority,
+            interp=interp,
+        )
 
 
 class components(MineprepWorldHandle):
@@ -825,6 +880,8 @@ class sections(MineprepSequencerHandle):
             target = [target]
         elif isinstance(target, unreal.MovieSceneTrack):
             target = mcseq.gather_sections(target)
+        elif isinstance(target, Mapping):
+            target = [v for v in target.values() if isinstance(v, unreal.MovieSceneSection)]
         elif isinstance(target, Iterable) and not isinstance(target, (str, bytes, type)):
             items = list(target)
             if items and isinstance(items[0], unreal.MovieSceneSection):
@@ -846,6 +903,19 @@ class sections(MineprepSequencerHandle):
                 super().__init__(mcseq.gather_channels(self.target, name))
 
         self.channels = ChannelsHandle
+
+    def set_clip(self, rate=None, clip_start=None, clip_end=None, clip_offset=None,
+                 reverse=None, start=None, end=None):
+        """设置骨骼动画片段倍速、源片段裁剪区间 [clip_start, clip_end)、首轮偏移、倒放或时间范围；支持位置参数。"""
+        mcseq.edit_skeletal_sections(
+            self.target, rate, clip_start, clip_end, clip_offset, reverse, start, end,
+        )
+        return self
+
+    def fade(self, fade_in=None, fade_out=None, crossfade=None, ease=None):
+        """设置骨骼动画片段淡入淡出时长（int 帧/float 秒）、同轨交叉过渡或曲线类型；支持如 fade(1.0, 1.0)。"""
+        mcseq.fade_skeletal_sections(self.target, fade_in, fade_out, crossfade, ease)
+        return self
 
     @staticmethod
     def find(parent, name=None):

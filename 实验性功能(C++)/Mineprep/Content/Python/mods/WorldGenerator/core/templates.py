@@ -310,7 +310,7 @@ class ModelIndex:
 def append_output(data,instances,definitions):
     """Append one nonmergeable record per complete model after cell merging."""
     from dataclasses import replace
-    from mc_math import encode_rotation
+    from mineprep.math_tools import encode_rotation
     used=sorted({i.template.id for i in instances});names=data.names+tuple('template_'+n for n in used)
     types={n:len(data.names)+j for j,n in enumerate(used)}
     xyz=np.array([i.anchor for i in instances],np.int32);xyz[:,0]-=data.region.x0;xyz[:,2]-=data.region.z0

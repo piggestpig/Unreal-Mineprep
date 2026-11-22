@@ -1,67 +1,15 @@
-try:
-    import unreal
-except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
-import os
-import re
-import json
 from collections.abc import Iterable
 from pathlib import Path
 
-import mc_importer, mc_utils, mc_prep, mc_localization, mc_structure, mc_config
-import mc_widget, mc_mod, mc_mesh, mc_material, mc_parallel, mc_bplib, mc_math
-import mc_handle, mc_rig, mc_sequencer, mc_blockstates, mc_model
-from mc_bplib import BPLibCaller, BPLib, EditorBPLib
-from mc_handle import (
-    MineprepAPIHandle, actor, actors, camera, selected, component, components, materials,
-    sequencer, bindings, tracks, sections, channels, keys,
-    spawn_camera, new_sequence, keyframes,
-)
-from mc_importer import import_block, import_item, resolve_block_json_path, get_all_blocks
-from mc_utils import (reload, cast, uclass, bpclass, world, prints, warn, throw, panic,
-                      enum, askopenfilename, askopenfilenames, send2trash, set_actor_label, select_actors,
-                      undo, open_main_panel, get_hotkey_object, construct, uasset, copy,
-                      List, SafeList, WrapList, iscollection, debug, resolve_soft, dialog,
-                      askdirectory, asksaveasfilename, startfile, screenshot, Lazy,
-                      left_mouse_down, middle_mouse_down, right_mouse_down, show_editor_task, unwrap_rotations)
-from mc_parallel import (
-    delay, tick, asynctask, thread, asyncthread, until,
-    DelayRunner, TickRunner, AsyncTaskRunner, ThreadRunner,
-)
-from mc_prep import (
-    prep_texture, load_mcprep_data, colorize_material,
-    apply_mc_material_defaults, identify_mc_texture, resolve_mc_texture,
-    prepare_materials, replace_materials, prepare_scene, prepare_assets,
-)
-from mc_material import (
-    tex_to_color, color_to_tex, ColorList,
-    register_biome_tex, clear_biome_tex,
-    tex_source_files, export_tex_cache, import_data_tex,
-)
-from mc_localization import (
-    localize, loctext, nsloctext, loctable_col, bilingual, tooltip,
-    Internationalization, i18n, I18N,
-    collect_i18n, check_i18n,
-    copy_engine_culture, editor_has_culture,
-)
-from mc_structure import (
-    parse_structure, structure_to_tex, structure_parts, Blocks,
-    convert_to_unreal_transforms, convert_to_packed_arrays, add_packed_instances,
-    spawn_structure,
-)
 import mcvars
-from mc_math import boxes_to_packed, encode_rotation, decode_rotation, wave, unwrap_angles
-from mc_blockstates import rotate_state, mirror_state
-from mc_config import config, paths, wclass
-from mc_rig import Rig
-from mc_sequencer import keyframe
-from mc_widget import Layout, PropertyGroup, add_widget, ui, make_combo_text
-from mc_mod import mods, Mod
-from mc_mesh import merge_skm
-from mc_model import LowPolyModel, SkeletalModel
+from mineprep import settings, prep, widgets
+from mineprep.settings import wclass
+from mineprep.handles import MineprepAPIHandle, actor
+from mineprep.importer import import_block
+from mineprep.localization import i18n, tooltip
+from mineprep.prep import prepare_assets, prepare_materials, prepare_scene, replace_materials
+from mineprep.utils import askdirectory, bpclass, cast, get_hotkey_object, prints, uclass, unreal, warn
 
-
-####################################################################################
 
 def help():
     """打印Mineprep Python API的默认提示"""
@@ -238,13 +186,13 @@ class panel(MineprepAddonHandle):
         label = name
         target = None
         if not name:
-            id_cls_map = {k:bpclass(v).get_name() for k,v in mc_widget.WidgetsCache.items() if v}
+            id_cls_map = {k:bpclass(v).get_name() for k,v in widgets.WidgetsCache.items() if v}
             prints(tooltip('所有插件面板'), id_cls_map)
             return
 
-        target = mc_widget.WidgetsCache.get(name)
+        target = widgets.WidgetsCache.get(name)
         if not target:
-            candidate = [k for k in mc_widget.WidgetsCache.keys() if name.lower() in k.lower()]
+            candidate = [k for k in widgets.WidgetsCache.keys() if name.lower() in k.lower()]
             warn(tooltip('未找到面板', name), '---------------', tooltip('你可能在寻找'), candidate)
         super().__init__(target, label)
 
@@ -252,7 +200,7 @@ class panel(MineprepAddonHandle):
 def _panel_material_parameters(rows=None):
     """Read checked rows, or all explicitly named shortcut rows, without changing UI."""
     parameters = {}
-    for path in tuple(mc_widget.WidgetsCache):
+    for path in tuple(widgets.WidgetsCache):
         if not path.startswith('材质参数_') or not path.endswith('.🔲启用'):
             continue
         root = path.rsplit('.', 1)[0]
@@ -282,7 +230,7 @@ def prep_from_browser(action='sharpen', *, resource_pack=None, save=True):
     action 为 sharpen/replace_textures；换包未传路径时选包，取消返回 None 且不修改配置。
     返回共用互斥的 AsyncTaskRunner，save=True 成功后保存全部脏资源和关卡。
     """
-    running = mc_prep._running_preparation()
+    running = prep._running_preparation()
     if running is not None:
         return running
     if action not in ('sharpen', 'replace_textures'):
@@ -297,11 +245,11 @@ def prep_from_browser(action='sharpen', *, resource_pack=None, save=True):
         resource_pack = Path(resource_pack).expanduser().resolve()
         if not resource_pack.is_dir():
             raise NotADirectoryError(resource_pack)
-        mc_config.config.load()
-        settings = dict(mc_config.config.config_dict.get('Settings', {}))
-        settings['texture_pack_path'] = str(resource_pack)
-        mc_config.config['Settings'] = settings
-        if 'ue材质包路径' in mc_widget.WidgetsCache:
+        settings.config.load()
+        options = dict(settings.config.config_dict.get('Settings', {}))
+        options['texture_pack_path'] = str(resource_pack)
+        settings.config['Settings'] = options
+        if 'ue材质包路径' in widgets.WidgetsCache:
             panel('ue材质包路径').set(str(resource_pack))
     return prepare_assets(assets, action=action, resource_pack=resource_pack, save=save)
 
@@ -324,7 +272,7 @@ def prep_from_panel(action='prepare', *, import_format=None):
                          'flat_shading': '🔲平直着色'}
     if action not in ('prepare', 'replace', 'scene', 'import_world', 'interpolate', *effect_rows, *geometry_controls):
         raise ValueError('未知准备动作: ' + str(action))
-    running = mc_prep._running_preparation()
+    running = prep._running_preparation()
     if running is not None:
         return running
     quality = panel('➖动态准备材质_滑条')
@@ -348,10 +296,10 @@ def prep_from_panel(action='prepare', *, import_format=None):
     if not targets:
         raise ValueError('请先在场景中选择需要处理的 Actor')
     if action in geometry_controls:
-        return mc_prep._prepare_scene_shortcut(targets, action, panel(geometry_controls[action]).get(int), scope)
+        return prep._prepare_scene_shortcut(targets, action, panel(geometry_controls[action]).get(int), scope)
     if action == 'interpolate':
         return prepare_materials(targets, scope=scope, effect=action,
-            parameters={mc_prep.ANIMATION_PARAMETER_NAME:
+            parameters={prep.ANIMATION_PARAMETER_NAME:
                         (None, None, None, int(panel('🔲渐变动画纹理').get(int) == 1))})
     if action in effect_rows:
         if action == 'enchant' and panel('🔲祛魔').get(int) == 1:
@@ -407,32 +355,6 @@ class hotkey(MineprepAddonHandle):
 
 ###########################################################################
 
-def _path_coordinates(point):
-    return (point.x, point.y, point.z) if isinstance(point, unreal.Vector) else point
-
-
-def orbit(center, samples, *, radius, height=0, turns=1, start_angle=0, roll=0, duration=None):
-    """返回环绕位置、连续旋转，可选厘米每秒的速度。"""
-    positions, rotations, *velocity = mc_math.orbit(
-        _path_coordinates(center), samples, radius=radius, height=height, turns=turns,
-        start_angle=start_angle, roll=roll, duration=duration)
-    result = ([unreal.Vector(*position) for position in positions],
-              [unreal.Rotator(pitch=pitch, yaw=yaw, roll=roll) for pitch, yaw, roll in rotations])
-    if duration is not None:
-        return (*result, [unreal.Vector(*value) for value in velocity[0]])
-    return result
-
-
-def spline(points, samples, *, closed=False, uniform_speed=False, tangents=False, duration=None):
-    """返回通过航点的路径，可选单位切线或厘米每秒的速度。"""
-    result = mc_math.spline((_path_coordinates(point) for point in points), samples,
-                            closed=closed, uniform_speed=uniform_speed, tangents=tangents, duration=duration)
-    if tangents or duration is not None:
-        positions, vectors = result
-        return [unreal.Vector(*point) for point in positions], [unreal.Vector(*vector) for vector in vectors]
-    return [unreal.Vector(*point) for point in result]
-
-
 def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None) -> unreal.Actor:
     """通过生成器面板放置 Actor，可指定位置/旋转/缩放"""
     is_inventory = button in ('放置方块', '放置物品')
@@ -446,10 +368,10 @@ def spawn_helper(button='', target='', loc=None, rot=None, scale=None, id=None) 
         if is_inventory:
             if isinstance(target, str):
                 if target:
-                    import mc_inventory
+                    from mineprep import inventory
 
                     category = 'Blocks' if button == '放置方块' else 'Items'
-                    should_click = bool(mc_inventory.select_option_by_target(option_widget.target, category, target))
+                    should_click = bool(inventory.select_option_by_target(option_widget.target, category, target))
             elif target:
                 should_click = False
         else:
@@ -499,7 +421,7 @@ def attach(target='', loc=None, rot=None, scale=None, id: int=None) -> unreal.Ac
 
 def spawn_blocks(mesh=None, transforms=None, loc=(0,0,0), rot=(0,0,0), *, collision=None) -> unreal.Actor:
     """放置一个模型的实例；Transform 可为迭代器，仍采用 UE 厘米和局部变换。"""
-    from mc_structure import _add_transform_instances
+    from mineprep.structure import _add_transform_instances
     if transforms is None:
         transforms = [unreal.Transform()]
     if isinstance(mesh, str):

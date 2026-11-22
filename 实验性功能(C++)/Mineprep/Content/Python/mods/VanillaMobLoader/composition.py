@@ -4,7 +4,7 @@ from dataclasses import replace
 import hashlib
 import json
 import math
-from mc_model import clean_asset_name as clean_name, model_destination as destination
+from mineprep.model import clean_asset_name as clean_name, model_destination as destination
 from .geometry import MeshData, build_geometry
 from .skin import alpha_reader
 from . import names
@@ -12,13 +12,16 @@ from . import names
 DEFAULT_SAVE_PATH = '/Game/mc/entity/'
 
 
-def automatic_name(entries):
+def automatic_name(entries, face_mode='none'):
     seen, words = set(), []
     for entry in entries:
         for word in clean_name(entry.id).split('_'):
             words.append('' if word in seen else word)
             seen.add(word)
-    return '_'.join(words).strip('_')[:96]
+    base = '_'.join(words).strip('_')[:90]
+    if base and len(entries) == 1 and face_mode in ('2d', '3d'):
+        return f'{base}_{face_mode.upper()}'
+    return base
 
 
 def recipe(entries, expansion, random_scale=0.):

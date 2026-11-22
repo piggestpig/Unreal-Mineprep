@@ -12,7 +12,16 @@ Java GLB 清单中的编辑骨架配置由 [HUMANOIDS](java_models.py) 与 [QUAD
 
 勾选「尝试头身分离」后，本地 Java GLB 可按 `head` 骨骼分支拆分。同一文件夹保留 `SKM_<名称>`，并生成 `SKM_<名称>_body` 与 `SKM_<名称>_head`，三个模型引用一体模型的材质和皮肤贴图。身体保留完整骨架，头部以自身枢轴为原点、沿原 `head` 骨骼的局部轴导出。玩家 biped 的独立头部面向 +X，附加到身体时局部变换为单位变换。无 head 分支、蒙皮跨界或使用 CEM 时，返回原因并沿用一体模型。
 
-头身拆分实现在模组内的 `gltf.split_head`，由 `java_models.split_source` 管理生成文件；GLB 读写复用核心 `mc_model`，不另设顶层拆分模块。
+支持为收录在 [facial_templates.json](../../mineprep/face/facial_templates.json) 中的本地 Java GLB 构建统一面部表情（面板「面部表情」选择 `无` / `2D` / `3D`，或脚本参数 `face='none' | '2d' | '3d'`）：
+- **头身分离、能力元数据与自动命名**：脚本未显式传入 `try_split_head` 时，人形启用表情默认头身分离、四足/其他默认一体模型；显式传 `try_split_head=True/False` 或在面板勾选/取消勾选「尝试头身分离」均严格尊重用户选择（对 `horse` 等 `head_parts` 下含同级吻部/鬃毛的复合头会安全提示并沿用一体模型）。未指定自定义保存名称时，自动追加 `_2D` / `_3D` 后缀（如 `player_2D`、`player_3D`），避免不同表情模式冲突。导入时仅按物种与模式导出/注册有效 `face_*` 曲线（15 条标准协议，含独立 `face_pupil_scale` 与 `face_eye_wide`），并写入 UE 资产元数据标签（`Mineprep.FaceMode` / `Mineprep.FaceSpecVersion` / `Mineprep.FaceCurves` / `Mineprep.FaceCurveDrivers`），下游可通过 `mineprep.face.describe_actor_capabilities(target)` 统一自省。
+- **`face='2d'`**：保持原版极简方块宣传片风格，将面部（支持单正面、斜倾面与动物 `±Y` 双侧面）切分到独立 `Face2D` 材质槽并生成干净底皮 `UV1`（零改图抹除静态死眼/眉毛），按物种自动配置 `/Game/Mineprep/材质/Core/M_Face2D`（`v7`，视线范围支持 `[-2, 2]`，支持 `BrowFollowBlink` 标量开关）实例，并在骨架上仅注册该物种实际支持的标准 `face_*` 材质曲线。核心材质通过 `Mineprep.FaceMaterialVersion` 记录简单版本号，版本不一致时仅 `warn` 提醒、不自动覆盖用户手改材质（需重建时显式传 `rebuild=True`）。
+- **`face='3d'`**：构建刚性不拉扯的浅眼窝、纤薄立体眉毛、真实内凹 3D 口腔、`face_root` 面部子骨骼树、与 2D 同名的有效 `face_*` Morph Targets，以及按物种实际需要生成的矫正形变（最多 4 条：`_mc_eye_wide_pos`、`_mc_mouth_neg_cancel`、`_mc_blink_wide_l/r`），由骨架无关后处理解算器 `/Game/Mineprep/生物模型rigs/Core/CR_MineprepFace3DSolver` + 模板 `/Game/Mineprep/生物模型rigs/Core/ABP_MineprepFace3D`（挂载在 `USkeletalMesh.post_process_anim_blueprint`）实时驱动，保证睁眼不拉扯鼻梁（眼洞移动顶边带 `-0.025 cm` 微内缩防止 UE Interchange 共点焊接）、负值抿嘴无穿插、睁眼+闭眼零漏缝。**全程仅使用 1 个 UV 通道（`UV0`）**，通过顶点色 `COLOR_0` 配合 `/Game/Mineprep/材质/Core/M_Face3D`（`v8`，支持 `MouthCavityColor` 向量参数与 `UVSlideMode=0/1`）自动抹除 3D 唇周残留的 2D 扁平嘴像素（绵羊保留 `keep_3d_lip_uv=true`）并冻结外圈嘴周皮肤（鼻、脸颊、胡须外缘全程静止），**一体模型与头身分离模型完全通吃**。勾选面板「显示详情」（或脚本传 `face_options={...}`）可调整 3D 眼窝/口腔/眉毛尺寸与以下选项并自动持久化：
+  - **上排牙齿 (`UseTeeth`)**：默认关闭（`False`），呈现纯深色口腔；开启后生成内嵌上排白牙。
+  - **口腔颜色 (`MouthCavityColor`)**：默认深黑 `#0d0b0d`，导入后也可直接在材质实例中修改。
+  - **眨眼带动眉毛 (`BrowFollowBlink`)**：默认关闭（`False`，眨眼与眉毛完全解耦，由 `face_brow_y_l/r` 独立控制）；开启后闭眼时眉毛完整下移约一格（2D/3D 通用）。
+  修改参数后点击「重新导入生物」即可原地更新模型。面板默认选中 `2D` 表情。
+
+头身拆分实现在模组内的 `gltf.split_head`，由 `java_models.split_source` 管理生成文件；GLB 读写复用核心 `mineprep.model`，不另设顶层拆分模块。
 
 生成的编辑骨架 GLB 缓存在模组的 `__pycache__/resources/generated/humanoid_edit/` 与 `quadruped_edit/`，文件名为 `<模型>_<8 位内容哈希>.glb`。导入后的资产可能引用此文件作为重新导入来源。制作新动画时，可以用构建结果中的 `rig_profile`（`'biped'`、`'quadruped_edit'` 或 `None`）确认编辑骨架。
 
@@ -22,7 +31,7 @@ Java GLB 清单中的编辑骨架配置由 [HUMANOIDS](java_models.py) 与 [QUAD
 
 - **资产命名与复用**：按显式传入的 `asset_name` 完整生成并绑定 `PA_<名称>`；成功头身分离时，`SKM_<名称>` 与 `SKM_<名称>_body` 共用 `PA_<名称>`，独立头部 `SKM_<名称>_head` 另外生成 `PA_<名称>_head`。使用 `SPLIT_ACTOR` 放置时，`Head` 附着组件本身保持 `NoCollision` 且不参与模拟，不与全身碰撞体重复碰撞；`SKM_<名称>_head` 仅在单独放置时使用自身物理资产。放置后的生物组件默认保持不开启物理模拟（`SimulatePhysics = False`）。
 - **重导保留与显式重建**：`reload=True` 重新导入网格体时，若 `rebuild_physics=False`（默认）会优先复用已绑定或同目录下兼容的物理资产（仅在尚无可用物理资产时补建），不覆盖手工调整过的盒体；若 `PA_<名称>` 已存在但与当前骨架不兼容，则保留原资产不覆盖、输出 warning 并改用唯一后缀命名（后续重导优先复用该新物理资产）。传 `rebuild_physics=True` 才重建并覆盖目标物理资产。传 `physics=False` 可跳过自动生成。
-- **`biped` 盒体规则与回退**：当插件提供盒体构建绑定 `unreal.mineprep.build_box_physics_asset` 且可通过资产关联 GLB 的纯 Python `mc_model.glb_bone_bounds()`（或在无可用 GLB 时回退可选实验接口 `get_bone_local_bounds`）获取骨骼局部顶点包围盒时，对于 `rig_profile == 'biped'` 启用 `VanillaMobLoader/physics.py` 拟合盒体：`root` 保留小型代理盒、无约束且屏蔽内部碰撞；`pelvis` 保留小型无碰撞代理盒并约束连接 `body` / `left_leg` / `right_leg`（带合理质量覆盖）；主肢体之间默认**保留相互碰撞**，使用内缩与关节退让盒体，自动排除外层皮肤骨骼并消除初始重叠。对存在长袍下摆且躯干包围盒明显下探覆盖腿部的人形（如灾厄村民、僵尸村民等），自动将 `body` 下缘裁剪至髋部高度以免挤压腿部厚度；对带有抱臂骨骼 `arms` 的模型，检查 `arms` 及其子孙骨骼（如 `left_shoulder`、`right_hand`、`middlearm_r1`）的包围盒与源 GLB 贴图 Alpha 通道（`villager` 系、`evoker`、`vindicator`、`illusioner` 合并 `arms` 子树作为胸前抱臂刚体，在无独立 `left_arm`/`right_arm` 或贴图不透明时替代双臂并约束到 `body` 且屏蔽 `arms-body` 内部碰撞；`arms` 全透明的 `pillager` 仍保留独立双臂）。
+- **`biped` 盒体规则与回退**：当插件提供盒体构建绑定 `unreal.mineprep.build_box_physics_asset` 且可通过资产关联 GLB 的纯 Python `mineprep.model.glb_bone_bounds()`（或在无可用 GLB 时回退可选实验接口 `get_bone_local_bounds`）获取骨骼局部顶点包围盒时，对于 `rig_profile == 'biped'` 启用 `VanillaMobLoader/physics.py` 拟合盒体：`root` 保留小型代理盒、无约束且屏蔽内部碰撞；`pelvis` 保留小型无碰撞代理盒并约束连接 `body` / `left_leg` / `right_leg`（带合理质量覆盖）；主肢体之间默认**保留相互碰撞**，使用内缩与关节退让盒体，自动排除外层皮肤骨骼并消除初始重叠。对存在长袍下摆且躯干包围盒明显下探覆盖腿部的人形（如灾厄村民、僵尸村民等），自动将 `body` 下缘裁剪至髋部高度以免挤压腿部厚度；对带有抱臂骨骼 `arms` 的模型，检查 `arms` 及其子孙骨骼（如 `left_shoulder`、`right_hand`、`middlearm_r1`）的包围盒与源 GLB 贴图 Alpha 通道（`villager` 系、`evoker`、`vindicator`、`illusioner` 合并 `arms` 子树作为胸前抱臂刚体，在无独立 `left_arm`/`right_arm` 或贴图不透明时替代双臂并约束到 `body` 且屏蔽 `arms-body` 内部碰撞；`arms` 全透明的 `pillager` 仍保留独立双臂）。
 - **非 `biped` 通用盒体规则**：对非人形 Java GLB（含 `quadruped_edit` 四足编辑骨架，自动跳过无顶点的 `pelvis`）、`edit_rig=False` 原始扁平骨架（含未列入编辑清单的标准网格模型如村民）、单体/复杂 CEM 以及组合 CEM 模型，启用 `compute_generic_physics_layout` 自动生成通用盒体物理资产：存在空 `root` 时保留一致的小型无约束代理盒并屏蔽对内碰撞，保持蓝图 `SetAllBodiesBelowSimulatePhysics("root", ..., false)` 行为统一；保留骨骼层级关系并基于核心躯干与组件空间表面距离构建连通 Prim 关节树；主碰撞体对非着地侧执行适度内缩（大尺度轴向约 `14%` 缩放余量并随角色尺度计算相邻分离间隙与近邻禁用边距）以避免落地自碰撞反弹；有主骨骼祖先的装饰/外层/覆盖件交由父骨骼自动刚性带动，直接挂在 `root` 或空枢轴下的面饰与嵌套配件则生成无碰撞辅助体并 `Locked` 约束至宿主骨骼；为优先确保密集关节体 Chaos 模拟稳定，**所有直接相连的约束对与退让后仍临近（`< close_margin`）/穿插的肢体对均禁用相互碰撞**（仅远端非相邻刚体保留互撞；作为稳定性取舍，相邻肢体大角度弯折后可能轻度穿入），并钳制极小部件与最重主体的质量比上限（`<= 14:1`）。
 - **引擎默认回退与保存校验**：当 `build_box_physics_asset` 不可用、既无匹配可读 GLB 又缺少可选 `get_bone_local_bounds`（或布局构建失败）时，均附带 warning 回退到引擎 `SkeletalMeshEditorSubsystem.create_physics_asset` 默认生成。回退生成遇到同名已有资产时同样保留旧资产而不删除，改为新建唯一名称的物理资产并绑定；保存物理资产失败时（`save_loaded_asset` 返回 `False` 或异常）会输出 warning。
 
@@ -32,7 +41,7 @@ Java GLB 清单中的编辑骨架配置由 [HUMANOIDS](java_models.py) 与 [QUAD
 
 搜索同时匹配四语名称、英文 ID、文件名和常用幼体别名，多个词取交集。例如 `僵尸 baby`、`oak 船`、`沉屍 外層`、`小鸡`、`牛犊`。空搜索仍按原分类和变体展开状态浏览。未收录名称回退英文，不保证完整翻译所有新增模板或上游说明。
 
-基础译名只读使用 Python 根目录的 `i18n_entities.json`，词缀模板在本模组的 `i18n.json`；没有共享词典时基础名称回退英文。目录构建及搜索只处理普通 Python 数据，名称和搜索词在构建目录时预计算。UE Text 在主线程批量注册，不由下载线程注册，也不在搜索时读取词典。
+基础译名只读使用 `mineprep/i18n_entities.json`，词缀模板在本模组的 `i18n.json`；没有共享词典时基础名称回退英文。目录构建及搜索只处理普通 Python 数据，名称和搜索词在构建目录时预计算。UE Text 在主线程批量注册，不由下载线程注册，也不在搜索时读取词典。
 
 `Entry.name` 和资产元数据 `VanillaMobLoader.Name` 保留来源英文；`Entry.translations` 提供四语字符串。`names.text(entry.name)` 在主线程取得本地化 Text，组合名称也可直接传入；`names.description(entry)` 将上游说明的 `{0}` 替换为本地化名称。保存名称、资产路径、目录 key 和配方身份始终不受显示语言影响。放置缓存模型时根据英文名称重新查译名，不需要重新导入；不迁移旧资产。
 

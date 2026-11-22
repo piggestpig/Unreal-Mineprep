@@ -20,7 +20,7 @@ Module-specific references (read the relevant topic):
 |---------|--------|-----|
 | `KeyError` / wrong Layout after edit | `importlib.reload` duplicated `Layout`/`PropertyGroup` | `mineprep.reload()` (in-place; do not `importlib.reload`) |
 | A separately imported function stays old after reload | `from mineprep import screenshot` keeps its own binding | Re-import `screenshot`, or use `mineprep.screenshot`; assigning the module return value does not refresh the function binding |
-| MCP `run` still calls old `mc_structure` after `reload()` | Shared snippet namespace kept the pre-reload module; another agent in this editor sees it too | `import mc_structure` again in that snippet, or call `mineprep.*`. [../remote.md](../remote.md) |
+| MCP `run` still calls old `mineprep.structure` after `reload()` | Shared snippet namespace kept the pre-reload module; another agent in this editor sees it too | `import mineprep.structure` again in that snippet, or call `mineprep.*`. [../remote.md](../remote.md) |
 | Panel shows old fields / ops use old names | Registration alone does not reload code; open panels retain objects | Full `mineprep.reload()` clears reloadable Mod submodules; reopen the panel. Other lifecycles: [../mods.md](../mods.md) |
 | Props attrs empty in ops | Read class attrs or passed class not instance | Instantiate `Props()` in the UI; pass its values to core operations. [Callable operations](../mods.md#callable-operations) |
 | Re-import JSON but mesh unchanged | `import_block` skips existing asset | `reload=True` when the source changed; no asset deletion is needed |
@@ -86,8 +86,3 @@ Full decorator rules: [../parallel.md](../parallel.md).
 | `accessed from a thread that is not the game thread` | `unreal.*` / `prints` inside `@thread` / `@asyncthread` | Stdlib / numpy only in the worker; UE work in `callback` or `@asynctask` |
 | `@asyncthread` function never runs | Wrapper is a generator; `work()` alone does not start the thread | `yield from work()` inside `@asynctask`, or use `@thread` for fire-and-forget |
 | `ValueError: generator already executing` from `@asynctask` | UE work inside a step re-entered Slate post-tick → nested `next()` | Current runners skip nested ticks. Do not roll a custom ticker that `next()`s the same gen. [../parallel.md](../parallel.md) § Re-entrancy |
-
-## Shipping a public API change
-
-Find affected callers in `mods/`, templates and facade re-exports; update only
-those consumers.

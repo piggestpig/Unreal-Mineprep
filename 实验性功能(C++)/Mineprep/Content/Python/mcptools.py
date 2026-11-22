@@ -116,11 +116,11 @@ def _async_view(runner) -> dict[str, Any]:
 
 def _capture_async(ns: dict[str, Any], result: Any, before: set) -> Any:
     """表达式结果是 runner，或赋值启动了唯一任务时，记下 _async 并返回状态。"""
-    import mc_parallel
+    from mineprep import parallel
 
-    runner = result if isinstance(result, mc_parallel.AsyncTaskRunner) else None
+    runner = result if isinstance(result, parallel.AsyncTaskRunner) else None
     if runner is None and result is None:
-        started = [item for item in mc_parallel._active_async if item not in before]
+        started = [item for item in parallel._active_async if item not in before]
         if len(started) == 1:
             runner = started[0]
     if runner is None:
@@ -180,7 +180,7 @@ def _json_ready(value: Any, depth: int = 0, *, truncations=None, path='result') 
     if (
         target is not None
         and target is not value
-        and type(value).__module__ in ('mineprep', 'mc_utils', 'mc_widget')
+        and type(value).__module__ in ('mineprep', 'mineprep.utils', 'mineprep.widgets')
     ):
         packed = {'handle': type(value).__name__, 'target': child(target, 'target')}
         label = getattr(value, 'name', None)
@@ -452,8 +452,8 @@ def run_code(code: str, loglevel: int = 1) -> str:
     previous_dialog_defaults = getattr(mcvars, 'PyUseDialogDefaults', False)
     mcvars.PyUseDialogDefaults = True
     try:
-        import mc_parallel
-        before = set(mc_parallel._active_async)
+        from mineprep import parallel
+        before = set(parallel._active_async)
         result = _capture_async(ns, execute_snippet(str(code), ns), before)
     except Exception as exc:
         ok = False

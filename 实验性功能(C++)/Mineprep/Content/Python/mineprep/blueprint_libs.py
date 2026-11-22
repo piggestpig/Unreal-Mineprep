@@ -13,11 +13,11 @@ Mineprep 蓝图函数库 (Blueprint Function Library) 反射调用器与语法�
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 import difflib
 from typing import Any, List, Optional
-from mc_utils import prints, warn, throw, world
-from mc_localization import i18n
+from mineprep.utils import prints, warn, throw, world
+from mineprep.localization import i18n
 
 
 class BPLibCaller:
@@ -59,7 +59,7 @@ class BPLibCaller:
         return self._cdo
 
     def _get_world(self) -> Optional[unreal.World]:
-        """获取当前世界上下文 (优先使用 mc_utils.world()，回退为编辑器世界)"""
+        """获取当前世界上下文 (优先使用 utils.world()，回退为编辑器世界)"""
         try:
             return world()
         except Exception:

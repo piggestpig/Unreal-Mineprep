@@ -3,7 +3,7 @@ import inspect
 import time
 
 import mineprep
-from mc_parallel import AsyncTaskRunner
+from mineprep.parallel import AsyncTaskRunner
 
 from . import tests
 

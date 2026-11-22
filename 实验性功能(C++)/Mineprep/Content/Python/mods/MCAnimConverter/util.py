@@ -1,7 +1,6 @@
 """共享常量与解析 / 资产 / 角色辅助。"""
 from collections.abc import Mapping
 from fractions import Fraction
-import gc
 import math
 import os
 import re
@@ -251,20 +250,22 @@ def describe_mesh_skeleton(target):
     """无需关卡 Actor，直接读取组件或 SkeletalMesh / Skeleton 的参考骨架信息。"""
     target = _unwrap_target_obj(target)
     if isinstance(target, unreal.SkeletalMeshComponent):
-        from mc_rig import describe_skeleton
+        from mineprep.rig import describe_skeleton
         return describe_skeleton(target)
     mesh = _resolve_mesh_asset(target, 'skeleton')
-    bounds, err = unreal.mineprep.get_bone_local_bounds(mesh)
-    if not err and bounds:
-        entries = [
-            (
-                str(entry.bone_name),
-                None if str(entry.parent_bone_name).casefold() == 'none' else str(entry.parent_bone_name),
-                entry.local_transform,
-            )
-            for entry in bounds
-        ]
-        return _build_skeleton_reference(entries)
+    get_bounds = getattr(getattr(unreal, 'mineprep', None), 'get_bone_local_bounds', None)
+    if get_bounds is not None:
+        bounds, err = get_bounds(mesh)
+        if not err and bounds:
+            entries = [
+                (
+                    str(entry.bone_name),
+                    None if str(entry.parent_bone_name).casefold() == 'none' else str(entry.parent_bone_name),
+                    entry.local_transform,
+                )
+                for entry in bounds
+            ]
+            return _build_skeleton_reference(entries)
     pose = unreal.AnimPoseExtensions.get_reference_pose(mesh.skeleton)
     entries = []
     for bone_name in unreal.AnimPoseExtensions.get_bone_names(pose):
@@ -277,15 +278,13 @@ def describe_mesh_skeleton(target):
     return _build_skeleton_reference(entries)
 
 
-def validate_existing_anim(name, skeleton):
+def validate_existing_anim(name, skeleton, *, fps=None):
     path = _asset_path(name)
     if not unreal.EditorAssetLibrary.does_asset_exist(path):
         return False
-    anim = unreal.load_asset(path)
-    if not isinstance(anim, unreal.AnimSequence):
-        mineprep.throw('已存在但不是动画序列: ' + path)
-    if anim.get_editor_property('skeleton') != skeleton:
-        raise ValueError('已有动画使用不同骨架: ' + path)
+    rate = normalize_frame_rate(fps) if fps is not None else None
+    target_tuple = (int(rate.numerator), int(rate.denominator)) if rate else None
+    _check_existing_anim_rate(path, skeleton, target_tuple)
     return True
 
 
@@ -296,10 +295,14 @@ def _check_existing_anim_rate(path, skeleton, target_tuple):
     if anim.get_editor_property('skeleton') != skeleton:
         raise ValueError('已有动画使用不同骨架: ' + path)
     if target_tuple is None:
-        return anim, True
+        return anim
     dm_tuple, ptfr_tuple = _anim_frame_rates(anim)
-    matches = (dm_tuple == target_tuple and ptfr_tuple == target_tuple)
-    return (anim, True) if matches else (None, False)
+    if dm_tuple != target_tuple or ptfr_tuple != target_tuple:
+        raise ValueError(
+            f'已有动画帧率不匹配: {path}，期望 {target_tuple}，'
+            f'实际 data={dm_tuple} platform={ptfr_tuple}；请使用新的输出路径'
+        )
+    return anim
 
 
 def open_or_create_anim(name, skeleton, *, fps=None, preview_mesh=None):
@@ -308,14 +311,7 @@ def open_or_create_anim(name, skeleton, *, fps=None, preview_mesh=None):
     target_rate = normalize_frame_rate(fps) if fps is not None else None
     target_tuple = (int(target_rate.numerator), int(target_rate.denominator)) if target_rate else None
     if unreal.EditorAssetLibrary.does_asset_exist(path):
-        anim, matches = _check_existing_anim_rate(path, skeleton, target_tuple)
-        if matches:
-            return anim
-        # PlatformTargetFrameRate is baked at factory creation; rebuild cleanly on rate change.
-        anim = None
-        gc.collect()
-        if not unreal.EditorAssetLibrary.delete_asset(path) or unreal.EditorAssetLibrary.does_asset_exist(path):
-            raise RuntimeError('无法按新帧率重建已占用的动画资产（请先关闭引用它的编辑器或序列）: ' + path)
+        return _check_existing_anim_rate(path, skeleton, target_tuple)
     unreal.EditorAssetLibrary.make_directory(directory)
     factory = unreal.AnimSequenceFactory()
     factory.set_editor_property('target_skeleton', skeleton)
@@ -341,15 +337,18 @@ def open_or_create_anim(name, skeleton, *, fps=None, preview_mesh=None):
     return anim
 
 
-def write_anim_tracks(anim, reference, animated_tracks, frame_count, *, save=True):
-    """向 AnimSequence 写入全骨骼局部轨道；未动画骨骼保持绑定姿势并维持四元数半球连续。"""
+def write_anim_tracks(anim, reference, animated_tracks, frame_count, *, float_curves=None, save=True):
+    """向 AnimSequence 写入全骨骼局部轨道与可选浮点表情曲线；未动画骨骼保持绑定姿势。"""
     nframes = max(1, int(frame_count))
     nkeys = nframes + 1
     ctrl = anim.controller
     dm = unreal.load_object(None, anim.get_editor_property('data_model_interface').get_path_name())
+    dm_rate = dm.get_frame_rate()
+    fps_val = dm_rate.numerator / dm_rate.denominator
     ctrl.open_bracket('Export MCAnimConverter AnimSequence', should_transact=False)
     try:
         ctrl.remove_all_bone_tracks(should_transact=False)
+        ctrl.remove_all_curves_of_type(unreal.RawCurveTrackTypes.RCT_FLOAT, should_transact=False)
         if int(dm.get_number_of_frames()) != nframes:
             ctrl.set_number_of_frames(unreal.FrameNumber(nframes), should_transact=False)
         for bone_name, ref_entry in reference.items():
@@ -373,6 +372,20 @@ def write_anim_tracks(anim, reference, animated_tracks, frame_count, *, save=Tru
             bname = unreal.Name(bone_name)
             ctrl.add_bone_curve(bname, should_transact=False)
             ctrl.set_bone_track_keys(bname, pos_keys, rot_keys, scale_keys, should_transact=False)
+        for curve_name, values in (float_curves or {}).items():
+            vals = list(values)
+            if len(vals) == 1 and nkeys == 2:
+                vals = [vals[0], vals[0]]
+            if len(vals) != nkeys:
+                raise ValueError(f'{curve_name}: 曲线采样键数 {len(vals)} 与目标帧数 {nkeys} 不一致')
+            cid = unreal.AnimationCurveIdentifierExtensions.set_curve_identifier(
+                unreal.AnimationCurveIdentifier(),
+                unreal.Name(curve_name),
+                unreal.RawCurveTrackTypes.RCT_FLOAT,
+            )
+            ctrl.add_curve(cid, should_transact=False)
+            rkeys = [unreal.RichCurveKey(time=i / fps_val, value=float(v)) for i, v in enumerate(vals)]
+            ctrl.set_curve_keys(cid, rkeys, should_transact=False)
     finally:
         ctrl.close_bracket(should_transact=False)
     if save and not unreal.EditorAssetLibrary.save_loaded_asset(anim, only_if_is_dirty=False):
@@ -383,9 +396,9 @@ def write_anim_tracks(anim, reference, animated_tracks, frame_count, *, save=Tru
 def export_options():
     opt = unreal.AnimSeqExportOption()
     opt.set_editor_property('export_transforms', True)
-    opt.set_editor_property('export_morph_targets', False)
-    opt.set_editor_property('export_attribute_curves', False)
-    opt.set_editor_property('export_material_curves', False)
+    opt.set_editor_property('export_morph_targets', True)
+    opt.set_editor_property('export_attribute_curves', True)
+    opt.set_editor_property('export_material_curves', True)
     opt.set_editor_property('record_in_world_space', False)
     opt.set_editor_property('evaluate_all_skeletal_mesh_components', False)
     opt.set_editor_property('use_custom_frame_rate', False)

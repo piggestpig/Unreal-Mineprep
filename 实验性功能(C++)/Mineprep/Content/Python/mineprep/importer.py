@@ -7,11 +7,11 @@ import struct
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
-from mc_math import MODEL_FRAME, model_vertices_to_ue
-from mc_prep import prep_texture, apply_mc_material_defaults, _read_png_size, _texture_animation
-from mc_utils import warn, debug, get_tex_size, throw, dialog
-from mc_localization import i18n
+    from mineprep.utils import Lazy as unreal
+from mineprep.math_tools import MODEL_FRAME, model_vertices_to_ue
+from mineprep.prep import prep_texture, apply_mc_material_defaults, _read_png_size, _texture_animation
+from mineprep.utils import warn, debug, get_tex_size, throw, dialog
+from mineprep.localization import i18n
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tga", ".bmp", ".exr"}
@@ -183,7 +183,7 @@ def _resolve_import_source(filepath, category, destination_path):
     if isinstance(filepath, str):
         match = re.fullmatch(r"(?:([a-z0-9_][a-z0-9_.-]*):)?([a-z0-9_-]+(?:/[a-z0-9_-]+)*)", filepath)
         if match and (match[1] or "/" not in filepath) and not source.exists():
-            from mc_config import paths
+            from mineprep.settings import paths
             namespace, relative = match[1] or "minecraft", match[2]
             folder, suffix = ("models/block", ".json") if category == "block" else ("textures/item", ".png")
             source = Path(paths.assets) / namespace / folder / (relative + suffix)
@@ -774,7 +774,7 @@ def _append_quad_with_uvs(mesh, vertices, uv_corners, material_id=0):
 def _blockstates_dir(models_dir=None) -> Path:
     """由 models/block 推导同级 blockstates 目录"""
     if models_dir is None:
-        from mc_config import paths
+        from mineprep.settings import paths
         configured = getattr(paths, "blockstates", None)
         if configured:
             return Path(configured)
@@ -921,7 +921,7 @@ def _with_suffix_if_missing(path: Path, suffix: str) -> Path:
 
 def _namespaced_resource(model_path, namespace, category, relative, suffix) -> Path:
     """先找模型自己的资源包，文件不存在时回退到 paths.assets。"""
-    from mc_config import paths
+    from mineprep.settings import paths
 
     relative = str(relative).strip("/")
     candidates = []
@@ -1214,7 +1214,7 @@ def _is_fluid_block_name(name) -> bool:
 def resolve_block_json_path(block_name, models_dir=None) -> Path:
     """按方块名解析 models 目录下的 JSON 模型路径，支持旧名/流体别名与 pane→玻璃回退"""
     if models_dir is None:
-        from mc_config import paths
+        from mineprep.settings import paths
         models_dir = Path(paths.blocks)
 
     stem = _sanitize_asset_name(str(block_name).lower().replace("minecraft:", ""))
@@ -1238,7 +1238,7 @@ def get_all_blocks(filter=''):
 
     filter 为正则，匹配方块名；空字符串返回全部，按字母序。
     """
-    from mc_config import paths
+    from mineprep.settings import paths
     names = sorted(path.stem for path in Path(paths.blocks).glob('*.json'))
     if filter:
         pattern = re.compile(filter)

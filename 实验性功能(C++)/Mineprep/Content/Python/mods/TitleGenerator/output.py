@@ -59,7 +59,7 @@ def prepare(glyphs, mode):
         if mode == 'pcg':
             groups = tuple(tuple(int(v) for v in ids) for ids in np.array_split(np.arange(len(names)), count))
         else:
-            from mc_math import partition_types
+            from mineprep.math_tools import partition_types
             groups = tuple(ids for ids, _ in partition_types(names, counts, max_types=256))
     return dict(output_mode=mode, glyphs=glyphs, models=models, ids=ids.tolist(), payloads=payloads,
                 groups=groups, character_count=character_count, line_count=len(lines), bounds=(lo.tolist(), hi.tolist()))
@@ -67,7 +67,7 @@ def prepare(glyphs, mode):
 
 def write_textures(plan, directory):
     """后台线程：将 GPU 分组实例数据编码写成 BPT/BRT EXR 贴图。"""
-    from mc_structure_data import write_structure_textures
+    from mineprep.structure_data import write_structure_textures
     return [write_structure_textures({str(i): plan['payloads'][str(i)] for i in group}, directory,
                                     name=f'Instances_{n}') for n, group in enumerate(plan['groups'], 1)]
 
@@ -146,7 +146,7 @@ def mesh(glyph, path, materials):
 
 
 def import_textures(files, folder):
-    from mc_structure import import_structure_textures
+    from mineprep.structure import import_structure_textures
     result = []
     for item in files:
         pair = import_structure_textures(item, destination=folder)[:2]

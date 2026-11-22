@@ -2,7 +2,7 @@
 import json
 import uuid
 import unreal
-from mc_model_assets import RECIPE, import_glb, pipeline
+from mineprep.model_assets import RECIPE, import_glb, pipeline
 from mineprep import i18n
 from . import importer
 from .assets import CACHE

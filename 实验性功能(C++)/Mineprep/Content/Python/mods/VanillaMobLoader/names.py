@@ -25,7 +25,7 @@ def normalize(value):
 @lru_cache(maxsize=1)
 def _catalogs():
     folder = Path(__file__).parent
-    shared = folder.parents[1] / 'i18n_entities.json'
+    shared = folder.parents[1] / 'mineprep' / 'i18n_entities.json'
     entities = json.loads(shared.read_text(encoding='utf-8-sig'))['Entities'] if shared.is_file() else {}
     templates = json.loads((folder / 'i18n.json').read_text(encoding='utf-8-sig'))['VanillaMobLoader']
     return entities, templates

@@ -3,7 +3,7 @@ import json
 import math
 from pathlib import Path
 import numpy as np
-from mc_math import validate_packed
+from mineprep.math_tools import validate_packed
 
 
 ENCODING_VERSION = 'bpt-brt-f32-3'

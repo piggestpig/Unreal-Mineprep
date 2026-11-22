@@ -3,7 +3,7 @@ from dataclasses import dataclass, replace
 import hashlib
 import json
 from pathlib import Path
-from mc_math import MODEL_FRAME
+from mineprep.math_tools import MODEL_FRAME
 
 RESOURCE_VERSION = 'block-sources-2:' + MODEL_FRAME
 SPECIAL_PARENTS = ('builtin/generated', 'item/generated', 'builtin/entity')

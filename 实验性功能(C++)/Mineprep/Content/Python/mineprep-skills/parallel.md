@@ -1,7 +1,7 @@
 # Delay / tick / asynctask / thread
 
-Implementation: `Plugins/Mineprep/Content/Python/mc_parallel.py`  
-Public names: `mineprep.delay`, `tick`, `asynctask`, `thread`, `asyncthread`, `until` (and the runner classes). After editing `mc_*.py`, `mineprep.reload()` is enough.
+Implementation: `Plugins/Mineprep/Content/Python/mineprep/parallel.py`
+Public names: `mineprep.delay`, `tick`, `asynctask`, `thread`, `asyncthread`, `until` (and the runner classes). After editing the `mineprep/` package, `mineprep.reload()` is enough.
 
 Worker threads must not call `unreal.*` or `mineprep.prints`. `callback` runs on the game thread and may touch UE. Runner exceptions are reported through `mineprep.warn` (on-screen + traceback).
 

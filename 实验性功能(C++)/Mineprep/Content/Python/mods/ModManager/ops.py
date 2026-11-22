@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 
 import mineprep
-from mc_mod import unregister_mod, MANIFEST_NAME, read_manifest, PathPatternMatch
+from mineprep.modding import unregister_mod, MANIFEST_NAME, read_manifest, PathPatternMatch
 
 MODS_DIR = Path(__file__).resolve().parent.parent
 SKIP_DIRS = {'.git', '.hg', '.svn', '__pycache__', '.pytest_cache'}

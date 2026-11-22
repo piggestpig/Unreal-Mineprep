@@ -53,11 +53,6 @@
       "zh-Hant": "時間縮放",
       "_native": "en"
     },
-    "动画片段": {
-      "zh": "动画片段",
-      "en": "Clip",
-      "zh-Hant": "動畫片段"
-    },
     "请选择动画 JSON": {
       "zh": "请选择动画 JSON",
       "en": "Choose an animation JSON",
@@ -87,6 +82,372 @@
       "zh": "将 Java、基岩版与 Blockbench 动画导入 Sequencer 或烘焙为动画序列",
       "en": "Import Java, Bedrock and Blockbench animations into Sequencer or bake to an Animation Sequence",
       "zh-Hant": "將 Java、基岩版與 Blockbench 動畫匯入 Sequencer 或烘焙為動畫序列"
+    },
+    "玩家 / 人形": {
+      "zh": "玩家 / 人形",
+      "en": "Player / Biped"
+    },
+    "通用四足": {
+      "zh": "通用四足",
+      "en": "Quadruped"
+    },
+    "骆驼": {
+      "zh": "骆驼",
+      "en": "Camel"
+    },
+    "青蛙": {
+      "zh": "青蛙",
+      "en": "Frog"
+    },
+    "监守者": {
+      "zh": "监守者",
+      "en": "Warden"
+    },
+    "猪": {
+      "zh": "猪",
+      "en": "Pig"
+    },
+    "嘎枝": {
+      "zh": "嘎枝",
+      "en": "Creaking"
+    },
+    "幼年美西螈": {
+      "zh": "幼年美西螈",
+      "en": "Baby Axolotl"
+    },
+    "其他骨架": {
+      "zh": "其他骨架",
+      "en": "Other"
+    },
+    "全部": {
+      "zh": "全部",
+      "en": "All"
+    },
+    "自制": {
+      "zh": "自制",
+      "en": "Custom"
+    },
+    "原版": {
+      "zh": "原版",
+      "en": "Vanilla"
+    },
+    "外部文件": {
+      "zh": "外部文件",
+      "en": "External"
+    },
+    "情绪预设（默认重置眉/嘴/眼形，保留视线与眨眼）": {
+      "zh": "情绪预设（默认重置眉/嘴/眼形，保留视线与眨眼）",
+      "en": "Emotions (resets emotion curves, keeps gaze & blink)"
+    },
+    "视线方向（叠加眼球，不覆盖嘴/眉）": {
+      "zh": "视线方向（叠加眼球，不覆盖嘴/眉）",
+      "en": "Gaze (layer eyes without overwriting mouth/brows)"
+    },
+    "眨眼与单眼（叠加眼睑）": {
+      "zh": "眨眼与单眼（叠加眼睑）",
+      "en": "Blink & Wink (layer eyelids)"
+    },
+    "刷新": {
+      "zh": "刷新",
+      "en": "Refresh"
+    },
+    "清除": {
+      "zh": "清除",
+      "en": "Clear"
+    },
+    "未选择动画片段": {
+      "zh": "未选择动画片段",
+      "en": "No clip selected"
+    },
+    "骨架模式": {
+      "zh": "骨架模式",
+      "en": "Skeleton Mode"
+    },
+    "直出动画资产": {
+      "zh": "直出动画资产",
+      "en": "Export AnimSequence"
+    },
+    "生成自动眨眼到当前序列": {
+      "zh": "生成自动眨眼到当前序列",
+      "en": "Generate Auto-Blink to Sequence"
+    },
+    "叠加策略": {
+      "zh": "叠加策略",
+      "en": "Layer Mode"
+    },
+    "应用表情到 Sequencer": {
+      "zh": "应用表情到 Sequencer",
+      "en": "Apply Expression to Sequencer"
+    },
+    "归零全部表情": {
+      "zh": "归零全部表情",
+      "en": "Reset All Expressions"
+    },
+    "已刷新本地动作库与表情预设": {
+      "zh": "已刷新本地动作库与表情预设",
+      "en": "Refreshed clip library and facial presets"
+    },
+    "没有匹配的动画片段": {
+      "zh": "没有匹配的动画片段",
+      "en": "No matching clips"
+    },
+    "全部骨架": {
+      "zh": "全部骨架",
+      "en": "All Skeletons"
+    },
+    "默认归零全部 15 条曲线": {
+      "zh": "默认归零全部 15 条曲线",
+      "en": "Resets all 15 curves by default"
+    },
+    "默认仅重置情绪曲线（保留视线/眨眼）": {
+      "zh": "默认仅重置情绪曲线（保留视线/眨眼）",
+      "en": "Resets emotion curves only (keeps gaze/blink)"
+    },
+    "默认仅叠加相关曲线": {
+      "zh": "默认仅叠加相关曲线",
+      "en": "Layers only its own curves by default"
+    },
+    "动态片段": {
+      "zh": "动态片段",
+      "en": "Animated clip"
+    },
+    "姿势预设": {
+      "zh": "姿势预设",
+      "en": "Pose preset"
+    },
+    "动作导入": {
+      "zh": "动作导入",
+      "en": "Animations"
+    },
+    "表情预设": {
+      "zh": "表情预设",
+      "en": "Facial Presets"
+    },
+    "搜索片段名或骨架…": {
+      "zh": "搜索片段名或骨架…",
+      "en": "Search clip or skeleton…"
+    },
+    "自动（按索引）": {
+      "zh": "自动（按索引）",
+      "en": "Auto (from index)"
+    },
+    "自动（情绪重置，视线/眨眼保留）": {
+      "zh": "自动（情绪重置，视线/眨眼保留）",
+      "en": "Auto (reset emotion scope, keep gaze/blink)"
+    },
+    "重置全部 15 条表情曲线": {
+      "zh": "重置全部 15 条表情曲线",
+      "en": "Reset all 15 facial curves"
+    },
+    "仅写入本预设声明通道": {
+      "zh": "仅写入本预设声明通道",
+      "en": "Layer preset curves only"
+    },
+    "在当前播放头将全部表情曲线写入 0.0。Replace 轨道会直接归零；Layered 叠加轨道仅归零当前层，不影响其他层已有权重。": {
+      "zh": "在当前播放头将全部表情曲线写入 0.0。Replace 轨道会直接归零；Layered 叠加轨道仅归零当前层，不影响其他层已有权重。",
+      "en": "Keys all facial curves to 0.0 at playhead. On a Replace track this zeroes the face; on a Layered/Additive track it only zeroes the active layer without clearing other layers."
+    },
+    "请选择外部 .json 或 .bbmodel 动画文件": {
+      "zh": "请选择外部 .json 或 .bbmodel 动画文件",
+      "en": "Choose an external .json or .bbmodel file"
+    },
+    "未选择表情预设": {
+      "zh": "未选择表情预设",
+      "en": "No preset selected"
+    },
+    "已有转换任务正在执行，请稍候…": {
+      "zh": "已有转换任务正在执行，请稍候…",
+      "en": "Another task is still running…"
+    },
+    "请先选择一个表情预设": {
+      "zh": "请先选择一个表情预设",
+      "en": "Choose a facial preset first"
+    },
+    "应用表情": {
+      "zh": "应用表情",
+      "en": "Apply Expression"
+    },
+    "归零表情": {
+      "zh": "归零表情",
+      "en": "Reset Expression"
+    },
+    "生成自动眨眼": {
+      "zh": "生成自动眨眼",
+      "en": "Auto-Blink"
+    },
+    "循环": {
+      "zh": "循环",
+      "en": "Loop"
+    },
+    "显示 {shown} / {total} 个片段": {
+      "zh": "显示 {shown} / {total} 个片段",
+      "en": "Showing {shown} / {total} clips"
+    },
+    "单次": {
+      "zh": "单次",
+      "en": "Once"
+    },
+    "烘焙完成": {
+      "zh": "烘焙完成",
+      "en": "Baked"
+    },
+    "直出完成": {
+      "zh": "直出完成",
+      "en": "Exported"
+    },
+    "烘焙失败": {
+      "zh": "烘焙失败",
+      "en": "Bake failed"
+    },
+    "直出失败": {
+      "zh": "直出失败",
+      "en": "Export failed"
+    },
+    "Props.ShowAdvanced": {
+      "en": "Show Advanced",
+      "zh": "显示高级选项",
+      "zh-Hant": "顯示進階選項",
+      "_native": "en"
+    },
+    "Props.IgnoreMissingBones": {
+      "en": "Ignore Missing Bones",
+      "zh": "跳过缺失骨骼",
+      "zh-Hant": "略過缺失骨骼",
+      "_native": "en"
+    },
+    "Props.ExportFps": {
+      "en": "Direct Export FPS",
+      "zh": "直出采样帧率",
+      "zh-Hant": "直出取樣影格率",
+      "_native": "en"
+    },
+    "FaceProps.Strength": {
+      "en": "Strength",
+      "zh": "表情强度",
+      "zh-Hant": "表情強度",
+      "_native": "en"
+    },
+    "FaceProps.category.FaceProps": {
+      "en": "Expression Options",
+      "zh": "表情写入参数",
+      "zh-Hant": "表情寫入參數",
+      "_native": "en"
+    },
+    "FaceProps.BlendIn": {
+      "en": "Blend In",
+      "zh": "淡入时长",
+      "zh-Hant": "淡入時長",
+      "_native": "en"
+    },
+    "FaceProps.Hold": {
+      "en": "Hold",
+      "zh": "保持时长",
+      "zh-Hant": "保持時長",
+      "_native": "en"
+    },
+    "FaceProps.BlendOut": {
+      "en": "Blend Out",
+      "zh": "淡出时长",
+      "zh-Hant": "淡出時長",
+      "_native": "en"
+    },
+    "FaceProps.StartAtPlayhead": {
+      "en": "Start at Playhead",
+      "zh": "从播放头开始",
+      "zh-Hant": "從播放頭開始",
+      "_native": "en"
+    },
+    "AutoBlinkProps.Duration": {
+      "en": "Duration (0 = Full Sequence)",
+      "zh": "时长（0 = 铺满序列）",
+      "zh-Hant": "時長（0 = 鋪滿序列）",
+      "_native": "en"
+    },
+    "AutoBlinkProps.category.AutoBlinkProps": {
+      "en": "Auto-Blink",
+      "zh": "自动眨眼参数",
+      "zh-Hant": "自動眨眼參數",
+      "_native": "en"
+    },
+    "AutoBlinkProps.MinInterval": {
+      "en": "Min Interval",
+      "zh": "最短间隔",
+      "zh-Hant": "最短間隔",
+      "_native": "en"
+    },
+    "AutoBlinkProps.MaxInterval": {
+      "en": "Max Interval",
+      "zh": "最长间隔",
+      "zh-Hant": "最長間隔",
+      "_native": "en"
+    },
+    "AutoBlinkProps.BlinkDuration": {
+      "en": "Blink Duration",
+      "zh": "单次眨眼时长",
+      "zh-Hant": "單次眨眼時長",
+      "_native": "en"
+    },
+    "AutoBlinkProps.DoubleBlinkChance": {
+      "en": "Double-Blink Chance",
+      "zh": "连眨概率",
+      "zh-Hant": "連眨機率",
+      "_native": "en"
+    },
+    "AutoBlinkProps.Seed": {
+      "en": "Random Seed (0 = Random)",
+      "zh": "随机种子（0 = 随机）",
+      "zh-Hant": "隨機種子（0 = 隨機）",
+      "_native": "en"
+    },
+    "自动生理眨眼（稀疏关键帧 · 仅眼睑）": {
+      "zh": "自动生理眨眼（稀疏关键帧 · 仅眼睑）",
+      "en": "Procedural Auto-Blink (sparse · eyelids only)"
+    },
+    "仅在眨眼瞬间写入关键帧；时长为 0 时自动铺满当前序列，种子为 0 时每次随机。": {
+      "zh": "仅在眨眼瞬间写入关键帧；时长为 0 时自动铺满当前序列，种子为 0 时每次随机。",
+      "en": "Writes sparse keys only at blink transitions; Duration 0 spans the active sequence, Seed 0 randomizes."
+    },
+    "淡入/保持/淡出均为 0 时，在播放头写入单帧姿势关键帧；勾选「自动应用动画」后点按钮直接写入时间轴。": {
+      "zh": "淡入/保持/淡出均为 0 时，在播放头写入单帧姿势关键帧；勾选「自动应用动画」后点按钮直接写入时间轴。",
+      "en": "With BlendIn/Hold/BlendOut at 0, stamps a single pose key at playhead; enable Auto Apply to key immediately on click."
+    },
+    "全部 15 条表情曲线归零": {
+      "zh": "全部 15 条表情曲线归零",
+      "en": "Resets all 15 facial curves to 0.0"
+    },
+    "读取动画失败": {
+      "zh": "读取动画失败",
+      "en": "Failed to load clips"
+    },
+    "Props.FollowSelection": {
+      "en": "Follow Viewport Selection",
+      "zh": "跟随视口选中角色",
+      "zh-Hant": "跟隨視口選中角色",
+      "_native": "en"
+    },
+    "Props.UseLayeredRig": {
+      "en": "Layered Control Rig",
+      "zh": "分层绑定",
+      "zh-Hant": "分層綁定",
+      "_native": "en"
+    },
+    "FaceProps.AutoApply": {
+      "en": "Auto Apply on Click",
+      "zh": "自动应用动画",
+      "zh-Hant": "自動套用動畫",
+      "_native": "en"
+    },
+    "FaceProps.UseLayeredRig": {
+      "en": "Layered Control Rig",
+      "zh": "分层绑定",
+      "zh-Hant": "分層綁定",
+      "_native": "en"
+    },
+    "AutoBlinkProps.HoldClosed": {
+      "en": "Closed Hold",
+      "zh": "闭眼保持时长",
+      "zh-Hant": "閉眼保持時長",
+      "_native": "en"
     }
   }
 }

@@ -4,7 +4,9 @@
 
 要在 UE 里从零放置生物并添加动作，见 [制作速查](QUICKSTART.md)。
 
-- **选片**。留空「动画 JSON」可浏览本地库。选择外部 `.json` 或 `.bbmodel` 文件后，下拉框列出该文件中的完整动画键。
+- **界面与选片**。面板分为「动作导入」与「表情预设」双标签页，右上角支持「跟随视口选中角色 (`FollowSelection`)」自动切换目标，骨架不匹配时直接在屏幕 `warn` 提示：
+  - **动作导入**：支持按来源（全部 / 自制 / 原版 / 外部文件）、骨架分类与关键词搜索浏览本地化短名称列表，并在右侧查看完整片段键、骨架类型与循环属性；支持勾选「分层绑定 (`UseLayeredRig`)」叠加写入，「显示高级选项」下暴露「跳过缺失骨骼」「骨架模式」与「直出采样帧率」，支持直接点击「直出动画资产」无头导出 `AnimSequence`。
+  - **表情预设 & 自动眨眼**：内置 21 个跨物种 15 曲线预设（`Anim/custom/Face/presets.json`，涵盖 10 情绪 / 7 视线 / 4 眨眼，含独立 `face_pupil_scale` 与 `face_eye_wide`），情绪预设默认采用 `reset_scope="emotion"` 非破坏性写入（只重置情绪曲线，保留预设未显式指定的视线与自动眨眼），支持「点击预设自动应用 (`AutoApply`)」以及单帧姿势或淡入/保持/淡出过渡；并提供稀疏关键帧、双眼同步、支持闭眼停留（`hold_closed`）的一键程序化自然眨眼生成器（`ops.apply_face_preset` / `ops.apply_auto_blink`）。
 - **Java**。每个 `.clip.json` 自带 `clip`、`bones`（名称和父级索引）、`bind`、`fps` 与 `frames`。普通片段沿用列主序 ModelPart 矩阵，可用于对应 Java 模型或 VanillaMobLoader 的编辑骨架（`biped` 与 `quadruped_edit`）。带 `space="local_trs"` 的片段保存局部位移、四元数和三轴缩放，要求目标层级和绑定姿势与源一致。青蛙鼓腮和吐舌使用此格式（暂不开启 `skeleton_mode` 与 `ignore_missing_bones`，但支持 `bones` 写入遮罩）。
 - **Bedrock（多模式与共有骨骼）**。支持数值常量、线性（`linear`）、Catmull-Rom 平滑曲线（`catmullrom`）及数值 `pre/post` 跳变（含纯数字字符串）。跳变写在序列的相邻 tick 上，烘焙资产按序列显示帧率采样；MoLang 表达式、时间轴事件和游戏控制器超出当前范围。`apply_animation(..., bones=None, ignore_missing_bones=False, skeleton_mode=None)` 提供三条显式语义路径：
   - `skeleton_mode='biped'`（默认，含 `bedrock_player` 索引条目）：使用已知玩家参考骨架重定向至 VanillaMobLoader 人形骨架（兼容 `left_arm` / `left_leg` 等 snake_case，并支持仅含抱臂 `arms` 的村民系人形；复用含双臂的动作时传入 `ignore_missing_bones=True` 可跳过缺失双臂）；校验失败直接报错，不静默回退为 `local`。
@@ -12,7 +14,7 @@
   - `skeleton_mode='local'`（显式传入或索引覆盖，如针对 `quadruped_edit` 的 `pelvis` 分层表演动画及非四足通用骨架）：将动画视为目标自身绑定姿势上的局部偏移，要求目标为 `EulerTransform` 控件且具有零绑定旋转（`<= 0.1°`）与单位绑定缩放；支持精确、大小写、camelCase/snake_case 及显式别名匹配。
   - **共享骨骼与写入遮罩**：`bones` 在建轨或打开序列前预检并限定本次写入的目标控件（`biped` 会先按完整父链解算再过滤写入，适合叠加局部上身动作）；`ignore_missing_bones=True` 跳过目标骨架缺失的源骨骼并汇总到 `skipped_bones`（若目标本身不满足前置校验，例如用 `pig` 导入 `biped` 片段，仍直接报错）。
 - **Blockbench（`.bbmodel`）**。当前支持 `meta.format_version="5.0"`、`meta.model_format="free"`（通用模型），可导入单段或多动画工程中的指定片段（单动画工程可省略 `clip`，多动画工程须指定 `clip`）。支持 `step`、`linear`、`catmullrom` 与加权 `bezier` 曲线（含混合插值优先级、`pre/post` 不连续跳变及显式中性通道复位）：位移、缩放及单轴旋转优先保持稀疏/加权 UE 曲线，多轴耦合旋转自动拟合为高精度三维 Hermite 曲线。支持 `bones` 遮罩；目标骨骼须为 `EulerTransform` 控件，且名称、父级与绑定局部姿势（位置容差 `1.0 cm`、旋转零值容差 `0.1°`、缩放 `1.0`）须与导出源一致；MoLang 表达式、时间轴特效脚本、全局旋转/四元数插值开关及非正缩放过冲会明确报错。
-- **头身分离**。支持 VanillaMobLoader 生成的身体与 `Head` 组件：身体保留完整动画，Head 同步接收共有且绑定局部姿势一致的子骨骼通道；根 `head` 与 Head 专属额外骨骼（如表情骨骼）保持原样，不补中性姿势也不清键。两组件使用相同时间和区间替换规则。
+- **头身分离与面部表情**。支持一体表情模型及 VanillaMobLoader 生成的身体与 `Head` 组件：动画定义除 `bones` 外还支持可选浮点 `curves` 字典（如 15 条标准 `face_*` 表情曲线，甚至可传入仅含 `curves` 的跨物种通用表情字典）；默认 `register_missing_curves=False`，自动跳过目标角色未声明的表情曲线并汇总到 `unsupported_curves`，不污染无关骨架；一体模型直接写入主骨骼轨/主动画序列，头身分离模型自动将 `curves` 及 `Head` 专属面部子骨骼（`nose`、`ear_l/r`、`brow_l/r`、`pupil_l/r` 等，兼容 Fresh Animations 别名）路由至 `Head` 组件与 `_Head` 动画资产。`bake_animation` 与 `export_anim_sequence` 均自动导出并保留全部 Morph Target 与材质浮点曲线。
 
 `.bbmodel` 的 Catmull-Rom 区间端点暂不支持双值 `data_points`（包括相等的 `pre/post`）：Blockbench 会为它裁剪样条邻点，普通四点公式无法等价还原。预检会明确拒绝；可将该区间改为 Linear / Bezier，或先烘焙为采样动画。Linear / Bezier 的首、末及单键双值跳变正常支持。
 
@@ -86,10 +88,10 @@ ops.apply_animation(custom_clip, actor, sequence=seq.target, clip='agent_wave')
 
 `bake_animation(..., start=None, end=None)` 统一采用半开区间 `[start, end)`（`int` 为帧、`float` 为秒，省略边界沿用原播放范围），身体与 Head 使用相同范围烘焙为从零开始播放的 `AnimSequence`，并在 `try/finally` 中恢复序列原播放范围。返回值仍为 `{'body': AnimSequence, 'head': AnimSequence或None}`，拆分头部追加 `_Head`。
 
-复用时在新的 Level Sequence 中可直接把 `bake_animation` 返回的字典（或 `head=`）交给现有 Actor 句柄成对播放：`mineprep.actor(actor).play_anim(assets, start=0, end=...)`（`assets['head']` 为 `None` 时自动只播身体）；也可分别传入 `target='Head'` 单独上轨。完整示例见制作速查。
+复用时在新的 Level Sequence 中可直接把 `bake_animation` 返回的字典（或 `head=`）交给现有 Actor 句柄成对播放：`mineprep.actor(actor).play_anim(assets, start=0, end=...)`（`assets['head']` 为 `None` 时自动只播身体）；支持 `rate` / `reverse` / `clip_start` / `clip_end` / `clip_offset` 与 `fade_in` / `fade_out` / `crossfade` / `ease`（写入前预检并对称同步邻接交叉过渡曲线；独立空轨淡入/淡出保持原有 `animation_mode` 不变并在未激活 `AnimationBlueprint` 时打印提示），也可用 `mineprep.sections(sec).set_clip(...)` / `.fade(1.0, 1.0)` 调整已有片段，或传 `target='Head'` 单独上轨。完整示例见制作速查。
 
 ### 无 UI 直写 AnimSequence
 
-不需要编辑器关卡 Actor 或打开 Sequencer 时，可直接调用同步函数 `ops.export_anim_sequence(json_path, target, output_path, *, clip=None, fps=60, time_scale=1.0, save=True, bones=None, ignore_missing_bones=False, skeleton_mode=None)` 编译全部既有格式（`.bbmodel`、Java `.clip.json`、Bedrock `biped` / `quadruped` / `local`）并直接写入目标骨架的全骨骼局部 TRS 轨道（未动画骨骼保持绑定姿势，采样帧率与 `PlatformTargetFrameRate` 保持一致）。`target` 支持 `SkeletalMesh`、`SkeletalMeshComponent`、带 PreviewMesh 的 `Skeleton`、资产路径、`Actor`/句柄，以及拆分头 `(body, head)` 或 `{'body', 'head'}`；返回值 `{'body', 'head', 'clip', 'fps', 'frames', 'keys', 'duration', 'matched_bones', 'skipped_bones', 'saved'}` 可直接传给 `mineprep.actor(actor).play_anim(...)`。
+不需要编辑器关卡 Actor 或打开 Sequencer 时，可直接调用同步函数 `ops.export_anim_sequence(json_path, target, output_path, *, clip=None, fps=60, time_scale=1.0, save=True, bones=None, ignore_missing_bones=False, skeleton_mode=None)` 编译全部既有格式（`.bbmodel`、Java `.clip.json`、Bedrock `biped` / `quadruped` / `local`）并直接写入目标骨架的全骨骼局部 TRS 轨道（未动画骨骼保持绑定姿势，采样帧率与 `PlatformTargetFrameRate` 保持一致）。`target` 支持 `SkeletalMesh`、`SkeletalMeshComponent`、带 PreviewMesh 的 `Skeleton`、资产路径、`Actor`/句柄，以及拆分头 `(body, head)` 或 `{'body', 'head'}`；返回值 `{'body', 'head', 'clip', 'fps', 'frames', 'keys', 'duration', 'matched_bones', 'skipped_bones', 'saved'}` 可直接传给 `mineprep.actor(actor).play_anim(...)`。写入前先校验身体和头部两个目标：已有资产骨架或采样帧率不匹配时会直接报错提示更换输出路径、不强删重建旧资产（`save=False` 仅控制是否保存本次写入）；读取参考骨架在缺少实验性 C++ `get_bone_local_bounds` 时自动回退到引擎 `AnimPoseExtensions`。
 
 动作库拆分为两处索引：`Anim/custom/` 存放可随模组打包分发的自制动画与 `Anim/custom/index.json`；`Anim/vanilla/` 存放本地参考原版解包动画（`Java/`、`Bedrock/` 与 `vanilla/index.json`），由 `mod_manifest.toml` 与 `.gitignore` 排除。缺少 `vanilla/` 时仍可正常工作；两份索引若存在重复 `clip` 键会明确报错。`library.catalog(skeleton=..., loop=...)` 与 `library.info(clip)` 采用统一规则查询 `source`、`skeleton`、`loop`、`source_version`、`clip`、`file` 与 `path`（索引未注明时按需回读片段 JSON，仍无法确定的保持 `None`）。同一文件可登记多个片段。用 VersionControl 更新安装包时启用 `UseModManifest`。

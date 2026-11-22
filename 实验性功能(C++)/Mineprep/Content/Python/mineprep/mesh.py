@@ -5,12 +5,12 @@ from hashlib import sha256
 import json
 import math
 from pathlib import Path
-from mc_math import _rotate, rotator_quaternion
+from mineprep.math_tools import _rotate, rotator_quaternion
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
-from mc_utils import warn
+    from mineprep.utils import Lazy as unreal
+from mineprep.utils import warn
 
 
 def _unwrap(ret):
@@ -570,7 +570,7 @@ def build_geometry(cells, resolve, *, pivot=(0, 0, 0), cull="opaque",
 
 
 def _canonical_uv(direction, p):
-    # 与 mc_importer 一致的未旋转整面标准 UV 映射
+    # 与 importer 一致的未旋转整面标准 UV 映射
     x, y, z = (v + .5 for v in p)
     return {"north": (x, 1-z), "south": (x, 1-z),
             "east": (1-y, 1-z), "west": (y, 1-z),
@@ -594,9 +594,9 @@ def _locked_uvs(original, transformed, uvs, source_dir, target_dir):
 class _SourceResolver:
     """单次烘焙的模型、贴图与方块状态解析器，同时记录依赖文件的哈希值。"""
     def __init__(self):
-        import mc_importer
-        import mc_structure
-        self.importer, self.structure = mc_importer, mc_structure
+        from mineprep import importer
+        from mineprep import structure
+        self.importer, self.structure = importer, structure
         self.models, self.textures, self.files, self.blockstates = {}, {}, {}, {}
 
     def _remember(self, path):
@@ -745,7 +745,7 @@ def bake_blocks(blocks, *, destination_path="/Game/mc/baked", asset_name=None,
                 pivot=(0, 0, 0), cull="opaque", merge_faces=True, reload=False,
                 two_sided=None):
     """将 Blocks 烘焙并保存为单个 StaticMesh 资产；若目标路径已存在相同配方的资产则直接复用。"""
-    import mc_importer
+    from mineprep import importer
     if not isinstance(reload, bool):
         raise ValueError("reload must be bool")
     if two_sided is not None and type(two_sided) is not bool:
@@ -755,7 +755,7 @@ def bake_blocks(blocks, *, destination_path="/Game/mc/baked", asset_name=None,
     destination_path = str(destination_path).rstrip("/")
     if not re.fullmatch(r"/Game(?:/\w+)*", destination_path):
         raise ValueError("destination_path must be a /Game package directory")
-    asset_name = mc_importer._sanitize_asset_name(asset_name or blocks.name)
+    asset_name = importer._sanitize_asset_name(asset_name or blocks.name)
     asset_path = destination_path + "/" + asset_name
     geometry = resolve_geometry(blocks.copy_cells(), pivot=pivot, cull=cull, merge_faces=merge_faces)
     if two_sided != legacy_sidedness:
@@ -772,7 +772,7 @@ def bake_blocks(blocks, *, destination_path="/Game/mc/baked", asset_name=None,
             raise ValueError(f"Different bake recipe at {asset_path}; use reload=True to replace")
     dynamic_mesh = _dynamic_mesh(geometry)
     # 几何校验通过后再创建材质、贴图与静态网格资产
-    materials = mc_importer._materials_for_files(
+    materials = importer._materials_for_files(
         [Path(p) for p in geometry.textures], destination_path, two_sided=two_sided, reload=reload)
     if any(material is None for material in materials):
         raise RuntimeError("Baking failed to resolve a material")

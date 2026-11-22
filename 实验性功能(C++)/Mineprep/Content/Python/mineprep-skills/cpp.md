@@ -11,7 +11,7 @@ These bindings can **break after an Engine upgrade** until the plugin is rebuilt
 1. Search `mineprep.*` and engine `unreal.*` first.
 2. Call `unreal.mineprep` only for a **necessary** gap (notification toast, UI scale, widget-under-mouse loc, viewport→RT, project-setting helpers, Scriptable Tool, …).
 3. Verify against the header and installed bindings; probe when runtime testing is in scope. If the type is missing, report that experimental C++ is unavailable (possibly not built or not loaded). Use a verified Python alternative where one exists; otherwise explain the limitation. Write or restore C++ only when the development request calls for it.
-4. Do not wrap these into `mineprep.py` unless they asked for a stable Python API.
+4. Do not wrap these into `mineprep/__init__.py` unless they asked for a stable Python API.
 5. Do not confuse this type with the Python module:
 
 ```python

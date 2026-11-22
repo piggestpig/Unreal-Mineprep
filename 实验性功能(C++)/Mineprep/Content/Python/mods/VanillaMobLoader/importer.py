@@ -5,7 +5,7 @@ import math
 import unreal
 import mineprep
 from mineprep import i18n
-from mc_model_assets import COMPLETE, RECIPE, SOURCE, SKIN_MATERIAL as MATERIAL, skin_instance
+from mineprep.model_assets import COMPLETE, RECIPE, SOURCE, SKIN_MATERIAL as MATERIAL, skin_instance
 from . import names
 
 BASE = '/Game/mc/mob'
@@ -27,7 +27,7 @@ def composition_target(recipe, folder, name, source, keys, reload=False):
         if lib.get_metadata_tag(existing, ENTRIES) != json.dumps(keys):
             raise ValueError(str(i18n('目标资产的条目不同，请更换保存名称',
                                      'Existing asset uses a different selection. Choose a different save name.')))
-        if (source == 'java_glb' or not reload) and lib.get_metadata_tag(existing, RECIPE) != recipe:
+        if not reload and lib.get_metadata_tag(existing, RECIPE) != recipe:
             raise ValueError(str(i18n('目标资产的导入选项不同，请重新导入或更换保存名称',
                                      'Import options changed. Reimport or choose a different save name.')))
         skeleton = existing.skeleton

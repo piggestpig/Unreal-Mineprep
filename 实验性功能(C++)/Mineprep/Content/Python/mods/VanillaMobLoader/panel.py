@@ -39,10 +39,26 @@ class VanillaMobLoader(mineprep.Mod):
             self.category = 'Regular' if 'Regular' in self.catalog.categories else self.catalog.categories[0]
         previous = settings.get('selected', []) if self.catalog else []
         self.selected_keys = list(dict.fromkeys(k for k in previous if self.catalog and k in self.catalog.by_key))
+        saved_face = settings.get('face_mode', '2d')
+        if saved_face == 'none':
+            saved_face = 'off'
+        self.face_mode = saved_face if saved_face in ('off', '2d', '3d') else '2d'
         self.options.SavePath = settings.get('save_path') or composition.DEFAULT_SAVE_PATH
         self.options.PreferJava = settings.get('prefer_java', True)
-        self.options.TrySplitHead = settings.get('try_split_head', False)
-        self.options.SaveName = str(settings.get('save_name', composition.automatic_name(self.selected_entries())))
+        self.options.TrySplitHead = settings.get('try_split_head', self.face_mode in ('2d', '3d'))
+        from mineprep.face import DEFAULT_FACE_OPTIONS, hex_to_linear_rgba
+        self.options.EyeDepth = float(settings.get('eye_depth', 0.12))
+        self.options.MouthDepth = float(settings.get('mouth_depth', 0.22))
+        self.options.UseTeeth = bool(settings.get('use_teeth', False))
+        cavity_hex = str(settings.get('mouth_cavity_color') or DEFAULT_FACE_OPTIONS['mouth_cavity_color'])
+        try:
+            self.options.MouthCavityColor = unreal.LinearColor(*hex_to_linear_rgba(cavity_hex, 1.0))
+        except Exception:
+            self.options.MouthCavityColor = unreal.LinearColor(*hex_to_linear_rgba(DEFAULT_FACE_OPTIONS['mouth_cavity_color'], 1.0))
+        self.options.BrowThickness = float(settings.get('brow_thickness', 0.08))
+        self.options.BrowHeight = float(settings.get('brow_height', 0.50))
+        self.options.BrowFollowBlink = bool(settings.get('brow_blink_follow', False))
+        self.options.SaveName = str(settings.get('save_name', composition.automatic_name(self.selected_entries(), self.face_mode)))
         self.query = ''
 
         self.rows = []
@@ -119,6 +135,19 @@ class VanillaMobLoader(mineprep.Mod):
         self.details = self.details_scroll.col()
         self._create_detail_widgets()
         right.prop(self.options, on_property_changed=self._options_changed)
+        face_row = right.row(padding=(2, 3))
+        face_row.text(i18n('面部表情', 'Face Rig'), size=11, align=(1, 2))
+        # Note: Unreal FName('none') == NAME_None, which UComboBoxKey.AddOption ignores! Use 'off' for the None option.
+        self.face_combo = face_row.combo(
+            {
+                'off': i18n('无', 'None'),
+                '2d': '2D',
+                '3d': '3D',
+            },
+            selected=self.face_mode,
+            fill=1,
+            on_selection_changed=self._face_mode_changed,
+        )
         self.load_button = right.button(i18n('放置生物', 'Place Mob'), size=12, on_clicked=self.load_entity)
         self.load_button.set_is_enabled(False)
         self.reload_button = right.button(i18n('重新导入生物', 'Reimport Mob'), size=12,
@@ -215,7 +244,7 @@ class VanillaMobLoader(mineprep.Mod):
         valid = [k for k in self.selected_keys if self.catalog and k in self.catalog.by_key]
         if valid != self.selected_keys:
             self.selected_keys = valid
-            self.options.SaveName = composition.automatic_name(self.selected_entries())
+            self.options.SaveName = composition.automatic_name(self.selected_entries(), self.face_mode)
         count = sum(self.category == 'ALL' or e.category == self.category
                     for e in self.catalog.entries) if self.catalog else 0
         self.heading.set_text(f'{label(self.category)} · {count}')
@@ -230,12 +259,28 @@ class VanillaMobLoader(mineprep.Mod):
         self._update_status()
 
     def _save(self):
+        from mineprep.face import linear_rgba_to_hex
         previous = {} if self.catalog else load_settings()
         if not save_settings(previous.get('category', self.category), previous.get('selected', self.selected_keys),
                              save_path=self.options.SavePath, save_name=self.options.SaveName,
                              expansion=self.options.LayerExpansion, random_scale=self.options.RandomScale,
-                             prefer_java=self.options.PreferJava, try_split_head=self.options.TrySplitHead):
+                             prefer_java=self.options.PreferJava, try_split_head=self.options.TrySplitHead,
+                             face_mode=self.face_mode,
+                             eye_depth=self.options.EyeDepth, mouth_depth=self.options.MouthDepth,
+                             use_teeth=bool(self.options.UseTeeth),
+                             mouth_cavity_color=linear_rgba_to_hex(self.options.MouthCavityColor),
+                             brow_thickness=self.options.BrowThickness, brow_height=self.options.BrowHeight,
+                             brow_blink_follow=bool(self.options.BrowFollowBlink)):
             self._status = str(i18n('设置未保存：缓存目录不可写', 'Settings not saved: cache is not writable'))
+
+    def _face_mode_changed(self, key, _reason=None):
+        new_mode = str(key) if str(key) in ('off', '2d', '3d') else '2d'
+        entries = self.selected_entries()
+        auto_candidates = {composition.automatic_name(entries, m) for m in ('off', 'none', '2d', '3d')}
+        self.face_mode = new_mode
+        if entries and (not self.options.SaveName or self.options.SaveName in auto_candidates):
+            self.options.SaveName = composition.automatic_name(entries, new_mode)
+        self._save()
 
     def select(self, key):
         state = unreal.InputLibrary.get_modifier_keys_state()
@@ -253,7 +298,7 @@ class VanillaMobLoader(mineprep.Mod):
         else:
             self.selected_keys = [key]
         if old != self.selected_keys:
-            self.options.SaveName = composition.automatic_name(self.selected_entries())
+            self.options.SaveName = composition.automatic_name(self.selected_entries(), self.face_mode)
         if self.catalog.variants.get(key):
             if not additive and key in self.expanded:
                 self.expanded.remove(key)
@@ -390,6 +435,8 @@ class VanillaMobLoader(mineprep.Mod):
                     source = 'Java GLB' if result['source'] == 'java_glb' else 'CEM'
                     if result.get('rig_profile'):
                         source += ' / FK'
+                    if result.get('face_mode') and result['face_mode'] != 'none':
+                        source += f" / {result['face_mode'].upper()}"
                     if result['head_mesh'] is not None:
                         source += ' / ' + str(i18n('头身分离', 'Split head'))
                     self._status = (str(i18n('已更新：', 'Updated: ') if reload else i18n('已放置：', 'Placed: '))
@@ -402,10 +449,20 @@ class VanillaMobLoader(mineprep.Mod):
                 finally:
                     self._finish_build()
 
+            from mineprep.face import linear_rgba_to_hex
+            face_opts = {
+                'eye_depth': self.options.EyeDepth,
+                'mouth_depth': self.options.MouthDepth,
+                'use_teeth': bool(self.options.UseTeeth),
+                'mouth_cavity_color': linear_rgba_to_hex(self.options.MouthCavityColor),
+                'brow_thickness': self.options.BrowThickness,
+                'brow_height': self.options.BrowHeight,
+                'brow_blink_follow': bool(self.options.BrowFollowBlink),
+            }
             self._build_job = api.build_entity(self.catalog, [e.key for e in entries],
                 save_path=self.options.SavePath, name=name, layer_expansion=self.options.LayerExpansion,
                 random_scale=self.options.RandomScale, reload=reload, prefer_java=self.options.PreferJava,
-                try_split_head=self.options.TrySplitHead,
+                try_split_head=self.options.TrySplitHead, face=self.face_mode, face_options=face_opts,
                 cache=self.store.cache, on_progress=progress,
                 on_conflict=conflict, on_stall=stalled, on_done=finished)
         except Exception as exc:

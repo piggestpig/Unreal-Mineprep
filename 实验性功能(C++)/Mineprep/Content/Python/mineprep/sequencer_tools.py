@@ -14,9 +14,9 @@ from types import SimpleNamespace
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
-from mc_utils import throw, unwrap_rotations
-from mc_math import _rotation_axes, unwrap_angles
+    from mineprep.utils import Lazy as unreal
+from mineprep.utils import throw, unwrap_rotations
+from mineprep.math_tools import _rotation_axes, unwrap_angles
 
 _TIME_UNIT = unreal.MovieSceneTimeUnit.DISPLAY_RATE
 
@@ -110,6 +110,9 @@ def _resolve_frame(time, sequence) -> int:
 
     if isinstance(time, unreal.FrameTime):
         return time.frame_number.value
+
+    if isinstance(time, bool):
+        throw(f'不支持的时间类型: {type(time).__name__}')
 
     if isinstance(time, int):
         return time
@@ -213,63 +216,520 @@ def _validate_skeletal_target(component, animation):
     return component, animation
 
 
-def _resolve_anim_span(sequence, animation, start, end):
-    sequence = resolve_sequence(sequence)
-    if sequence is None:
-        raise ValueError('需要有效的 Level Sequence')
+def _validate_play_rate(rate):
+    if isinstance(rate, bool) or not isinstance(rate, (int, float)) or not math.isfinite(rate) or rate <= 0:
+        raise ValueError('rate 必须为有限正数')
+    return float(rate)
+
+
+def _validate_reverse(reverse):
+    if not isinstance(reverse, bool):
+        raise ValueError('reverse 必须为 bool')
+    return reverse
+
+
+def _resolve_seconds(value, sequence, label) -> float:
+    rate = sequence.get_display_rate()
+    if isinstance(value, bool):
+        raise ValueError(f'{label} 须为整数帧或有限秒数')
+    if isinstance(value, int):
+        return value * rate.denominator / rate.numerator
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError(f'{label} 必须为有限秒数')
+        return value
+    if isinstance(value, unreal.FrameNumber):
+        return value.value * rate.denominator / rate.numerator
+    if isinstance(value, unreal.FrameTime):
+        return (value.frame_number.value + value.sub_frame) * rate.denominator / rate.numerator
+    raise ValueError(f'{label} 须为整数帧或有限秒数')
+
+
+def _seconds_to_ticks(seconds, sequence) -> int:
+    tick_rate = sequence.get_tick_resolution()
+    return int(round(seconds * tick_rate.numerator / tick_rate.denominator))
+
+
+def _resolve_ticks(value, sequence, label) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f'{label} 须为整数帧或有限秒数')
+    if isinstance(value, int):
+        disp = sequence.get_display_rate()
+        tick_rate = sequence.get_tick_resolution()
+        return int(round(value * disp.denominator * tick_rate.numerator / (disp.numerator * tick_rate.denominator)))
+    if isinstance(value, unreal.FrameNumber):
+        disp = sequence.get_display_rate()
+        tick_rate = sequence.get_tick_resolution()
+        return int(round(value.value * disp.denominator * tick_rate.numerator / (disp.numerator * tick_rate.denominator)))
+    return _seconds_to_ticks(_resolve_seconds(value, sequence, label), sequence)
+
+
+def _frame_to_ticks(frame: int, sequence) -> int:
+    disp = sequence.get_display_rate()
+    tick_rate = sequence.get_tick_resolution()
+    return int(round(frame * disp.denominator * tick_rate.numerator / (disp.numerator * tick_rate.denominator)))
+
+
+def _resolve_easing_type(value):
+    enum_cls = unreal.MovieSceneBuiltInEasing
+    if isinstance(value, enum_cls):
+        return value
+    if isinstance(value, str):
+        key = value.strip().upper()
+        for member in dir(enum_cls):
+            if member.isupper() and member == key:
+                return getattr(enum_cls, member)
+    raise ValueError(f'未知过渡曲线类型: {value!r}')
+
+
+def _parse_ease_spec(ease):
+    if ease is None:
+        return None
+    if isinstance(ease, (tuple, list)):
+        if len(ease) != 2:
+            raise ValueError('ease 二元组须为 (ease_in, ease_out)')
+        return (
+            None if ease[0] is None else _resolve_easing_type(ease[0]),
+            None if ease[1] is None else _resolve_easing_type(ease[1]),
+        )
+    resolved = _resolve_easing_type(ease)
+    return (resolved, resolved)
+
+
+def _resolve_clip_timing(sequence, animation, *, rate=1.0, reverse=False,
+                         clip_start=0, clip_end=None, clip_offset=0, current=None):
+    anim_len = float(animation.get_play_length())
+    asset_rate_scale = float(getattr(animation, 'rate_scale', 1.0) or 1.0)
+    if not math.isfinite(asset_rate_scale) or asset_rate_scale <= 0:
+        asset_rate_scale = 1.0
+
+    if current is None:
+        eff_rate = _validate_play_rate(rate)
+        eff_reverse = _validate_reverse(reverse)
+        crop_start_sec = _resolve_seconds(clip_start, sequence, 'clip_start')
+        crop_end_sec = anim_len if clip_end is None else _resolve_seconds(clip_end, sequence, 'clip_end')
+        offset_sec = _resolve_seconds(clip_offset, sequence, 'clip_offset')
+    else:
+        cur_rate, cur_reverse, cur_start_ticks, cur_end_ticks, cur_offset_ticks = current
+        tick_rate = sequence.get_tick_resolution()
+        tick_hz = tick_rate.numerator / tick_rate.denominator
+        eff_rate = cur_rate if rate is None else _validate_play_rate(rate)
+        eff_reverse = cur_reverse if reverse is None else _validate_reverse(reverse)
+        crop_start_sec = cur_start_ticks / tick_hz if clip_start is None else _resolve_seconds(clip_start, sequence, 'clip_start')
+        crop_end_sec = max(0.0, anim_len - cur_end_ticks / tick_hz) if clip_end is None else _resolve_seconds(clip_end, sequence, 'clip_end')
+        offset_sec = cur_offset_ticks / tick_hz if clip_offset is None else _resolve_seconds(clip_offset, sequence, 'clip_offset')
+
+    if crop_start_sec < -1e-6:
+        raise ValueError('clip_start 不能为负数')
+    crop_start_sec = max(0.0, crop_start_sec)
+    if offset_sec < -1e-6:
+        raise ValueError('clip_offset 不能为负数')
+    offset_sec = max(0.0, offset_sec)
+
+    if anim_len <= 1e-6:
+        if crop_start_sec > 1e-6 or crop_end_sec > 1e-6 or offset_sec > 1e-6:
+            raise ValueError('零时长动画不支持裁剪或相位偏移')
+        return dict(
+            rate=eff_rate, reverse=eff_reverse,
+            start_ticks=0, end_ticks=0, offset_ticks=0,
+            effective_sec=0.0,
+        )
+
+    if crop_end_sec > anim_len + 1e-4:
+        raise ValueError(f'clip_end ({crop_end_sec:.4g}s) 不能超过动画长度 ({anim_len:.4g}s)')
+    crop_end_sec = min(crop_end_sec, anim_len)
+    if crop_end_sec <= crop_start_sec + 1e-5:
+        raise ValueError('clip_end 必须晚于 clip_start')
+    loop_len = crop_end_sec - crop_start_sec
+    if offset_sec >= loop_len - 1e-5:
+        raise ValueError('clip_offset 必须小于裁剪后的单轮片段时长')
+
+    start_ticks = _seconds_to_ticks(crop_start_sec, sequence)
+    end_ticks = max(0, _seconds_to_ticks(anim_len - crop_end_sec, sequence))
+    offset_ticks = _seconds_to_ticks(offset_sec, sequence)
+    effective_sec = (loop_len - offset_sec) / (eff_rate * asset_rate_scale)
+    return dict(
+        rate=eff_rate, reverse=eff_reverse,
+        start_ticks=start_ticks, end_ticks=end_ticks, offset_ticks=offset_ticks,
+        effective_sec=effective_sec,
+    )
+
+
+def _read_current_clip_timing(section, sequence):
+    params = section.get_editor_property('params')
+    animation = params.animation
+    if not isinstance(animation, unreal.AnimSequence):
+        raise ValueError('动画片段缺少有效的 AnimSequence')
+    raw_rate = float(unreal.MovieSceneTimeWarpExtensions.conv_time_warp_variant_to_play_rate(params.play_rate))
+    raw_reverse = bool(params.reverse)
+    eff_reverse = (raw_rate < 0.0) ^ raw_reverse
+    raw_offset = params.first_loop_start_frame_offset.value
+    offset_ticks = -raw_offset if (raw_rate < 0.0 and not raw_reverse) else raw_offset
+    return animation, (
+        abs(raw_rate) if raw_rate != 0.0 else 1.0,
+        eff_reverse,
+        params.start_frame_offset.value,
+        params.end_frame_offset.value,
+        max(0, offset_ticks),
+    )
+
+
+def _write_skeletal_params(section, animation, timing):
+    params = section.get_editor_property('params')
+    params.animation = animation
+    # UE5.8 bReverse adds Duration instead of Start+End when StartFrameOffset > 0; negative play_rate handles both.
+    signed_rate = -timing['rate'] if timing['reverse'] else timing['rate']
+    signed_offset = -timing['offset_ticks'] if timing['reverse'] else timing['offset_ticks']
+    params.play_rate = unreal.MovieSceneTimeWarpExtensions.make_time_warp(signed_rate)
+    params.reverse = False
+    params.start_frame_offset = unreal.FrameNumber(timing['start_ticks'])
+    params.end_frame_offset = unreal.FrameNumber(timing['end_ticks'])
+    params.first_loop_start_frame_offset = unreal.FrameNumber(signed_offset)
+    section.set_editor_property('params', params)
+
+
+def _resolve_anim_span(sequence, timing, start, end):
     first = _resolve_frame(start, sequence)
     if end is None:
         rate = sequence.get_display_rate()
-        frames = animation.get_play_length() * rate.numerator / rate.denominator
-        last = first + math.ceil(frames - 1e-5)
+        frames = timing['effective_sec'] * rate.numerator / rate.denominator
+        last = first + max(1, math.ceil(frames - 1e-5))
     else:
         last = _resolve_frame(end, sequence)
     if last <= first:
         raise ValueError('动画片段结束帧必须晚于起始帧')
-    return sequence, first, last
+    return first, last
 
 
-def _insert_skeletal_section(sequence, component, animation, first, last):
+def _same_row_overlaps(track, section, sequence, first_tick, last_tick):
+    left_hits, right_hits = [], []
+    if track is None:
+        return left_hits, right_hits
+    row = section.get_row_index() if section is not None else 0
+    for other in track.get_sections():
+        if other == section or other.get_row_index() != row:
+            continue
+        if not other.has_start_frame() or not other.has_end_frame():
+            continue
+        o_first = _frame_to_ticks(other.get_start_frame(), sequence)
+        o_last = _frame_to_ticks(other.get_end_frame(), sequence)
+        if o_last <= o_first:
+            continue
+        if o_first < first_tick < o_last <= last_tick:
+            left_hits.append((other, o_first, o_last, o_last - first_tick))
+        elif first_tick <= o_first < last_tick < o_last:
+            right_hits.append((other, o_first, o_last, last_tick - o_first))
+    return left_hits, right_hits
+
+
+def _resolve_fade_ticks(value, sequence, label):
+    if value is None:
+        return None
+    ticks = _resolve_ticks(value, sequence, label)
+    if ticks < 0:
+        raise ValueError(f'{label} 不能为负数')
+    return ticks
+
+
+def _apply_section_ease_types(section, ease_pair):
+    if ease_pair is None:
+        return
+    for attr_name, ease_type in zip(('EaseInFunction', 'EaseOutFunction'), ease_pair):
+        if ease_type is None:
+            continue
+        fn_obj = unreal.find_object(section, attr_name)
+        if fn_obj is not None:
+            fn_obj.modify()
+            fn_obj.set_editor_property('type', ease_type)
+
+
+def _prepare_section_fade(track, section, sequence, *, fade_in=None, fade_out=None,
+                          crossfade=False, ease=None, bounds=None):
+    in_ticks = _resolve_fade_ticks(fade_in, sequence, 'fade_in')
+    out_ticks = _resolve_fade_ticks(fade_out, sequence, 'fade_out')
+    ease_pair = _parse_ease_spec(ease)
+
+    first, last = bounds if bounds is not None else (section.get_start_frame(), section.get_end_frame())
+    first_tick = _frame_to_ticks(first, sequence)
+    last_tick = _frame_to_ticks(last, sequence)
+    span_ticks = last_tick - first_tick
+    if span_ticks <= 0:
+        raise ValueError('动画片段长度无效，无法设置淡入淡出')
+
+    left_hits, right_hits = _same_row_overlaps(track, section, sequence, first_tick, last_tick)
+    left_ov = max((ov for _, _, _, ov in left_hits), default=0)
+    right_ov = max((ov for _, _, _, ov in right_hits), default=0)
+
+    target_in = in_ticks if in_ticks is not None else (left_ov if crossfade else None)
+    target_out = out_ticks if out_ticks is not None else (right_ov if crossfade else None)
+    eff_in = target_in if target_in is not None else (section.get_ease_in_duration() if section else 0)
+    eff_out = target_out if target_out is not None else (section.get_ease_out_duration() if section else 0)
+    if eff_in > span_ticks or eff_out > span_ticks or (eff_in + eff_out) > span_ticks:
+        raise ValueError('淡入与淡出时长之和不能超过动画片段总长度')
+
+    return dict(
+        section=section, sequence=sequence,
+        target_in=target_in, target_out=target_out,
+        ease_pair=ease_pair, crossfade=bool(crossfade),
+        left_hits=left_hits, right_hits=right_hits,
+        left_ov=left_ov, right_ov=right_ov,
+    )
+
+
+def _commit_section_fade(plan):
+    section = plan['section']
+    section.modify()
+    if plan['target_in'] is not None:
+        section.set_ease_in_duration(plan['target_in'])
+    if plan['target_out'] is not None:
+        section.set_ease_out_duration(plan['target_out'])
+    _apply_section_ease_types(section, plan['ease_pair'])
+    if plan['crossfade']:
+        ease_in, ease_out = plan['ease_pair'] or (None, None)
+        for other, o_first, o_last, ov in plan['left_hits']:
+            cap = max(0, (o_last - o_first) - other.get_ease_in_duration())
+            other.modify()
+            other.set_ease_out_duration(min(ov, cap))
+            _apply_section_ease_types(other, (None, ease_in))
+        for other, o_first, o_last, ov in plan['right_hits']:
+            cap = max(0, (o_last - o_first) - other.get_ease_out_duration())
+            other.modify()
+            other.set_ease_in_duration(min(ov, cap))
+            _apply_section_ease_types(other, (ease_out, None))
+
+
+def _warn_if_open_fade_without_anim_bp(component, plan):
+    if component is None:
+        return
+    need_in = (plan['target_in'] or 0) > plan['left_ov']
+    need_out = (plan['target_out'] or 0) > plan['right_ov']
+    if not (need_in or need_out):
+        return
+    anim_mode = component.get_animation_mode()
+    anim_bp_enum = unreal.AnimationMode.ANIMATION_BLUEPRINT
+    anim_inst = component.get_anim_instance()
+    if anim_mode == anim_bp_enum and anim_inst is not None:
+        return
+    anim_class = component.get_editor_property('anim_class')
+    name = component.get_name()
+    if anim_class is not None:
+        unreal.log(
+            f'[mc_play_anim] {name}: 当前动画模式为 {anim_mode.name}，空轨淡入/淡出将在 BeginPlay/渲染切换 '
+            f'{anim_class.get_name()} 后平滑生效；如需在编辑器视口即时预览，请将动画模式设为 Use Animation Blueprint'
+        )
+    else:
+        unreal.log(
+            f'[mc_play_anim] {name}: 组件未配置动画蓝图（CustomMode），双片段重叠交叉淡化有效，'
+            '但退回空轨的独立淡入/淡出在边界会直接恢复绑定姿势'
+        )
+
+
+def _insert_skeletal_section(sequence, component, animation, timing, first, last):
     binding = _ensure_binding(sequence, component)
     track = next((t for t in binding.get_tracks()
                   if isinstance(t, unreal.MovieSceneSkeletalAnimationTrack)), None)
     if track is None:
         track = binding.add_track(unreal.MovieSceneSkeletalAnimationTrack)
+    existing = list(track.get_sections())
+    next_priority = max((s.get_overlap_priority() for s in existing), default=-1) + 1
     section = track.add_section()
     section.set_range(first, last)
-    params = section.get_editor_property('params')
-    params.animation = animation
-    section.set_editor_property('params', params)
+    section.set_overlap_priority(next_priority)
+    _write_skeletal_params(section, animation, timing)
+    return track, section
+
+
+def _prepare_skeletal_slot(sequence, component, first, last, *, fade_in, fade_out, crossfade, ease):
+    """Plan against existing overlaps before creating bindings, tracks or sections."""
+    binding = _find_binding_for_object(sequence, component)
+    track = next((t for t in binding.get_tracks()
+                  if isinstance(t, unreal.MovieSceneSkeletalAnimationTrack)), None) if binding else None
+    return _prepare_section_fade(
+        track, None, sequence, bounds=(first, last),
+        fade_in=fade_in, fade_out=fade_out, crossfade=crossfade, ease=ease,
+    )
+
+
+def _track_component(sequence, track):
+    if sequence is None or track is None:
+        return None
+    world_ctx = None
+    try:
+        world_ctx = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    except Exception:
+        pass
+    for binding in _iter_bindings(sequence):
+        if track in binding.get_tracks():
+            for bound in sequence.locate_bound_objects(binding, world_ctx):
+                if isinstance(bound, unreal.SkeletalMeshComponent):
+                    return bound
+    return None
+
+
+def _place_skeletal_slot(sequence, component, animation, timing, first, last, plan):
+    _, section = _insert_skeletal_section(sequence, component, animation, timing, first, last)
+    plan['section'] = section
+    _commit_section_fade(plan)
     return section
 
 
-def add_skeletal_animation(component, animation, *, start=0, end=None, sequence=None):
+def add_skeletal_animation(component, animation, *, start=0, end=None, sequence=None,
+                           rate=1.0, reverse=False, clip_start=0, clip_end=None, clip_offset=0,
+                           fade_in=None, fade_out=None, crossfade=True, ease=None):
     """Add a section that repeats the native animation when extended beyond one cycle."""
     component, animation = _validate_skeletal_target(component, animation)
-    sequence, first, last = _resolve_anim_span(sequence, animation, start, end)
+    sequence = resolve_sequence(sequence)
+    if sequence is None:
+        raise ValueError('需要有效的 Level Sequence')
+    timing = _resolve_clip_timing(
+        sequence, animation,
+        rate=rate, reverse=reverse,
+        clip_start=clip_start, clip_end=clip_end, clip_offset=clip_offset,
+    )
+    first, last = _resolve_anim_span(sequence, timing, start, end)
+    plan = _prepare_skeletal_slot(
+        sequence, component, first, last,
+        fade_in=fade_in, fade_out=fade_out, crossfade=crossfade, ease=ease,
+    )
+
     with unreal.ScopedEditorTransaction('Add skeletal animation section'):
-        section = _insert_skeletal_section(sequence, component, animation, first, last)
+        section = _place_skeletal_slot(sequence, component, animation, timing, first, last, plan)
+    _warn_if_open_fade_without_anim_bp(component, plan)
     _refresh_sequencer()
     return section
 
 
 def add_skeletal_animation_pair(body_component, body_animation, head_component=None,
-                                head_animation=None, *, start=0, end=None, sequence=None):
+                                head_animation=None, *, start=0, end=None, sequence=None,
+                                rate=1.0, reverse=False, clip_start=0, clip_end=None, clip_offset=0,
+                                fade_in=None, fade_out=None, crossfade=True, ease=None):
     """Add paired body and optional Head skeletal animation sections over identical bounds."""
     body_component, body_animation = _validate_skeletal_target(body_component, body_animation)
     if head_animation is not None:
         head_component, head_animation = _validate_skeletal_target(head_component, head_animation)
         if head_component == body_component:
             raise ValueError('Head 组件不能与身体组件相同')
-    sequence, first, last = _resolve_anim_span(sequence, body_animation, start, end)
+    sequence = resolve_sequence(sequence)
+    if sequence is None:
+        raise ValueError('需要有效的 Level Sequence')
+    body_timing = _resolve_clip_timing(
+        sequence, body_animation,
+        rate=rate, reverse=reverse,
+        clip_start=clip_start, clip_end=clip_end, clip_offset=clip_offset,
+    )
+    head_timing = (
+        _resolve_clip_timing(
+            sequence, head_animation,
+            rate=rate, reverse=reverse,
+            clip_start=clip_start, clip_end=clip_end, clip_offset=clip_offset,
+        )
+        if head_animation is not None else None
+    )
+    first, last = _resolve_anim_span(sequence, body_timing, start, end)
+    body_plan = _prepare_skeletal_slot(
+        sequence, body_component, first, last,
+        fade_in=fade_in, fade_out=fade_out, crossfade=crossfade, ease=ease,
+    )
+    head_plan = None
+    if head_animation is not None:
+        head_plan = _prepare_skeletal_slot(
+            sequence, head_component, first, last,
+            fade_in=fade_in, fade_out=fade_out, crossfade=crossfade, ease=ease,
+        )
+
     with unreal.ScopedEditorTransaction('Add paired skeletal animation section'):
-        result = {
-            'body': _insert_skeletal_section(sequence, body_component, body_animation, first, last),
-            'head': (_insert_skeletal_section(sequence, head_component, head_animation, first, last)
-                     if head_animation is not None else None),
-        }
+        body_sec = _place_skeletal_slot(
+            sequence, body_component, body_animation, body_timing, first, last, body_plan,
+        )
+        head_sec = None
+        if head_animation is not None:
+            head_sec = _place_skeletal_slot(
+                sequence, head_component, head_animation, head_timing, first, last, head_plan,
+            )
+        result = {'body': body_sec, 'head': head_sec}
+    _warn_if_open_fade_without_anim_bp(body_component, body_plan)
+    if head_plan is not None:
+        _warn_if_open_fade_without_anim_bp(head_component, head_plan)
     _refresh_sequencer()
     return result
+
+
+def _validate_skeletal_sections(sections):
+    items = []
+    seen = set()
+    for section in sections or ():
+        if not isinstance(section, unreal.MovieSceneSkeletalAnimationSection):
+            raise TypeError('仅支持 MovieSceneSkeletalAnimationSection')
+        path = section.get_path_name()
+        if path in seen:
+            continue
+        seen.add(path)
+        sequence = section.get_typed_outer(unreal.LevelSequence)
+        if sequence is None:
+            raise ValueError('动画片段必须属于 LevelSequence')
+        items.append((section, _section_track(section), sequence))
+    return items
+
+
+def edit_skeletal_sections(sections, rate=None, clip_start=None, clip_end=None,
+                           clip_offset=None, reverse=None, start=None, end=None):
+    """更新已有骨骼动画片段的倍速、倒放、裁剪偏移或时间范围。"""
+    if all(v is None for v in (rate, clip_start, clip_end, clip_offset, reverse, start, end)):
+        return
+    targets = _validate_skeletal_sections(sections)
+    if not targets:
+        return
+    plans = []
+    for section, _track, sequence in targets:
+        animation, current = _read_current_clip_timing(section, sequence)
+        timing = _resolve_clip_timing(
+            sequence, animation,
+            rate=rate, reverse=reverse,
+            clip_start=clip_start, clip_end=clip_end, clip_offset=clip_offset,
+            current=current,
+        )
+        cur_first = section.get_start_frame() if section.has_start_frame() else 0
+        cur_last = section.get_end_frame() if section.has_end_frame() else None
+        first = cur_first if start is None else _resolve_frame(start, sequence)
+        if end is None:
+            last = cur_last if cur_last is not None else _resolve_anim_span(sequence, timing, first, None)[1]
+        else:
+            last = _resolve_frame(end, sequence)
+        if last <= first:
+            raise ValueError('动画片段结束帧必须晚于起始帧')
+        plans.append((section, animation, timing, first, last))
+
+    with unreal.ScopedEditorTransaction('Edit skeletal animation sections'):
+        for section, animation, timing, first, last in plans:
+            section.modify()
+            if (not section.has_start_frame() or not section.has_end_frame()
+                    or section.get_start_frame() != first or section.get_end_frame() != last):
+                section.set_range(first, last)
+            _write_skeletal_params(section, animation, timing)
+    _refresh_sequencer()
+
+
+def fade_skeletal_sections(sections, fade_in=None, fade_out=None, crossfade=None, ease=None):
+    """调整已有骨骼动画片段的淡入淡出时长、同轨交叉过渡或曲线类型。"""
+    if all(v is None for v in (fade_in, fade_out, crossfade, ease)):
+        return
+    targets = _validate_skeletal_sections(sections)
+    if not targets:
+        return
+    plans = [
+        (track, sequence, _prepare_section_fade(
+            track, section, sequence,
+            fade_in=fade_in, fade_out=fade_out,
+            crossfade=bool(crossfade), ease=ease,
+        ))
+        for section, track, sequence in targets
+    ]
+    with unreal.ScopedEditorTransaction('Fade skeletal animation sections'):
+        for _track, _sequence, plan in plans:
+            _commit_section_fade(plan)
+    for track, sequence, plan in plans:
+        _warn_if_open_fade_without_anim_bp(_track_component(sequence, track), plan)
+    _refresh_sequencer()
 
 
 def _get_or_create_unbounded_property_section(track):
@@ -1640,3 +2100,33 @@ def _unwrap_target(obj):
     if not isinstance(obj, (unreal.Actor, unreal.SceneComponent, Iterable)) and hasattr(obj, 'target'):
         obj = obj.target
     return obj
+
+
+def _path_coordinates(point):
+    return (point.x, point.y, point.z) if isinstance(point, unreal.Vector) else point
+
+
+def orbit(center, samples, *, radius, height=0, turns=1, start_angle=0, roll=0, duration=None):
+    """返回环绕位置、连续旋转，可选厘米每秒的速度。"""
+    from mineprep import math_tools
+    positions, rotations, *velocity = math_tools.orbit(
+        _path_coordinates(center), samples, radius=radius, height=height, turns=turns,
+        start_angle=start_angle, roll=roll, duration=duration)
+    result = ([unreal.Vector(*position) for position in positions],
+              [unreal.Rotator(pitch=pitch, yaw=yaw, roll=roll) for pitch, yaw, roll in rotations])
+    if duration is not None:
+        return (*result, [unreal.Vector(*value) for value in velocity[0]])
+    return result
+
+
+def spline(points, samples, *, closed=False, uniform_speed=False, tangents=False, duration=None):
+    """返回通过航点的路径，可选单位切线或厘米每秒的速度。"""
+    from mineprep import math_tools
+    result = math_tools.spline((_path_coordinates(point) for point in points), samples,
+                            closed=closed, uniform_speed=uniform_speed, tangents=tangents, duration=duration)
+    if tangents or duration is not None:
+        positions, vectors = result
+        return [unreal.Vector(*point) for point in positions], [unreal.Vector(*vector) for vector in vectors]
+    return [unreal.Vector(*point) for point in result]
+
+

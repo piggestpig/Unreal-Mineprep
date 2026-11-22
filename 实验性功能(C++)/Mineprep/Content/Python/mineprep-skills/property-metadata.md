@@ -96,5 +96,5 @@ PropertyDef's getter/setter arguments are separate from metadata too.
 - Installed source: `Engine/Source/Editor/PropertyEditor/Private/` for condition
   parsing and property widgets; Python property flags are set in
   `Engine/Plugins/Experimental/PythonScriptPlugin/Source/PythonScriptPlugin/Private/PyWrapperObject.cpp`.
-- Mineprep `mc_widget.py`: PropertyGroup declarations and Layout.prop view selection.
+- Mineprep `mineprep/widgets.py`: PropertyGroup declarations and Layout.prop view selection.
   Recheck relevant behavior after engine/plugin upgrades.

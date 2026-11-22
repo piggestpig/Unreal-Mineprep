@@ -1,7 +1,7 @@
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 
 import os
 import ast
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from functools import lru_cache
 from copy import copy, deepcopy
-from mc_utils import prints, debug, warn, send2trash
+from mineprep.utils import prints, debug, warn, send2trash
 from contextlib import contextmanager
 
 
@@ -190,6 +190,8 @@ class Internationalization:
     def __matmul__(self, file):
         """返回使用指定 JSON 文件的收集节点，保留原节点的其他配置。"""
         path = Path(file).resolve()
+        if path.suffix.lower() != '.json':
+            raise ValueError('file 须为 JSON 文件路径')
         node = copy(self)
         node._file = path
         node._memory_mode = False
@@ -197,6 +199,8 @@ class Internationalization:
 
     def __or__(self, source):
         """单字符串只读查找；先保留调用来源，再复用普通调用。"""
+        if not isinstance(source, str):
+            raise TypeError('i18n | 需要单字符串原文')
         node = copy(self)
         node._source = self._source or sys._getframe(1).f_code.co_filename
         return node(source, read_only=True)
@@ -253,12 +257,14 @@ class Internationalization:
         if file.suffix != '.py':
             return None, 'UObjectDisplayNames'
         file = file.resolve()
+        core = Path(__file__).resolve().parent
+        if file.is_relative_to(core) or file.parent == core.parent:
+            return core / 'i18n.json', 'Core'
         root = next((p for p in reversed(file.parents)
                      if (p / '__init__.py').is_file()), None)
         if root is not None:
             return root / 'i18n.json', root.name
-        namespace = 'Core' if file.parent == Path(__file__).resolve().parent else file.stem
-        return file.parent / 'i18n.json', namespace
+        return file.parent / 'i18n.json', file.stem
 
     @staticmethod
     def _validate(entries):

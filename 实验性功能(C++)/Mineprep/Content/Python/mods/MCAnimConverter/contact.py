@@ -6,7 +6,7 @@ import json
 import math
 from pathlib import Path
 
-from mc_model import glb_bone_bounds
+from mineprep.model import glb_bone_bounds
 from . import rig_rules, sampling
 
 

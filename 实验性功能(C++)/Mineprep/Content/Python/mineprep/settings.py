@@ -1,12 +1,12 @@
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 import json
 from dataclasses import dataclass, asdict
 
-from mc_utils import prints, uclass
-from mc_localization import i18n
+from mineprep.utils import prints, uclass
+from mineprep.localization import i18n
 
 
 class _LazyUClass:

@@ -6,14 +6,14 @@ from collections.abc import Mapping
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 
-from mc_sequencer import (
+from mineprep.sequencer_tools import (
     _TIME_UNIT, _binding_id, _ensure_binding, _get_active_sequence,
     _resolve_frame, _unwrap_target,
 )
-import mc_sequencer as mcseq
-from mc_utils import throw, uclass, undo, world
+from mineprep import sequencer_tools as mcseq
+from mineprep.utils import throw, uclass, undo, world
 
 
 # Sequencer channel identifiers for scalar, vector and transform controls.
@@ -148,7 +148,7 @@ def describe_skeleton(component):
 class Rig:
     """Sequencer 上的 Control Rig 句柄。默认 FK；已有轨保持 layered，新建为 layered。"""
 
-    def __init__(self, target, rig_class=None, *, layered=None):
+    def __init__(self, target, rig_class=None, *, layered=None, section=None):
         sequence = _get_active_sequence()
         skm = _resolve_skm(target)
         cls = _resolve_rig_class(rig_class)
@@ -170,36 +170,131 @@ class Rig:
 
         self.sequence = sequence
         self.skm = skm
+        self.binding = skm_binding
         self.track = track
         self.target = control_rig
+        self.section = section
 
-    def names(self) -> list[str]:
-        """列出控件全名（含模块前缀，如 Spine/body_ctrl）"""
+    @classmethod
+    def bake_from_anim(cls, target, rig_class, *, reduce_keys=False, tolerance=0.01,
+                       reset_controls=True, export_options=None):
+        """将当前序列中目标骨骼网格体的现有动画烘焙到指定 Control Rig（依赖向后解析）。"""
+        sequence = _get_active_sequence()
+        skm = _resolve_skm(target)
+        rig_uclass = _resolve_rig_class(rig_class)
+        owner = skm.get_owner()
+        if owner:
+            _ensure_binding(sequence, owner)
+        skm_binding = _ensure_binding(sequence, skm)
+        opts = export_options if export_options is not None else unreal.AnimSeqExportOption()
+        ok = unreal.ControlRigSequencerLibrary.bake_to_control_rig(
+            world(), sequence, rig_uclass, opts, bool(reduce_keys), float(tolerance),
+            skm_binding, reset_controls=bool(reset_controls),
+        )
+        mcseq._refresh_sequencer()
+        if not ok:
+            throw(f'烘焙动画到 Control Rig 失败: {rig_class}')
+        return cls(skm, rig_uclass)
+
+    @property
+    def priority(self) -> int:
+        """多条 Control Rig 轨道的执行优先级（UE 5.8 中数值越小越后求值、覆盖优先级越高，默认基线 100）。"""
+        return int(unreal.ControlRigSequencerLibrary.get_control_rig_priority_order(self.track))
+
+    @priority.setter
+    def priority(self, value: int) -> None:
+        self.track.modify()
+        unreal.ControlRigSequencerLibrary.set_control_rig_priority_order(self.track, int(value))
+        mcseq._refresh_sequencer()
+
+    def sections(self) -> list:
+        """返回当前 Control Rig 轨道上的全部 section（基础层及叠加动画层）。"""
+        return list(self.track.get_sections())
+
+    def _target_section(self):
+        all_sections = self.sections()
+        if not all_sections:
+            throw('Control Rig 轨道没有可用 section')
+        section = getattr(self, 'section', None)
+        if section is None:
+            if len(all_sections) != 1:
+                raise ValueError('Rig 写键需要单个 section，多动画层轨道请在构造时指定 section= 索引或对象')
+            return all_sections[0]
+        if isinstance(section, int) and not isinstance(section, bool):
+            try:
+                return all_sections[section]
+            except IndexError as exc:
+                raise ValueError(f'section 索引越界: {section}（共 {len(all_sections)} 个）') from exc
+        if section in all_sections:
+            return section
+        raise ValueError('指定的 section 不属于当前 Control Rig 轨道')
+
+    def names(self, *, include_visual_cues: bool = False) -> list[str]:
+        """列出控件全名（含模块前缀与子动画通道，默认跳过仅视觉提示的 VISUAL_CUE）。"""
         hier = self.target.get_hierarchy()
-        return [str(key.name) for key in hier.get_controls(True)]
+        cue_type = getattr(unreal.RigControlAnimationType, 'VISUAL_CUE', None)
+        result = []
+        for key in hier.get_controls(True):
+            if not include_visual_cues and cue_type is not None:
+                if hier.get_control_settings(key).animation_type == cue_type:
+                    continue
+            result.append(str(key.name))
+        return result
 
     def describe(self):
         """Return parent, local and component reference poses, pivot and axes for each bone."""
         return describe_skeleton(self.skm)
 
-    def _resolve_name(self, name: str, *, controls=None) -> str:
-        """匹配全名、短名、FK 骨骼名（head → head_CONTROL）；撞名则报错"""
-        name = str(name)
+    def _control_aliases(self, controls):
+        hier = self.target.get_hierarchy()
+        ch_type = getattr(unreal.RigControlAnimationType, 'ANIMATION_CHANNEL', None)
         aliases = {}
-        for full in self.names() if controls is None else controls:
-            keys = {full, full.rsplit('/', 1)[-1]}
+        channel_aliases = {}
+        for full in controls:
             short = full.rsplit('/', 1)[-1]
+            keys = {full, short}
             if short.endswith('_CURVE_CONTROL'):
                 keys.add(short[:-len('_CURVE_CONTROL')])
             elif short.endswith('_CONTROL'):
                 keys.add(short[:-len('_CONTROL')])
+            if ch_type is not None:
+                elem_key = unreal.RigElementKey(type=unreal.RigElementType.CONTROL, name=full)
+                if hier.contains(elem_key):
+                    settings = hier.get_control_settings(elem_key)
+                    if settings.animation_type == ch_type:
+                        disp = str(getattr(settings, 'display_name', '') or '')
+                        if disp.casefold() in ('', 'none'):
+                            disp = ''
+                        parents = hier.get_parents(elem_key)
+                        for p in parents:
+                            p_full = str(p.name)
+                            p_short = p_full.rsplit('/', 1)[-1]
+                            for p_alias in (p_full, p_short):
+                                for ch_alias in (short, disp) if disp else (short,):
+                                    dotted = f'{p_alias}.{ch_alias}'
+                                    keys.add(dotted)
+                                    channel_aliases.setdefault(dotted, []).append(full)
+                        if disp and disp != short:
+                            keys.add(disp)
             for key in keys:
                 aliases.setdefault(key, []).append(full)
+        return aliases, channel_aliases
+
+    def _resolve_name(self, name: str, *, controls=None) -> str:
+        """匹配全名、短名、父控件.子通道名（ctrl.Channel）、FK 骨骼名；撞名则报错"""
+        name = str(name)
+        controls = self.names() if controls is None else controls
+        aliases, _ = self._control_aliases(controls)
 
         matches = aliases.get(name)
         if matches is None:
             folded = name.casefold()
             matches = next((v for k, v in aliases.items() if k.casefold() == folded), None)
+            if matches is None:
+                from mineprep.face import FACE_BONE_ALIASES
+                mapped = FACE_BONE_ALIASES.get(folded)
+                if mapped is not None:
+                    matches = next((v for k, v in aliases.items() if k.casefold() == mapped), None)
         if not matches:
             throw(f'找不到控件: {name}')
         unique = list(dict.fromkeys(matches))
@@ -232,17 +327,27 @@ class Rig:
                     rotation=value.rotation.rotator(),
                     scale=value.scale3d,
                 )
+            if isinstance(value, unreal.TransformNoScale):
+                return unreal.EulerTransform(
+                    location=value.location,
+                    rotation=value.rotation.rotator(),
+                    scale=unreal.Vector(1.0, 1.0, 1.0),
+                )
             if isinstance(value, (unreal.Rotator, unreal.Vector)):
                 cur = self._read(full_name, frame, time_unit)
                 if isinstance(value, unreal.Rotator):
                     return unreal.EulerTransform(location=cur.location, rotation=value, scale=cur.scale)
                 return unreal.EulerTransform(location=value, rotation=cur.rotation, scale=cur.scale)
-        if ctype == T.ROTATOR and isinstance(value, unreal.EulerTransform):
-            return value.rotation
-        if ctype == T.POSITION and isinstance(value, unreal.EulerTransform):
-            return value.location
-        if ctype in (T.POSITION, T.SCALE) and isinstance(value, tuple) and len(value) == 3:
-            return unreal.Vector(*value)
+        if ctype == T.ROTATOR and isinstance(value, (unreal.EulerTransform, unreal.Transform)):
+            return value.rotation if isinstance(value, unreal.EulerTransform) else value.rotation.rotator()
+        if ctype == T.POSITION and isinstance(value, (unreal.EulerTransform, unreal.Transform)):
+            return value.location if isinstance(value, unreal.EulerTransform) else value.translation
+        if ctype in (T.FLOAT, T.SCALE_FLOAT) and isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value)
+        if ctype == T.VECTOR2D and isinstance(value, (tuple, list)) and len(value) == 2:
+            return unreal.Vector2D(float(value[0]), float(value[1]))
+        if ctype in (T.POSITION, T.SCALE) and isinstance(value, (tuple, list)) and len(value) == 3:
+            return unreal.Vector(float(value[0]), float(value[1]), float(value[2]))
         return value
 
     def _write(self, full_name, value, frame, set_key: bool):
@@ -302,7 +407,7 @@ class Rig:
 
     def _key_batches(self, batches, interp, *, replace_span=False, playback_end=None,
                      time_unit=_TIME_UNIT, hold_ticks=()):
-        from mc_handle import keys
+        from mineprep.handles import keys
         if not batches:
             return keys([], sequence=self.sequence)
         modes = {
@@ -318,9 +423,10 @@ class Rig:
         if not any(times for times, _ in batches.values()):
             return keys([], sequence=self.sequence)
         mcseq.require_focused_sequence(self.sequence)
-        sections = self.track.get_sections()
-        if len(sections) != 1:
-            raise ValueError('Rig 写键需要单个 section')
+        all_sections = self.sections()
+        target_section = self._target_section()
+        use_native_batch = (len(all_sections) == 1)
+        sections = [target_section]
         tick_unit = unreal.MovieSceneTimeUnit.TICK_RESOLUTION
         key_tick = (lambda frame: frame.value) if time_unit == tick_unit else self._key_tick
         channels = mcseq.gather_channels(sections)
@@ -341,8 +447,24 @@ class Rig:
                 if len(chosen) != expected:
                     raise ValueError(f'{name}: 找不到完整的目标通道')
                 item = (full, frames, encoded, None, None)
-            else:
+            elif use_native_batch:
                 item = self._prepare_keys(full, times, values, time_unit)
+            else:
+                frames = ([self._frame(t) for t in times] if time_unit == _TIME_UNIT
+                          else [unreal.FrameNumber(t) for t in times])
+                ctype = self._type(full)
+                getter, _ = _rig_io(ctype)
+                encoded = [
+                    self._encode_scalars(
+                        ctype,
+                        getter(self.sequence, self.target, full, frame, time_unit)
+                        if value is None else self._coerce(full, ctype, value, frame, time_unit),
+                    )
+                    for frame, value in zip(frames, values)
+                ]
+                if len(chosen) != len(encoded[0]):
+                    raise ValueError(f'{name}: 找不到完整的目标通道')
+                item = (full, frames, encoded, None, None)
             for frame in item[1]:
                 for channel in chosen:
                     identity = (chosen.locations[id(channel)], key_tick(frame))
@@ -409,6 +531,27 @@ class Rig:
             mcseq._refresh_sequencer()
         return keys(written, sequence=self.sequence)
 
+    @staticmethod
+    def _encode_scalars(ctype, value):
+        T = unreal.RigControlType
+        if ctype == T.BOOL:
+            return (bool(value),)
+        if ctype in (T.FLOAT, T.SCALE_FLOAT):
+            return (float(value),)
+        if ctype == T.INTEGER:
+            return (int(value),)
+        if ctype == T.VECTOR2D:
+            return (float(value.x), float(value.y))
+        if ctype in (T.POSITION, T.SCALE):
+            return (float(value.x), float(value.y), float(value.z))
+        if ctype == T.ROTATOR:
+            return (float(value.roll), float(value.pitch), float(value.yaw))
+        if ctype == T.EULER_TRANSFORM:
+            return (float(value.location.x), float(value.location.y), float(value.location.z),
+                    float(value.rotation.roll), float(value.rotation.pitch), float(value.rotation.yaw),
+                    float(value.scale.x), float(value.scale.y), float(value.scale.z))
+        throw(f'不支持的控件类型: {ctype}')
+
     def _prepare_keys(self, full, times, values, time_unit):
         if any(not isinstance(time, (int, float)) or not math.isfinite(time) for time in times):
             raise ValueError('批量时间必须为有限的整数帧或浮点秒')
@@ -427,10 +570,26 @@ class Rig:
         # Validate native value conversion before the warm-up changes the rig.
         return full, frames, unreal.Array.cast(value_type, encoded), single, batch
 
-    @staticmethod
-    def _control_channels(channels, full, part=''):
+    def _control_channels(self, channels, full, part=''):
         part = _ROTATION_ALIASES.get(part, part)
-        names = {full.casefold() + suffix for suffix in _CONTROL_SUFFIXES
+        bases = {full.casefold()}
+        hier = self.target.get_hierarchy()
+        ch_type = getattr(unreal.RigControlAnimationType, 'ANIMATION_CHANNEL', None)
+        if ch_type is not None and not part:
+            elem_key = unreal.RigElementKey(type=unreal.RigElementType.CONTROL, name=full)
+            if hier.contains(elem_key):
+                settings = hier.get_control_settings(elem_key)
+                if settings.animation_type == ch_type:
+                    short = full.rsplit('/', 1)[-1]
+                    disp = str(getattr(settings, 'display_name', '') or '')
+                    if disp.casefold() in ('', 'none'):
+                        disp = ''
+                    for p in hier.get_parents(elem_key):
+                        p_name = str(p.name).casefold()
+                        bases.add(f'{p_name}.{short.casefold()}')
+                        if disp:
+                            bases.add(f'{p_name}.{disp.casefold()}')
+        names = {base + suffix for base in bases for suffix in _CONTROL_SUFFIXES
                  if not part or _ROTATION_ALIASES.get(suffix, suffix) == part
                  or suffix.startswith(part + '.')}
         return channels.select(ch for ch in channels if mcseq._channel_name(ch).casefold() in names)
@@ -442,6 +601,16 @@ class Rig:
         for full in controls:
             if full.casefold() == folded:
                 return full, ''
+        if '.' in name:
+            _, channel_aliases = self._control_aliases(controls)
+            ch_match = channel_aliases.get(name)
+            if ch_match is None:
+                ch_match = next((v for k, v in channel_aliases.items() if k.casefold() == folded), None)
+            if ch_match:
+                unique = list(dict.fromkeys(ch_match))
+                if len(unique) > 1:
+                    throw(f'控件名 {name} 不唯一: {unique}')
+                return unique[0], ''
         for part in _CONTROL_PARTS:
             if folded.endswith(part):
                 full = self._resolve_name(name[:-len(part)], controls=controls)
@@ -466,7 +635,7 @@ class Rig:
         if value is None:
             value = self._read(full, frame, time_unit)
             if ctype == unreal.RigControlType.EULER_TRANSFORM:
-                value = getattr(value, {'location':'location', 'rotation':'rotation', 'scale':'scale'}[group])
+                value = getattr(value, {'location': 'location', 'rotation': 'rotation', 'scale': 'scale'}[group])
             if scalar:
                 axis = axis or group
                 value = getattr(value, dict(x='roll', y='pitch', z='yaw')[axis]
@@ -530,11 +699,90 @@ class Rig:
             raise ValueError('Rig replace_span 结束帧不能小于起始帧')
         return self._key_tick(unreal.FrameNumber(span_start)), self._key_tick(unreal.FrameNumber(span_end))
 
+    def _resolve_space_key(self, space) -> unreal.RigElementKey:
+        lib = unreal.ControlRigSequencerLibrary
+        if space is None or (isinstance(space, str) and space.strip().casefold() == 'world'):
+            return lib.get_world_space_reference_key()
+        if isinstance(space, unreal.RigElementKey):
+            return space
+        hier = self.target.get_hierarchy()
+        name = str(space)
+        for etype in (unreal.RigElementType.CONTROL, unreal.RigElementType.BONE, unreal.RigElementType.NULL):
+            key = unreal.RigElementKey(type=etype, name=name)
+            if hier.contains(key):
+                return key
+        try:
+            full = self._resolve_name(name)
+            return unreal.RigElementKey(type=unreal.RigElementType.CONTROL, name=full)
+        except Exception:
+            throw(f'找不到空间参考元素: {space}')
+
+    def set_space(self, name, space=None, time=None) -> bool:
+        """在指定时刻切换控件的参考空间（space=None/'world' 表示世界空间，或传骨骼/控件名）。"""
+        full = self._resolve_name(name)
+        space_key = self._resolve_space_key(space)
+        ok = unreal.ControlRigSequencerLibrary.set_control_rig_space(
+            self.sequence, self.target, full, space_key, self._frame(time), _TIME_UNIT,
+        )
+        mcseq._refresh_sequencer()
+        return bool(ok)
+
+    def bake_space(self, names, space=None, *, start=None, end=None, reduce_keys=False, tolerance=0.001) -> bool:
+        """将指定控件区间内的运动烘焙到目标参考空间。"""
+        if isinstance(names, str):
+            names = [names]
+        full_names = [self._resolve_name(n) for n in names]
+        space_key = self._resolve_space_key(space)
+        settings = unreal.RigSpacePickerBakeSettings()
+        settings.set_editor_property('target_space', space_key)
+        settings.set_editor_property('reduce_keys', bool(reduce_keys))
+        settings.set_editor_property('tolerance', float(tolerance))
+        if start is not None:
+            settings.set_editor_property('start_frame', self._frame(start))
+        if end is not None:
+            settings.set_editor_property('end_frame', self._frame(end))
+        ok = unreal.ControlRigSequencerLibrary.bake_control_rig_space(
+            self.sequence, self.target, full_names, settings, _TIME_UNIT,
+        )
+        mcseq._refresh_sequencer()
+        return bool(ok)
+
+    def constrain_to(self, name, parent, *, bone='', maintain_offset=True, constraint_type=None):
+        """将控件约束到另一个 Actor/Component/Socket 或 (Rig, 控件名)。"""
+        full = self._resolve_name(name)
+        clib = unreal.ConstraintsScriptingLibrary
+        w = world()
+        child_handle = clib.create_transformable_handle(w, self.target, full)
+        if isinstance(parent, tuple) and len(parent) == 2 and isinstance(parent[0], Rig):
+            p_rig, p_ctrl = parent
+            parent_handle = clib.create_transformable_handle(w, p_rig.target, p_rig._resolve_name(p_ctrl))
+        else:
+            parent_obj = _unwrap_target(parent)
+            if isinstance(parent_obj, unreal.Actor) and not bone:
+                parent_obj = parent_obj.root_component or parent_obj
+            parent_handle = clib.create_transformable_handle(w, parent_obj, str(bone) if bone else 'None')
+        ctype = constraint_type if constraint_type is not None else unreal.TransformConstraintType.PARENT
+        constraint = unreal.ControlRigSequencerLibrary.add_constraint(
+            w, ctype, child_handle, parent_handle, bool(maintain_offset),
+        )
+        mcseq._refresh_sequencer()
+        return constraint
+
+    def bake_constraint(self, constraint, frames) -> bool:
+        """将约束烘焙为指定帧序列上的关键帧。"""
+        frame_nums = [self._frame(f) for f in frames]
+        ok = unreal.ControlRigSequencerLibrary.bake_constraint(
+            world(), constraint, frame_nums, _TIME_UNIT,
+        )
+        mcseq._refresh_sequencer()
+        return bool(ok)
+
     def channels(self, name=''):
         """查询整轨、控件、分组或单轴通道。"""
-        from mc_handle import channels
+        from mineprep.handles import channels
 
-        found = mcseq.gather_channels(mcseq.gather_sections(self.track))
+        secs = [self._target_section()] if getattr(self, 'section', None) is not None else mcseq.gather_sections(self.track)
+        found = mcseq.gather_channels(secs)
         if name:
             found = self._control_channels(found, *self._control_selection(name))
         return channels(found)
@@ -543,7 +791,14 @@ class Rig:
         """查询所选通道的键。"""
         return self.channels(name).keys()
 
-    def clear(self, name=''):
-        """清除所选通道的键，保留 section 和通道默认值。"""
-        self.channels(name).clear()
+    def clear(self, name='', *, all_sections=False):
+        """清除所选通道的键，保留 section 和通道默认值；多动画层轨道须指定 section= 或传 all_sections=True。"""
+        if all_sections:
+            self.channels(name).clear()
+            return self
+        from mineprep.handles import channels
+        found = mcseq.gather_channels([self._target_section()])
+        if name:
+            found = self._control_channels(found, *self._control_selection(name))
+        channels(found).clear()
         return self

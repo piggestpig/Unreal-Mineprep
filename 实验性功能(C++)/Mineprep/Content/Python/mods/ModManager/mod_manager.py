@@ -6,7 +6,7 @@ import unreal
 import mineprep
 import mcvars
 from mineprep import i18n, Layout, askopenfilename, asksaveasfilename, dialog
-from mc_mod import iter_mod_infos
+from mineprep.modding import iter_mod_infos
 from . import ops
 
 MODS_DIR = Path(__file__).resolve().parent.parent

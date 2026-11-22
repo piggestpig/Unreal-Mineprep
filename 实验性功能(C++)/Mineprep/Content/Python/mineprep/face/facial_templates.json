@@ -1,0 +1,515 @@
+{
+  "version": "2.0",
+  "curves": [
+    "face_blink_l",
+    "face_blink_r",
+    "face_eye_wide",
+    "face_pupil_scale",
+    "face_look_x_l",
+    "face_look_x_r",
+    "face_look_y",
+    "face_brow_y_l",
+    "face_brow_y_r",
+    "face_brow_rot_l",
+    "face_brow_rot_r",
+    "face_mouth_open",
+    "face_mouth_wide",
+    "face_mouth_smile",
+    "face_mouth_x"
+  ],
+  "templates": {
+    "player": {
+      "tex_size": [64, 64],
+      "head_bone": "head",
+      "front_uv": [8, 8, 16, 16],
+      "eye_l": [13, 12, 15, 13],
+      "pupil_l": [13, 12, 14, 13],
+      "eye_r": [9, 12, 11, 13],
+      "pupil_r": [10, 12, 11, 13],
+      "brow_l": [13, 11, 15, 12],
+      "brow_r": [9, 11, 11, 12],
+      "brow_3d_uv": [11, 8, 13, 9],
+      "mouth": [11, 14, 13, 15],
+      "use_brows": false,
+      "use_mouth": true,
+      "skin_uv": [11, 11],
+      "auto_player_skin": true,
+      "sclera_hex": "#ffffff",
+      "mouth_hex": "#5a2220",
+      "use_teeth": false,
+      "supports_3d": true
+    },
+    "player_slim": {
+      "extends": "player",
+      "brow_3d_uv": [11, 9, 13, 10],
+      "skin_uv": [10, 13],
+      "mouth_hex": "#9e4b47"
+    },
+    "zombie": {
+      "extends": "player",
+      "pupil_l": [13, 12, 15, 13],
+      "pupil_r": [9, 12, 11, 13],
+      "brow_3d_uv": [11, 9, 13, 10],
+      "auto_player_skin": false,
+      "sclera_hex": "#1a1a1a",
+      "mouth_hex": "#22381b",
+      "use_teeth": false
+    },
+    "zombie_baby": {
+      "extends": "zombie",
+      "front_uv": [9, 9, 15, 15],
+      "eye_l": [13, 12, 15, 13],
+      "pupil_l": [13, 12, 15, 13],
+      "eye_r": [9, 12, 11, 13],
+      "pupil_r": [9, 12, 11, 13],
+      "brow_l": [13, 11, 15, 12],
+      "brow_r": [9, 11, 11, 12],
+      "brow_3d_uv": [11, 9, 13, 10],
+      "mouth": [11, 13, 13, 14],
+      "skin_uv": [11, 11]
+    },
+    "husk": {
+      "extends": "zombie",
+      "sclera_hex": "#1e1a16",
+      "mouth_hex": "#3b3124"
+    },
+    "villager": {
+      "tex_size": [64, 64],
+      "head_bone": "head",
+      "front_uv": [8, 8, 16, 18],
+      "eye_l": [13, 14, 15, 15],
+      "pupil_l": [13, 14, 14, 15],
+      "eye_r": [9, 14, 11, 15],
+      "pupil_r": [10, 14, 11, 15],
+      "brow_l": [12, 13, 15, 14],
+      "brow_r": [9, 13, 12, 14],
+      "mouth": [10, 16, 14, 17],
+      "use_brows": true,
+      "use_mouth": true,
+      "skin_uv": [11, 11],
+      "sclera_hex": "#ffffff",
+      "mouth_hex": "#5a2e25",
+      "supports_3d": true
+    },
+    "villager_baby": {
+      "extends": "villager",
+      "front_uv": [7, 7, 15, 15],
+      "eye_l": [12, 12, 14, 13],
+      "pupil_l": [12, 12, 13, 13],
+      "eye_r": [8, 12, 10, 13],
+      "pupil_r": [9, 12, 10, 13],
+      "brow_l": [11, 11, 14, 12],
+      "brow_r": [8, 11, 11, 12],
+      "mouth": [9, 14, 13, 15],
+      "skin_uv": [10, 9]
+    },
+    "wandering_trader": {
+      "extends": "villager",
+      "skin_uv": [11, 15]
+    },
+    "witch": {
+      "extends": "villager",
+      "tex_size": [64, 128],
+      "mouth": [11, 16, 13, 17],
+      "mouth_hex": "#4a3338"
+    },
+    "pillager": {
+      "extends": "villager",
+      "brow_l": [12, 12, 16, 14],
+      "brow_r": [8, 12, 12, 14],
+      "mouth_hex": "#33383b"
+    },
+    "vindicator": {
+      "extends": "pillager"
+    },
+    "evoker": {
+      "extends": "pillager"
+    },
+    "breeze": {
+      "tex_size": [32, 32],
+      "head_bone": "head",
+      "front_uv": [8, 8, 16, 16],
+      "drop_duplicate_front_bones": ["eyes"],
+      "split_visor_brows": {
+        "bones": ["head", "eyes"],
+        "front_uv": [8, 28, 18, 31]
+      },
+      "eye_l": [14, 14, 16, 15],
+      "pupil_l": [14, 14, 15, 15],
+      "eye_r": [8, 14, 10, 15],
+      "pupil_r": [9, 14, 10, 15],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [12, 14],
+      "sclera_hex": "#f9d564",
+      "mouth_hex": "#2b3b52",
+      "supports_3d": false
+    },
+    "wolf": {
+      "tex_size": [64, 32],
+      "head_bone": "real_head",
+      "front_uv": [4, 4, 10, 10],
+      "promote_cuboids": [
+        {
+          "source_bone": "real_head",
+          "target_bone": "nose",
+          "plus_x_uv": [4, 14, 7, 17],
+          "pivot_anchor": "back_center"
+        },
+        {
+          "source_bone": "real_head",
+          "target_bone": "ear_r",
+          "plus_x_uv": [17, 15, 19, 17],
+          "side_y": "positive",
+          "pivot_anchor": "bottom_center"
+        },
+        {
+          "source_bone": "real_head",
+          "target_bone": "ear_l",
+          "plus_x_uv": [17, 15, 19, 17],
+          "side_y": "negative",
+          "pivot_anchor": "bottom_center"
+        }
+      ],
+      "eye_l": [8, 6, 10, 7],
+      "pupil_l": [8, 6, 9, 7],
+      "eye_r": [4, 6, 6, 7],
+      "pupil_r": [5, 6, 6, 7],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [6, 6],
+      "sclera_hex": "#ffffff",
+      "mouth_hex": "#121416",
+      "supports_3d": true
+    },
+    "wolf_baby": {
+      "tex_size": [32, 32],
+      "head_bone": "head",
+      "front_uv": [5, 17, 11, 22],
+      "promote_cuboids": [
+        {
+          "source_bone": "head",
+          "target_bone": "nose",
+          "plus_x_uv": [19, 14, 22, 16],
+          "pivot_anchor": "back_center"
+        }
+      ],
+      "eye_l": [9, 19, 10, 20],
+      "pupil_l": [9, 19, 10, 20],
+      "eye_r": [6, 19, 7, 20],
+      "pupil_r": [6, 19, 7, 20],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [7, 18],
+      "sclera_hex": "#121416",
+      "mouth_hex": "#121416",
+      "supports_3d": true
+    },
+    "horse": {
+      "tex_size": [64, 64],
+      "head_bone": "head",
+      "surfaces": [
+        {
+          "bone": "head",
+          "uv": [0, 20, 7, 25],
+          "normal": "+y",
+          "skin_uv": [2, 21],
+          "eyes": ["r"]
+        },
+        {
+          "bone": "head",
+          "uv": [13, 20, 20, 25],
+          "normal": "-y",
+          "skin_uv": [17, 21],
+          "eyes": ["l"]
+        }
+      ],
+      "eye_r": [3, 21, 5, 22],
+      "pupil_r": [4, 21, 5, 22],
+      "eye_l": [15, 21, 17, 22],
+      "pupil_l": [15, 21, 16, 22],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [2, 21],
+      "sclera_hex": "#ffffff",
+      "supports_3d": true
+    },
+    "horse_baby": {
+      "tex_size": [64, 64],
+      "head_bone": "head",
+      "surfaces": [
+        {
+          "bone": "head",
+          "uv": [0, 9, 9, 13],
+          "normal": "+y",
+          "skin_uv": [4, 10],
+          "eyes": ["r"]
+        },
+        {
+          "bone": "head",
+          "uv": [15, 9, 24, 13],
+          "normal": "-y",
+          "skin_uv": [19, 10],
+          "eyes": ["l"]
+        }
+      ],
+      "eye_r": [2, 10, 4, 11],
+      "pupil_r": [3, 10, 4, 11],
+      "eye_l": [20, 10, 22, 11],
+      "pupil_l": [20, 10, 21, 11],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [4, 10],
+      "sclera_hex": "#ffffff",
+      "supports_3d": true
+    },
+    "goat": {
+      "tex_size": [64, 64],
+      "head_bone": "nose",
+      "surfaces": [
+        {
+          "bone": "nose",
+          "uv": [34, 56, 44, 63],
+          "normal": "+y",
+          "skin_uv": [39, 58],
+          "eyes": ["r"]
+        },
+        {
+          "bone": "nose",
+          "uv": [49, 56, 59, 63],
+          "normal": "-y",
+          "skin_uv": [53, 58],
+          "eyes": ["l"]
+        }
+      ],
+      "eye_r": [37, 58, 38, 60],
+      "pupil_r": [37, 58, 38, 59],
+      "eye_l": [55, 58, 56, 60],
+      "pupil_l": [55, 58, 56, 59],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [39, 58],
+      "sclera_hex": "#ffffff",
+      "supports_3d": true
+    },
+    "camel": {
+      "tex_size": [128, 128],
+      "head_bone": "head",
+      "surfaces": [
+        {
+          "bone": "head",
+          "uv": [21, 7, 28, 21],
+          "normal": "+y",
+          "skin_uv": [24, 9],
+          "eyes": ["r"]
+        },
+        {
+          "bone": "head",
+          "uv": [35, 7, 42, 21],
+          "normal": "-y",
+          "skin_uv": [38, 9],
+          "eyes": ["l"]
+        }
+      ],
+      "eye_r": [26, 8, 28, 9],
+      "pupil_r": [27, 8, 28, 9],
+      "eye_l": [35, 8, 37, 9],
+      "pupil_l": [35, 8, 36, 9],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [24, 9],
+      "sclera_hex": "#5f4823",
+      "supports_3d": true
+    },
+    "hoglin": {
+      "tex_size": [128, 64],
+      "head_bone": "head",
+      "front_uv": [80, 1, 94, 20],
+      "front_normal": "+x",
+      "eye_r": [80, 8, 82, 10],
+      "pupil_r": [80, 8, 82, 10],
+      "eye_l": [92, 8, 94, 10],
+      "pupil_l": [92, 8, 94, 10],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [86, 8],
+      "sclera_hex": "#ffffff",
+      "supports_3d": true
+    },
+    "zoglin": {
+      "extends": "hoglin"
+    },
+    "pig": {
+      "tex_size": [64, 64],
+      "head_bone": "head",
+      "front_uv": [8, 8, 16, 16],
+      "promote_cuboids": [
+        {
+          "source_bone": "head",
+          "target_bone": "nose",
+          "plus_x_uv": [17, 17, 21, 20],
+          "pivot_anchor": "back_center"
+        }
+      ],
+      "eye_l": [14, 11, 16, 12],
+      "pupil_l": [15, 11, 16, 12],
+      "eye_r": [8, 11, 10, 12],
+      "pupil_r": [8, 11, 9, 12],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [11, 10],
+      "sclera_hex": "#ffffff",
+      "mouth_hex": "#894746",
+      "supports_3d": true
+    },
+    "cow": {
+      "tex_size": [64, 64],
+      "head_bone": "head",
+      "front_uv": [6, 6, 14, 14],
+      "promote_cuboids": [
+        {
+          "source_bone": "head",
+          "target_bone": "nose",
+          "plus_x_uv": [2, 34, 8, 37],
+          "pivot_anchor": "back_center"
+        }
+      ],
+      "eye_l": [12, 9, 14, 10],
+      "pupil_l": [13, 9, 14, 10],
+      "eye_r": [6, 9, 8, 10],
+      "pupil_r": [6, 9, 7, 10],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [9, 8],
+      "sclera_hex": "#ffffff",
+      "mouth_hex": "#2a2222",
+      "supports_3d": true
+    },
+    "sheep": {
+      "tex_size": [64, 32],
+      "head_bone": "head",
+      "front_uv": [8, 8, 14, 14],
+      "eye_l": [12, 10, 14, 11],
+      "pupil_l": [13, 10, 14, 11],
+      "eye_r": [8, 10, 10, 11],
+      "pupil_r": [8, 10, 9, 11],
+      "mouth": [10, 12, 12, 14],
+      "use_brows": false,
+      "use_mouth": true,
+      "keep_3d_lip_uv": true,
+      "skin_uv": [11, 10],
+      "sclera_hex": "#ffffff",
+      "mouth_hex": "#ffb8b8",
+      "supports_3d": true
+    },
+    "cat": {
+      "tex_size": [64, 32],
+      "head_bone": "head",
+      "front_uv": [5, 5, 10, 9],
+      "promote_cuboids": [
+        {
+          "source_bone": "head",
+          "target_bone": "nose",
+          "plus_x_uv": [2, 26, 5, 28],
+          "pivot_anchor": "back_center"
+        },
+        {
+          "source_bone": "head",
+          "target_bone": "ear_r",
+          "plus_x_uv": [2, 12, 3, 13],
+          "side_y": "positive",
+          "pivot_anchor": "bottom_center"
+        },
+        {
+          "source_bone": "head",
+          "target_bone": "ear_l",
+          "plus_x_uv": [8, 12, 9, 13],
+          "side_y": "negative",
+          "pivot_anchor": "bottom_center"
+        }
+      ],
+      "eye_l": [8, 6, 10, 7],
+      "pupil_l": [8, 6, 9, 7],
+      "eye_r": [5, 6, 7, 7],
+      "pupil_r": [6, 6, 7, 7],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [7, 5],
+      "sclera_hex": "#eaeaea",
+      "mouth_hex": "#be7373",
+      "supports_3d": true
+    },
+    "fox": {
+      "tex_size": [48, 32],
+      "head_bone": "head",
+      "front_uv": [7, 11, 15, 17],
+      "eye_l": [13, 14, 15, 15],
+      "pupil_l": [14, 14, 15, 15],
+      "eye_r": [7, 14, 9, 15],
+      "pupil_r": [7, 14, 8, 15],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [10, 12],
+      "sclera_hex": "#f9f4f4",
+      "supports_3d": true
+    },
+    "chicken": {
+      "tex_size": [64, 32],
+      "head_bone": "head",
+      "front_uv": [3, 3, 7, 9],
+      "eye_l": [6, 4, 7, 5],
+      "pupil_l": [6, 4, 7, 5],
+      "eye_r": [3, 4, 4, 5],
+      "pupil_r": [3, 4, 4, 5],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [4, 4],
+      "sclera_hex": "#000000",
+      "supports_3d": true
+    },
+    "rabbit": {
+      "tex_size": [64, 64],
+      "head_bone": "head",
+      "front_uv": [5, 21, 10, 26],
+      "eye_l": [8, 22, 9, 24],
+      "pupil_l": [8, 22, 9, 24],
+      "eye_r": [6, 22, 7, 24],
+      "pupil_r": [6, 22, 7, 24],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [7, 22],
+      "sclera_hex": "#392717",
+      "supports_3d": true
+    },
+    "bee": {
+      "tex_size": [64, 64],
+      "head_bone": "body",
+      "front_uv": [10, 10, 17, 17],
+      "eye_l": [15, 13, 17, 16],
+      "pupil_l": [15, 13, 17, 16],
+      "eye_r": [10, 13, 12, 16],
+      "pupil_r": [10, 13, 12, 16],
+      "use_brows": false,
+      "use_mouth": false,
+      "skin_uv": [13, 13],
+      "sclera_hex": "#1e1e28",
+      "supports_3d": true
+    },
+    "ghast": {
+      "tex_size": [128, 64],
+      "head_bone": "body",
+      "front_uv": [32, 32, 64, 64],
+      "eye_l": [52, 42, 58, 44],
+      "pupil_l": [52, 42, 58, 44],
+      "eye_r": [38, 42, 44, 44],
+      "pupil_r": [38, 42, 44, 44],
+      "mouth": [44, 56, 52, 58],
+      "use_brows": false,
+      "use_mouth": true,
+      "skin_uv": [48, 48],
+      "sclera_hex": "#4a4a4a",
+      "mouth_hex": "#4a2424",
+      "supports_3d": true
+    }
+  }
+}

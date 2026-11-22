@@ -1,7 +1,7 @@
 """Compact bone silhouettes with bounded, physical foot extensions."""
 from functools import lru_cache
 import numpy as np
-from mc_math import encode_rotation
+from mineprep.math_tools import encode_rotation
 from ...core.features import FeatureBatch
 from ...core.templates import rotate
 from ...core.volume_features import Anchors

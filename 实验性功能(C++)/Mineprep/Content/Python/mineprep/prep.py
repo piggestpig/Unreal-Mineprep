@@ -2,17 +2,17 @@
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 import json
 import re
 import struct
 from fnmatch import fnmatchcase
 from pathlib import Path
 
-from mc_config import paths
-from mc_utils import debug, show_editor_task
-from mc_material import material_parameter_type, get_material_param, set_material_param, tex_source_files, _set_material_param
-from mc_parallel import asynctask
+from mineprep.settings import paths
+from mineprep.utils import debug, show_editor_task
+from mineprep.material_tools import material_parameter_type, get_material_param, set_material_param, tex_source_files, _set_material_param
+from mineprep.parallel import asynctask
 
 ANIMATION_PARAMETER_NAME = '动画速度/步长/列数/渐变'
 
@@ -392,6 +392,56 @@ _DEFAULT_PBR_TEXTURES = {
     'specular': '/Game/Mineprep/材质/Core/Tex/LabPBR高光默认贴图_s',
 }
 
+_EFFECT_PARAMETERS = {
+    'enchant': {'附魔颜色': 'vector', '附魔缩放/速度/对比度/底色': 'vector'},
+    'disenchant': {'附魔颜色': 'vector'},
+    'wind': {'摇摆速度': 'scalar', '摇摆幅度': 'scalar'},
+    'translucent': {'不透明R~G+B*A': 'vector'},
+    'emissive': {'发光亮度': 'scalar', '照明强度': 'scalar'},
+    'interpolate': {ANIMATION_PARAMETER_NAME: 'vector'},
+}
+
+
+def _material_policy(material):
+    """Resolve the nearest explicit metadata or legacy name rule along the parent chain."""
+    while material is not None:
+        value = unreal.EditorAssetLibrary.get_metadata_tag(material, 'Mineprep.MaterialPolicy')
+        origin = 'metadata'
+        if value:
+            if value not in ('auto', 'skip', 'keep'):
+                raise ValueError(f'未知材质策略 {value!r}: {material.get_path_name()}')
+        else:
+            origin = 'prefix'
+            name = material.get_name()
+            value = ('skip' if name.startswith('-') else
+                     'keep' if name.replace('◉', '').startswith('+') else None)
+        if value:
+            return dict(material_policy=value, policy_source=material.get_path_name(), policy_origin=origin)
+        material = material.get_editor_property('parent') if isinstance(material, unreal.MaterialInstance) else None
+    return dict(material_policy='auto', policy_source=None, policy_origin='default')
+
+
+def _kept_material_source(material):
+    """Resolve the stable parent and collect only intervening MID overrides."""
+    overrides = {}
+    while isinstance(material, unreal.MaterialInstanceDynamic):
+        for kind in ('scalar', 'vector', 'texture'):
+            for entry in material.get_editor_property(kind + '_parameter_values'):
+                if entry.parameter_info.association == unreal.MaterialParameterAssociation.GLOBAL_PARAMETER:
+                    overrides.setdefault(str(entry.parameter_info.name), _parameter_value(entry.parameter_value))
+        material = material.get_editor_property('parent')
+    return material, overrides
+
+
+def _is_translucent_material(material):
+    modes = (unreal.BlendMode.BLEND_TRANSLUCENT, unreal.BlendMode.BLEND_TRANSLUCENT_COLORED_TRANSMITTANCE)
+    while isinstance(material, unreal.MaterialInstance):
+        props = material.get_editor_property('base_property_overrides')
+        if props.get_editor_property('override_blend_mode'):
+            return props.get_editor_property('blend_mode') in modes
+        material = material.get_editor_property('parent')
+    return material.get_editor_property('blend_mode') in modes
+
 
 def _parameter_value(value):
     if isinstance(value, unreal.LinearColor):
@@ -426,7 +476,10 @@ def _labpbr_source(material):
 
 
 def _ordinary_source(material):
-    """Extract the first BaseColor texture and obvious multipliers; keep the source intact."""
+    """Prefer the instance's MC texture parameter, otherwise inspect BaseColor."""
+    texture = get_material_param(material, '纹理贴图') if isinstance(material, unreal.MaterialInstance) else None
+    named_texture = isinstance(texture, unreal.Texture2D)
+    overrides = {}
     root = material
     two_sided = blend_mode = None
     while isinstance(root, unreal.MaterialInstance):
@@ -435,9 +488,21 @@ def _ordinary_source(material):
             two_sided = props.get_editor_property('two_sided')
         if blend_mode is None and props.get_editor_property('override_blend_mode'):
             blend_mode = props.get_editor_property('blend_mode')
+        if named_texture:
+            for kind in ('scalar', 'vector', 'texture'):
+                for entry in root.get_editor_property(kind + '_parameter_values'):
+                    if entry.parameter_info.association == unreal.MaterialParameterAssociation.GLOBAL_PARAMETER:
+                        overrides.setdefault(str(entry.parameter_info.name), _parameter_value(entry.parameter_value))
         root = root.get_editor_property('parent')
     if not isinstance(root, unreal.Material):
         return None
+    blend_mode = root.get_editor_property('blend_mode') if blend_mode is None else blend_mode
+    two_sided = root.get_editor_property('two_sided') if two_sided is None else two_sided
+    translucent = blend_mode in (unreal.BlendMode.BLEND_TRANSLUCENT,
+                                unreal.BlendMode.BLEND_TRANSLUCENT_COLORED_TRANSMITTANCE)
+    family = _LABPBR_FAMILIES[2 if translucent else 0 if two_sided else 1]
+    if named_texture:
+        return family, overrides, texture
     library = unreal.MaterialEditingLibrary
     base_color = library.get_material_property_input_node(root, unreal.MaterialProperty.MP_BASE_COLOR)
 
@@ -481,7 +546,6 @@ def _ordinary_source(material):
             return factors(inputs(node)[0])
         return [node]
 
-    overrides = {}
     terms = factors(base_color)
     if texture_node in terms:
         tint, vertex_color = [1.0, 1.0, 1.0], False
@@ -493,15 +557,10 @@ def _ordinary_source(material):
                     tint[channel] *= multiplier[channel] if isinstance(multiplier, tuple) else multiplier
         overrides['纹理颜色'] = (*tint, 1.0)
         overrides['顶点颜色'] = float(vertex_color)
-    blend_mode = root.get_editor_property('blend_mode') if blend_mode is None else blend_mode
-    two_sided = root.get_editor_property('two_sided') if two_sided is None else two_sided
-    translucent = blend_mode in (unreal.BlendMode.BLEND_TRANSLUCENT,
-                                unreal.BlendMode.BLEND_TRANSLUCENT_COLORED_TRANSMITTANCE)
     opacity = value(library.get_material_property_input_node(root,
         unreal.MaterialProperty.MP_OPACITY if translucent else unreal.MaterialProperty.MP_OPACITY_MASK))
     if isinstance(opacity, (int, float)):
         overrides['不透明R~G+B*A'] = (None, None, None, opacity)
-    family = _LABPBR_FAMILIES[2 if translucent else 0 if two_sided else 1]
     return family, overrides, texture
 
 
@@ -672,7 +731,10 @@ def _parameter_records(parent):
                              ('vector', unreal.VectorParameterValue),
                              ('texture', unreal.TextureParameterValue)):
         names = getattr(unreal.MaterialEditingLibrary, 'get_' + kind + '_parameter_names')(parent)
-        getter = getattr(parent, 'get_' + kind + '_parameter_value')
+        getter = (getattr(parent, 'get_' + kind + '_parameter_value')
+                  if isinstance(parent, unreal.MaterialInstance) else
+                  lambda name: getattr(unreal.MaterialEditingLibrary,
+                      'get_material_default_' + kind + '_parameter_value')(parent, name))
         properties[kind + '_parameter_values'] = [entry_type(
             parameter_info=unreal.MaterialParameterInfo(name=name), parameter_value=getter(name))
             for name in names]
@@ -739,7 +801,12 @@ def _sharpen_asset_textures(assets, report, task):
                     if _is_core_asset(material):
                         report['skipped'].append(dict(asset=material.get_path_name(), reason='protected_core_asset'))
                     else:
-                        used.extend(unreal.MaterialEditingLibrary.get_material_used_textures(material))
+                        policy = _material_policy(material)
+                        if policy['material_policy'] == 'skip':
+                            report['skipped'].append(dict(asset=material.get_path_name(),
+                                                          reason='material_policy_skip', **policy))
+                        else:
+                            used.extend(unreal.MaterialEditingLibrary.get_material_used_textures(material))
         for texture in used:
             if texture in textures:
                 continue
@@ -768,19 +835,24 @@ def _replace_asset_textures(assets, resource_pack, report, task):
             report['skipped'].append(dict(asset=path, reason='unsupported_asset'))
             yield
             continue
+        policy = _material_policy(material)
+        if policy['material_policy'] == 'skip':
+            report['skipped'].append(dict(asset=path, reason='material_policy_skip', **policy))
+            yield
+            continue
         if any(material_parameter_type(material, name) != 'texture' for name in _TEXTURE_PARAMETERS.values()):
-            report['skipped'].append(dict(asset=path, reason='unsupported_material'))
+            report['skipped'].append(dict(asset=path, reason='unsupported_material', **policy))
             yield
             continue
         identity = identify_mc_texture(material)
         if identity is None:
-            report['skipped'].append(dict(asset=path, reason='unknown_texture'))
+            report['skipped'].append(dict(asset=path, reason='unknown_texture', **policy))
             yield
             continue
         try:
             files = resolve_mc_texture(identity, resource_pack)
         except FileNotFoundError:
-            report['skipped'].append(dict(asset=path, reason='missing_base', texture_id=identity))
+            report['skipped'].append(dict(asset=path, reason='missing_base', texture_id=identity, **policy))
             yield
             continue
         destination = _asset_texture_directory(material, resource_pack)
@@ -806,7 +878,7 @@ def _replace_asset_textures(assets, resource_pack, report, task):
                     _set_material_param(material, ANIMATION_PARAMETER_NAME,
                                         unreal.LinearColor(0, 1, 1, 0), 'vector')
             unreal.MaterialEditingLibrary.update_material_instance(material)
-        report['changed'].append(dict(asset=path, action='replace_textures', texture_id=identity))
+        report['changed'].append(dict(asset=path, action='replace_textures', texture_id=identity, **policy))
         yield
 
 
@@ -869,11 +941,20 @@ def _material_steps(components, level, parameters, resource_pack, scope, effect,
         for number, component in enumerate(components, 1):
             task.stage(f'材质 {number}/{len(components)} · {component.get_name()}')
             pending = []
-            for kind, index, source_material in _material_slots(component, scope):
-                slot = dict(component=component.get_path_name(), kind=kind, index=index)
-                profile = _labpbr_source(source_material)
-                converted = profile is None
-                if converted:
+            slots = tuple(_material_slots(component, scope))
+            for kind, index, source_material in slots:
+                policy = _material_policy(source_material)
+                slot = dict(component=component.get_path_name(), kind=kind, index=index, **policy)
+                if policy['material_policy'] == 'skip':
+                    report['skipped'].append(dict(slot, reason='material_policy_skip'))
+                    continue
+                kept = policy['material_policy'] == 'keep'
+                profile = None if kept else _labpbr_source(source_material)
+                converted = not kept and profile is None
+                if kept:
+                    parent, overrides = _kept_material_source(source_material)
+                    base = get_material_param(source_material, '纹理贴图')
+                elif converted:
                     if source_material not in ordinary_sources:
                         ordinary_sources[source_material] = _ordinary_source(source_material)
                     source = ordinary_sources[source_material]
@@ -889,22 +970,39 @@ def _material_steps(components, level, parameters, resource_pack, scope, effect,
                 texture_source = sources[0] if len(sources) == 1 else None
                 if converted:
                     old_level = 2 if _texture_animation(texture_source) is not None else 1
-                target_level = old_level if level is None else level
-                if effect in ('enchant', 'wind'):
-                    target_level = max(old_level, target_level, 3)
-                elif effect == 'interpolate':
-                    target_level = max(old_level, target_level, 2)
-                elif effect == 'disenchant':
-                    target_level = old_level
-                elif effect == 'translucent':
-                    # 半透明暂用单面以减少排序问题；待 UE 5.9 的排序方案验证后再评估双面。
-                    family = _LABPBR_FAMILIES[2]
-                parent = unreal.load_asset(family[target_level - 1])
+                if not kept:
+                    target_level = old_level if level is None else level
+                    if effect in ('enchant', 'wind'):
+                        target_level = max(old_level, target_level, 3)
+                    elif effect == 'interpolate':
+                        target_level = max(old_level, target_level, 2)
+                    elif effect == 'disenchant':
+                        target_level = old_level
+                    elif effect == 'translucent':
+                        # 半透明暂用单面以减少排序问题；待 UE 5.9 的排序方案验证后再评估双面。
+                        family = _LABPBR_FAMILIES[2]
+                    parent = unreal.load_asset(family[target_level - 1])
                 if parent not in parameter_records:
                     parameter_records[parent] = _parameter_records(parent)
+                records = parameter_records[parent]
+                if kept and effect is not None:
+                    missing = [name for name, kind in _EFFECT_PARAMETERS[effect].items()
+                               if _parameter_kind(records, name) != kind]
+                    missing.extend(name for name in parameters if _parameter_kind(records, name) is None
+                                   and name not in missing)
+                    if missing or (effect == 'translucent' and not _is_translucent_material(source_material)):
+                        report['skipped'].append(dict(slot, reason='unsupported_effect', effect=effect,
+                                                      missing_parameters=missing))
+                        continue
+                if kept and resource_pack is not None and any(
+                        _parameter_kind(records, name) != 'texture' for name in _TEXTURE_PARAMETERS.values()):
+                    report['skipped'].append(dict(slot, reason='unsupported_material'))
+                    continue
                 for name, value in parameters.items():
-                    declared = _parameter_kind(parameter_records[parent], name)
+                    declared = _parameter_kind(records, name)
                     if declared is None:
+                        if kept:
+                            continue
                         raise ValueError(f'目标模板没有参数: {name}: {parent.get_path_name()}')
                     if isinstance(value, tuple) and any(v is None for v in value):
                         if declared != 'vector' or len(value) != 4:
@@ -937,27 +1035,30 @@ def _material_steps(components, level, parameters, resource_pack, scope, effect,
                     overrides = {name: value for name, value in overrides.items()
                                  if name not in (*_TEXTURE_PARAMETERS.values(), ANIMATION_PARAMETER_NAME)}
                 elif converted:
-                    bindings = {'纹理贴图': base, **{_TEXTURE_PARAMETERS[role]: unreal.load_asset(path)
-                                for role, path in _DEFAULT_PBR_TEXTURES.items()}}
+                    bindings = {'纹理贴图': base}
+                    for role, path in _DEFAULT_PBR_TEXTURES.items():
+                        name = _TEXTURE_PARAMETERS[role]
+                        texture = get_material_param(source_material, name)
+                        bindings[name] = texture if isinstance(texture, unreal.Texture2D) else unreal.load_asset(path)
                 else:
                     # Preserve inherited texture bindings even when changing the template.
                     bindings = {name: get_material_param(source_material, name)
                                 for name in _TEXTURE_PARAMETERS.values()
                                 if material_parameter_type(source_material, name) == 'texture'}
-                pending.append((slot, source_material, parent, texture_source, overrides, bindings, identity, converted))
+                pending.append((slot, source_material, parent, texture_source, overrides, bindings, identity, converted, kept))
 
             if pending:
                 with unreal.ScopedEditorTransaction('Mineprep: prepare component materials'):
                     component.modify()
-                    for slot, source_material, parent, texture_source, overrides, bindings, identity, converted in pending:
-                        stem = _material_stem(source_material, identity, texture_source,
+                    for slot, source_material, parent, texture_source, overrides, bindings, identity, converted, kept in pending:
+                        stem = _material_stem(parent if kept else source_material, identity, texture_source,
                                               slot['kind'], slot['index'])
                         name = source_material.get_name()
                         slot_name = (name == stem or (name.startswith(stem + '_')
                                      and name[len(stem) + 1:].isdigit()))
                         reusable = (isinstance(source_material, unreal.MaterialInstanceDynamic)
                                     and source_material.get_outer() == component
-                                    and slot_name
+                                    and (slot_name or (kept and sum(m == source_material for _, _, m in slots) == 1))
                                     and source_material.get_editor_property('parent') == parent)
                         if reusable:
                             material = source_material
@@ -968,9 +1069,20 @@ def _material_steps(components, level, parameters, resource_pack, scope, effect,
                             material = unreal.MaterialInstanceDynamic(outer=component,
                                 name=_unique_mid_name(component, stem))
                             material.set_editor_property('parent', parent)
-                        apply_mc_material_defaults(material, texture_source)
+                            if kept and isinstance(parent, unreal.MaterialInstance):
+                                material.copy_parameter_overrides(parent)
+                            if kept and isinstance(source_material, unreal.MaterialInstanceDynamic) and (
+                                    slot['policy_source'] == source_material.get_path_name()):
+                                unreal.EditorAssetLibrary.set_metadata_tag(material, 'Mineprep.MaterialPolicy', 'keep')
+                        if not kept:
+                            apply_mc_material_defaults(material, texture_source)
+                        elif resource_pack is not None and material_parameter_type(material, ANIMATION_PARAMETER_NAME) == 'vector':
+                            if not _apply_texture_animation(material, texture_source):
+                                _set_material_param(material, ANIMATION_PARAMETER_NAME,
+                                                    unreal.LinearColor(0, 1, 1, 0), 'vector')
                         records = parameter_records[parent]
-                        _apply_parameters(material, overrides, records)
+                        if not kept or not reusable:
+                            _apply_parameters(material, overrides, records)
                         _apply_parameters(material, bindings, records)
                         _apply_parameters(material, parameters, records)
                         _sync_parameter_metadata(material, parameter_records[parent])

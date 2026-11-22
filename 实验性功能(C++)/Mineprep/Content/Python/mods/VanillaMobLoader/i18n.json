@@ -540,6 +540,95 @@
     "放置 {name}": {
       "zh": "放置 {name}",
       "en": "Placing {name}"
+    },
+    "目标资产的条目不同，请更换保存名称": {
+      "zh": "目标资产的条目不同，请更换保存名称",
+      "en": "Existing asset uses a different selection. Choose a different save name."
+    },
+    "目标资产的导入选项不同，请重新导入或更换保存名称": {
+      "zh": "目标资产的导入选项不同，请重新导入或更换保存名称",
+      "en": "Import options changed. Reimport or choose a different save name."
+    },
+    "面部表情": {
+      "zh": "面部表情",
+      "en": "Face Rig",
+      "zh-Hant": "臉部表情",
+      "zh-Hant-HK": "面部表情"
+    },
+    "无": {
+      "zh": "无",
+      "en": "None",
+      "zh-Hant": "無"
+    },
+    "LoaderOptions.EyeDepth": {
+      "en": "Eye Depth",
+      "zh": "眼窝深度",
+      "zh-Hant": "眼窩深度"
+    },
+    "LoaderOptions.EyeDepth.tooltip": {
+      "zh": "3D 表情眼窝内凹深度（MC 像素单位，1 像素 = 6.25 cm）",
+      "en": "3D eye socket recess depth in MC pixels (1 px = 6.25 cm)",
+      "zh-Hant": "3D 表情眼窩內凹深度（MC 像素單位，1 像素 = 6.25 cm）"
+    },
+    "LoaderOptions.MouthDepth": {
+      "en": "Mouth Depth",
+      "zh": "口腔深度",
+      "zh-Hant": "口腔深度"
+    },
+    "LoaderOptions.MouthDepth.tooltip": {
+      "zh": "3D 表情口腔内凹深度（MC 像素单位，1 像素 = 6.25 cm）",
+      "en": "3D mouth cavity recess depth in MC pixels (1 px = 6.25 cm)",
+      "zh-Hant": "3D 表情口腔內凹深度（MC 像素單位，1 像素 = 6.25 cm）"
+    },
+    "LoaderOptions.BrowThickness": {
+      "en": "Brow Thickness",
+      "zh": "眉毛厚度",
+      "zh-Hant": "眉毛厚度"
+    },
+    "LoaderOptions.BrowThickness.tooltip": {
+      "zh": "3D 表情眉毛前凸厚度（MC 像素单位，0 为不凸起）",
+      "en": "3D eyebrow extrusion thickness in MC pixels (0 disables extrusion)",
+      "zh-Hant": "3D 表情眉毛前凸厚度（MC 像素單位，0 為不凸起）"
+    },
+    "LoaderOptions.BrowHeight": {
+      "en": "Brow Height",
+      "zh": "眉毛粗细",
+      "zh-Hant": "眉毛粗細"
+    },
+    "LoaderOptions.BrowHeight.tooltip": {
+      "zh": "3D 表情眉毛粗细高度（MC 像素单位）",
+      "en": "3D eyebrow height in MC pixels",
+      "zh-Hant": "3D 表情眉毛粗細高度（MC 像素單位）"
+    },
+    "LoaderOptions.UseTeeth": {
+      "en": "3D Mouth Teeth",
+      "zh": "生成牙齿",
+      "zh-Hant": "生成牙齒"
+    },
+    "LoaderOptions.UseTeeth.tooltip": {
+      "zh": "3D 表情张嘴时生成上排牙齿；关闭则为纯深色口腔（默认关闭，更贴近常见 MC 动画）",
+      "en": "Generate upper teeth inside the 3D mouth; disable for a clean dark cavity (default off)",
+      "zh-Hant": "3D 表情張嘴時生成上排牙齒；關閉則為純深色口腔（預設關閉，更貼近常見 MC 動畫）"
+    },
+    "LoaderOptions.MouthCavityColor": {
+      "en": "Mouth Cavity Color",
+      "zh": "口腔颜色",
+      "zh-Hant": "口腔顏色"
+    },
+    "LoaderOptions.MouthCavityColor.tooltip": {
+      "zh": "3D 表情口腔内部颜色（默认深黑，导入后也可在材质实例中随时调整）",
+      "en": "Interior color of the 3D mouth cavity (defaults to dark black; also editable on the Material Instance)",
+      "zh-Hant": "3D 表情口腔內部顏色（預設深黑，匯入後也可在材質實例中隨時調整）"
+    },
+    "LoaderOptions.BrowFollowBlink": {
+      "en": "Blink Moves Brows",
+      "zh": "眨眼带动眉毛",
+      "zh-Hant": "眨眼帶動眉毛"
+    },
+    "LoaderOptions.BrowFollowBlink.tooltip": {
+      "zh": "眨眼时带动眉毛完整下移一格；关闭则与眨眼完全解耦，由 face_brow_y 独立控制",
+      "en": "Drop eyebrows by a full grid row when blinking; disable to keep brows decoupled and driven solely by face_brow_y",
+      "zh-Hant": "眨眼時帶動眉毛完整下移一格；關閉則與眨眼完全解耦，由 face_brow_y 獨立控制"
     }
   }
 }

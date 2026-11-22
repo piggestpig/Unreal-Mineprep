@@ -2,7 +2,7 @@
 
 Use `mineprep.LowPolyModel` for instanced static meshes and
 `mineprep.SkeletalModel` for rigidly skinned box models.
-Both are implemented in [mc_model.py](../mc_model.py).
+Both are implemented in [mineprep/model.py](../mineprep/model.py).
 Recipes and data validation work without Unreal; placement and asset preparation
 require the editor. Do not install extra packages.
 

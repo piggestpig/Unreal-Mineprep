@@ -113,15 +113,55 @@ def regular_times(duration, fps):
     return [min(i / fps, duration) for i in range(int(math.ceil(duration * fps - 1e-5)) + 1)]
 
 
-def compile_animation(name, animation, fps):
-    """Return duration, sample seconds, per-bone P/R/S and pre-limit sample indices."""
+def scalar_channel(value, where):
+    """Parse a scalar float channel (constant or time -> number / {pre, post, lerp_mode})."""
+    def num(v):
+        parsed = _parse_number(v)
+        if parsed is None or not math.isfinite(parsed):
+            raise ValueError(where + ': expected finite numeric scalar')
+        return (parsed,)
+
+    if not isinstance(value, dict):
+        pt = num(value)
+        return [(0.0, pt, pt, 'linear')]
+    result = []
+    for t, v in value.items():
+        if isinstance(t, bool):
+            raise ValueError(where + ': unsupported time/interpolation: ' + str(t))
+        try:
+            time = float(t)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(where + ': unsupported time/interpolation: ' + str(t)) from exc
+        if not math.isfinite(time) or time < 0:
+            raise ValueError(where + ': time must be finite and nonnegative')
+        if isinstance(v, dict):
+            mode = v.get('lerp_mode', 'linear')
+            if mode not in ('linear', 'catmullrom'):
+                raise ValueError(where + ': unsupported lerp_mode: ' + str(mode))
+            if 'pre' not in v and 'post' not in v:
+                raise ValueError(where + ': key requires pre or post')
+            pre = num(v.get('pre', v.get('post')))
+            post = num(v.get('post', v.get('pre')))
+        else:
+            mode = 'linear'
+            pre = post = num(v)
+        result.append((time, pre, post, mode))
+    result.sort(key=lambda key: key[0])
+    if not result or any(a[0] == b[0] for a, b in zip(result, result[1:])):
+        raise ValueError(where + ': empty channel or duplicate time')
+    return result
+
+
+def compile_clip_channels(name, animation, fps):
+    """Return (duration, times, bone_samples, curve_samples, left_indices)."""
     for feature in ('animation_controllers', 'timeline', 'particle_effects', 'sound_effects'):
         if feature in animation:
             raise ValueError(name + ': unsupported ' + feature)
     parsed = {}
+    parsed_curves = {}
     jumps = set()
     duration = float(animation.get('animation_length', 0))
-    for bone, channels in animation.get('bones', {}).items():
+    for bone, channels in (animation.get('bones') or {}).items():
         parsed[bone] = {}
         for prop, default in (('position', (0.,)*3), ('rotation', (0.,)*3), ('scale', (1.,)*3)):
             keys = channel(channels[prop], f'{name}/{bone}/{prop}') if prop in channels else []
@@ -132,13 +172,40 @@ def compile_animation(name, animation, fps):
                     t for idx, (t, pre, post, _) in enumerate(keys)
                     if t > 0 and pre != post and (idx == 0 or keys[idx-1][3] != 'catmullrom')
                 )
+    raw_curves = animation.get('curves') or {}
+    if not isinstance(raw_curves, dict):
+        raise ValueError(name + ': curves must be an object')
+    for cname, spec in raw_curves.items():
+        if not isinstance(cname, str) or not cname.strip():
+            raise ValueError(name + ': curve name must be a non-empty string')
+        keys = scalar_channel(spec, f'{name}/curves/{cname}')
+        parsed_curves[cname.strip()] = keys
+        if keys:
+            duration = max(duration, keys[-1][0])
+            jumps.update(
+                t for idx, (t, pre, post, _) in enumerate(keys)
+                if t > 0 and pre != post and (idx == 0 or keys[idx-1][3] != 'catmullrom')
+            )
     if not math.isfinite(duration) or duration < 0 or not math.isfinite(fps) or fps <= 0:
         raise ValueError(name + ': invalid duration or fps')
     times = regular_times(duration, fps)
-    # The duplicate time carries the left limit and then the value at the key.
     timeline = sorted({(t, False) for t in times} | {(t, left) for t in jumps for left in (True, False)},
                       key=lambda sample: (sample[0], not sample[1]))
     samples = {bone: {prop: [evaluate(keys, t, default, before=left) for t, left in timeline]
                       for prop, (keys, default) in channels.items()}
                for bone, channels in parsed.items()}
-    return duration, [t for t, _ in timeline], samples, {i for i, (_, left) in enumerate(timeline) if left}
+    curve_samples = {cname: [evaluate(keys, t, (0.0,), before=left)[0] for t, left in timeline]
+                     for cname, keys in parsed_curves.items()}
+    return (
+        duration,
+        [t for t, _ in timeline],
+        samples,
+        curve_samples,
+        {i for i, (_, left) in enumerate(timeline) if left},
+    )
+
+
+def compile_animation(name, animation, fps):
+    """Return duration, sample seconds, per-bone P/R/S and pre-limit sample indices."""
+    duration, times, samples, _curves, left_indices = compile_clip_channels(name, animation, fps)
+    return duration, times, samples, left_indices

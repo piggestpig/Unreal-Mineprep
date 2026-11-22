@@ -32,7 +32,7 @@ language (omitted means `zh`); `I18N` creates English-native records.
 Manifest arrays and language dictionaries use the same catalog; see
 [manifest text syntax](../mods/ModManager/MANIFEST.md#文本写法).
 `bilingual`, `localize` and `loctext` remain available for existing callers.
-See the [Internationalization docstring](../mc_localization.py) for other options.
+See the [Internationalization docstring](../mineprep/localization.py) for other options.
 
 ## Read-only calls
 
@@ -108,7 +108,7 @@ UE categories share translations globally by name.
 
 When migrating old explicit `localize('Field', ...)` calls, run them before the
 automatic call to retain their translations. For additional options, see the
-[localize docstring](../mc_widget.py).
+[localize docstring](../mineprep/widgets.py).
 
 ## Explicit catalog files
 
@@ -215,7 +215,7 @@ the first match without building an index. JSON edits still need the normal relo
 Inspect a mod folder or Python file without importing or running it:
 
 ```python
-from mc_localization import collect_i18n, check_i18n
+from mineprep.localization import collect_i18n, check_i18n
 
 preview = collect_i18n('mods/MyMod')             # read only
 report = check_i18n('mods/MyMod')               # read only
@@ -223,7 +223,7 @@ report = check_i18n('mods/MyMod')               # read only
 ```
 
 Outside UE, put the plugin Python directory on `sys.path` and import
-`mc_localization` directly for a standard-library-only process. Both helpers are
+`mineprep.localization` directly for a standard-library-only process. Both helpers are
 also exported by `mineprep`.
 
 Reports contain `added`, `untranslated`, `unused`, `dynamic` and `errors` lists.
@@ -240,4 +240,4 @@ not fully detected. Review source and `added` / `dynamic` separately. `unused`
 entries are candidates only; legacy calls and missed references can cause false
 positives. Check callers before deleting entries. Writes preserve existing JSON
 values and skip conflicts or invalid files; reload afterward. See the
-[helper docstrings](../mc_localization.py) for details.
+[helper docstrings](../mineprep/localization.py) for details.

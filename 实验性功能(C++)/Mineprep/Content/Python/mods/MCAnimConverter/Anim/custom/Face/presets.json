@@ -1,0 +1,260 @@
+{
+  "version": "1.2",
+  "presets": [
+    {
+      "id": "neutral",
+      "category": "emotion",
+      "name": ["自然", "Neutral", "自然"],
+      "reset_scope": "all",
+      "curves": {}
+    },
+    {
+      "id": "happy",
+      "category": "emotion",
+      "name": ["开心", "Happy", "開心"],
+      "reset_scope": "emotion",
+      "curves": {
+        "face_pupil_scale": 0.15,
+        "face_brow_y_l": 0.25,
+        "face_brow_y_r": 0.25,
+        "face_mouth_open": 0.25,
+        "face_mouth_wide": 0.35,
+        "face_mouth_smile": 0.85
+      }
+    },
+    {
+      "id": "laugh",
+      "category": "emotion",
+      "name": ["大笑", "Laugh", "大笑"],
+      "reset_scope": "emotion",
+      "curves": {
+        "face_eye_wide": -0.55,
+        "face_brow_y_l": 0.45,
+        "face_brow_y_r": 0.45,
+        "face_mouth_open": 0.85,
+        "face_mouth_wide": 0.55,
+        "face_mouth_smile": 1.0
+      }
+    },
+    {
+      "id": "angry",
+      "category": "emotion",
+      "name": ["生气", "Angry", "生氣"],
+      "reset_scope": "emotion",
+      "curves": {
+        "face_eye_wide": -0.35,
+        "face_pupil_scale": -0.2,
+        "face_brow_y_l": -0.45,
+        "face_brow_y_r": -0.45,
+        "face_brow_rot_l": -0.95,
+        "face_brow_rot_r": -0.95,
+        "face_mouth_open": 0.35,
+        "face_mouth_wide": 0.2,
+        "face_mouth_smile": -0.75
+      }
+    },
+    {
+      "id": "sad",
+      "category": "emotion",
+      "name": ["难过", "Sad", "難過"],
+      "reset_scope": "emotion",
+      "curves": {
+        "face_look_y": -0.35,
+        "face_brow_y_l": 0.2,
+        "face_brow_y_r": 0.2,
+        "face_brow_rot_l": 0.85,
+        "face_brow_rot_r": 0.85,
+        "face_mouth_wide": -0.25,
+        "face_mouth_smile": -0.75
+      }
+    },
+    {
+      "id": "surprised",
+      "category": "emotion",
+      "name": ["惊讶", "Surprised", "驚訝"],
+      "reset_scope": "emotion",
+      "curves": {
+        "face_eye_wide": 0.75,
+        "face_pupil_scale": -0.45,
+        "face_brow_y_l": 0.8,
+        "face_brow_y_r": 0.8,
+        "face_mouth_open": 0.65,
+        "face_mouth_wide": -0.45
+      }
+    },
+    {
+      "id": "shocked",
+      "category": "emotion",
+      "name": ["震惊", "Shocked", "震驚"],
+      "reset_scope": "emotion",
+      "curves": {
+        "face_eye_wide": 1.0,
+        "face_pupil_scale": -0.85,
+        "face_brow_y_l": 1.0,
+        "face_brow_y_r": 1.0,
+        "face_brow_rot_l": 0.35,
+        "face_brow_rot_r": 0.35,
+        "face_mouth_open": 1.0,
+        "face_mouth_wide": -0.65
+      }
+    },
+    {
+      "id": "smirk",
+      "category": "emotion",
+      "name": ["坏笑", "Smirk", "壞笑"],
+      "reset_scope": "emotion",
+      "curves": {
+        "face_brow_y_l": 0.55,
+        "face_brow_y_r": -0.2,
+        "face_brow_rot_r": -0.45,
+        "face_mouth_open": 0.15,
+        "face_mouth_smile": 0.75,
+        "face_mouth_x": 0.45
+      }
+    },
+    {
+      "id": "suspicious",
+      "category": "emotion",
+      "name": ["怀疑", "Suspicious", "懷疑"],
+      "reset_scope": "emotion",
+      "curves": {
+        "face_eye_wide": -0.65,
+        "face_pupil_scale": -0.3,
+        "face_brow_y_l": 0.45,
+        "face_brow_y_r": -0.35,
+        "face_brow_rot_r": -0.5,
+        "face_mouth_wide": -0.2,
+        "face_mouth_smile": -0.25,
+        "face_mouth_x": -0.25
+      }
+    },
+    {
+      "id": "sleepy",
+      "category": "emotion",
+      "name": ["困倦", "Sleepy", "睏倦"],
+      "reset_scope": "emotion",
+      "curves": {
+        "face_blink_l": 0.55,
+        "face_blink_r": 0.55,
+        "face_look_y": -0.35,
+        "face_brow_y_l": -0.25,
+        "face_brow_y_r": -0.25,
+        "face_mouth_open": 0.3,
+        "face_mouth_wide": -0.35
+      }
+    },
+    {
+      "id": "look_center",
+      "category": "gaze",
+      "name": ["看正中", "Look Center", "看正中"],
+      "reset_scope": "none",
+      "curves": {
+        "face_look_x_l": 0.0,
+        "face_look_x_r": 0.0,
+        "face_look_y": 0.0
+      }
+    },
+    {
+      "id": "look_left",
+      "category": "gaze",
+      "name": ["向左看", "Look Left", "向左看"],
+      "reset_scope": "none",
+      "curves": {
+        "face_look_x_l": 0.8,
+        "face_look_x_r": 0.2,
+        "face_look_y": 0.0
+      }
+    },
+    {
+      "id": "look_right",
+      "category": "gaze",
+      "name": ["向右看", "Look Right", "向右看"],
+      "reset_scope": "none",
+      "curves": {
+        "face_look_x_l": -0.2,
+        "face_look_x_r": -0.8,
+        "face_look_y": 0.0
+      }
+    },
+    {
+      "id": "look_up",
+      "category": "gaze",
+      "name": ["向上看", "Look Up", "向上看"],
+      "reset_scope": "none",
+      "curves": {
+        "face_look_y": 0.8
+      }
+    },
+    {
+      "id": "look_down",
+      "category": "gaze",
+      "name": ["向下看", "Look Down", "向下看"],
+      "reset_scope": "none",
+      "curves": {
+        "face_look_y": -0.8
+      }
+    },
+    {
+      "id": "cross_eye",
+      "category": "gaze",
+      "name": ["斗鸡眼", "Cross-Eyed", "鬥雞眼"],
+      "reset_scope": "none",
+      "curves": {
+        "face_look_x_l": -0.35,
+        "face_look_x_r": 0.35
+      }
+    },
+    {
+      "id": "derpy",
+      "category": "gaze",
+      "name": ["呆萌外斜", "Derpy Eyes", "呆萌外斜"],
+      "reset_scope": "none",
+      "curves": {
+        "face_look_x_l": 0.9,
+        "face_look_x_r": -0.9
+      }
+    },
+    {
+      "id": "blink",
+      "category": "blink",
+      "name": ["自然眨眼", "Blink", "自然眨眼"],
+      "reset_scope": "none",
+      "animation_length": 0.21,
+      "curves": {
+        "face_blink_l": {"0.0": 0.0, "0.05": 1.0, "0.13": 1.0, "0.21": 0.0},
+        "face_blink_r": {"0.0": 0.0, "0.05": 1.0, "0.13": 1.0, "0.21": 0.0}
+      }
+    },
+    {
+      "id": "double_blink",
+      "category": "blink",
+      "name": ["连续眨眼", "Double Blink", "連續眨眼"],
+      "reset_scope": "none",
+      "animation_length": 0.52,
+      "curves": {
+        "face_blink_l": {"0.0": 0.0, "0.05": 1.0, "0.12": 1.0, "0.20": 0.0, "0.30": 0.0, "0.35": 1.0, "0.43": 1.0, "0.52": 0.0},
+        "face_blink_r": {"0.0": 0.0, "0.05": 1.0, "0.12": 1.0, "0.20": 0.0, "0.30": 0.0, "0.35": 1.0, "0.43": 1.0, "0.52": 0.0}
+      }
+    },
+    {
+      "id": "wink_l",
+      "category": "blink",
+      "name": ["左眼眨眼", "Wink Left", "左眼眨眼"],
+      "reset_scope": "none",
+      "curves": {
+        "face_blink_l": 1.0,
+        "face_blink_r": 0.0
+      }
+    },
+    {
+      "id": "wink_r",
+      "category": "blink",
+      "name": ["右眼眨眼", "Wink Right", "右眼眨眼"],
+      "reset_scope": "none",
+      "curves": {
+        "face_blink_l": 0.0,
+        "face_blink_r": 1.0
+      }
+    }
+  ]
+}

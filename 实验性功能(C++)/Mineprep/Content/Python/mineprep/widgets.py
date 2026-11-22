@@ -4,16 +4,16 @@ import sys
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 import uuid
 import random
 import weakref
 import mcvars
 from pathlib import Path
-from mc_utils import (construct, uasset, enum, uclass, debug, SafeList,
+from mineprep.utils import (construct, uasset, enum, uclass, debug, SafeList,
                       resolve_soft, get_tex_size, get_hotkey_object)
-from mc_config import paths, wclass
-from mc_localization import Internationalization, I18N
+from mineprep.settings import paths, wclass
+from mineprep.localization import Internationalization, I18N
 from typing import TypeVar, Callable, Any
 
 T = TypeVar('T')
@@ -667,8 +667,13 @@ def add_widget(root, widget: T, props: dict=None,
     if hasattr(slot, 'set_padding') and not isinstance(root, unreal.ScaleBox):
         if isinstance(padding, (int, float)):
             padding = unreal.Margin(padding, padding, padding, padding)
-        elif isinstance(padding, (list, tuple)) and len(padding) == 2:
-            padding = unreal.Margin(padding[0], padding[1], padding[0], padding[1])
+        elif isinstance(padding, (list, tuple)):
+            if len(padding) == 2:
+                padding = unreal.Margin(padding[0], padding[1], padding[0], padding[1])
+            elif len(padding) == 4:
+                padding = unreal.Margin(*padding)
+            else:
+                raise ValueError(f'padding 长度须为 2 或 4，传入了 {len(padding)}')
         slot.set_padding(padding)
 
     if hasattr(slot, 'set_horizontal_alignment'):
@@ -718,7 +723,7 @@ class Layout():
     参数中的**kwargs可传入以下通用参数
 
     padding = unreal.Margin(3,1,3,1)
-        可简写为(3,1), 也可简写至一个数字
+        可简写为 (左, 上, 右, 下)、(水平, 垂直) 或单个数字
     align = (0,0)
         (水平, 垂直) 对齐方式, 0填充, 1靠左/靠上, 2居中, 3靠右/靠下
     fill = False
@@ -1123,16 +1128,32 @@ class Layout():
                 texts[key] = label if isinstance(label, unreal.Text) else unreal.Text(str(label))
             return keys, texts
 
-        def bind_generate(fn):
+        # UComboBoxKey::GenerateContent / HandleGenerateItemWidget return UWidget* and immediately
+        # discard it after TakeWidget(), leaving STextBlock::StrikeBrush pointing into a UTextBlock
+        # with no UPROPERTY root. Pin generated widgets inside the delegate closures so UE GC cannot
+        # collect them while the ComboBoxKey is alive (e.g. hidden inside a WidgetSwitcher).
+        pinned_content = []
+        pinned_items = {}
+
+        def bind_generate(fn, *, is_content: bool):
+            def _pin(key, widget):
+                if widget is not None:
+                    if is_content:
+                        pinned_content[:] = [widget]
+                    else:
+                        pinned_items[key] = widget
+                return widget
+
             if fn is make_combo_text:
                 def wrapped(item):
                     key = str(item)
                     if key == 'None' and key not in texts and ('' in texts or not keys):
                         key = ''  # FName('') 会变成 'None'，若选项定义了空字符串键则还原回 ''
-                    return make_combo_text(key, texts=texts, outer=box)
+                    return _pin(key, make_combo_text(key, texts=texts, outer=box))
                 return wrapped
             def wrapped(item):
-                return _combo_widget(fn(str(item)))
+                key = str(item)
+                return _pin(key, _combo_widget(fn(key)))
             return wrapped
 
         widget_class = (subclass if subclass and unreal.MathLibrary.class_is_child_of(
@@ -1151,8 +1172,8 @@ class Layout():
         box.set_editor_property('widget_style', style)
         keys, texts = _combo_options(options)
 
-        gen_content = bind_generate(on_generate_content_widget)
-        gen_item = bind_generate(on_generate_item_widget)
+        gen_content = bind_generate(on_generate_content_widget, is_content=True)
+        gen_item = bind_generate(on_generate_item_widget, is_content=False)
         box.get_editor_property('on_generate_content_widget').bind_callable(gen_content)
         box.get_editor_property('on_generate_item_widget').bind_callable(gen_item)
         for key in keys:
@@ -1170,6 +1191,8 @@ class Layout():
         node._combo_keys = keys
         node._combo_gen_content = gen_content
         node._combo_gen_item = gen_item
+        node._combo_pinned_content = pinned_content
+        node._combo_pinned_items = pinned_items
         # 挂载到父控件时可能立即触发 Slate 构建，需在此之前绑定生成回调并设置初始选中项
         add_widget(self.target, box, **kwargs)
         if on_selection_changed:

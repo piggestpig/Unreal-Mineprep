@@ -1,6 +1,6 @@
 # Layout & PropertyGroup
 
-Source: `mc_widget.py`. Export: `mineprep.Layout`, `mineprep.PropertyGroup`, `mineprep.ui`.
+Source: `mineprep/widgets.py`. Export: `mineprep.Layout`, `mineprep.PropertyGroup`, `mineprep.ui`.
 
 When you need to see how a UI looks, check the reference screenshots in `mods/Showcase/image/`.
 
@@ -12,7 +12,7 @@ When you need to see how a UI looks, check the reference screenshots in `mods/Sh
 | `mineprep.Layout()` | Inside `Mod.draw`, or tiny console experiments (still spawns a tab) |
 | `mineprep.Mod` subclass | Persistent tool (toolbar, reload, Mod Manager) — see [mods.md](mods.md) |
 
-For small tasks prefer **`mineprep.ui`**. Read [mods.md](mods.md) when a kept tool or lifecycle details are relevant; `VAT_Tools` is a larger-tool example. Reading `mc_widget.py` to verify behavior does not imply changing the plugin.
+For small tasks prefer **`mineprep.ui`**. Read [mods.md](mods.md) when a kept tool or lifecycle details are relevant; `VAT_Tools` is a larger-tool example. Reading `mineprep/widgets.py` to verify behavior does not imply changing the plugin.
 
 ### Temporary panel (`mineprep.ui`) - complete example
 
@@ -238,7 +238,7 @@ on Down (for example, `if mineprep.right_mouse_down() is True: ...`), then use t
 recorded mode on Move/Up. A released button cannot identify which Up event fired;
 these helpers do not expose the event's triggering button.
 
-**Return value** (wrapper in `mc_widget.border`):
+**Return value** (wrapper in `mineprep.widgets.border`):
 
 - `handled` means the mouse event is not passed to widgets below
 - `unhandled` continues to pass it through

@@ -7,8 +7,8 @@ from uuid import uuid4
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
-from mc_utils import world, warn, List, iscollection
+    from mineprep.utils import Lazy as unreal
+from mineprep.utils import world, warn, List, iscollection
 
 CLEAR = unreal.LinearColor(0, 0, 0, 0)
 MASK = unreal.LinearColor(1, 1, 1, 1)

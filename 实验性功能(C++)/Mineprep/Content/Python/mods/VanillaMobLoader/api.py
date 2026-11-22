@@ -28,6 +28,10 @@ class _Job:
         _jobs.add(self)
         self._runner = self._run(operation, on_done)
 
+    @property
+    def done(self):
+        return self.state in ('completed', 'failed', 'cancelled')
+
     def status(self):
         return dict(state=self.state, result=self.result, error=self.error)
 
@@ -149,30 +153,55 @@ def _resolve_keys(catalog, entities):
 
 
 def _prepare_build(catalog, keys, save_path, name, layer_expansion, random_scale,
-                   prefer_java, edit_rig, conflict_policy):
+                   prefer_java, edit_rig, conflict_policy, face='none', face_options=None):
+    from mineprep.face import normalize_face_mode, normalize_face_options
+
+    face_mode = normalize_face_mode(face)
+    norm_face_opts = normalize_face_options(face_options)
     if not keys or any(k not in catalog.by_key for k in keys) or len(set(keys)) != len(keys):
         raise ValueError('请选择存在且不重复的生物条目 key')
     if conflict_policy not in ('error', 'keep_first'):
         raise ValueError('conflict_policy 须为 error 或 keep_first')
     entries = [catalog.by_key[k] for k in keys]
     explicit_name = bool(name)
-    folder, resolved_name = composition.destination(save_path, name or composition.automatic_name(entries))
     model = java_models.find(entries, mineprep.paths.glb, prefer_java)
     profile = java_models.edit_profile(model[0].name) if model else None
     rig_profile = profile if edit_rig else None
     source = 'java_glb' if model else 'cem'
+    face_spec = None
+    effective_face = 'none'
+    face_warning = None
+    if face_mode != 'none':
+        if model:
+            face_spec = java_models.face_spec_for(model[0])
+            if face_spec is None:
+                face_warning = f'表情未应用：当前尚未收录 {model[0].stem} 的五官模板'
+            elif face_mode == '3d' and not face_spec.get('supports_3d', False):
+                raise ValueError(f'{model[0].stem} 当前仅支持 2d 表情模式，请使用 face="2d"')
+            else:
+                effective_face = face_mode
+        else:
+            face_warning = '表情未应用：当前仅支持本地 Java GLB'
+    auto_name = composition.automatic_name(entries, effective_face)
+    folder, resolved_name = composition.destination(save_path, name or auto_name)
     entry = entries[0] if model else composition.aggregate_entry(entries, resolved_name, layer_expansion, random_scale)
     asset_name = resolved_name + '_Raw' if profile and not edit_rig and not explicit_name else resolved_name
     recipe = f'{entry.key}:{rig_profile}' if rig_profile else entry.key
+    if effective_face != 'none':
+        recipe = f'{recipe}:face_{effective_face}'
     label = ('Java GLB / FK' if rig_profile else 'Java GLB') if model else 'CEM'
+    if effective_face != 'none':
+        label = f'{label} / {effective_face.upper()}'
     return dict(entries=entries, folder=folder, asset_name=asset_name, model=model,
-                rig_profile=rig_profile, source=source, entry=entry, recipe=recipe, label=label, keys=keys)
+                rig_profile=rig_profile, source=source, entry=entry, recipe=recipe, label=label, keys=keys,
+                face_mode=effective_face, face_spec=face_spec, face_options=norm_face_opts, face_warning=face_warning)
 
 
 def _build_entity_step(job, catalog, spec, *, layer_expansion, random_scale,
                        reload, try_split_head, use_physics, rebuild_physics,
                        conflict_policy, on_conflict):
     import unreal
+    from mineprep.face import FACE_META_VERSION, FACE_SPEC_VERSION, supported_face_curves
     from . import importer, java_import, physics as physics_mod
 
     names.register(catalog)
@@ -183,6 +212,10 @@ def _build_entity_step(job, catalog, spec, *, layer_expansion, random_scale,
     folder = spec['folder']
     asset_name = spec['asset_name']
     recipe = spec['recipe']
+    face_mode = spec['face_mode']
+    face_spec = spec['face_spec']
+    face_options = spec.get('face_options')
+    face_curves = tuple(supported_face_curves(face_spec, face_mode, face_options)) if face_mode != 'none' else ()
     display_name = str(names.text(entry.name))
     pa_snapshot = None
     if use_physics and not rebuild_physics:
@@ -191,29 +224,52 @@ def _build_entity_step(job, catalog, spec, *, layer_expansion, random_scale,
         name=display_name, source=spec['label'])))
     target = importer.composition_target(recipe, folder, asset_name, source, keys, reload)
     mesh = target[2]
-    warnings = []
-    reused = mesh is not None and not reload
+    warnings = [spec['face_warning']] if spec.get('face_warning') else []
+    raw_model_path = model[0] if model else None
+    source_current = False
     if model:
         path, version = model
-        if not reused:
-            path = java_models.import_source(path, job.store.cache, spec['rig_profile'])
+        path = java_models.import_source(path, job.store.cache, spec['rig_profile'],
+                                         face_mode=face_mode, face_spec=face_spec, face_options=face_options)
+        if mesh is not None and not reload:
+            lib = unreal.EditorAssetLibrary
+            face_meta_ok = (face_mode == 'none') or (lib.get_metadata_tag(mesh, FACE_META_VERSION) == FACE_SPEC_VERSION)
+            source_current = (
+                lib.get_metadata_tag(mesh, java_import.SOURCE_HASH) == hashlib.sha256(path.read_bytes()).hexdigest()
+                and face_meta_ok
+            )
+    reused = (mesh is not None and not reload and (source_current if model else True))
+    if reused and model and face_mode != 'none':
+        from mineprep.model_assets import RECIPE as ASSET_RECIPE, SOURCE as ASSET_SOURCE, sync_face_material_slot
+        if sync_face_material_slot(
+            mesh, folder, asset_name,
+            owner={ASSET_SOURCE: 'java_glb', ASSET_RECIPE: recipe},
+            face_mode=face_mode, face_spec=face_spec, face_options=face_options,
+        ) is None:
+            reused = False
     if not reused:
         if model:
             job.progress(str(mineprep.i18n('导入 {name} · {source}', 'Importing {name} · {source}').format(
                 name=display_name, source=spec['label'])))
-            mesh = java_import.build(entry, keys, target, path, version, recipe=recipe)
+            mesh = java_import.build(entry, keys, target, path, version, recipe=recipe,
+                                     face_spec=face_spec, register_curves=face_curves,
+                                     face_options=face_options)
         else:
-            mesh, warnings = yield from _build_cem(job, catalog, spec['entries'], keys, entry, target,
-                                                   layer_expansion, random_scale, conflict_policy, on_conflict)
+            mesh, cem_warnings = yield from _build_cem(job, catalog, spec['entries'], keys, entry, target,
+                                                       layer_expansion, random_scale, conflict_policy, on_conflict)
+            warnings.extend(cem_warnings)
     if mesh is None:
         raise RuntimeError('未生成生物网格体')
     full_mesh = mesh
     head_mesh = None
+    if try_split_head is None:
+        try_split_head = bool(face_mode != 'none' and spec['rig_profile'] == 'biped')
     if try_split_head:
         if model:
             try:
-                path = Path(full_mesh.get_editor_property('asset_import_data').get_first_filename())
-                parts = java_models.split_source(path, job.store.cache)
+                base_split_path = java_models.import_source(raw_model_path, job.store.cache, spec['rig_profile'])
+                parts = java_models.split_source(base_split_path, job.store.cache,
+                                                 face_mode=face_mode, face_spec=face_spec, face_options=face_options)
             except (OSError, ValueError) as exc:
                 warnings.append('头身分离未应用：' + str(exc))
             else:
@@ -227,18 +283,41 @@ def _build_entity_step(job, catalog, spec, *, layer_expansion, random_scale,
                                                               source, keys, reload)
                     output = part_target[2]
                     source_hash = hashlib.sha256(part_path.read_bytes()).hexdigest()
-                    current = (
+                    part_face_ok = (
+                        part != 'head' or face_mode == 'none'
+                        or lib.get_metadata_tag(output, FACE_META_VERSION) == FACE_SPEC_VERSION
+                    ) if output is not None else False
+                    geo_current = (
                         output is not None
                         and lib.get_metadata_tag(output, java_import.SOURCE_HASH) == source_hash
-                        and all(slot.material_interface == surfaces[str(slot.material_slot_name)]
+                        and part_face_ok
+                    )
+                    mat_slots_match = (
+                        output is not None
+                        and all(slot.material_interface == surfaces.get(str(slot.material_slot_name))
                                 for slot in output.materials)
                     )
+                    if (geo_current and not reload and not mat_slots_match
+                            and {str(s.material_slot_name) for s in output.materials} <= surfaces.keys()):
+                        part_slots = list(output.materials)
+                        for s in part_slots:
+                            s.material_interface = surfaces[str(s.material_slot_name)]
+                        output.set_editor_property('materials', part_slots)
+                        if not lib.save_loaded_asset(output):
+                            raise RuntimeError('Failed to save ' + output.get_path_name())
+                        mat_slots_match = True
+                    current = geo_current and mat_slots_match
                     reused = reused and current and not reload
                     if not current or reload:
                         job.progress(str(mineprep.i18n('导入 {name} · {source}', 'Importing {name} · {source}').format(
                             name=display_name, source=part)))
-                        output = java_import.build(entry, keys, part_target, part_path, version,
-                                                   recipe=part_recipe, shared_materials=surfaces)
+                        output = java_import.build(
+                            entry, keys, part_target, part_path, version,
+                            recipe=part_recipe, shared_materials=surfaces,
+                            face_spec=face_spec if part == 'head' else None,
+                            register_curves=face_curves if part == 'head' else (),
+                            face_options=face_options if part == 'head' else None,
+                        )
                     outputs[part] = output
                 mesh, head_mesh = outputs['body'], outputs['head']
         else:
@@ -261,25 +340,29 @@ def _build_entity_step(job, catalog, spec, *, layer_expansion, random_scale,
                 full_mesh=full_mesh, head_mesh=head_mesh,
                 physics_asset=phys_info['physics_asset'],
                 head_physics_asset=phys_info['head_physics_asset'],
-                reused=reused, source=source, rig_profile=rig_profile)
+                reused=reused, source=source, rig_profile=rig_profile, face_mode=face_mode)
 
 
 def build_entity(catalog, entry_keys, *, save_path=composition.DEFAULT_SAVE_PATH, name='',
                  layer_expansion=0.01, random_scale=0.001, reload=False,
-                 prefer_java=True, edit_rig=True, try_split_head=False,
+                 prefer_java=True, edit_rig=True, try_split_head=None, face='none', face_options=None,
                  physics=True, rebuild_physics=False,
                  conflict_policy='error', cache=CACHE, stall_timeout=10,
                  on_progress=None, on_conflict=None, on_stall=None, on_done=None):
-    """构建/复用资产，不放置 Actor。冲突默认失败；keep_first 显式保留主模型骨骼。"""
+    """构建/复用资产，不放置 Actor。未显式传 try_split_head 时，人形启用表情默认头身分离，四足/其他默认一体模型。"""
+    from mineprep.face import normalize_face_mode
+
+    face_mode = normalize_face_mode(face)
+    split_head_flag = None if try_split_head is None else bool(try_split_head)
     keys = [entry_keys] if isinstance(entry_keys, str) else list(entry_keys)
     spec = _prepare_build(catalog, keys, save_path, name, layer_expansion, random_scale,
-                          prefer_java, edit_rig, conflict_policy)
+                          prefer_java, edit_rig, conflict_policy, face=face_mode, face_options=face_options)
 
     def operation(job):
         return (yield from _build_entity_step(
             job, catalog, spec,
             layer_expansion=layer_expansion, random_scale=random_scale,
-            reload=reload, try_split_head=try_split_head,
+            reload=reload, try_split_head=split_head_flag,
             use_physics=physics, rebuild_physics=rebuild_physics,
             conflict_policy=conflict_policy, on_conflict=on_conflict,
         ))
@@ -289,14 +372,18 @@ def build_entity(catalog, entry_keys, *, save_path=composition.DEFAULT_SAVE_PATH
 def spawn(entity, *, catalog=None, refresh=False, scale=1.0, target=None, label=None,
           save_path=composition.DEFAULT_SAVE_PATH, name='',
           layer_expansion=0.01, random_scale=0.001, reload=False,
-          prefer_java=True, edit_rig=True, try_split_head=False,
+          prefer_java=True, edit_rig=True, try_split_head=None, face='none', face_options=None,
           physics=True, rebuild_physics=False,
           conflict_policy='error', cache=CACHE, stall_timeout=10,
           on_progress=None, on_conflict=None, on_stall=None, on_done=None):
     """按英文 ID（或目录 key / 组合列表）在内部完成目录查找、构建并放置 Actor，返回任务句柄。"""
     import unreal
+    from mineprep.face import normalize_face_mode, normalize_face_options
     from . import importer
 
+    face_mode = normalize_face_mode(face)
+    norm_face_opts = normalize_face_options(face_options)
+    split_head_flag = None if try_split_head is None else bool(try_split_head)
     scale = float(scale)
     if not math.isfinite(scale) or scale <= 0:
         raise ValueError('Scale must be positive')
@@ -308,7 +395,8 @@ def spawn(entity, *, catalog=None, refresh=False, scale=1.0, target=None, label=
     if catalog is not None:
         resolved_keys = _resolve_keys(catalog, entity)
         resolved_spec = _prepare_build(catalog, resolved_keys, save_path, name,
-                                       layer_expansion, random_scale, prefer_java, edit_rig, conflict_policy)
+                                       layer_expansion, random_scale, prefer_java, edit_rig, conflict_policy,
+                                       face=face_mode, face_options=norm_face_opts)
     else:
         items = [entity] if isinstance(entity, str) else list(entity)
         if not items or any(not isinstance(item, str) or not item for item in items):
@@ -319,11 +407,12 @@ def spawn(entity, *, catalog=None, refresh=False, scale=1.0, target=None, label=
         spec = resolved_spec or _prepare_build(
             active_catalog, _resolve_keys(active_catalog, entity),
             save_path, name, layer_expansion, random_scale, prefer_java, edit_rig, conflict_policy,
+            face=face_mode, face_options=norm_face_opts,
         )
         result = yield from _build_entity_step(
             job, active_catalog, spec,
             layer_expansion=layer_expansion, random_scale=random_scale,
-            reload=reload, try_split_head=try_split_head,
+            reload=reload, try_split_head=split_head_flag,
             use_physics=physics, rebuild_physics=rebuild_physics,
             conflict_policy=conflict_policy, on_conflict=on_conflict,
         )

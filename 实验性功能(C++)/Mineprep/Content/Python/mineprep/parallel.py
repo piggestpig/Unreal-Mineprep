@@ -2,10 +2,10 @@ import threading
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 from concurrent.futures import Future
 from functools import wraps
-from mc_utils import throw, warn
+from mineprep.utils import throw, warn
 
 _active_delays = set()
 _active_async = set()

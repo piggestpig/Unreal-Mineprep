@@ -1,7 +1,7 @@
 # MC structure / block import
 
-Sources: `mc_structure.py`, `mc_structure_data.py`, `mc_blockstates.py`, `mc_math.py`, `mc_importer.py`, `mc_config.paths`.  
-`mc_structure_data.py` contains the Unreal-free cell container, VarInt decoder and BPT/BRT encoding/output; `cv2` is loaded only when writing EXR files.
+Sources: `mineprep/structure.py`, `mineprep/structure_data.py`, `mineprep/blockstates.py`, `mineprep/math_tools.py`, `mineprep/importer.py`, `mineprep.settings.paths`.
+`mineprep/structure_data.py` contains the Unreal-free cell container, VarInt decoder and BPT/BRT encoding/output; `cv2` is loaded only when writing EXR files.
 Resources: `…/assets/minecraft/models/block` + sibling `blockstates/`.  
 User file → `spawn_structure(source=path)`. For procedural structures, use `Blocks.add` → explicit `connect()` when needed → `spawn_structure(b, gpu=0/1/2)`; [api.md](api.md) has an oak example. Do not assume a matching NBT/schematic is bundled. Generator presets are a separate UI feature. Common mistakes: [pitfalls/structure.md](pitfalls/structure.md). Unsure of a model name: `mineprep.get_all_blocks`.
 
@@ -47,7 +47,7 @@ Source dimensions do not change placement, centering or baking; WorldGenerator
 
 ## File processing and editable cells
 
-For large structure files (`.nbt`, `.mcstructure`, `.schem`, `.schematic`), pass the file path directly to `spawn_structure(path, ...)` or `parse_structure(path, ...)` (`mc_structure.py`). Use `Blocks.from_file(path)` when you need an editable sparse cell dictionary.
+For large structure files (`.nbt`, `.mcstructure`, `.schem`, `.schematic`), pass the file path directly to `spawn_structure(path, ...)` or `parse_structure(path, ...)` (`mineprep/structure.py`). Use `Blocks.from_file(path)` when you need an editable sparse cell dictionary.
 
 File import preserves native states and coordinates: only missing glass-pane links and Bedrock door-half properties are synced automatically, while trapdoor neighbour repair requires `repair_trapdoors=True`. `spawn_structure` logs CPU preparation and submission times, not GPU rendering completion.
 
@@ -67,14 +67,14 @@ These methods mutate `b` in place and return it (use `mineprep.Blocks('copy', b.
 - `rotate(rotation=90, pivot=(0, 0, 0))`: multiples of 90°; positive turns map north → east → south → west around an MC cell-center pivot.
 - `mirror(axis='x', pivot=0)`: reflects across an `'x'` (east↔west) or `'z'` (north↔south) plane in cell-center coordinates (integer or half-integer `pivot`), flipping door hinges and stair corners.
 - `connect(families=None, positions=None)`: recomputes `'fence'`, `'gate'`, `'pane'`, `'wall'`, and `'stairs'` states in place (`connect_fences()` is the fence/pane/iron-bars subset). Neither `spawn_structure` nor `bake` calls `connect()` implicitly.
-- State-only helpers: `mineprep.rotate_state(name, props, turns=1)` and `mineprep.mirror_state(name, props, axis='x')` return new property dicts. Offline code can also call `mc_blockstates.connect(cells, is_full_cube=..., families=..., positions=...)`, `rotate_cells`, and `mirror_cells`.
+- State-only helpers: `mineprep.rotate_state(name, props, turns=1)` and `mineprep.mirror_state(name, props, axis='x')` return new property dicts. Offline code can also call `mineprep.blockstates.connect(cells, is_full_cube=..., families=..., positions=...)`, `rotate_cells`, and `mirror_cells`.
 
 ## Offline batch math
 
-`mc_math` requires NumPy but no Unreal. In the editor, the same helpers are
+`mineprep.math_tools` requires NumPy but no Unreal. In the editor, the same helpers are
 exposed as `mineprep.boxes_to_packed`, `encode_rotation` and `decode_rotation`.
 
-`mc_math.partition_types(names, counts, groups=1, *, max_types=None)` returns tuples of
+`mineprep.math_tools.partition_types(names, counts, groups=1, *, max_types=None)` returns tuples of
 `(original_type_ids, instance_count)`. It minimizes `sum(types * instances)`
 exactly, without splitting a type. Counts are nonnegative integers; zero-count
 types are omitted for multiple groups. The single-group path preserves the
@@ -83,7 +83,7 @@ original palette, including zero-count entries; all-zero input returns `()`.
 to fit; the same cost is minimized under that limit. The default is uncapped.
 
 ```python
-from mc_math import boxes_to_packed, encode_rotation
+from mineprep.math_tools import boxes_to_packed, encode_rotation
 payload = boxes_to_packed(
     coords=[[0, 0, 0]], sizes=[4, 1, 1],
     rot=encode_rotation(pitch=0, yaw=90, roll=90))
@@ -124,7 +124,7 @@ mesh = b.bake(destination_path='/Game/mc/baked', asset_name='SM_Oak',
               pivot=(0, 0, 0), cull='same', merge_faces=True)
 ```
 
-Bakes `b` into a single saved `unreal.StaticMesh` (default `/Game/mc/baked`) without placing Actors or mutating `b` (`mc_mesh.py`):
+Bakes `b` into a single saved `unreal.StaticMesh` (default `/Game/mc/baked`) without placing Actors or mutating `b` (`mineprep/mesh.py`):
 
 - **`pivot`**: cell-center coordinate in MC `(X, Y, Z)` block units (unlike `spawn_structure`'s minimum-corner anchor). A root cell at `(0, 0, 0)` with `pivot=(0, 0, 0)` has its bottom at UE `Z = -50` cm, so place the mesh 50 cm above the ground.
 - **`cull`**: `'opaque'` (default, culls faces covered by complete opaque neighbors), `'same'` (also culls faces between identical complete blocks, e.g. leaves), or `'none'`.
@@ -160,7 +160,7 @@ Instance **location** = world box center (UE), independent of rotation;
 **Scale3D** = world extents permuted into the model's local axes; same `rot_id`.
 There is no bottom-pivot translation or extra half-cell adjustment after packing.
 
-**GPU BRT:** RGB = local scale (X,Y,Z) in **block multiples** (e.g. 3 = three blocks). **A** is a rotation code: integer **0–23** (`id = up * 4 + twist`, see `mc_math.py`) or a **negative UE yaw in degrees** (pure horizontal rotation; `0°` stays `0`). Sample with nearest filtering. Decode negatives before indexing `Rotation[24]`.
+**GPU BRT:** RGB = local scale (X,Y,Z) in **block multiples** (e.g. 3 = three blocks). **A** is a rotation code: integer **0–23** (`id = up * 4 + twist`, see `mineprep/math_tools.py`) or a **negative UE yaw in degrees** (pure horizontal rotation; `0°` stays `0`). Sample with nearest filtering. Decode negatives before indexing `Rotation[24]`.
 
 **GPU BPT:** RGB = location in meters (`cm/100`, may be fractional; merged centers are often `*.5`); A = mesh type index (`<0` = empty).
 

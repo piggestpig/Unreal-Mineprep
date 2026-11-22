@@ -7,7 +7,7 @@ from pathlib import Path
 
 import unreal
 import mineprep
-from mc_mod import MANIFEST_NAME, PathPatternMatch, read_manifest
+from mineprep.modding import MANIFEST_NAME, PathPatternMatch, read_manifest
 from mineprep import i18n
 
 _SKIP_COPY = frozenset({'Intermediate', 'Saved'})

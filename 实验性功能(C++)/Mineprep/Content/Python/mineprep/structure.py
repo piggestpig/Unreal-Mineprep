@@ -1,26 +1,26 @@
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 import os
 import gzip
 import struct
 import json
 import math
 import numpy as np
-import mc_blockstates
-from mc_structure_data import CellData, decode_varints
+from mineprep import blockstates
+from mineprep.structure_data import CellData, decode_varints
 from pathlib import Path
 from pprint import pformat
-from mc_utils import warn, uclass, set_actor_label, select_actors
-from mc_config import paths
-from mc_math import boxes_to_packed, decode_rotation, encode_rotation, validate_packed, partition_types
-from mc_importer import (
+from mineprep.utils import warn, uclass, set_actor_label, select_actors
+from mineprep.settings import paths
+from mineprep.math_tools import boxes_to_packed, decode_rotation, encode_rotation, validate_packed, partition_types
+from mineprep.importer import (
     _make_import_task, _run_import_task, _load_mc_model,
     _model_data_is_full_cube, _resolve_texture_reference,
     resolve_block_json_path, get_all_blocks, import_block,
 )
-from mc_prep import prep_texture
+from mineprep.prep import prep_texture
 
 if __name__ == "__main__":
     import numpy as np
@@ -1237,14 +1237,14 @@ def _sync_bedrock_door_halves(sparse_dict, *, positions=None):
 
 def _fix_pane_connections(sparse_dict, *, facts=None):
     """只补全完全缺少连接属性的玻璃板；保留明确写入的 false。"""
-    keys = tuple(k for d in mc_blockstates.DIRECTIONS
+    keys = tuple(k for d in blockstates.DIRECTIONS
                  for k in (d, 'minecraft:connection_' + d, 'connection_' + d))
     def missing(cell):
         return (str(cell['name']).endswith('_pane')
                 and not any(k in (cell.get('properties') or {}) for k in keys))
     pending = (sparse_dict.positions(missing) if isinstance(sparse_dict, CellData)
                else (p for p,cell in sparse_dict.items() if missing(cell)))
-    mc_blockstates.connect(sparse_dict, is_full_cube=(facts or _BlockModelFacts()).full,
+    blockstates.connect(sparse_dict, is_full_cube=(facts or _BlockModelFacts()).full,
                            families=('pane',), positions=pending)
     return sparse_dict
 
@@ -1414,18 +1414,18 @@ class Blocks:
 
     def connect(self, *, families=None, positions=None):
         """根据邻接关系更新栅栏、玻璃板、铁栏杆、石墙、栅栏门和楼梯的连接状态。"""
-        mc_blockstates.connect(self._cells, is_full_cube=_BlockModelFacts().full,
+        blockstates.connect(self._cells, is_full_cube=_BlockModelFacts().full,
                                families=families, positions=positions)
         return self
 
     def rotate(self, rotation=90, *, pivot=(0, 0, 0)):
         """绕 pivot（MC 格子中心坐标）顺时针旋转结构（90 度的倍数），同步更新坐标与朝向。"""
-        self._cells = mc_blockstates.rotate_cells(self._cells, rotation, pivot=pivot)
+        self._cells = blockstates.rotate_cells(self._cells, rotation, pivot=pivot)
         return self
 
     def mirror(self, axis='x', *, pivot=0):
         """沿 MC 的 X 或 Z 轴镜像翻转结构，同步更新坐标与朝向。"""
-        self._cells = mc_blockstates.mirror_cells(self._cells, axis, pivot=pivot)
+        self._cells = blockstates.mirror_cells(self._cells, axis, pivot=pivot)
         return self
 
     def copy_cells(self):
@@ -1460,7 +1460,7 @@ class Blocks:
         two_sided 可显式指定双面或单面材质；默认 None 在 cull='same' 时使用双面材质。
         目标路径已存在不同配方的网格时需传入 reload=True 覆盖。
         """
-        from mc_mesh import bake_blocks
+        from mineprep.mesh import bake_blocks
         return bake_blocks(self, destination_path=destination_path,
                            asset_name=asset_name, pivot=pivot, cull=cull,
                            merge_faces=merge_faces, reload=reload, two_sided=two_sided)
@@ -1695,7 +1695,7 @@ def import_structure_textures(files, destination=None):
 
 def structure_to_tex(ue_data, name='structure', fp32=True):
     """将结构数据编码为 BPT/BRT 贴图并导入到 UE（支持 Transform 列表或打包数组格式）。"""
-    from mc_structure_data import write_structure_textures
+    from mineprep.structure_data import write_structure_textures
     if not ue_data:
         unreal.log_warning('ue_data 为空，取消贴图导出。')
         return

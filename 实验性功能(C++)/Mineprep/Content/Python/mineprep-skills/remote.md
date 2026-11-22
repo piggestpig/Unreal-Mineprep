@@ -104,7 +104,7 @@ postconditions before retrying.
 
 ## MCP Python (`mcptools.PythonTools`)
 
-Implementation: `Plugins/Mineprep/Content/Python/mcptools.py`. Not part of `mineprep.reload()` (name is not `mc_*`); restart or `importlib.reload(mcptools); mcptools.register()` after editing the bridge itself. Reloading it resets the shared Python session state.
+Implementation: `Plugins/Mineprep/Content/Python/mcptools.py`. The bridge retains its registered UE tool class across package reloads; restart or `importlib.reload(mcptools); mcptools.register()` after editing the bridge itself. Reloading it resets the shared Python session state.
 
 ```
 toolset_name = "mcptools.PythonTools"
@@ -116,25 +116,20 @@ arguments    = {"code": "unreal.Paths.project_dir()", "loglevel": 0}
 - **Yielding `@asynctask`**: returns `{"pending": true, "name": "<func>"}` immediately and stores the runner in `_async`. Query `_async` in a later `run` call (`{"pending": false, "name": "...", "result": ...}` or `"error"`); never wait inside `run`. See [parallel.md](parallel.md).
 - **Return format & truncation**: returns `{ok, result, logs, error}` (capped at 200,000 chars; sequences/maps keep at most 80 items, with `truncated` and `truncation_details` when trimmed). UObjects serialize as `{"uobject": "<path>", "label": "..."}` and handles as `{"handle": "<class>", "target": ...}`.
 
-For large collections (>80 items), store the list in the session namespace and slice in-editor:
+For large collections (>80 items), retain plain paths rather than UObject wrappers, then slice in-editor:
 
 ```python
-# First call: retain the raw snapshot in the shared bridge namespace.
-review_items = list(mineprep.actors().target)
-len(review_items)
+# First call: return a count and the first page.
+review_paths = [a.get_path_name() for a in mineprep.actors().target]
+len(review_paths), review_paths[:80]
 ```
 
 ```python
-# Subsequent calls: use the count to choose nonoverlapping slices <=80 items.
-review_items[0:80]
+# Later call: request the next page.
+review_paths[80:160]
 ```
 
-```python
-review_items[80:160]
-```
-
-Do not count the serialized array or treat its trailing omission string as a
-UObject. Use an explicit count to determine the total number of items.
+Use the explicit count; the serialized omission marker is not an item.
 
 - `ok` + `result` (and task-specific postconditions) are the contract. `logs` are evidence of what the engine reported, not proof the mutation finished. Use status checks before retrying something that can duplicate actors or assets.
 - After plugin/mod edits, follow [Reload](api.md#reload). The shared MCP namespace
@@ -246,7 +241,7 @@ a = mineprep.actor['Steve']          # raw UObject (class subscript → .target)
 root = a.root_component              # often Body SkeletalMeshComponent
 ```
 
-`warn` / `prints` from `mc_utils` show on-screen and in the log when run inside the editor.
+`warn` / `prints` from `mineprep.utils` show on-screen and in the log when run inside the editor.
 
 ## Remote-debug UI panels
 

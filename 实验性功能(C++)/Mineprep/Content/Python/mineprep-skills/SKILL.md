@@ -103,15 +103,15 @@ engine correctness, observed appearance and the user's visual acceptance.
 
 ## Source map
 
-The public facade is `mineprep.py`. Follow its imports to `mc_handle` (scene and
-Sequencer handles), `mc_rig` (Control Rig), `mc_sequencer` (Sequencer operations),
-`mc_widget` / `mc_mod` (UI and lifecycle), `mc_structure` / `mc_importer`
-(blocks and models), `mc_model` (model recipes and GLB), `mc_mesh` (baking and merging), `mc_prep` (textures), and
-`mc_parallel` (scheduling). `mcptools.py` implements the editor bridge;
+The public facade is `mineprep/__init__.py`. Follow its imports to `mineprep.handles` (scene and
+Sequencer handles), `mineprep.rig` (Control Rig), `mineprep.sequencer_tools` (Sequencer operations),
+`mineprep.widgets` / `mineprep.modding` (UI and lifecycle), `mineprep.structure` / `mineprep.importer`
+(blocks and models), `mineprep.model` (model recipes and GLB), `mineprep.face` (unified 2D/3D
+facial rigs, materials & 3D post-process solver), `mineprep.mesh` (baking and merging), `mineprep.prep` (textures), and
+`mineprep.parallel` (scheduling). `mcptools.py` implements the editor bridge;
 `Source/Mineprep/` contains C++ bindings. References identify relevant functions.
 
-## Maintaining this skill
+## Documentation scope
 
-Check changed contracts against source, parse complete Python examples without
-Unreal, and check local links. Keep reusable methods here, project state and
-test histories in project documentation, and each detailed rule in one reference.
+Keep reusable API contracts, workflows and pitfalls here. Put Blueprint wiring,
+node IDs, project state, handoffs and test histories in project documentation.

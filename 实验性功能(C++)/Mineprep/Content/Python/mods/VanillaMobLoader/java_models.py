@@ -53,10 +53,23 @@ def find(entries, root, prefer_java):
         return None
 
 
-def import_source(path, cache, profile=None):
-    """Keep the imported GLB version available for reimport and later splitting."""
-    from mc_model import cache_model_source, humanoid_edit_glb, quadruped_edit_glb
+def face_spec_for(path: Path):
+    """Return the configured facial template (refined against embedded PNG) for a Java GLB, or None."""
+    from mineprep.face import get_face_spec
+    from mineprep.model import embedded_base_color_surfaces
 
+    raw = path.read_bytes()
+    surfs = embedded_base_color_surfaces(raw)
+    primary_png = bytes(next(iter(surfs.values()))[0]) if surfs else None
+    return get_face_spec(path.stem, primary_png)
+
+
+def import_source(path, cache, profile=None, *, face_mode='none', face_spec=None, face_options=None):
+    """Keep the imported GLB version available for reimport and later splitting."""
+    from mineprep.face import normalize_face_mode, upgrade_face_glb
+    from mineprep.model import cache_model_source, humanoid_edit_glb, quadruped_edit_glb
+
+    face_mode = normalize_face_mode(face_mode)
     builders = {
         'biped': ('humanoid_edit', humanoid_edit_glb),
         'quadruped_edit': ('quadruped_edit', quadruped_edit_glb),
@@ -69,17 +82,26 @@ def import_source(path, cache, profile=None):
                 raise ValueError(f'Unknown edit rig profile: {profile}')
             folder, build = builders[profile]
             data = build(data)
+        if face_mode != 'none' and face_spec is not None:
+            data = upgrade_face_glb(data, face_spec, mode=face_mode, options=face_options)
+            folder = f'{folder}_face_{face_mode}'
         directory = Path(cache).resolve() / 'resources' / 'generated' / folder
         return cache_model_source(directory, path.name, data)
     except Exception as exc:
         raise ValueError(f'{path}: {exc}') from exc
 
 
-def split_source(path, cache):
-    from mc_model import cache_model_source
+def split_source(path, cache, *, face_mode='none', face_spec=None, face_options=None):
+    from mineprep.face import normalize_face_mode, upgrade_face_glb
+    from mineprep.model import cache_model_source
     from .gltf import split_head
 
+    face_mode = normalize_face_mode(face_mode)
     parts = split_head(path.read_bytes())
-    directory = Path(cache) / 'resources' / 'generated' / 'head_split'
+    folder = 'head_split'
+    if face_mode != 'none' and face_spec is not None:
+        parts['head'] = upgrade_face_glb(parts['head'], face_spec, mode=face_mode, options=face_options)
+        folder = f'head_split_face_{face_mode}'
+    directory = Path(cache) / 'resources' / 'generated' / folder
     return {part: cache_model_source(directory, path.stem + '_' + part + '.glb', data)
             for part, data in parts.items()}

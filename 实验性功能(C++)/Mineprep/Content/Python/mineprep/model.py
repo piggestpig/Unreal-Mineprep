@@ -1031,7 +1031,7 @@ class SkeletalModel:
 
     def bake(self, name=None, *, destination_path='/Game/mc/entity', reload=False):
         """Save a new mesh, or explicitly update a prior bake with the same reference skeleton."""
-        from mc_model_assets import COMPLETE, RECIPE, SOURCE, publish_skinned_glb
+        from mineprep.model_assets import COMPLETE, RECIPE, SOURCE, publish_skinned_glb
 
         ue = _ue()
         lib = ue.EditorAssetLibrary
@@ -1170,7 +1170,7 @@ def _asset(source, expected):
         if source.startswith('/') and not source.endswith('.json'):
             source = ue.load_asset(source)
         elif expected == ue.StaticMesh:
-            from mc_importer import import_block
+            from mineprep.importer import import_block
             source = import_block(source)
     if not isinstance(source, expected):
         raise ValueError(f'Expected {expected.__name__}, got {source}')
@@ -1307,8 +1307,8 @@ class LowPolyModel(_Group):
 
     @classmethod
     def from_blocks(cls, blocks, *, cell_size=1, cull=2, merge=3):
-        from mc_structure import Blocks, _apply_cull, convert_to_packed_arrays
-        from mc_math import decode_rotation
+        from mineprep.structure import Blocks, _apply_cull, convert_to_packed_arrays
+        from mineprep.math_tools import decode_rotation
         if not isinstance(blocks, Blocks):
             raise TypeError('from_blocks requires Blocks')
         unit = float(_xyz(cell_size, 'cell_size', positive=True)[0])
@@ -1337,7 +1337,7 @@ class LowPolyModel(_Group):
                 if root.root_component is None:
                     _component(root, root, ue.SceneComponent, 'Root')
                 root.root_component.set_mobility(ue.ComponentMobility.MOVABLE)
-                from mc_utils import set_actor_label
+                from mineprep.utils import set_actor_label
                 set_actor_label(root, self.name)
                 root.set_actor_transform(pose, False, False)
                 root.set_folder_path(self.name)
@@ -1365,7 +1365,7 @@ class LowPolyModel(_Group):
         owner = _tag(root, _ROOT)
         if owner is None:
             raise ValueError('component requires a LowPolyModel root Actor')
-        from mc_handle import component
+        from mineprep.handles import component
         if not path:
             return component(root.root_component)
         for group in _owned(root, owner):
@@ -1375,7 +1375,7 @@ class LowPolyModel(_Group):
 
     def _replace(self, root, prepared, collision):
         ue = _ue()
-        from mc_structure import _add_transform_instances
+        from mineprep.structure import _add_transform_instances
         owner = _tag(root, _ROOT)
         old = _owned(root, owner)
         anchors = {_tag(a, _GROUP): a for a in old if _tag(a, _GROUP) is not None}

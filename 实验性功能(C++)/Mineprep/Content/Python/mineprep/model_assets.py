@@ -7,8 +7,8 @@ from uuid import uuid4
 
 import unreal
 
-from mc_model import cache_model_source, embedded_base_color_surfaces
-from mc_prep import prep_texture
+from mineprep.model import cache_model_source, embedded_base_color_surfaces
+from mineprep.prep import prep_texture
 
 SKIN_MATERIAL = '/Game/Mineprep/材质/皮肤/Core/皮肤_Steve'
 TRANSLUCENT_SKIN = '/Game/Mineprep/材质/半透明Core/LabPBR半透明1_Inst'
@@ -110,7 +110,8 @@ def _tag(asset, metadata):
         unreal.EditorAssetLibrary.set_metadata_tag(asset, key, value)
 
 
-def _import(target, path, owner, metadata, allow_pose_change, shared_materials):
+def _import(target, path, owner, metadata, allow_pose_change, shared_materials,
+            face_spec=None, register_curves=(), face_options=None):
     folder, name, existing = target
     lib = unreal.EditorAssetLibrary
     if not existing and lib.does_asset_exist(folder + '/SK_' + name):
@@ -172,6 +173,23 @@ def _import(target, path, owner, metadata, allow_pose_change, shared_materials):
                     texture = publish(source_texture, texture_dst)
                     save(texture, texture_hash)
                 published_textures[texture_hash] = texture
+            if slot in ('Face2D', 'Face3D') and face_spec is not None:
+                from mineprep.face import create_face2d_material, create_face3d_material
+                material_hash, norm_opts = _face_material_recipe(slot, texture_hash, face_spec, face_options)
+                material_dst = f'{folder}/MI_{name}_{slot}_{material_hash[:8]}'
+                instance = reuse(material_dst, unreal.MaterialInstanceConstant, material_hash)
+                if instance is None:
+                    created = []
+                    try:
+                        if slot == 'Face2D':
+                            instance = create_face2d_material(texture, material_dst, face_spec, created, options=norm_opts)
+                        else:
+                            instance = create_face3d_material(texture, material_dst, face_spec, created, options=norm_opts)
+                    finally:
+                        moved.extend(asset.get_path_name().split('.')[0] for asset in created)
+                    save(instance, material_hash)
+                slot_materials[slot] = instance
+                continue
             template = TRANSLUCENT_SKIN if alpha_mode == 'BLEND' else SKIN_MATERIAL
             recipe = json.dumps([template, texture_hash])
             material_hash = hashlib.sha256(recipe.encode('utf-8')).hexdigest()
@@ -207,6 +225,19 @@ def _import(target, path, owner, metadata, allow_pose_change, shared_materials):
         mesh.set_editor_property('materials', slots)
         attached = existing is not None
 
+        detected_face_mode = (
+            '3d' if 'Face3D' in slot_materials else ('2d' if 'Face2D' in slot_materials else None)
+        )
+        if register_curves or detected_face_mode is not None:
+            from mineprep.face import setup_face_skeleton
+            setup_face_skeleton(
+                skeleton,
+                register_curves or None,
+                mesh=mesh,
+                spec=face_spec,
+                mode=detected_face_mode,
+                options=face_options,
+            )
         _tag(skeleton, owner)
         _tag(mesh, {**owner, **metadata, COMPLETE: '1'})
         for asset in (skeleton, mesh):
@@ -223,10 +254,78 @@ def _import(target, path, owner, metadata, allow_pose_change, shared_materials):
             lib.delete_directory(stage)
 
 
+def _face_material_recipe(slot: str, texture_hash: str, face_spec: dict, face_options=None) -> tuple[str, dict]:
+    from mineprep.face import FACE2D_MATERIAL_VERSION, FACE3D_MATERIAL_VERSION, normalize_face_options
+    norm_opts = normalize_face_options(face_options)
+    if slot == 'Face2D':
+        recipe = json.dumps(
+            [f'Face2D_v{FACE2D_MATERIAL_VERSION}', texture_hash, face_spec, norm_opts['brow_blink_follow']],
+            sort_keys=True,
+        )
+    elif slot == 'Face3D':
+        recipe = json.dumps(
+            [f'Face3D_v{FACE3D_MATERIAL_VERSION}', texture_hash, face_spec.get('mouth'), face_spec.get('tex_size'), norm_opts['mouth_cavity_color']],
+            sort_keys=True,
+        )
+    else:
+        raise ValueError('Unsupported face material slot: ' + slot)
+    return hashlib.sha256(recipe.encode('utf-8')).hexdigest(), norm_opts
+
+
+def sync_face_material_slot(mesh, folder: str, name: str, *, owner: dict, face_mode: str, face_spec: dict | None, face_options=None):
+    """Ensure a reused mesh's Face2D/Face3D slot matches current material options without re-running Interchange.
+
+    Returns True when up-to-date or updated in place, False if not applicable, or None if the caller must reimport.
+    """
+    if face_mode not in ('2d', '3d') or face_spec is None:
+        return False
+    slot_name = 'Face3D' if face_mode == '3d' else 'Face2D'
+    lib = unreal.EditorAssetLibrary
+    mel = unreal.MaterialEditingLibrary
+    slots = list(mesh.materials)
+    target_slot = next((s for s in slots if str(s.material_slot_name) == slot_name), None)
+    if target_slot is None or target_slot.material_interface is None:
+        return None
+    cur_mi = target_slot.material_interface
+    texture = mel.get_material_instance_texture_parameter_value(cur_mi, '纹理贴图')
+    texture_hash = str(lib.get_metadata_tag(texture, CONTENT_HASH) or '').strip() if texture is not None else ''
+    if not texture_hash:
+        return None
+    material_hash, norm_opts = _face_material_recipe(slot_name, texture_hash, face_spec, face_options)
+    if lib.get_metadata_tag(cur_mi, CONTENT_HASH) == material_hash:
+        return True
+    material_dst = f'{folder}/MI_{name}_{slot_name}_{material_hash[:8]}'
+    instance = None
+    if lib.does_asset_exist(material_dst):
+        asset = unreal.load_asset(material_dst)
+        if (isinstance(asset, unreal.MaterialInstanceConstant)
+                and lib.get_metadata_tag(asset, SOURCE) == owner[SOURCE]
+                and lib.get_metadata_tag(asset, RECIPE) == owner[RECIPE]
+                and lib.get_metadata_tag(asset, CONTENT_HASH) == material_hash):
+            instance = asset
+        else:
+            return None
+    if instance is None:
+        from mineprep.face import create_face2d_material, create_face3d_material
+        if slot_name == 'Face2D':
+            instance = create_face2d_material(texture, material_dst, face_spec, options=norm_opts)
+        else:
+            instance = create_face3d_material(texture, material_dst, face_spec, options=norm_opts)
+        _tag(instance, {SOURCE: owner[SOURCE], RECIPE: owner[RECIPE], CONTENT_HASH: material_hash})
+        if not lib.save_loaded_asset(instance):
+            raise RuntimeError('Failed to save ' + instance.get_path_name())
+    target_slot.material_interface = instance
+    mesh.set_editor_property('materials', slots)
+    if not lib.save_loaded_asset(mesh):
+        raise RuntimeError('Failed to save ' + mesh.get_path_name())
+    return True
+
+
 def publish_skinned_glb(target, path, *, owner, metadata=None, allow_pose_change=False,
-                        shared_materials=None):
+                        shared_materials=None, face_spec=None, register_curves=(), face_options=None):
     """Publish a GLB; shared_materials maps slot names to existing material instances."""
     try:
-        return _import(target, path, owner, metadata or {}, allow_pose_change, shared_materials)
+        return _import(target, path, owner, metadata or {}, allow_pose_change, shared_materials,
+                       face_spec=face_spec, register_curves=register_curves, face_options=face_options)
     except Exception as exc:
         raise RuntimeError(f'{path}: {exc}') from exc

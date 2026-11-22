@@ -1308,7 +1308,7 @@ def _assign_physics_asset_if_needed(mesh, physics_asset, *, warnings: list[str],
 
 def _mesh_bone_names(skeletal_mesh) -> set[str] | None:
     try:
-        from mc_model_assets import _reference_bones
+        from mineprep.model_assets import _reference_bones
         bones = _reference_bones(skeletal_mesh)
         return set(bones) if bones else None
     except Exception:
@@ -1338,7 +1338,7 @@ def _query_bone_bounds(skeletal_mesh) -> list[dict]:
     """Query per-bone local bounds from the linked GLB first, then optional C++ fallback."""
     from pathlib import Path
     import unreal
-    from mc_model import glb_bone_bounds
+    from mineprep.model import glb_bone_bounds
 
     if skeletal_mesh is not None:
         try:
@@ -1533,7 +1533,7 @@ def _has_opaque_glb_bone(glb_path: str, bone_names: set[str]) -> bool | None:
     """Return True/False if GLB image has opaque pixels on `bone_names`, or None if unreadable."""
     import io
     from pathlib import Path
-    from mc_model import _read_glb_accessor, read_glb
+    from mineprep.model import _read_glb_accessor, read_glb
 
     path = Path(glb_path)
     if not path.is_file():

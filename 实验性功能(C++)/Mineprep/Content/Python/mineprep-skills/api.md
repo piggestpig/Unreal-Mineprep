@@ -1,16 +1,16 @@
 # Mineprep API reference
 
-Facade: `Plugins/Mineprep/Content/Python/mineprep.py`  
-Prefer `mineprep.*`. Use `obj.help()` / `mineprep.help()` for on-screen tips.  
+Facade: `Plugins/Mineprep/Content/Python/mineprep/__init__.py`
+Prefer `mineprep.*`. Use `obj.help()` / `mineprep.help()` for on-screen tips.
 `unreal.*` class/method names: [UE5 Python API](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/) for the installed version. If a call fails or the skill is silent, read the matching source.
 
 ```python
 import mineprep
-# After editing mineprep.py / mc_*.py or a ReloadWithMineprep mod:
+# After editing the mineprep package or a ReloadWithMineprep mod:
 # mineprep.reload()
 ```
 
-Outside Unreal, the public modules use `mc_utils.Lazy` as an `unreal` placeholder and skip editor config loading so pure-Python helpers and tests can import them offline. Functions that touch Unreal still require the editor runtime.
+Outside Unreal, the public modules use `mineprep.utils.Lazy` as an `unreal` placeholder and skip editor config loading so pure-Python helpers and tests can import them offline. Functions that touch Unreal still require the editor runtime.
 
 ## Quick map
 
@@ -26,6 +26,7 @@ Outside Unreal, the public modules use `mc_utils.Lazy` as an `unreal` placeholde
 | Optional localization | [localization.md](localization.md): `i18n`, `I18N`, `collect_i18n`, `check_i18n` |
 | Spawn | `spawn_block/item/mob/preset`, `attach`, `spawn_blocks`, `spawn_structure`, `Blocks`, `structure_parts`, `get_all_blocks` |
 | Mesh | `merge_skm`, `Blocks.bake` |
+| Facial | `mineprep.face` (`FACE_CURVES`, `describe_actor_capabilities`, `supported_face_curves`, `upgrade_face_glb`, `ensure_face2d_material`, `ensure_face3d_material`, `ensure_face3d_post_process_abp`); presets/blink via `mods.MCAnimConverter.ops.apply_face_preset` / `apply_auto_blink` |
 | Modelling | `LowPolyModel` for primitives and instancing, `SkeletalModel` for rigidly skinned boxes and GLB output. [Contracts](modelling.md) |
 | Assets & Config | `uasset`, `uclass`, `bpclass`, `construct`, `copy`, `config`, `paths` |
 | Blueprint libs | `BPLib`, `EditorBPLib`, `BPLibCaller` — call a Blueprint function library by function, attribute, or subscript. Not `unreal.mineprep` |
@@ -245,15 +246,22 @@ merged = mineprep.channels([curves_a, curves_b])  # deduplicated with section ow
 
 ```python
 handle = mineprep.actor(actor)
-handle.play_anim(body_anim, start=0, end=180, sequence=seq)
+s0 = handle.play_anim(walk_anim, start=0, end=120, rate=1.5, clip_start=0.2, clip_end=0.8, fade_in=0.2, sequence=seq)
+s1 = handle.play_anim(run_anim, start=105, end=180, reverse=True, fade_out=0.3, ease='linear', sequence=seq)
 # Split-head actors can pass bake_animation()'s {'body', 'head'} dict or head=... directly:
-sections = handle.play_anim(assets, start=0, end=180, sequence=seq)
+pair = handle.play_anim(assets, start=0, end=180, rate=1.2, sequence=seq)
+# Post-edit existing skeletal sections (supports positional args and {'body', 'head'} dicts):
+mineprep.sections(pair).set_clip(1.5, 0.1, 0.9).fade(0.25, 0.25, ease='cubic_in_out')
 # Or target Head individually:
 handle.play_anim(head_anim, start=0, end=180, sequence=seq, target='Head')
 ```
 
-- `start=0` / `end=None` treat `int` as display-rate frames and `float` as seconds; `[start, end)` is half-open. Omitting `end` covers one clip cycle; extending `end` beyond one cycle loops the animation.
-- Passing a `{'body': ..., 'head': ...}` mapping (from `bake_animation`) or `head=head_anim` plays both components over identical bounds in one transaction and returns `{'body': section, 'head': section | None}` (skipping `Head` cleanly if `'head'` is `None`).
+- `start=0`, `end=None`, `clip_start=0`, `clip_end=None`, `clip_offset=0`, `fade_in=None`, `fade_out=None`: `int` values are display-rate frames (converted via sequence tick resolution for source/easing offsets) and `float` values are seconds; `[start, end)` and source crop `[clip_start, clip_end)` are half-open. Omitting `end` covers one effective cropped/retimed cycle `(clip_len - clip_offset) / (rate * anim.rate_scale)`; extending `end` beyond one cycle loops the cropped source window (`clip_offset` applies to the first cycle only).
+- **Speed & direction (`rate=1.0, reverse=False`)**: `rate > 0` scales clip playback speed; `reverse=True` plays the `[clip_start, clip_end)` window backward (internally encoded with signed `play_rate` so cropped reverse and `clip_offset` behave identically across UE 5.8).
+- **Fades & overlaps (`fade_in=None, fade_out=None, crossfade=True, ease=None`)**: when `crossfade=True`, placing an overlapping section on the same row sets symmetric manual ease-out / ease-in durations across the `[overlap_start, overlap_end)` span and bumps overlap priority on the newer section (`fade_in`/`fade_out` explicit values override that side). `ease` accepts a `MovieSceneBuiltInEasing` member/name string (e.g. `'linear'`, `'cubic_in_out'`, `'sin_in_out'`) or `(ease_in, ease_out)` 2-tuple. It also sets the matching neighbor side: incoming ease-in sets the preceding section's ease-out; outgoing ease-out sets the following section's ease-in. Invalid fade spans are rejected before adding sections, including either side of a body/head pair.
+- **Standalone empty-track fades**: Mineprep keeps the component's `animation_mode` unchanged and logs a `[mc_play_anim]` tip when an open (non-overlapped) `fade_in`/`fade_out` targets a component not currently running an `AnimationBlueprint` (`MC基础动画蓝图_C`, which auto-enables on `BeginPlay`/render); overlapping `A -> B` crossfades blend smoothly in both `AnimationBlueprint` and `CustomMode`.
+- **Post-edit handles**: `mineprep.sections(target)` accepts a section, section list, or `{'body', 'head'}` mapping; `.set_clip(rate=None, clip_start=None, clip_end=None, clip_offset=None, reverse=None, start=None, end=None)` and `.fade(fade_in=None, fade_out=None, crossfade=None, ease=None)` accept positional or keyword arguments (`fade(1.0, 1.0)`).
+- Passing a `{'body': ..., 'head': ...}` mapping (from `bake_animation`) or `head=head_anim` plays both components with identical bounds, timing, and easing in one transaction and returns `{'body': section, 'head': section | None}` (skipping `Head` cleanly if `'head'` is `None`).
 - `target` selects the body `SkeletalMeshComponent` (default first SKM); `head_target='Head'` selects the attached split-head component.
 
 **Not AnimSequence bone tracks.** Listing / clearing skeletal animation curves is engine API — [pitfalls/anim.md](pitfalls/anim.md).
@@ -352,10 +360,15 @@ pitch_keys.tangents(0.0)                   # scalar slope in degrees per second
 r.clear('waist.Location')                  # on a player rig
 ```
 
-- `actor.rig(target=SKM, rig_class=None, *, layered=None)` forwards to the SKM component's `rig()`.
-  `layered` selects the mode when creating a track. `None` keeps the layered default for new tracks.
-- Names: full path, last segment, strip `_CONTROL` / `_CURVE_CONTROL`, case-insensitive; ambiguous → throw
-- FK bones are `EulerTransform`; pass `Rotator` / `Vector` / `Transform` / `EulerTransform`
+- `actor.rig(target=SKM, rig_class=None, *, layered=None, section=None)` forwards to the SKM component's `rig()`.
+  `layered` selects the mode when creating a track (`None` keeps the layered default); `section` selects an anim-layer section index/object when a track has multiple sections. `r.clear(name='', *, all_sections=False)` also requires `section=` on multi-section tracks unless `all_sections=True`.
+- Names: full path, last segment, `parent.Channel` for Control Animation Channels (e.g. `gaze_ctrl.Pupil_Scale`, `gaze_ctrl.Eye_Overflow_X`, `gaze_ctrl.Eye_Overflow_Y`, `face_panel_ctrl.Pupil_Rest_Mode`, `face_panel_ctrl.Show_Brows`), strip `_CONTROL` / `_CURVE_CONTROL`, case-insensitive; `VISUAL_CUE` controls are excluded from `names()` by default; ambiguous → throw
+- Controls accept native UE values plus `(x, y)` tuples for `Vector2D` and `(x, y, z)` tuples for `Position` / `Scale`; FK bones are `EulerTransform` (`Rotator` / `Vector` / `Transform` / `EulerTransform`).
+- Stacking & workflows: `r.priority` gets/sets `ControlRigSequencerLibrary` track priority order (in UE 5.8 `ControlRigLayerInstanceProxy`, **smaller** numbers evaluate later / on top of larger numbers, with UE default `100`, e.g. Body `100` → Face `99`); `r.sections()` lists track sections; `Rig.bake_from_anim(target, rig_class, ...)` bakes active sequence animation onto a Control Rig via Backwards Solve (note: UE disables the component's `SkeletalAnimationTrack`); `r.set_space(...)` / `r.bake_space(...)` switch and bake spaces (`None`/`'world'` or bone/control name); `r.constrain_to(...)` / `r.bake_constraint(...)` manage Sequencer constraints.
+- Shared facial rig: `mineprep.ensure_face_control_rig()` ensures `/Game/Mineprep/生物模型rigs/Rig/CR_MC_Face` (v5: cross-species anchor chain `root → pelvis → body → neck → head_parts → head → real_head`, pure-`W` viewport controls driving all 15 canonical `face_*` curves: `eye_both_ctrl` 2D wide/blink/squint, down-only `eye_l/r_ctrl` blink, `gaze_ctrl` `[-1, 1]` 2D look with `Pupil_Scale` / `Eye_Overflow_X` (`0.5`) / `Eye_Overflow_Y` (`1.0`) / `Eye_Cross`, `face_panel_ctrl` species metadata `Pupil_Rest_Mode` (`-1` inner / `0` center / `+1` outer) + per-direction head margins `Eye_Margin_In` / `Eye_Margin_Out` / `Pupil_Scale_Shift` (keeping 3D pupils flush inside the head boundary even under `Pupil_Scale > 0` while allowing edge-flush full-eye mobs like Chicken/Bee to look inward), `brow_l/r_ctrl` 2D height+tilt, `mouth_ctrl` `"Mouth (Open / Shift)"` / `mouth_expr_ctrl` `"Mouth (Smile / Wide)"`, and continuous branch-free Backwards Solve with exact round-trip within reachable control limits; warns on version mismatch without overwriting user edits unless `rebuild=True`).
+- One-call attachment & face-only bake:
+  - `mineprep.add_face_rig(target)` (or `actor.face_rig()` / `component.face_rig()`) accepts a whole mob `Actor` or `SkeletalMeshComponent`, checks `describe_actor_capabilities(target)` (metadata first, fallback scanning + `pupil_rest_mode` / `eye_bounds` inference for existing/legacy meshes), warns and returns `None` when unsupported or no Level Sequence is open, otherwise attaches `CR_MC_Face` (`layered=False` for exact WYSIWYG values with zero additive double-counting while passing body bones through unchanged, `priority = min(others) - 1`, default `99`) and auto-configures `Pupil_Rest_Mode`, `Eye_Margin_In/Out`, `Pupil_Scale_Shift`, `Eye_Overflow_X/Y`, `Show_Brows`, and `Show_Mouth` via channel defaults.
+  - `mineprep.bake_face_to_rig(target, *, start=None, end=None, step=1)` (or `actor.bake_face_rig()` / `component.bake_face_rig()`) synchronously evaluates underlying `face_*` curves via `SequencerTools.export_anim_sequence` using exact recorded key timestamps (preserving mid-shot section starts and inactive gaps as `0.0`) and bakes them into `CR_MC_Face` **without** disabling unified mobs' body `SkeletalAnimationTrack`. When `CR_MC_Face` is already mounted on a target, `MCAnimConverter.ops.apply_face_preset`, `apply_auto_blink`, and single-eye `face_look_x_l/r` clips automatically write only the affected `CR_MC_Face` controls/sub-channels directly, preserving unrelated hand edits and the untouched eye's existing keyframes without spawning an extra `FKControlRig`.
 - `Rig.key()` uses the same write path as the batch methods.
 - `r.describe()` reads the mesh's reference skeleton, keyed by bone name.
   Each record contains `parent` (or `None`), parent-local `local` and
@@ -505,7 +518,7 @@ NBT→mesh details (coords, stairs/fence multipart, uvlock): [structure.md](stru
 `blocks.bake(...)` creates one reusable StaticMesh without placing Actors;
 see [baking options, cell-center pivot and asset reuse](structure.md#blocksbake-one-reusable-model).
 
-Pure batch math is available offline as `mc_math.boxes_to_packed(coords, sizes=1,
+Pure batch math is available offline as `mineprep.math_tools.boxes_to_packed(coords, sizes=1,
 rot=0, origin=(0,0,0))`; editor alias: `mineprep.boxes_to_packed`. It returns a
 float32 dict of instance **centers**, encoded rotation and local scale. The
 fixed model pivot is MC `(8,8,8)`, not each model's actual bounds center.
@@ -555,7 +568,7 @@ For `b.bounds()`, `b.source_size`, `b.connect(families=..., positions=...)`, and
 
 ## `merge_skm`
 
-Exported as `mineprep.merge_skm` (implemented in `mc_mesh.py`).
+Exported as `mineprep.merge_skm` (implemented in `mineprep/mesh.py`).
 
 ```python
 mineprep.merge_skm(root, save_path=None, name=None,
@@ -571,7 +584,7 @@ mineprep.merge_skm(root, save_path=None, name=None,
 
 Geometry Script traps (mat IDs, compact, vertex color, transforms): [pitfalls/mesh.md](pitfalls/mesh.md).
 
-## Texture utilities (`mc_material.py`)
+## Texture utilities (`mineprep/material_tools.py`)
 
 ### `tex_to_color` / `color_to_tex` / `ColorList`
 
@@ -601,7 +614,7 @@ tex = mineprep.color_to_tex(flat, width=64)
 
 ### Source and data texture helpers
 
-Run these on the editor game thread (`mc_material.py`):
+Run these on the editor game thread (`mineprep/material_tools.py`):
 
 | Function | Purpose & return value | Scope / notes |
 |----------|------------------------|---------------|
@@ -625,7 +638,7 @@ files and offline tools, read [localization.md](localization.md).
 
 ## Reload
 
-Use **only** after editing plugin Python (`mineprep.py` / `mc_*.py`) or a `ReloadWithMineprep` mod. Ordinary `ui()` / console snippets do not reload first.
+Use after editing the `mineprep/` package or a `ReloadWithMineprep` mod.
 
 ```python
 mineprep.reload()
@@ -635,10 +648,10 @@ mineprep.reload()
 - Prefer this over `importlib.reload(mineprep)` — duplicate `Layout`/`PropertyGroup` class objects cause `KeyError` / stale Props
 - Mod submodule removal, re-registration and panel cleanup: [Reload workflow](mods.md#reload-workflow).
 - `from mineprep import func` leaves a separate binding: re-import it after reload, or use `mineprep.func`. Assigning the return value to `mineprep` does not refresh that separate binding.
-- MCP `run` keeps one namespace for the editor process. `mineprep` is injected on every call. An earlier `import mc_structure` (any `mc_*` except `mcvars`) stays on the module from before `reload()`. Re-import that name in the snippet, or use the `mineprep` attribute. [remote.md](remote.md) § MCP Python.
+- MCP `run` keeps one namespace for the editor process. Re-import submodule aliases such as `from mineprep import widgets` after reload.
 - Full reload clears the Props registry; `_unique_` does not preserve state or
   migrate objects/callbacks. Follow the panel cleanup rules linked above.
-- `mcvars` is **not** unloaded. Handshake caches belong there (`ActorCache`, `SpawnNameCache`, `SpawnIDCache`, `LocalizationCache`; `WidgetsCache` is on `mc_widget` and is copied). Do not store Blueprint-written globals on `mineprep.py`: `_adopt_module` copies function objects whose `__globals__` still point at the discarded new module.
+- Store Blueprint handshake state on `mcvars`, which survives full reload. The reloader preserves the existing `mineprep.widgets.WidgetsCache` dictionary and refreshes the public API on the original package object.
 
 ## Warn / errors
 
@@ -663,7 +676,7 @@ mineprep.dialog('title', 'message', default=True)   # Yes/No bool
 
 ## Delay / tick / thread
 
-`delay`, `tick`, `asynctask`, `thread`, `asyncthread`, `until` live in `mc_parallel.py`. Choose a decorator and the game-thread rules: [parallel.md](parallel.md). `until` is the `yield from` wait inside `@asynctask`.
+`delay`, `tick`, `asynctask`, `thread`, `asyncthread`, `until` live in `mineprep/parallel.py`. Choose a decorator and the game-thread rules: [parallel.md](parallel.md). `until` is the `yield from` wait inside `@asynctask`.
 
 ```python
 @mineprep.delay(0.5)
@@ -678,7 +691,7 @@ def task():
 
 Do not call `unreal.*` or `mineprep.prints` from `@thread` / `@asyncthread` workers. Do not poll a `Future` with ticker `delay=0`.
 
-## Minecraft material & scene preparation (`mc_prep.py`)
+## Minecraft material & scene preparation (`mineprep/prep.py`)
 
 ### Low-level material & texture helpers
 
@@ -707,6 +720,9 @@ All high-level prep calls share one active `AsyncTaskRunner` slot (concurrent ca
 | `prep_from_panel` | `(action='prepare', *, import_format=None)` | Snapshots the legacy panel and selected level Actors. Actions: `prepare/replace/scene`, effects `enchant/wind/translucent/emissive`, double-clicks `collision/complex_collision/flat_shading/interpolate`, or `import_world`. Ordinary actions require viewport selection mode. `import_world` ignores selection-mode/category toggles and the quality slider: static normal slots, level 1, format `1` (jmc2obj) forces flat shading; other formats use the checkbox. Collision/complexity and checked parameter rows still apply; import preparation saves all dirty content on success. |
 
 - **`scope`**: `None` (all slots), or any combination of `'static'` (`StaticMeshComponent` normal slots), `'skeletal'` (`SkeletalMeshComponent` normal slots), and `'overlay'` (global and per-slot overlays on all mesh components).
+- **Conversion source**: an instance's `纹理贴图` parameter bound to a Texture2D takes priority, preserving explicit overrides without inspecting the shader graph. Otherwise extraction follows Texture Samples upstream of BaseColor; it does not expand material functions or inspect Front Material. `no_base_texture` means neither route found a usable texture. Auto conversion uses LabPBR templates; use `keep` to preserve a custom shader.
+- **Material policy**: `Mineprep.MaterialPolicy` metadata accepts `auto`, `skip`, or `keep`. Walk from the bound material up its parent chain: each level checks metadata first, then legacy `-` (skip) / `+` (keep; ignores `◉`) name prefixes. The nearest declaration wins; no declaration means auto. Explicit auto overrides that level's prefix and ancestors; removing the tag restores prefix/parent lookup. Invalid nonempty values raise.
+- `skip` blocks that material's preparation, effects, replacement, and texture collection through the material. Direct texture selection is not locked. `keep` uses the original Material/MIC shader, reuses component MIDs, ignores requested levels, preserves existing values without MC default resets, and writes only declared parameters. Unsupported effects (including translucency on opaque shaders) skip the slot; replacement requires the existing MC texture parameter convention. Collision/normals still run. Material `changed/skipped` records include `material_policy/policy_source/policy_origin`.
 - **Saving/cancellation**: `save=True` saves **all loaded dirty assets and maps, including unrelated edits**. Replacement overwrites and immediately saves same-name textures but does not save maps. Cancellation stops subsequent steps and keeps completed changes; it does not roll back already saved textures. Shared mesh normals/collision affect all mesh references; ISM changes apply to the whole component.
 - **`effect` modes** (silent, `save=False` by default):
   - `'enchant'`: raises level to `>=3`; `'disenchant'` keeps level and zeroes `附魔颜色` Alpha.
@@ -734,7 +750,7 @@ job = mineprep.prepare_scene(targets, collision=True, flat_shading=True, level=2
 - **`prep_from_browser(action='sharpen', *, resource_pack=None, save=True)`**: snapshots selected assets once; no folder recursion or scene selection. With `replace_textures` and no path, asks for a resource pack; cancelling returns `None` without changing settings. A confirmed path updates the remembered pack path, not the panel's processing-mode toggles.
 - Both return the shared mutually exclusive `AsyncTaskRunner`, use cancellable notifications and short transactions. `result` contains `changed/skipped/imported_assets/saved`. Default `save=True` saves **all dirty assets and maps, including unrelated edits**. Cancelled/failed tasks skip the final save; already imported textures remain saved. `save=False` disables only the final full save.
 - Asset preparation skips `/Game/Mineprep/材质/Core/` recursively, including core materials/textures encountered through mesh/material references; `skipped[].reason` is `protected_core_asset`. Core templates/default textures remain readable for ordinary component preparation and replacement bindings. The full-save policy is unchanged.
-- Legacy Blueprint wiring: [scene preparation and asset commands](../../../docs/scene-preparation.md).
+- Selection and material scope: [scene and asset preparation](../../../docs/scene-preparation.md).
 
 ```python
 job = mineprep.prepare_assets([unreal.load_asset('/Game/YourTexture')], save=False)

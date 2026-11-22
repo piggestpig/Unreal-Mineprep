@@ -9,7 +9,7 @@ show walls down to y_min.
 from dataclasses import dataclass
 
 import numpy as np
-from mc_math import boxes_to_packed, validate_packed, partition_types
+from mineprep.math_tools import boxes_to_packed, validate_packed, partition_types
 
 from .data import BLOCK_CM, require_int, to_ue
 from .noise3 import hash01

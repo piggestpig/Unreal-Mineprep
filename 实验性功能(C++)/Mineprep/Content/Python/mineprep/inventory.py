@@ -6,13 +6,13 @@
 
 调用示例::
 
-    import mc_inventory
+    from mineprep import inventory
 
-    entries = mc_inventory.search_blocks("金合欢 打开", search_all=False, tag_filter={2: 1})
+    entries = inventory.search_blocks("金合欢 打开", search_all=False, tag_filter={2: 1})
     ids = [entry.id for entry in entries]
     names = [entry.name for entry in entries]
 
-    item = mc_inventory.get_entry("Items", "minecraft:music_disc_13")
+    item = inventory.get_entry("Items", "minecraft:music_disc_13")
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from __future__ import annotations
 try:
     import unreal
 except ModuleNotFoundError:
-    from mc_utils import Lazy as unreal
+    from mineprep.utils import Lazy as unreal
 
 from collections import Counter
 from dataclasses import dataclass
@@ -31,7 +31,7 @@ from pathlib import Path
 import pickle
 
 import mcvars
-from mc_localization import Internationalization
+from mineprep.localization import Internationalization
 
 INVENTORY_FILE = Path(__file__).with_name("i18n_inventory.json")
 LANGUAGES = ("zh", "en", "zh-Hant", "zh-Hant-HK")
@@ -216,7 +216,7 @@ def _load_catalog() -> dict[str, dict[str, _RawEntry]]:
 
 def _resolve_pack_dir(category: str, assets_dir: str | os.PathLike | None) -> Path | None:
     if assets_dir is None:
-        from mc_config import paths
+        from mineprep.settings import paths
 
         base = str(paths.assets or "").strip()
     else:
@@ -535,7 +535,7 @@ def _resolve_legacy_table(table_data=None, table_path=None):
         return _load_pickle_table(str(Path(table_path).resolve()))
     if mcvars.LocalizationCache:
         return mcvars.LocalizationCache
-    from mc_config import paths
+    from mineprep.settings import paths
 
     default_pickle = Path(str(paths.mineprep)) / "插件贴图" / "语言本地化_language_localization.pickle"
     if default_pickle.is_file():

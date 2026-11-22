@@ -8,7 +8,7 @@ import traceback
 import builtins
 import ctypes
 import mcvars
-from mc_math import _rotation_axes, unwrap_angles
+from mineprep.math_tools import _rotation_axes, unwrap_angles
 from dataclasses import dataclass, asdict
 from pprint import pformat
 from functools import lru_cache, wraps
@@ -385,127 +385,6 @@ def undo(arg: str=None):
     return decorator
 
 
-def _adopt_module(dst, src):
-    """用新模块的内容更新旧模块对象，使控制台等处已有的引用继续有效。"""
-    dst_dict = dst.__dict__
-    src_dict = src.__dict__
-    keep = ('__name__', '__doc__', '__package__', '__loader__', '__spec__')
-    for key in list(dst_dict):
-        if key not in src_dict and key not in keep:
-            del dst_dict[key]
-    dst_dict.update(src_dict)
-
-
-def _rebind_mineprep(from_mod, to_mod) -> int:
-    """把各命名空间里的 mineprep 从 from_mod 改到 to_mod（含控制台栈帧）。"""
-    rebound = 0
-    for mod in list(sys.modules.values()):
-        if mod is None:
-            continue
-        try:
-            d = getattr(mod, '__dict__', None)
-            if d is not None and d.get('mineprep') is from_mod:
-                d['mineprep'] = to_mod
-                rebound += 1
-        except Exception:
-            pass
-    try:
-        import inspect
-        for info in inspect.stack():
-            g = info.frame.f_globals
-            if g.get('mineprep') is from_mod:
-                g['mineprep'] = to_mod
-                rebound += 1
-    except Exception:
-        pass
-    return rebound
-
-
-def reload(*args):
-    """重新加载 Mineprep 及其子模块；传入模块时，只重载指定模块。
-    
-    完整重载会先注销支持 ReloadWithMineprep 的模组，重新导入后再注册。
-    mcvars 保留。mineprep 模块对象原地更新，控制台无需重新赋值。
-    重新导入可避免 Layout、PropertyGroup 等类沿用旧定义。"""
-    import importlib
-    import sys
-
-    if args:
-        for mod in args:
-            importlib.reload(mod)
-            unreal.log(f'重新加载 {mod.__name__}')
-        return mod if len(args) == 1 else args
-
-    import mc_mod
-    import mcvars
-    mcvars.ModsInitialized = False
-    reloadable = list(mc_mod.reloadable_mods())
-    # 模组对象即将失效，先记下名字与启用状态
-    enabled_names = {
-        mod.__name__
-        for mod in reloadable
-        if mod.__name__ in mcvars.EnabledMods
-    }
-    reloadable_names = [mod.__name__ for mod in reloadable]
-
-    for mod in reversed(reloadable):
-        if not mc_mod.unregister_mod(mod):
-            mcvars.ModsInitialized = True
-            raise RuntimeError(f'注销失败，停止重载: {mod.__name__}')
-
-    import mineprep as old_mineprep
-    import mc_widget
-    widgets_copy = mc_widget.WidgetsCache
-
-    drop = set()
-    for name in list(sys.modules):
-        if name == 'mineprep':
-            drop.add(name)
-        elif name.startswith('mc_') and name != 'mcvars':
-            # mcvars 保留全局状态；其余 mc_* 全部卸掉以便全新绑定
-            drop.add(name)
-        elif name == 'mods':
-            drop.add(name)
-        else:
-            for mod_name in reloadable_names:
-                if name == mod_name or name.startswith(mod_name + '.'):
-                    drop.add(name)
-                    break
-
-    for name in sorted(drop, key=lambda n: n.count('.'), reverse=True):
-        sys.modules.pop(name, None)
-        unreal.log(f'已卸载 {name}')
-
-    mcvars.Props.clear()
-
-    import mineprep as new_mineprep
-    unreal.log('重新加载 mineprep')
-
-    import mc_widget
-    mc_widget.WidgetsCache = widgets_copy
-
-    # 原地更新：控制台持有的仍是 old_mineprep 这个对象
-    _adopt_module(old_mineprep, new_mineprep)
-    sys.modules['mineprep'] = old_mineprep
-    rebound = _rebind_mineprep(new_mineprep, old_mineprep)
-    if rebound:
-        unreal.log(f'已刷新 {rebound} 处 mineprep 引用')
-
-    import mc_mod
-    for mod_name in reloadable_names:
-        try:
-            mod = importlib.import_module(mod_name)
-            mc_mod._sync_mod_info(mod)
-            if mod_name in enabled_names:
-                mc_mod.register_mod(mod)
-            unreal.log(f'重新加载 {mod_name}')
-        except Exception as e:
-            warn(f'重新加载 {mod_name} 时出错: {e}')
-
-    mcvars.ModsInitialized = True
-    return old_mineprep
-
-
 def enum(input: type | unreal.EnumBase):
     """用下标获取UE枚举类型的对应值，如enum(var)[0]"""
     if isinstance(input, type):
@@ -553,7 +432,7 @@ def throw(*errors, duration=5.0, color=unreal.LinearColor(1, 0, 0, 1)):
 
 def _i18n(*args, **kwargs):
     """i18n包装器，避免循环导入"""
-    from mc_localization import i18n
+    from mineprep.localization import i18n
     return i18n(*args, **kwargs)
 
 
@@ -1282,11 +1161,11 @@ def show_editor_task(title: unreal.Text | str = None,
         except Exception as e:
             warn(f"EditorUtilityTask 启动时出错: {e}")
         if time:
-            import mc_parallel
+            from mineprep import parallel
             def finish_later():
                 if not finished:
                     self.finish_executing_task(True)
-            mc_parallel.delay(time)(finish_later)()
+            parallel.delay(time)(finish_later)()
 
     def receive_cancel_requested(self):
         nonlocal finished

@@ -6,6 +6,40 @@ from . import bbmodel
 
 ROOT = Path(__file__).with_name('Anim')
 SOURCES = (('custom', ROOT / 'custom'), ('vanilla', ROOT / 'vanilla'))
+_DEFAULT_LANGUAGES = ('zh', 'en', 'zh-Hant')
+
+
+def parse_localized_text(value, *, languages=_DEFAULT_LANGUAGES):
+    """Normalize manifest-style localized text (`str`, `[zh, en, ...]`, or `{lang: text}`) to a catalog record."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        return {'_native': languages[0], languages[0]: text} if text else None
+    if isinstance(value, list):
+        if not value or not isinstance(value[0], str) or not value[0].strip():
+            raise ValueError('本地化名称数组首个条目须为非空字符串')
+        if len(value) > len(languages):
+            raise ValueError(f'本地化名称数组长度不能超过 {len(languages)}')
+        record = {'_native': languages[0]}
+        for lang, item in zip(languages, value):
+            if not isinstance(item, str):
+                raise ValueError('本地化名称数组元素须为字符串')
+            if item.strip():
+                record[lang] = item.strip()
+        return record
+    if isinstance(value, dict):
+        primary = value.get(languages[0])
+        if not isinstance(primary, str) or not primary.strip():
+            raise ValueError(f'本地化名称字典须包含非空 {languages[0]!r} 原文')
+        record = {'_native': languages[0]}
+        for lang, item in value.items():
+            if not isinstance(lang, str) or lang.startswith('_') or not isinstance(item, str):
+                continue
+            if item.strip():
+                record[lang] = item.strip()
+        return record
+    raise ValueError('本地化名称须为字符串、数组或语言字典')
 
 
 def read(path):
@@ -30,13 +64,15 @@ def resolve_clips(data, clip=None):
                            for k, v in animations.items())):
             raise ValueError('Bedrock animations 须为映射片段名到动画对象的非空字典')
         return animations
-    if 'bones' in data:
-        if not isinstance(data.get('bones'), dict):
+    if 'bones' in data or 'curves' in data:
+        if 'bones' in data and not isinstance(data.get('bones'), dict):
             raise ValueError('单个动画定义的 bones 须为对象')
+        if 'curves' in data and not isinstance(data.get('curves'), dict):
+            raise ValueError('单个动画定义的 curves 须为对象')
         if not isinstance(clip, str) or not clip.strip():
             raise ValueError('直接传入单个动画定义时必须提供 clip 名称')
         return {clip: data}
-    raise ValueError('无法识别的动画格式：需要 animations、frames、bones 或 .bbmodel')
+    raise ValueError('无法识别的动画格式：需要 animations、frames、bones/curves 或 .bbmodel')
 
 
 def clips(path, clip=None):
@@ -92,6 +128,7 @@ def _entry_record(source, path, item, cache=None):
         'path': path,
         'file': item['file'],
         'clip': item['clip'],
+        'name': parse_localized_text(item.get('name')),
         'skeleton': item.get('skeleton'),
         'skeleton_mode': item.get('skeleton_mode'),
         'loop': item.get('loop'),
@@ -152,6 +189,7 @@ def match_entry(path=None, clip=None):
             'path': entry_path,
             'file': item['file'],
             'clip': item['clip'],
+            'name': parse_localized_text(item.get('name')),
             'skeleton': item.get('skeleton'),
             'skeleton_mode': item.get('skeleton_mode'),
             'loop': item.get('loop'),

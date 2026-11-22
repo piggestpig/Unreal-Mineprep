@@ -568,7 +568,7 @@ def prepare_curve(segments, tick_rate, *, kind='rotation', tolerance=None, weigh
 
 def write_curve(rig, selector, segments, *, kind='rotation', tolerance=None):
     """Prepare the entire scalar curve before writing; auto-fit without the C++ binding."""
-    from mc_handle import _tick_resolution_sync
+    from mineprep.handles import _tick_resolution_sync
     weighted = _tick_resolution_sync() is not None
     rate = rig.sequence.get_tick_resolution()
     prepared = prepare_curve(segments, rate.numerator / rate.denominator,
@@ -612,9 +612,9 @@ def write_prepared(rig, selector, prepared, *, replace_span=None):
     adjacent curves are never zero-clamped or rebuilt retroactively.
     """
     import unreal
-    import mc_sequencer as mcseq
-    from mc_handle import _tick_resolution_sync
-    from mc_rig import _key_tick_time
+    from mineprep import sequencer_tools as mcseq
+    from mineprep.handles import _tick_resolution_sync
+    from mineprep.rig import _key_tick_time
 
     (times, values, arrive, leave, arrive_w, leave_w,
      arrive_on, leave_on, interp_modes) = _prepare_write_payload(prepared)

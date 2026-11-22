@@ -162,8 +162,8 @@ def validate_backend(data, backend, groups=None):
 
 
 def model_directory():
-    import mc_config
-    return mc_config.paths.blocks
+    from mineprep import settings
+    return settings.paths.blocks
 
 
 def prepare_mesh(resource, *, refresh=False):
@@ -241,12 +241,12 @@ def cached_textures(key, *, folder, index):
 
 
 def import_textures(files, key, *, folder, index, world_key):
-    import mc_importer
+    from mineprep import importer
     from pprint import pformat
     textures = []
     for kind in ('BPT','BRT'):
-        task = mc_importer._make_import_task(files[kind],folder,f'structure_{kind}_{index}')
-        texture = mc_importer._run_import_task(task)[0]
+        task = importer._make_import_task(files[kind],folder,f'structure_{kind}_{index}')
+        texture = importer._run_import_task(task)[0]
         # These texels are instance records: averaging or streaming out a mip
         # changes positions/scales even while the source dimensions stay valid.
         texture.set_editor_properties(dict(srgb=False,
@@ -266,11 +266,11 @@ def cached_biome_texture(key, *, folder):
 
 
 def import_biome_texture(files, *, folder, world_key):
-    import mc_importer
+    from mineprep import importer
     key = files['key']
     path,_ = _shared_path(folder+'/biome_colors','structure_BCT',key,'WGBCTKey')
     destination,_,asset_name = path.rpartition('/')
-    texture = mc_importer._run_import_task(mc_importer._make_import_task(files['path'],destination,asset_name))[0]
+    texture = importer._run_import_task(importer._make_import_task(files['path'],destination,asset_name))[0]
     texture.set_editor_properties(dict(srgb=False, compression_settings=unreal.TextureCompressionSettings.TC_HDR,
         compression_no_alpha=False,
         filter=unreal.TextureFilter.TF_BILINEAR, address_x=unreal.TextureAddress.TA_CLAMP,
@@ -333,8 +333,8 @@ _TEMPLATE_MATERIAL_POLICY = 'source-animation-2'
 
 
 def template_resources(instances,models_dir,*,block_names=(),block_materials=None):
-    from mc_mesh import BAKE_VERSION
-    from mc_structure import structure_parts
+    from mineprep.mesh import BAKE_VERSION
+    from mineprep.structure import structure_parts
     from .resources import capture_templates
     return capture_templates(instances,models_dir,structure_parts,BAKE_VERSION+':wg-'+_TEMPLATE_MATERIAL_POLICY,
                              block_names=block_names,block_materials=block_materials)
@@ -387,13 +387,13 @@ def _template_textures(meshes):
     for mesh in meshes:
         if not unreal.EditorAssetLibrary.get_metadata_tag(mesh,'WGBlockID').startswith('template_'):
             continue
-        import mc_importer
+        from mineprep import importer
         for slot in mesh.get_editor_property('static_materials'):
             material=slot.material_interface
             if material is None or not unreal.SystemLibrary.is_valid(material):
                 raise ValueError('template material is missing: '+mesh.get_path_name())
             texture=unreal.MaterialEditingLibrary.get_material_instance_texture_parameter_value(
-                material,mc_importer.BASE_TEXTURE_PARAMETER_NAME)
+                material,importer.BASE_TEXTURE_PARAMETER_NAME)
             if (not isinstance(texture,unreal.Texture2D) or not unreal.SystemLibrary.is_valid(texture)
                     or not unreal.EditorAssetLibrary.does_asset_exist(texture.get_path_name())):
                 raise ValueError('template texture is missing: '+mesh.get_path_name())
@@ -419,20 +419,20 @@ def unready_textures(meshes, textures):
 
 
 def _shared_material(source, root, *, two_sided=True):
-    import mc_importer
-    from mc_prep import load_mcprep_data, apply_mc_material_defaults
+    from mineprep import importer
+    from mineprep.prep import load_mcprep_data, apply_mc_material_defaults
     from .resources import template_texture_key
     source=Path(source);key=template_texture_key(source)
     path,texture=_shared_path(root+'/tex',source.stem,key,'WGTextureKey')
     if texture is not None:
-        size=json.dumps(mc_importer._image_size(source))
+        size=json.dumps(importer._image_size(source))
         if unreal.EditorAssetLibrary.get_metadata_tag(texture,'WGTextureSize')!=size:
             unreal.EditorAssetLibrary.set_metadata_tag(texture,'WGTextureSize',size)
             _save_texture(texture)
     if texture is None:
         # Reimport only an absent/broken resource, never once per template.
-        task=mc_importer._make_import_task(source,root+'/tex',path.rsplit('/',1)[1])
-        texture=mc_importer._run_import_task(task)[0]
+        task=importer._make_import_task(source,root+'/tex',path.rsplit('/',1)[1])
+        texture=importer._run_import_task(task)[0]
         normal=source.stem.endswith('_n')
         texture.set_editor_properties(dict(filter=unreal.TextureFilter.TF_NEAREST,
             compression_settings=(unreal.TextureCompressionSettings.TC_NORMALMAP if normal
@@ -440,10 +440,10 @@ def _shared_material(source, root, *, two_sided=True):
             oodle_preserve_extremes=True,srgb=not normal,
             lod_group=(unreal.TextureGroup.TEXTUREGROUP_WORLD_NORMAL_MAP if normal
                        else unreal.TextureGroup.TEXTUREGROUP_WORLD)))
-        unreal.EditorAssetLibrary.set_metadata_tag(texture,'WGTextureSize',json.dumps(mc_importer._image_size(source)))
+        unreal.EditorAssetLibrary.set_metadata_tag(texture,'WGTextureSize',json.dumps(importer._image_size(source)))
         unreal.EditorAssetLibrary.set_metadata_tag(texture,'WGTextureKey',key)
         _save_texture(texture)
-    parent=mc_importer._material_instance_path_for_texture(texture,two_sided=two_sided,texture_source=source)
+    parent=importer._material_instance_path_for_texture(texture,two_sided=two_sided,texture_source=source)
     tint=load_mcprep_data()['blocks']['desaturated'].get(source.stem)
     material_key=hashlib.sha256(json.dumps((key,parent,tint,_TEMPLATE_MATERIAL_POLICY)).encode()).hexdigest()
     path,material=_shared_path(root+'/mat',source.stem,material_key,'WGMaterialKey')
@@ -452,11 +452,11 @@ def _shared_material(source, root, *, two_sided=True):
         if not isinstance(material,unreal.MaterialInstanceConstant):
             raise RuntimeError('failed to create shared template material: '+path)
         unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(
-            material,mc_importer.BASE_TEXTURE_PARAMETER_NAME,texture)
+            material,importer.BASE_TEXTURE_PARAMETER_NAME,texture)
         apply_mc_material_defaults(material,source)
         _tag_assets((material,),material_key,'WGMaterialKey')
     if unreal.MaterialEditingLibrary.get_material_instance_texture_parameter_value(
-            material,mc_importer.BASE_TEXTURE_PARAMETER_NAME)!=texture:
+            material,importer.BASE_TEXTURE_PARAMETER_NAME)!=texture:
         raise ValueError('shared template material has a mismatched texture: '+path)
     return material
 
@@ -481,13 +481,13 @@ def _override_material(parent, values, root):
 
 
 def _template_geometry(resource):
-    import mc_mesh
+    from mineprep import mesh as mesh_tools
     from dataclasses import replace
     cells = {(x,y,z):dict(name=name,properties=dict(props))
              for x,y,z,name,props in resource.template.bake_cells}
     if not getattr(resource,'materials',()):
-        return mc_mesh.resolve_geometry(cells,pivot=(0,0,0),cull='same',merge_faces=True)
-    resolver = mc_mesh._SourceResolver()
+        return mesh_tools.resolve_geometry(cells,pivot=(0,0,0),cull='same',merge_faces=True)
+    resolver = mesh_tools._SourceResolver()
     aliases = {}
     for record, values in zip(resource.template.bake_cells,resource.materials):
         x,y,z,name,props = record
@@ -501,7 +501,7 @@ def _template_geometry(resource):
             return prototype
         suffix = '\0'+json.dumps(dict(values),sort_keys=True)
         return replace(prototype,faces=tuple(replace(face,texture=face.texture+suffix) for face in prototype.faces))
-    geometry = mc_mesh.build_geometry(cells,resolve,pivot=(0,0,0),cull='same',merge_faces=True)
+    geometry = mesh_tools.build_geometry(cells,resolve,pivot=(0,0,0),cull='same',merge_faces=True)
     geometry.recipe = hashlib.sha256((geometry.recipe+json.dumps(sorted(resolver.files.items()),separators=(',',':'))).encode()).hexdigest()
     return geometry
 
@@ -514,7 +514,7 @@ def _template_material(source, pool, *, two_sided=True):
 
 def prepare_template(resource, *, refresh=False, pool_revision=None):
     """Whole-model assets are immutable versions; never overwrite a running world's mesh."""
-    import mc_mesh
+    from mineprep import mesh as mesh_tools
     identity=(resource.fingerprint,'template_'+resource.template.id)
     root=_WORLD_ROOT+'/templates'
     pool=root if not refresh else root+'/refresh_'+(pool_revision or uuid.uuid4().hex[:12])
@@ -527,12 +527,12 @@ def prepare_template(resource, *, refresh=False, pool_revision=None):
         materials=[_template_material(p,pool,two_sided=resource.template.two_sided) for p in geometry.textures]
         unreal.EditorAssetLibrary.make_directory(pool)
         mesh,outcome=unreal.GeometryScript_NewAssetUtils.create_new_static_mesh_asset_from_mesh(
-            mc_mesh._dynamic_mesh(geometry),path,unreal.GeometryScriptCreateNewStaticMeshAssetOptions())
+            mesh_tools._dynamic_mesh(geometry),path,unreal.GeometryScriptCreateNewStaticMeshAssetOptions())
         if mesh is None or outcome!=unreal.GeometryScriptOutcomePins.SUCCESS:
             raise RuntimeError('failed to write template mesh: '+path)
         for slot,material in enumerate(materials):mesh.set_material(slot,material)
-        unreal.EditorAssetLibrary.set_metadata_tag(mesh,mc_mesh.RECIPE_TAG,geometry.recipe)
-        unreal.EditorAssetLibrary.set_metadata_tag(mesh,mc_mesh.STATS_TAG,json.dumps(geometry.stats,sort_keys=True))
+        unreal.EditorAssetLibrary.set_metadata_tag(mesh,mesh_tools.RECIPE_TAG,geometry.recipe)
+        unreal.EditorAssetLibrary.set_metadata_tag(mesh,mesh_tools.STATS_TAG,json.dumps(geometry.stats,sort_keys=True))
         resource.checked()
         unreal.EditorAssetLibrary.set_metadata_tag(mesh,'WGSourceKey',identity[0])
         unreal.EditorAssetLibrary.set_metadata_tag(mesh,'WGBlockID',identity[1])

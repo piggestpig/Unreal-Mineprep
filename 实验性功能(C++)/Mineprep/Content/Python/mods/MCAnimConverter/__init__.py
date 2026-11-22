@@ -6,7 +6,7 @@ mod_info = {
         '将 Java、基岩版与 Blockbench 动画导入 Sequencer 或烘焙为动画序列',
         'Import Java, Bedrock and Blockbench animations into Sequencer or bake to an Animation Sequence',
     ),
-    'Version': '4.2',
+    'Version': '5.0',
     'CreatedBy': 'Pig',
     'EnabledByDefault': True,
     'ReloadWithMineprep': True,
@@ -23,6 +23,6 @@ def unregister():
     import sys
     from . import panel
     panel.MCAnimConverter.unregister()
-    for sub in ('panel', 'ops', 'props', 'util', 'rig_rules', 'biped', 'java_clip', 'sampling', 'retarget', 'library', 'curves', 'bbmodel', 'contact'):
+    for sub in ('panel', 'ops', 'props', 'util', 'rig_rules', 'biped', 'java_clip', 'sampling', 'retarget', 'library', 'curves', 'bbmodel', 'contact', 'face_presets'):
         sys.modules.pop(f'{__name__}.{sub}', None)
         globals().pop(sub, None)
